@@ -234,6 +234,20 @@ export function useBesoinsList(
   });
 }
 
+export function useBesoinsForCommandeSelector() {
+  const depenseService = useDepenseService();
+
+  return useQuery({
+    queryKey: [...besoinsKey, "selector-commande"],
+    queryFn: async () => {
+      const result = await depenseService.listBesoinsForSelector();
+      if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement besoins");
+      return result.data.data;
+    },
+    staleTime: 2 * 60_000,
+  });
+}
+
 export function useBesoinDetail(id: string | undefined) {
   const depenseService = useDepenseService();
 

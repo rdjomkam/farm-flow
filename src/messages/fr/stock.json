@@ -134,6 +134,9 @@
       "all": "Toutes"
     },
     "fields": {
+      "besoin": "Liste de besoins",
+      "besoinPlaceholder": "Choisir un besoin",
+      "aucunBesoin": "Aucun besoin eligible (APPROUVEE ou TRAITEE)",
       "fournisseur": "Fournisseur",
       "choix": "Choisir",
       "date": "Date de commande",
@@ -143,6 +146,7 @@
       "total": "Total : {montant} FCFA",
       "montantTotal": "Montant total"
     },
+    "linkingMode": "Ce besoin a deja une depense directe. La commande sera creee en statut Livree avec la depense existante rattachee.",
     "lignes": {
       "add": "Ajouter une ligne",
       "qtePlaceholder": "Qte",

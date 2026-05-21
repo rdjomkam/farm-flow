@@ -134,6 +134,9 @@
       "all": "All"
     },
     "fields": {
+      "besoin": "Needs list",
+      "besoinPlaceholder": "Select a need",
+      "aucunBesoin": "No eligible needs (APPROVED or PROCESSED)",
       "fournisseur": "Supplier",
       "choix": "Select",
       "date": "Order date",
@@ -143,6 +146,7 @@
       "total": "Total: {montant} FCFA",
       "montantTotal": "Total amount"
     },
+    "linkingMode": "This need already has a direct expense. The order will be created as Delivered with the existing expense linked.",
     "lignes": {
       "add": "Add a line",
       "qtePlaceholder": "Qty",

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, StatutVague } from "@/types";
+import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -7,6 +7,7 @@ import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } f
 // ---------------------------------------------------------------------------
 
 export interface CoutDetailLigne {
+  /** @deprecated kept for backward compat — always "depense" now */
   type: "stock" | "depense";
   label: string;
   montant: number;
@@ -124,29 +125,6 @@ function buildDateFilter(
   };
 }
 
-/**
- * Calcule la somme des mouvements ENTREE d'une categorie de produit pour un site.
- * Utilise une jointure via findMany car Prisma ne supporte pas aggregate avec join.
- */
-async function sumCoutsParCategorie(
-  siteId: string,
-  categorie: CategorieProduit,
-  dateFilter?: { gte?: Date; lte?: Date }
-): Promise<number> {
-  const mouvements = await prisma.mouvementStock.findMany({
-    where: {
-      siteId,
-      type: TypeMouvement.ENTREE,
-      prixTotal: { not: null },
-      ...(dateFilter && { date: dateFilter }),
-      produit: { categorie },
-    },
-    select: { prixTotal: true },
-  });
-
-  return mouvements.reduce((sum, m) => sum + (m.prixTotal ?? 0), 0);
-}
-
 // ---------------------------------------------------------------------------
 // Query 1 — Resume financier global
 // ---------------------------------------------------------------------------
@@ -154,168 +132,108 @@ async function sumCoutsParCategorie(
 /**
  * Calcule les KPIs financiers globaux d'un site.
  *
+ * Source unique des couts : Depense (ce que l'utilisateur saisit).
+ * Pas de MouvementStock pour eviter les ecarts et doublons.
+ *
  * - revenus : SUM(Vente.montantTotal)
- * - coutsAliments/coutsIntrants/coutsEquipements : SUM(MouvementStock.prixTotal)
- *   filtre type=ENTREE + produit.categorie
+ * - couts   : SUM(Depense.montantTotal) groupes par categorieDepense
  * - encaissements : SUM(Paiement.montant)
  * - creances : revenus - encaissements
  * - prixMoyenVenteKg : revenu total / poids total vendu
- *
- * @param siteId  - ID du site (multi-tenancy, R8)
- * @param periode - Filtre de periode optionnel (dateFrom / dateTo ISO 8601)
  */
 export async function getResumeFinancier(
   siteId: string,
   periode?: { dateFrom: string; dateTo: string }
 ): Promise<ResumeFinancier> {
-  const dateFilterVente = periode
-    ? buildDateFilter(periode)
-    : undefined;
-  const dateFilterStock = periode
-    ? buildDateFilter(periode)
-    : undefined;
-  const dateFilterPaiement = periode
-    ? buildDateFilter(periode)
-    : undefined;
+  const dateFilterVente = periode ? buildDateFilter(periode) : undefined;
+  const dateFilterDepense = periode ? buildDateFilter(periode) : undefined;
+  const dateFilterPaiement = periode ? buildDateFilter(periode) : undefined;
 
-  // Lancer toutes les agregations en parallele pour minimiser les round-trips
-  const [
-    venteAgg,
-    paiementAgg,
-    nombreFactures,
-    coutsAliments,
-    coutsIntrants,
-    coutsEquipements,
-    depensesHorsCommande,
-    toutesDepenses,
-  ] = await Promise.all([
-    // Revenus : SUM et COUNT des ventes + SUM poids
-    prisma.vente.aggregate({
-      where: {
-        siteId,
-        ...(dateFilterVente && { createdAt: dateFilterVente }),
-      },
-      _sum: { montantTotal: true, poidsTotalKg: true },
-      _count: { id: true },
-    }),
-
-    // Encaissements : SUM des paiements
-    prisma.paiement.aggregate({
-      where: {
-        siteId,
-        ...(dateFilterPaiement && { date: dateFilterPaiement }),
-      },
-      _sum: { montant: true },
-    }),
-
-    // Nombre de factures
-    prisma.facture.count({
-      where: {
-        siteId,
-        ...(dateFilterVente && { dateEmission: dateFilterVente }),
-      },
-    }),
-
-    // Couts par categorie (via jointure interne)
-    sumCoutsParCategorie(siteId, CategorieProduit.ALIMENT, dateFilterStock),
-    sumCoutsParCategorie(siteId, CategorieProduit.INTRANT, dateFilterStock),
-    sumCoutsParCategorie(siteId, CategorieProduit.EQUIPEMENT, dateFilterStock),
-
-    // Depenses hors-commande : anti double-comptage pour le calcul des COUTS
-    // On inclut les lignes pour exclure celles avec produitId (deja comptees via MouvementStock ENTREE)
-    prisma.depense.findMany({
-      where: {
-        siteId,
-        commandeId: null,
-        ...(dateFilterStock && { date: dateFilterStock }),
-      },
-      select: {
-        montantTotal: true,
-        montantPaye: true,
-        statut: true,
-        categorieDepense: true,
-        listeBesoinsId: true,
-        lignes: {
-          where: { produitId: null },
-          select: { montantTotal: true, categorieDepense: true },
+  const [venteAgg, paiementAgg, nombreFactures, toutesDepenses] =
+    await Promise.all([
+      // Revenus : SUM et COUNT des ventes + SUM poids
+      prisma.vente.aggregate({
+        where: {
+          siteId,
+          ...(dateFilterVente && { createdAt: dateFilterVente }),
         },
-      },
-    }),
+        _sum: { montantTotal: true, poidsTotalKg: true },
+        _count: { id: true },
+      }),
 
-    // TOUTES les depenses : pour le suivi des PAIEMENTS (payees/impayees)
-    prisma.depense.findMany({
-      where: {
-        siteId,
-        ...(dateFilterStock && { date: dateFilterStock }),
-      },
-      select: {
-        montantTotal: true,
-        montantPaye: true,
-        statut: true,
-        categorieDepense: true,
-      },
-    }),
-  ]);
+      // Encaissements : SUM des paiements
+      prisma.paiement.aggregate({
+        where: {
+          siteId,
+          ...(dateFilterPaiement && { date: dateFilterPaiement }),
+        },
+        _sum: { montant: true },
+      }),
+
+      // Nombre de factures
+      prisma.facture.count({
+        where: {
+          siteId,
+          ...(dateFilterVente && { dateEmission: dateFilterVente }),
+        },
+      }),
+
+      // TOUTES les depenses : source unique pour couts + suivi paiement
+      prisma.depense.findMany({
+        where: {
+          siteId,
+          ...(dateFilterDepense && { date: dateFilterDepense }),
+        },
+        select: {
+          montantTotal: true,
+          montantPaye: true,
+          statut: true,
+          categorieDepense: true,
+        },
+      }),
+    ]);
 
   const revenus = venteAgg._sum.montantTotal ?? 0;
   const poidsTotalKg = venteAgg._sum.poidsTotalKg ?? 0;
   const nombreVentes = venteAgg._count.id;
-
   const encaissements = paiementAgg._sum.montant ?? 0;
 
-  // Agregation des depenses hors-commande (pour calcul des COUTS uniquement)
-  // Pour les depenses issues de besoins (listeBesoinsId != null), ne compter que les
-  // lignes SANS produitId — les lignes avec produitId sont deja comptees via MouvementStock ENTREE.
-  let depensesHCTotal = 0;
-  const depensesHCParCategorie: Partial<Record<CategorieDepense, number>> = {};
-
-  for (const dep of depensesHorsCommande) {
-    if (dep.listeBesoinsId && dep.lignes.length >= 0) {
-      // Depense issue d'un besoin : ne compter que les lignes sans produit
-      for (const ligne of dep.lignes) {
-        depensesHCTotal += ligne.montantTotal;
-        const cat = (ligne.categorieDepense ?? dep.categorieDepense) as CategorieDepense;
-        depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + ligne.montantTotal;
-      }
-    } else {
-      // Depense manuelle (pas de besoin) : compter le montantTotal complet
-      depensesHCTotal += dep.montantTotal;
-      const cat = dep.categorieDepense as CategorieDepense;
-      depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + dep.montantTotal;
-    }
-  }
-
-  // Agregation de TOUTES les depenses (pour suivi PAIEMENT)
-  let depensesTotales = 0;
+  // Agregation des depenses (source unique pour les couts ET le suivi paiement)
+  let coutsTotaux = 0;
   let depensesPayees = 0;
   let depensesImpayees = 0;
+  let coutsAliments = 0;
+  let coutsIntrants = 0;
+  let coutsEquipements = 0;
   const depensesParCategorie: Partial<Record<CategorieDepense, number>> = {};
 
   for (const dep of toutesDepenses) {
-    depensesTotales += dep.montantTotal;
+    const montant = dep.montantTotal;
+    coutsTotaux += montant;
+
     if (dep.statut === StatutDepense.PAYEE) {
-      depensesPayees += dep.montantTotal;
+      depensesPayees += montant;
     } else {
-      depensesImpayees += dep.montantTotal - dep.montantPaye;
+      depensesImpayees += montant - dep.montantPaye;
     }
+
     const cat = dep.categorieDepense as CategorieDepense;
-    depensesParCategorie[cat] = (depensesParCategorie[cat] ?? 0) + dep.montantTotal;
+    depensesParCategorie[cat] = (depensesParCategorie[cat] ?? 0) + montant;
+
+    // Map CategorieDepense to legacy coutsXxx fields
+    if (cat === CategorieDepense.ALIMENT) coutsAliments += montant;
+    else if (cat === CategorieDepense.INTRANT) coutsIntrants += montant;
+    else if (cat === CategorieDepense.EQUIPEMENT) coutsEquipements += montant;
   }
 
-  // Couts : stock + depenses hors-commande (anti double-comptage)
-  const coutsStock = coutsAliments + coutsIntrants + coutsEquipements;
-  const coutsTotaux = coutsStock + depensesHCTotal;
   const margeBrute = revenus - coutsTotaux;
   const tauxMarge = revenus > 0 ? (margeBrute / revenus) * 100 : null;
   const creances = revenus - encaissements;
   const prixMoyenVenteKg = poidsTotalKg > 0 ? revenus / poidsTotalKg : null;
 
-  // Ventilation detaillee des couts par type
+  // Ventilation detaillee des couts par categorie
   const coutsDetail: CoutDetailLigne[] = [];
-  if (coutsAliments > 0) coutsDetail.push({ type: "stock", label: "ALIMENT", montant: Math.round(coutsAliments) });
-  if (coutsIntrants > 0) coutsDetail.push({ type: "stock", label: "INTRANT", montant: Math.round(coutsIntrants) });
-  if (coutsEquipements > 0) coutsDetail.push({ type: "stock", label: "EQUIPEMENT", montant: Math.round(coutsEquipements) });
-  for (const [cat, montant] of Object.entries(depensesHCParCategorie)) {
+  for (const [cat, montant] of Object.entries(depensesParCategorie)) {
     if ((montant as number) > 0) {
       coutsDetail.push({ type: "depense", label: cat, montant: Math.round(montant as number) });
     }
@@ -336,7 +254,7 @@ export async function getResumeFinancier(
       prixMoyenVenteKg !== null ? Math.round(prixMoyenVenteKg * 100) / 100 : null,
     nombreVentes,
     nombreFactures,
-    depensesTotales: Math.round(depensesTotales),
+    depensesTotales: Math.round(coutsTotaux),
     depensesPayees: Math.round(depensesPayees),
     depensesImpayees: Math.round(depensesImpayees),
     depensesParCategorie: Object.fromEntries(
@@ -521,7 +439,7 @@ export async function getRentabiliteParVague(
  *
  * Pour chaque mois :
  * - revenus       : SUM(Vente.montantTotal) creees ce mois
- * - couts         : SUM(MouvementStock.prixTotal) type=ENTREE ce mois
+ * - couts         : SUM(Depense.montantTotal) — source unique (pas de MouvementStock)
  * - marge         : revenus - couts
  * - encaissements : SUM(Paiement.montant) de ce mois
  *
@@ -532,115 +450,54 @@ export async function getEvolutionFinanciere(
   siteId: string,
   moisCount: number = 12
 ): Promise<EvolutionFinanciere> {
-  // Calculer la date de debut : debut du mois il y a moisCount mois
   const now = new Date();
   const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
 
-  // Charger toutes les donnees sur la periode en parallele
-  const [ventes, mouvements, paiements, depensesHorsCommande] = await Promise.all([
+  const [ventes, depenses, paiements] = await Promise.all([
     prisma.vente.findMany({
-      where: {
-        siteId,
-        createdAt: { gte: dateDebut },
-      },
+      where: { siteId, createdAt: { gte: dateDebut } },
       select: { createdAt: true, montantTotal: true },
     }),
-    prisma.mouvementStock.findMany({
-      where: {
-        siteId,
-        type: TypeMouvement.ENTREE,
-        prixTotal: { not: null },
-        date: { gte: dateDebut },
-      },
-      select: { date: true, prixTotal: true },
+    // Depense = source unique pour les couts (toutes, y compris liees a commandes)
+    prisma.depense.findMany({
+      where: { siteId, date: { gte: dateDebut } },
+      select: { date: true, montantTotal: true },
     }),
     prisma.paiement.findMany({
-      where: {
-        siteId,
-        date: { gte: dateDebut },
-      },
+      where: { siteId, date: { gte: dateDebut } },
       select: { date: true, montant: true },
-    }),
-    // Depenses hors-commande (anti double-comptage)
-    prisma.depense.findMany({
-      where: {
-        siteId,
-        commandeId: null,
-        date: { gte: dateDebut },
-      },
-      select: {
-        date: true,
-        montantTotal: true,
-        listeBesoinsId: true,
-        lignes: {
-          where: { produitId: null },
-          select: { montantTotal: true },
-        },
-      },
     }),
   ]);
 
-  // Generer la liste des mois de la periode (format "YYYY-MM")
   const moisList: string[] = [];
   for (let i = 0; i < moisCount; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1) + i, 1);
-    const moisLabel = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    moisList.push(moisLabel);
+    moisList.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
 
-  // Initialiser les agregats par mois
-  const agregats = new Map<
-    string,
-    { revenus: number; couts: number; encaissements: number }
-  >();
+  const agregats = new Map<string, { revenus: number; couts: number; encaissements: number }>();
   for (const mois of moisList) {
     agregats.set(mois, { revenus: 0, couts: 0, encaissements: 0 });
   }
 
-  // Affecter les ventes
+  const toMois = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
   for (const v of ventes) {
-    const mois = `${v.createdAt.getFullYear()}-${String(
-      v.createdAt.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const agg = agregats.get(mois);
+    const agg = agregats.get(toMois(v.createdAt));
     if (agg) agg.revenus += v.montantTotal;
   }
 
-  // Affecter les mouvements
-  for (const m of mouvements) {
-    const mois = `${m.date.getFullYear()}-${String(
-      m.date.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const agg = agregats.get(mois);
-    if (agg) agg.couts += m.prixTotal ?? 0;
+  for (const dep of depenses) {
+    const agg = agregats.get(toMois(dep.date));
+    if (agg) agg.couts += dep.montantTotal;
   }
 
-  // Affecter les depenses hors-commande (anti double-comptage)
-  for (const d of depensesHorsCommande) {
-    const mois = `${d.date.getFullYear()}-${String(
-      d.date.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const agg = agregats.get(mois);
-    if (!agg) continue;
-    if (d.listeBesoinsId) {
-      for (const ligne of d.lignes) {
-        agg.couts += ligne.montantTotal;
-      }
-    } else {
-      agg.couts += d.montantTotal;
-    }
-  }
-
-  // Affecter les paiements
   for (const p of paiements) {
-    const mois = `${p.date.getFullYear()}-${String(
-      p.date.getMonth() + 1
-    ).padStart(2, "0")}`;
-    const agg = agregats.get(mois);
+    const agg = agregats.get(toMois(p.date));
     if (agg) agg.encaissements += p.montant;
   }
 
-  // Construire le tableau final ordonne par mois croissant
   const evolution: EvolutionMois[] = moisList.map((mois) => {
     const agg = agregats.get(mois) ?? { revenus: 0, couts: 0, encaissements: 0 };
     return {
@@ -679,38 +536,15 @@ export async function getCoutsParMoisParType(
   const now = new Date();
   const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
 
-  const [mouvements, depenses] = await Promise.all([
-    prisma.mouvementStock.findMany({
-      where: {
-        siteId,
-        type: TypeMouvement.ENTREE,
-        prixTotal: { not: null },
-        date: { gte: dateDebut },
-      },
-      select: {
-        date: true,
-        prixTotal: true,
-        produit: { select: { categorie: true } },
-      },
-    }),
-    prisma.depense.findMany({
-      where: {
-        siteId,
-        commandeId: null,
-        date: { gte: dateDebut },
-      },
-      select: {
-        date: true,
-        montantTotal: true,
-        categorieDepense: true,
-        listeBesoinsId: true,
-        lignes: {
-          where: { produitId: null },
-          select: { montantTotal: true, categorieDepense: true },
-        },
-      },
-    }),
-  ]);
+  // Depense = source unique pour les couts (toutes, y compris liees a commandes)
+  const depenses = await prisma.depense.findMany({
+    where: { siteId, date: { gte: dateDebut } },
+    select: {
+      date: true,
+      montantTotal: true,
+      categorieDepense: true,
+    },
+  });
 
   const moisList: string[] = [];
   for (let i = 0; i < moisCount; i++) {
@@ -722,52 +556,30 @@ export async function getCoutsParMoisParType(
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
   // mois -> categorie -> montant
-  const grid = new Map<string, Map<string, { montant: number; type: "stock" | "depense" }>>();
+  const grid = new Map<string, Map<string, number>>();
   for (const m of moisList) grid.set(m, new Map());
 
   const categoriesSet = new Set<string>();
 
-  for (const mv of mouvements) {
-    const mois = toMois(mv.date);
-    const cat = mv.produit.categorie as string;
+  for (const dep of depenses) {
+    const mois = toMois(dep.date);
+    const cat = dep.categorieDepense as string;
     categoriesSet.add(cat);
     const row = grid.get(mois);
     if (!row) continue;
-    const entry = row.get(cat) ?? { montant: 0, type: "stock" as const };
-    entry.montant += mv.prixTotal ?? 0;
-    row.set(cat, entry);
-  }
-
-  for (const dep of depenses) {
-    const mois = toMois(dep.date);
-    const addToGrid = (cat: string, montant: number) => {
-      categoriesSet.add(cat);
-      const row = grid.get(mois);
-      if (!row) return;
-      const entry = row.get(cat) ?? { montant: 0, type: "depense" as const };
-      entry.montant += montant;
-      row.set(cat, entry);
-    };
-
-    if (dep.listeBesoinsId) {
-      for (const ligne of dep.lignes) {
-        addToGrid((ligne.categorieDepense ?? dep.categorieDepense) as string, ligne.montantTotal);
-      }
-    } else {
-      addToGrid(dep.categorieDepense as string, dep.montantTotal);
-    }
+    row.set(cat, (row.get(cat) ?? 0) + dep.montantTotal);
   }
 
   const lignes: CoutMoisCategorie[] = [];
   for (const mois of moisList) {
     const row = grid.get(mois)!;
-    for (const [cat, data] of row) {
-      if (data.montant > 0) {
+    for (const [cat, montant] of row) {
+      if (montant > 0) {
         lignes.push({
           mois,
           categorie: cat,
-          type: data.type,
-          montant: Math.round(data.montant),
+          type: "depense",
+          montant: Math.round(montant),
         });
       }
     }
@@ -803,43 +615,17 @@ export async function getCoutsDetailParMois(
   const now = new Date();
   const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
 
-  const [mouvements, depenses] = await Promise.all([
-    prisma.mouvementStock.findMany({
-      where: {
-        siteId,
-        type: TypeMouvement.ENTREE,
-        prixTotal: { not: null },
-        date: { gte: dateDebut },
-      },
-      select: {
-        date: true,
-        prixTotal: true,
-        quantite: true,
-        notes: true,
-        produit: { select: { nom: true, categorie: true } },
-      },
-      orderBy: { date: "asc" },
-    }),
-    prisma.depense.findMany({
-      where: {
-        siteId,
-        commandeId: null,
-        date: { gte: dateDebut },
-      },
-      select: {
-        date: true,
-        montantTotal: true,
-        description: true,
-        categorieDepense: true,
-        listeBesoinsId: true,
-        lignes: {
-          where: { produitId: null },
-          select: { montantTotal: true, designation: true, categorieDepense: true },
-        },
-      },
-      orderBy: { date: "asc" },
-    }),
-  ]);
+  // Depense = source unique pour les couts (toutes, y compris liees a commandes)
+  const depenses = await prisma.depense.findMany({
+    where: { siteId, date: { gte: dateDebut } },
+    select: {
+      date: true,
+      montantTotal: true,
+      description: true,
+      categorieDepense: true,
+    },
+    orderBy: { date: "asc" },
+  });
 
   const toMois = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -852,49 +638,20 @@ export async function getCoutsDetailParMois(
 
   const lignesParMois: Record<string, CoutDetailLigneConcrete[]> = {};
 
-  for (const mv of mouvements) {
-    const mois = toMois(mv.date);
-    if (!moisList.includes(mois)) continue;
-    if (!lignesParMois[mois]) lignesParMois[mois] = [];
-    lignesParMois[mois].push({
-      date: mv.date,
-      mois,
-      description: `${mv.produit.nom} (${mv.quantite} unités)`,
-      categorie: mv.produit.categorie as string,
-      type: "stock",
-      montant: Math.round(mv.prixTotal ?? 0),
-    });
-  }
-
   for (const dep of depenses) {
     const mois = toMois(dep.date);
     if (!moisList.includes(mois)) continue;
     if (!lignesParMois[mois]) lignesParMois[mois] = [];
-
-    if (dep.listeBesoinsId) {
-      for (const ligne of dep.lignes) {
-        lignesParMois[mois].push({
-          date: dep.date,
-          mois,
-          description: ligne.designation ?? dep.description,
-          categorie: (ligne.categorieDepense ?? dep.categorieDepense) as string,
-          type: "depense",
-          montant: Math.round(ligne.montantTotal),
-        });
-      }
-    } else {
-      lignesParMois[mois].push({
-        date: dep.date,
-        mois,
-        description: dep.description,
-        categorie: dep.categorieDepense as string,
-        type: "depense",
-        montant: Math.round(dep.montantTotal),
-      });
-    }
+    lignesParMois[mois].push({
+      date: dep.date,
+      mois,
+      description: dep.description,
+      categorie: dep.categorieDepense as string,
+      type: "depense",
+      montant: Math.round(dep.montantTotal),
+    });
   }
 
-  // Filter to months that have data
   const moisAvecData = moisList.filter((m) => lignesParMois[m]?.length > 0);
 
   return { moisList: moisAvecData, lignesParMois };
@@ -1100,8 +857,6 @@ export interface CoutProductionVague {
  * - **Aliments** : Les `ReleveConsommation` font foi pour les aliments.
  *   Les `Depense` avec `categorieDepense = ALIMENT` sont EXCLUES des depenses
  *   directes pour eviter de compter deux fois.
- * - **Commandes** : Les `Depense` liees a une commande (`commandeId != null`)
- *   sont exclues — elles sont deja tracees via MouvementStock.
  *
  * ## Allocation des depenses recurrentes
  * Utilise les `Depense` reelles generees depuis les templates `DepenseRecurrente`
@@ -1175,7 +930,6 @@ export async function getCoutProductionVague(
     }),
 
     // 2b. Depenses directes liees a la vague
-    // Exclure: commandeId non null (anti double-comptage MouvementStock)
     // Exclure: categorieDepense = ALIMENT (anti double-comptage ReleveConsommation)
     // Exclure: depenseRecurrenteId non null (comptees separement via montantPaye)
     // Filtre par dateFin : exclure les depenses posterieures a la cloture
@@ -1183,7 +937,6 @@ export async function getCoutProductionVague(
       where: {
         siteId,
         vagueId,
-        commandeId: null,
         depenseRecurrenteId: null,
         categorieDepense: { not: CategorieDepense.ALIMENT },
         date: { lte: dateFin },
@@ -1197,14 +950,13 @@ export async function getCoutProductionVague(
     }),
 
     // 2c. Depenses multi-vague via ListeBesoins (vagueId null, listeBesoinsId non null)
-    // Exclure: commandeId non null + categorieDepense = ALIMENT
+    // Exclure: categorieDepense = ALIMENT (anti double-comptage ReleveConsommation)
     // Filtre par dateFin : exclure les depenses posterieures a la cloture
     prisma.depense.findMany({
       where: {
         siteId,
         listeBesoinsId: { not: null },
         vagueId: null,
-        commandeId: null,
         categorieDepense: { not: CategorieDepense.ALIMENT },
         date: { lte: dateFin },
       },
@@ -1706,7 +1458,7 @@ export async function getCoutProductionVague(
  * - nombreVagues      : nombre de vagues dans l'unite
  * - nombreDepenses    : nombre de depenses directement assignees a l'unite
  *
- * Les depenses avec commandeId sont exclues (anti double-comptage via MouvementStock).
+ * Depense est la source unique pour les couts (toutes incluses, pas de filtre commandeId).
  * Les couts non affectes (depenses sans uniteProductionId ni vagueId) sont regroupes
  * dans nonAffecte.
  *
@@ -1745,9 +1497,9 @@ export async function getResumeFinancierParUnite(
       select: { vagueId: true, montantTotal: true },
     }),
 
-    // 1d. Depenses hors-commande du site (anti double-comptage)
+    // 1d. Toutes les depenses du site (source unique pour les couts)
     prisma.depense.findMany({
-      where: { siteId, commandeId: null },
+      where: { siteId },
       select: { uniteProductionId: true, vagueId: true, montantTotal: true },
     }),
 

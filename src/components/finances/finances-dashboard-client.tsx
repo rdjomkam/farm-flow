@@ -200,7 +200,7 @@ export function FinancesDashboardClient({
                     </span>
                     <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${ligne.type === "stock" ? "bg-primary" : "bg-warning"}`}
+                        className="h-full rounded-full bg-primary"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

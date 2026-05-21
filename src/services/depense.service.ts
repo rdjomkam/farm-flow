@@ -30,6 +30,38 @@ import type {
   CreerCommandeDepuisBesoinDTO,
 } from "@/types";
 
+/** Shape returned by GET /api/besoins?forSelector=true */
+export interface BesoinForCommandeSelectorItem {
+  id: string;
+  numero: string;
+  titre: string;
+  montantEstime: number;
+  statut: string;
+  createdAt: string;
+  _count: { lignes: number };
+  lignes: {
+    id: string;
+    designation: string;
+    quantite: number;
+    prixEstime: number;
+    produitId: string | null;
+    produit: {
+      id: string;
+      nom: string;
+      prixUnitaire: number;
+      unite: string;
+      uniteAchat: string | null;
+      fournisseurId: string | null;
+    } | null;
+  }[];
+  depenses: {
+    id: string;
+    numero: string;
+    montantTotal: number;
+    statut: string;
+  }[];
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -262,6 +294,11 @@ export function useDepenseService() {
     [call]
   );
 
+  const listBesoinsForSelector = useCallback(
+    () => call<{ data: BesoinForCommandeSelectorItem[] }>("/api/besoins?forSelector=true"),
+    [call]
+  );
+
   const getBesoin = useCallback(
     (id: string) => call<ListeBesoinsDetailResponse>(`/api/besoins/${id}`),
     [call]
@@ -390,6 +427,7 @@ export function useDepenseService() {
     deleteDepenseRecurrente,
     genererDepensesRecurrentes,
     listBesoins,
+    listBesoinsForSelector,
     getBesoin,
     createBesoin,
     updateBesoin,

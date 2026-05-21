@@ -792,8 +792,9 @@ export interface CreateLigneCommandeDTO {
   prixUnitaire: number;
 }
 
-/** DTO pour creer une commande */
+/** DTO pour creer une commande (obligatoirement liee a un besoin) */
 export interface CreateCommandeDTO {
+  listeBesoinsId: string;
   fournisseurId: string;
   dateCommande: string;
   lignes: CreateLigneCommandeDTO[];

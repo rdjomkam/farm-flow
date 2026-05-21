@@ -131,20 +131,45 @@ export async function getCommandeById(id: string, siteId: string) {
   });
 }
 
-/** Cree une commande avec ses lignes */
+/**
+ * Cree une commande obligatoirement liee a un besoin.
+ *
+ * **Mode liaison** : si le besoin a deja une depense LIBRE (listeBesoinsId set,
+ * commandeId null), la commande est creee en statut LIVREE et la depense
+ * existante est liee. Pas de nouveau MouvementStock.
+ *
+ * **Mode normal** : commande BROUILLON classique avec listeBesoinsId set.
+ */
 export async function createCommande(
   siteId: string,
   userId: string,
   data: CreateCommandeDTO
 ) {
   return prisma.$transaction(async (tx) => {
-    // Verify fournisseur belongs to site
+    // 1. Validate besoin
+    const besoin = await tx.listeBesoins.findFirst({
+      where: { id: data.listeBesoinsId, siteId },
+      select: {
+        id: true,
+        lignes: {
+          where: { commandeId: null, produitId: { not: null } },
+          select: { id: true, produitId: true },
+        },
+        depenses: {
+          where: { commandeId: null },
+          select: { id: true, montantTotal: true, lignes: { select: { id: true, ligneBesoinId: true, produitId: true } } },
+        },
+      },
+    });
+    if (!besoin) throw new Error("Liste de besoins introuvable");
+
+    // 2. Validate fournisseur
     const fournisseur = await tx.fournisseur.findFirst({
       where: { id: data.fournisseurId, siteId },
     });
     if (!fournisseur) throw new Error("Fournisseur introuvable");
 
-    // Verify all products belong to site
+    // 3. Validate products
     const produitIds = data.lignes.map((l) => l.produitId);
     const produits = await tx.produit.findMany({
       where: { id: { in: produitIds }, siteId },
@@ -153,22 +178,35 @@ export async function createCommande(
       throw new Error("Un ou plusieurs produits introuvables");
     }
 
-    // Calculate total
+    // 4. Calculate total
     const montantTotal = data.lignes.reduce(
       (sum, l) => sum + l.quantite * l.prixUnitaire,
       0
     );
 
-    // Generate numero CMD-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    // 5. Generate numero
     const numero = await generateNextNumero(tx, "commande", "CMD", siteId);
 
-    // Create commande + lignes
+    // 6. Detect linking mode: besoin has a LIBRE depense
+    const libreDepense = besoin.depenses.length > 0 ? besoin.depenses[0] : null;
+    const isLinkingMode = libreDepense !== null;
+
+    // 7. Create commande + lignes
     const created = await tx.commande.create({
       data: {
         numero,
         fournisseurId: data.fournisseurId,
         dateCommande: new Date(data.dateCommande),
         montantTotal,
+        // Linking mode: LIVREE with received amounts
+        ...(isLinkingMode
+          ? {
+              statut: StatutCommande.LIVREE,
+              dateLivraison: new Date(),
+              montantRecu: montantTotal,
+            }
+          : {}),
+        listeBesoinsId: data.listeBesoinsId,
         userId,
         siteId,
         lignes: {
@@ -176,11 +214,15 @@ export async function createCommande(
             produitId: l.produitId,
             quantite: l.quantite,
             prixUnitaire: l.prixUnitaire,
+            // Linking mode: mark as fully received
+            ...(isLinkingMode ? { quantiteRecue: l.quantite } : {}),
           })),
         },
       },
     });
-    return tx.commande.findUniqueOrThrow({
+
+    // 8. Re-fetch to get created ligneCommande IDs
+    const commande = await tx.commande.findUniqueOrThrow({
       where: { id: created.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
@@ -189,6 +231,39 @@ export async function createCommande(
         },
       },
     });
+
+    // 9. Link LigneBesoin records to this commande
+    const besoinLigneIds = besoin.lignes.map((l) => l.id);
+    if (besoinLigneIds.length > 0) {
+      await tx.ligneBesoin.updateMany({
+        where: { id: { in: besoinLigneIds } },
+        data: { commandeId: commande.id },
+      });
+    }
+
+    // 10. Linking mode: wire up existing depense
+    if (isLinkingMode && libreDepense) {
+      // Link depense to this commande
+      await tx.depense.update({
+        where: { id: libreDepense.id },
+        data: { commandeId: commande.id },
+      });
+
+      // Link LigneDepense to LigneCommande (match by produitId)
+      for (const lc of commande.lignes) {
+        const matchingLd = libreDepense.lignes.find(
+          (ld) => ld.produitId === lc.produitId
+        );
+        if (matchingLd) {
+          await tx.ligneDepense.update({
+            where: { id: matchingLd.id },
+            data: { ligneCommandeId: lc.id },
+          });
+        }
+      }
+    }
+
+    return commande;
   });
 }
 

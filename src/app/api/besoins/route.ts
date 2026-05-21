@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getListeBesoins,
   createListeBesoins,
+  getBesoinsForCommandeSelector,
 } from "@/lib/queries/besoins";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { requirePermission } from "@/lib/permissions";
@@ -29,6 +30,12 @@ export async function GET(request: NextRequest) {
       Permission.BESOINS_SOUMETTRE
     );
     const { searchParams } = new URL(request.url);
+
+    // Lightweight selector for order creation dialog
+    if (searchParams.get("forSelector") === "true") {
+      const data = await getBesoinsForCommandeSelector(auth.activeSiteId);
+      return NextResponse.json({ data });
+    }
 
     const filters: ListeBesoinsFilters = {};
 

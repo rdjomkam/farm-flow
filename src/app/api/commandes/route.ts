@@ -101,6 +101,10 @@ export async function POST(request: NextRequest) {
 
     const errors: { field: string; message: string }[] = [];
 
+    if (!body.listeBesoinsId || typeof body.listeBesoinsId !== "string") {
+      errors.push({ field: "listeBesoinsId", message: "La liste de besoins est obligatoire." });
+    }
+
     if (!body.fournisseurId || typeof body.fournisseurId !== "string") {
       errors.push({ field: "fournisseurId", message: "Le fournisseur est obligatoire." });
     }
@@ -130,6 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data: CreateCommandeDTO = {
+      listeBesoinsId: body.listeBesoinsId,
       fournisseurId: body.fournisseurId,
       dateCommande: body.dateCommande,
       lignes: body.lignes.map((l: Record<string, unknown>) => ({

@@ -1106,3 +1106,62 @@ export async function deleteListeBesoins(id: string, siteId: string) {
     return tx.listeBesoins.delete({ where: { id } });
   });
 }
+
+// ---------------------------------------------------------------------------
+// Selector pour creation de commande — besoins eligibles
+// ---------------------------------------------------------------------------
+
+/**
+ * Retourne les besoins APPROUVEE/TRAITEE ayant des lignes non encore commandees
+ * (commandeId IS NULL, produitId IS NOT NULL).
+ * Inclut les depenses LIBRE (commandeId null) pour detecter le mode "liaison".
+ */
+export async function getBesoinsForCommandeSelector(siteId: string) {
+  return prisma.listeBesoins.findMany({
+    where: {
+      siteId,
+      statut: { in: [StatutBesoins.APPROUVEE, StatutBesoins.TRAITEE] },
+      // Au moins une ligne non commandee avec un produit
+      lignes: {
+        some: { commandeId: null, produitId: { not: null } },
+      },
+    },
+    select: {
+      id: true,
+      numero: true,
+      titre: true,
+      montantEstime: true,
+      statut: true,
+      createdAt: true,
+      _count: { select: { lignes: true } },
+      lignes: {
+        where: { commandeId: null, produitId: { not: null } },
+        select: {
+          id: true,
+          designation: true,
+          quantite: true,
+          prixEstime: true,
+          produitId: true,
+          produit: {
+            select: {
+              id: true,
+              nom: true,
+              prixUnitaire: true,
+              unite: true,
+              uniteAchat: true,
+              fournisseurId: true,
+            },
+          },
+        },
+      },
+      // Depenses LIBRE = liees au besoin mais pas a une commande
+      depenses: {
+        where: { commandeId: null },
+        select: { id: true, numero: true, montantTotal: true, statut: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export type BesoinForCommandeSelector = Awaited<ReturnType<typeof getBesoinsForCommandeSelector>>[number];

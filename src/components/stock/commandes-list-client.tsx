@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
-import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2, SlidersHorizontal, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { StatutCommande, Permission } from "@/types";
 import type { Commande } from "@/types";
 import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-queries";
+import { useBesoinsForCommandeSelector } from "@/hooks/queries/use-depenses-queries";
 import { CommandesFilterSheet } from "./commandes-filter-sheet";
 import type { CommandeFilterValues } from "./commandes-filter-sheet";
 import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
@@ -84,7 +85,11 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   });
   const commandes = commandesRaw as unknown as CommandeData[];
 
+  // Besoins selector data
+  const { data: besoinsForSelector = [] } = useBesoinsForCommandeSelector();
+
   // Form state
+  const [selectedBesoinId, setSelectedBesoinId] = useState("");
   const [fournisseurId, setFournisseurId] = useState("");
   const [dateCommande, setDateCommande] = useState(
     new Date().toISOString().split("T")[0]
@@ -92,6 +97,26 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   const [lignes, setLignes] = useState<LigneForm[]>([
     { produitId: "", quantite: "", prixUnitaire: "" },
   ]);
+
+  // Derived: selected besoin and linking mode
+  const selectedBesoin = besoinsForSelector.find((b) => b.id === selectedBesoinId);
+  const isLinkingMode = selectedBesoin && selectedBesoin.depenses.length > 0;
+
+  // Auto-fill when besoin is selected
+  useEffect(() => {
+    if (!selectedBesoin) return;
+    const newLignes = selectedBesoin.lignes
+      .filter((lb) => lb.produitId && lb.produit)
+      .map((lb) => ({
+        produitId: lb.produitId!,
+        quantite: String(lb.quantite),
+        prixUnitaire: String(lb.prixEstime),
+      }));
+    if (newLignes.length > 0) setLignes(newLignes);
+    // Auto-set fournisseur from first product
+    const firstFournisseur = selectedBesoin.lignes[0]?.produit?.fournisseurId;
+    if (firstFournisseur) setFournisseurId(firstFournisseur);
+  }, [selectedBesoinId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeFilterCount = Object.entries(filters).filter(
     ([, val]) => val !== undefined && val !== ""
@@ -134,6 +159,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   }
 
   function resetForm() {
+    setSelectedBesoinId("");
     setFournisseurId("");
     setDateCommande(new Date().toISOString().split("T")[0]);
     setLignes([{ produitId: "", quantite: "", prixUnitaire: "" }]);
@@ -168,6 +194,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   }, 0);
 
   const isValid =
+    selectedBesoinId &&
     fournisseurId &&
     dateCommande &&
     lignes.every((l) => l.produitId && parseFloat(l.quantite) > 0 && parseFloat(l.prixUnitaire) >= 0);
@@ -177,6 +204,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
 
     try {
       await createCommandeMutation.mutateAsync({
+        listeBesoinsId: selectedBesoinId,
         fournisseurId,
         dateCommande,
         lignes: lignes.map((l) => ({
@@ -252,6 +280,42 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
                   <DialogTitle>{t("commandes.add")}</DialogTitle>
                 </DialogHeader>
                 <DialogBody className="flex flex-col gap-4 py-2">
+                  {/* Needs selector — required */}
+                  <Select value={selectedBesoinId} onValueChange={setSelectedBesoinId}>
+                    <SelectTrigger label={t("commandes.fields.besoin")}>
+                      <SelectValue placeholder={t("commandes.fields.besoinPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {besoinsForSelector.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          {t("commandes.fields.aucunBesoin")}
+                        </div>
+                      ) : (
+                        besoinsForSelector.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{b.numero} — {b.titre}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {b._count.lignes} {b._count.lignes === 1 ? "ligne" : "lignes"} · ~{formatNumber(b.montantEstime)} F
+                                {b.depenses.length > 0 && " · Achat direct"}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Linking mode banner */}
+                  {isLinkingMode && (
+                    <div className="flex items-start gap-2 rounded-md bg-accent-blue-muted/50 border border-accent-blue/20 px-3 py-2">
+                      <Info className="h-4 w-4 text-accent-blue mt-0.5 shrink-0" />
+                      <p className="text-xs text-accent-blue">
+                        {t("commandes.linkingMode")}
+                      </p>
+                    </div>
+                  )}
+
                   <Select value={fournisseurId} onValueChange={setFournisseurId}>
                     <SelectTrigger label={t("commandes.fields.fournisseur")}>
                       <SelectValue placeholder={t("commandes.fields.choix")} />
