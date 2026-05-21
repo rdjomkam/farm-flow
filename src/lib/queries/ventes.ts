@@ -653,23 +653,29 @@ export async function deleteVente(
       await tx.facture.delete({ where: { id: vente.facture.id } });
     }
 
-    // 2. Charger les releves VENTE pour connaitre les quantites reellement deduites par bac
-    //    (nombreVendus peut differer de LigneVente.nombrePoissons apres une cloture de livraison)
-    const venteReleves = await tx.releve.findMany({
-      where: { venteId, typeReleve: TypeReleve.VENTE },
-      select: { bacId: true, vagueId: true, nombreVendus: true },
+    // 2. Charger TOUS les releves lies a cette vente pour calculer le total a restaurer par bac.
+    //    - VENTE releves : nombreVendus = poissons vendus (livres)
+    //    - AVARIE releves (venteId set) : nombreMorts = poissons morts en transport
+    //    Total a restaurer = vendus + morts = total commande (= ce qui a ete deduit du bac)
+    const allVenteReleves = await tx.releve.findMany({
+      where: { venteId },
+      select: { bacId: true, vagueId: true, typeReleve: true, nombreVendus: true, nombreMorts: true },
     });
 
-    // Agreger par bac+vague (au cas ou il y aurait plusieurs releves par bac)
+    // Agreger par bac+vague
     const restoreMap = new Map<string, { vagueId: string; toRestore: number }>();
-    for (const r of venteReleves) {
+    for (const r of allVenteReleves) {
       if (!r.bacId) continue;
       const key = `${r.bacId}__${r.vagueId}`;
+      // VENTE releves contribute nombreVendus, MORTALITE/AVARIE contribute nombreMorts
+      const count = r.typeReleve === "VENTE"
+        ? (r.nombreVendus ?? 0)
+        : (r.nombreMorts ?? 0);
       const existing = restoreMap.get(key);
       if (existing) {
-        existing.toRestore += r.nombreVendus ?? 0;
+        existing.toRestore += count;
       } else {
-        restoreMap.set(key, { vagueId: r.vagueId ?? "", toRestore: r.nombreVendus ?? 0 });
+        restoreMap.set(key, { vagueId: r.vagueId ?? "", toRestore: count });
       }
     }
 
@@ -695,10 +701,9 @@ export async function deleteVente(
       });
     }
 
-    // 4. Supprimer TOUS les releves lies a cette vente (VENTE releves via venteId,
-    //    and AVARIE releves whose notes reference this sale numero)
+    // 4. Supprimer TOUS les releves lies a cette vente (VENTE + AVARIE via venteId)
     await tx.releve.deleteMany({ where: { venteId } });
-    // Also delete AVARIE releves created by cloture (they don't have venteId but reference the vente in notes)
+    // Fallback: delete AVARIE releves from older code that didn't set venteId (matched by notes)
     await tx.releve.deleteMany({
       where: {
         siteId,
@@ -814,8 +819,13 @@ export async function cloturerVente(
       : new Date();
 
     // Si pertes > 0 : la quantite commandee (deja deduite a la commande) est superieure
-    // a la quantite livree. Il faut RESTITUER la difference aux bacs (les poissons non livres
-    // reviennent dans les bacs) et creer un releve AVARIE pour la tracabilite.
+    // a la quantite livree. Les poissons manquants sont des pertes reelles (morts en transport,
+    // perte de poids, etc.). Le stock bac NE CHANGE PAS car ces poissons ont deja ete deduits
+    // a la commande — ils ne reviennent pas. On met a jour le releve VENTE pour ne refleter
+    // que les poissons vendus, et on cree un releve AVARIE qui sera compte par
+    // computeVivantsByBac pour la mortalite.
+    //
+    // Bilan : VENTE releve (livres) + AVARIE releve (morts) = total commande (deja deduit)
     if (nombreMorts > 0 && vente.lignes.length > 0) {
       const totalLossKg = vente.poidsTotalKg - dto.poidsLivreKg;
       let mortsRestants = nombreMorts;
@@ -836,34 +846,16 @@ export async function cloturerVente(
 
         if (nombreMortsLigne <= 0) continue;
 
-        // RESTITUER les poissons non livres au bac (ils avaient ete deduits a la commande)
-        const freshBac = await tx.bac.findUnique({
-          where: { id: ligne.bacId },
-          select: { nombrePoissons: true },
-        });
-        const freshCount = freshBac?.nombrePoissons ?? 0;
-        const restoredCount = freshCount + nombreMortsLigne;
+        // PAS de restitution au bac : les poissons sont morts/perdus, ils ne reviennent pas.
+        // Le stock bac a deja ete decremente a la commande — on ne touche pas aux compteurs.
 
-        // ADR-043 : dual-write — restitution
-        await tx.bac.update({
-          where: { id: ligne.bacId },
-          data: { nombrePoissons: restoredCount },
-        });
-        await tx.assignationBac.updateMany({
-          where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
-          data: { nombreActuel: restoredCount },
-        });
-
-        // Mettre a jour le releve VENTE pour refleter la quantite reellement livree
-        // (on ne peut pas cibler un releve unique par ligne, donc on met a jour
-        // tous les releves VENTE de cette vente pour ce bac)
+        // Mettre a jour le releve VENTE pour refleter uniquement la quantite livree/vendue
         const venteReleves = await tx.releve.findMany({
           where: { venteId, bacId: ligne.bacId, typeReleve: TypeReleve.VENTE },
           select: { id: true, nombreVendus: true },
         });
         for (const vr of venteReleves) {
           const oldVendus = vr.nombreVendus ?? 0;
-          // Reduire proportionnellement (meme ratio que la ligne)
           const newVendus = Math.max(0, oldVendus - nombreMortsLigne);
           await tx.releve.update({
             where: { id: vr.id },
@@ -871,8 +863,9 @@ export async function cloturerVente(
           });
         }
 
-        // Releve MORTALITE/AVARIE pour la tracabilite (ne decremente PAS le stock,
-        // car ces poissons sont deja exclus via la reduction du releve VENTE ci-dessus)
+        // Releve MORTALITE/AVARIE : perte reelle qui impacte le stock.
+        // computeVivantsByBac soustrait nombreMorts des MORTALITE releves.
+        // Combiné avec le VENTE releve mis a jour : VENTE(livres) + AVARIE(morts) = commande totale.
         await tx.releve.create({
           data: {
             date: dateLivraison,
@@ -883,7 +876,8 @@ export async function cloturerVente(
             userId,
             nombreMorts: nombreMortsLigne,
             causeMortalite: CauseMortalite.AVARIE,
-            notes: `Perte transport vente ${vente.numero} — ${nombreMortsLigne} poissons (tracabilite uniquement, stock deja ajuste)`,
+            venteId,
+            notes: `Perte transport vente ${vente.numero} — ${nombreMortsLigne} poissons`,
           },
         });
 
