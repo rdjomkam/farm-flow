@@ -1005,11 +1005,12 @@ export async function getCoutProductionVague(
       },
     }),
 
-    // 2f. Ventes de la vague
+    // 2f. Ventes de la vague (quantitePoissons pour biomasse produite)
     prisma.vente.findMany({
       where: { siteId, vagueId },
       select: {
         createdAt: true,
+        quantitePoissons: true,
         poidsTotalKg: true,
         prixUnitaireKg: true,
         montantTotal: true,
@@ -1043,11 +1044,22 @@ export async function getCoutProductionVague(
 
   // -------------------------------------------------------------------------
   // 2bis. Calcul biomasse estimée (pour coutParKg)
-  // Même logique per-bac que getIndicateursVague pour cohérence
+  //
+  // Utilise excludeVentes=true pour ignorer les releves de type VENTE
+  // (qui peuvent etre incoherents avec les ventes reelles).
+  // A la place, on soustrait les poissons reellement vendus (ventes.quantitePoissons)
+  // pour obtenir la biomasse restante en ferme.
+  //
+  // biomasseProduite = biomasseKg (restante) + poidsTotalVendu (reel)
   // -------------------------------------------------------------------------
 
   const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
-  const vivantsByBac = computeVivantsByBac(bacsVague, relevesVague, vague.nombreInitial);
+  // excludeVentes=true : on ignore les releves VENTE pour eviter les incoherences
+  // Les ventes reelles seront soustraites plus bas via quantitePoissons
+  const vivantsByBac = computeVivantsByBac(bacsVague, relevesVague, vague.nombreInitial, { excludeVentes: true });
+
+  // Nombre total de poissons reellement vendus (source de verite : Vente)
+  const totalPoissonsVendus = ventes.reduce((acc, v) => acc + v.quantitePoissons, 0);
 
   let biomasseKg: number | null = null;
 
@@ -1059,25 +1071,35 @@ export async function getCoutProductionVague(
       }
     }
 
-    let totalBiomasse = 0;
+    // Biomasse AVANT soustraction des ventes (vivants incluent les poissons vendus)
+    let biomasseAvantVentes = 0;
+    let totalVivantsAvantVentes = 0;
     let hasBiomasse = false;
     for (const bac of bacsVague) {
       const bio = biometriesParBac.get(bac.id);
       const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+      totalVivantsAvantVentes += vivantsBac;
       if (bio && vivantsBac > 0) {
-        totalBiomasse += (bio.poidsMoyen * vivantsBac) / 1000;
+        biomasseAvantVentes += (bio.poidsMoyen * vivantsBac) / 1000;
         hasBiomasse = true;
       }
     }
-    biomasseKg = hasBiomasse ? Math.round(totalBiomasse * 100) / 100 : null;
+
+    if (hasBiomasse && totalVivantsAvantVentes > 0) {
+      // Soustraire les poissons vendus proportionnellement
+      const vivantsRestants = Math.max(0, totalVivantsAvantVentes - totalPoissonsVendus);
+      const ratioRestant = vivantsRestants / totalVivantsAvantVentes;
+      biomasseKg = Math.round(biomasseAvantVentes * ratioRestant * 100) / 100;
+    }
   } else {
-    const nombreVivants = computeNombreVivantsVague(bacsVague, relevesVague, vague.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsVague, relevesVague, vague.nombreInitial, { excludeVentes: true });
     const biometrieReleves = relevesVague
       .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
     if (biometrieReleves.length > 0) {
       const last = biometrieReleves[biometrieReleves.length - 1];
-      biomasseKg = nombreVivants > 0
-        ? Math.round(((last.poidsMoyen as number) * nombreVivants) / 1000 * 100) / 100
+      const vivantsRestants = Math.max(0, nombreVivants - totalPoissonsVendus);
+      biomasseKg = vivantsRestants > 0
+        ? Math.round(((last.poidsMoyen as number) * vivantsRestants) / 1000 * 100) / 100
         : null;
     }
   }
