@@ -84,6 +84,23 @@ export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardPro
               </p>
             </div>
           )}
+          {(vague.totalVenduKg ?? 0) > 0 && (vague.biomasse ?? 0) > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>{td("ventesLabel")}</span>
+                <span>{formatNum(vague.totalVenduKg ?? 0, 1)} / {formatNum(vague.biomasse ?? 0, 1)} kg</span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent-blue transition-all"
+                  style={{ width: `${Math.min(100, Math.round(((vague.totalVenduKg ?? 0) / (vague.biomasse ?? 1)) * 100))}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 text-right">
+                {Math.round(((vague.totalVenduKg ?? 0) / (vague.biomasse ?? 1)) * 100)}%
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>
