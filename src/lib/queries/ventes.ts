@@ -56,6 +56,20 @@ const VENTE_DETAIL_INCLUDE = {
       bac: { select: { id: true, nom: true } },
     },
   },
+  releves: {
+    select: {
+      id: true,
+      typeReleve: true,
+      date: true,
+      nombreVendus: true,
+      nombreMorts: true,
+      causeMortalite: true,
+      notes: true,
+      bac: { select: { id: true, nom: true } },
+      vague: { select: { id: true, code: true } },
+    },
+    orderBy: { date: "asc" as const },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------

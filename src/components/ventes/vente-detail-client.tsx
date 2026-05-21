@@ -80,6 +80,18 @@ interface LigneVenteDisplay {
   bac?: { id: string; nom: string } | null;
 }
 
+interface ReleveVenteDisplay {
+  id: string;
+  typeReleve: string;
+  date: string;
+  nombreVendus: number | null;
+  nombreMorts: number | null;
+  causeMortalite: string | null;
+  notes: string | null;
+  bac?: { id: string; nom: string } | null;
+  vague?: { id: string; code: string } | null;
+}
+
 interface VenteData {
   id: string;
   numero: string;
@@ -114,6 +126,7 @@ interface VenteData {
     paiements: { id: string; montant: number; mode: string; date: string }[];
   } | null;
   lignes?: LigneVenteDisplay[];
+  releves?: ReleveVenteDisplay[];
 }
 
 interface ClientOption {
@@ -728,6 +741,61 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Releves linked to this vente (VENTE + AVARIE) */}
+      {(vente.releves ?? []).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Fish className="h-4 w-4" />
+              {t("ventes.detail.relevesTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 flex flex-col gap-2">
+            {(vente.releves ?? []).map((r) => {
+              const isAvarie = r.typeReleve === "MORTALITE" && r.causeMortalite === "AVARIE";
+              const isVente = r.typeReleve === "VENTE";
+              return (
+                <div
+                  key={r.id}
+                  className={`rounded-lg p-3 flex items-center justify-between text-sm ${
+                    isAvarie ? "bg-orange-50 dark:bg-orange-950/20" : "bg-muted/30"
+                  }`}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      {isVente && (
+                        <Badge variant="terminee" className="text-[10px] px-1.5 py-0">
+                          {t("ventes.detail.releveVente")}
+                        </Badge>
+                      )}
+                      {isAvarie && (
+                        <Badge variant="annulee" className="text-[10px] px-1.5 py-0">
+                          {t("ventes.detail.releveAvarie")}
+                        </Badge>
+                      )}
+                      <span className="text-muted-foreground text-xs">
+                        {r.bac?.nom ?? "-"} • {r.vague?.code ?? "-"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(r.date).toLocaleDateString(locale)}
+                    </span>
+                  </div>
+                  <div className="text-right font-medium">
+                    {isVente && r.nombreVendus != null && (
+                      <span>{r.nombreVendus} {t("ventes.detail.poissonsVendus")}</span>
+                    )}
+                    {isAvarie && r.nombreMorts != null && (
+                      <span className="text-orange-600">-{r.nombreMorts} {t("ventes.detail.poissonsPerdus")}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}
