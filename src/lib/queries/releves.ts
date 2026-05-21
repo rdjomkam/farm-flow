@@ -160,6 +160,9 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
     // Date : saisie si fournie et valide, sinon maintenant
     const releveDate = data.date ? new Date(data.date) : new Date();
 
+    // Auto-resolve uniteProductionId from context (vague or lot d'alevins)
+    let resolvedUniteProductionId: string | null = null;
+
     if (isLotAlevinsMode) {
       // Verifier que le lot d'alevins existe et appartient au site
       const lotAlevins = await tx.lotAlevins.findFirst({
@@ -176,6 +179,13 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
           throw new Error("Bac introuvable");
         }
       }
+
+      // Reproduction context: find the site's REPRODUCTION unit
+      const reproUnit = await tx.uniteProduction.findFirst({
+        where: { siteId, type: "REPRODUCTION" },
+        select: { id: true },
+      });
+      resolvedUniteProductionId = reproUnit?.id ?? null;
     } else {
       // Mode vague classique : validation bac + vague obligatoires
       const bac = await tx.bac.findFirst({
@@ -214,6 +224,9 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
           `La date du releve ne peut pas etre anterieure au debut de la vague (${vague.dateDebut.toISOString().split("T")[0]}).`
         );
       }
+
+      // Vague context: use the vague's uniteProductionId
+      resolvedUniteProductionId = (vague as { uniteProductionId?: string | null }).uniteProductionId ?? null;
     }
 
     // Construire les donnees selon le type
@@ -228,6 +241,8 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
       notes: data.notes ?? null,
       // R1-S4 — lien lot d'alevins optionnel (ADR-044 §5.2, XOR avec vagueId)
       ...(data.lotAlevinsId && { lotAlevinsId: data.lotAlevinsId }),
+      // Auto-resolved from context — never user-supplied
+      ...(resolvedUniteProductionId && { uniteProductionId: resolvedUniteProductionId }),
       // Champs biometrie
       ...("poidsMoyen" in data && { poidsMoyen: data.poidsMoyen }),
       ...("tailleMoyenne" in data && { tailleMoyenne: data.tailleMoyenne }),

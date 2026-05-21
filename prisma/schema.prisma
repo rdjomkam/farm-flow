@@ -1335,6 +1335,10 @@ model Releve {
   lotAlevinsId String?
   lotAlevins   LotAlevins? @relation(fields: [lotAlevinsId], references: [id])
 
+  // Unité de production auto-résolue depuis le contexte (vague ou lot d'alevins)
+  uniteProductionId String?
+  uniteProduction   UniteProduction? @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1346,6 +1350,7 @@ model Releve {
   @@index([lotAlevinsId])
   @@index([userId])
   @@index([venteId])
+  @@index([uniteProductionId])
 }
 
 // ──────────────────────────────────────────
@@ -3664,6 +3669,7 @@ model UniteProduction {
   transfertsSortants  TransfertInterne[]  @relation("TransfertSource")
   transfertsEntrants  TransfertInterne[]  @relation("TransfertDestination")
   besoins             ListeBesoins[]
+  releves             Releve[]
 
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt

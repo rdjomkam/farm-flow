@@ -697,6 +697,9 @@ export interface Releve {
   /** ID du lot d'alevins lie (nullable — rempli si releve de suivi alevinage, R1-S4) */
   lotAlevinsId?: string | null;
 
+  /** ID de l'unite de production auto-resolue depuis le contexte (vague ou lot d'alevins) */
+  uniteProductionId: string | null;
+
   /** Bac associe (present si la query inclut le bac) */
   bac?: { id: string; nom: string } | null;
 }
