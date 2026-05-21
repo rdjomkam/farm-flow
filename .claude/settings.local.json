@@ -44,7 +44,9 @@
       "Bash(tmux list-windows:*)",
       "Bash(do echo '=== Window: $window ===' tmux capture-pane -t farm-flow-team:$window -p)",
       "Bash(env:*)",
-      "Bash(1 echo \"\" echo \"Agent statuses:\" grep -n \"FAIT\\\\|EN COURS\" /Users/ronald/project/dkfarm/farm-flow/docs/TASKS.md)"
+      "Bash(1 echo \"\" echo \"Agent statuses:\" grep -n \"FAIT\\\\|EN COURS\" /Users/ronald/project/dkfarm/farm-flow/docs/TASKS.md)",
+      "Bash(/opt/homebrew/opt/postgresql@16/bin/psql \"postgres://postgres:n6t2CiPF2SaINP17iqhbEfeFORWG5dkr1a1cLTWSfARtHF6igReL6MpRDnX2vRCc@72.61.187.32:5432/postgres?sslmode=require\" -c \"SELECT id, code, \\\\\"nombreInitial\\\\\", \\\\\"poidsMoyenInitial\\\\\", statut, \\\\\"poidsObjectifKg\\\\\" FROM \\\\\"Vague\\\\\" WHERE code ILIKE '%dibac%';\")",
+      "Bash(find /opt/homebrew -name \"psql\" -type f 2>/dev/null | head -3)"
     ]
   }
 }
