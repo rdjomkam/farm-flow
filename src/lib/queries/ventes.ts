@@ -617,11 +617,12 @@ export async function updateVente(
  * Supprime une vente et restaure le stock de poissons (transaction atomique).
  *
  * Flux :
- * 1. Charger la vente avec ses lignes, facture, paiements
+ * 1. Charger la vente avec ses lignes, facture, paiements, releves VENTE
  * 2. Supprimer les paiements lies a la facture
  * 3. Supprimer la facture
- * 4. Supprimer les releves VENTE lies a cette vente
- * 5. Restaurer le stock par bac (ADR-043 dual-write)
+ * 4. Restaurer le stock par bac en utilisant les VENTE releves (nombreVendus)
+ *    qui refletent la quantite reellement deduite (= livree si cloturee, sinon commandee)
+ * 5. Supprimer TOUS les releves lies a cette vente (VENTE + AVARIE)
  * 6. Supprimer les LigneVente
  * 7. Supprimer la vente
  * 8. Audit log
@@ -652,40 +653,68 @@ export async function deleteVente(
       await tx.facture.delete({ where: { id: vente.facture.id } });
     }
 
-    // 2. Supprimer les releves VENTE + MORTALITE/AVARIE lies a cette vente
-    await tx.releve.deleteMany({ where: { venteId } });
+    // 2. Charger les releves VENTE pour connaitre les quantites reellement deduites par bac
+    //    (nombreVendus peut differer de LigneVente.nombrePoissons apres une cloture de livraison)
+    const venteReleves = await tx.releve.findMany({
+      where: { venteId, typeReleve: TypeReleve.VENTE },
+      select: { bacId: true, vagueId: true, nombreVendus: true },
+    });
 
-    // 3. Restaurer le stock par bac (inverse de applyLignesStock)
-    for (const ligne of vente.lignes) {
+    // Agreger par bac+vague (au cas ou il y aurait plusieurs releves par bac)
+    const restoreMap = new Map<string, { vagueId: string; toRestore: number }>();
+    for (const r of venteReleves) {
+      if (!r.bacId) continue;
+      const key = `${r.bacId}__${r.vagueId}`;
+      const existing = restoreMap.get(key);
+      if (existing) {
+        existing.toRestore += r.nombreVendus ?? 0;
+      } else {
+        restoreMap.set(key, { vagueId: r.vagueId ?? "", toRestore: r.nombreVendus ?? 0 });
+      }
+    }
+
+    // 3. Restaurer le stock par bac (ADR-043 dual-write)
+    for (const [key, { vagueId, toRestore }] of restoreMap) {
+      if (toRestore <= 0) continue;
+      const bacId = key.split("__")[0];
+
       const currentBac = await tx.bac.findUnique({
-        where: { id: ligne.bacId },
+        where: { id: bacId },
         select: { nombrePoissons: true },
       });
       const currentCount = currentBac?.nombrePoissons ?? 0;
-      const restoredCount = currentCount + ligne.nombrePoissons;
+      const restoredCount = currentCount + toRestore;
 
-      // ADR-043 : dual-write Bac + AssignationBac
       await tx.bac.update({
-        where: { id: ligne.bacId },
+        where: { id: bacId },
         data: { nombrePoissons: restoredCount },
       });
       await tx.assignationBac.updateMany({
-        where: {
-          bacId: ligne.bacId,
-          vagueId: ligne.vagueId,
-          dateFin: null,
-        },
+        where: { bacId, vagueId, dateFin: null },
         data: { nombreActuel: restoredCount },
       });
     }
 
-    // 4. Supprimer les LigneVente
+    // 4. Supprimer TOUS les releves lies a cette vente (VENTE releves via venteId,
+    //    and AVARIE releves whose notes reference this sale numero)
+    await tx.releve.deleteMany({ where: { venteId } });
+    // Also delete AVARIE releves created by cloture (they don't have venteId but reference the vente in notes)
+    await tx.releve.deleteMany({
+      where: {
+        siteId,
+        typeReleve: TypeReleve.MORTALITE,
+        causeMortalite: CauseMortalite.AVARIE,
+        notes: { contains: vente.numero },
+      },
+    });
+
+    // 5. Supprimer les LigneVente
     await tx.ligneVente.deleteMany({ where: { venteId } });
 
-    // 5. Supprimer la vente
+    // 6. Supprimer la vente
     await tx.vente.delete({ where: { id: venteId } });
 
-    // 6. Audit log
+    // 7. Audit log
     const vagueCodes = [...new Set(vente.lignes.map((l) => l.vagueId))];
     await tx.siteAuditLog.create({
       data: {
@@ -700,6 +729,9 @@ export async function deleteVente(
           quantitePoissons: vente.quantitePoissons,
           montantTotal: vente.montantTotal,
           nbLignes: vente.lignes.length,
+          restoredFish: Object.fromEntries(
+            [...restoreMap.entries()].map(([k, v]) => [k.split("__")[0], v.toRestore])
+          ),
         },
       },
     });
