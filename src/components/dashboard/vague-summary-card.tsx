@@ -67,40 +67,48 @@ export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardPro
               {t("indicateurs.poidsMoyen")} : {formatNum(vague.poidsMoyen, 1, "g")}
             </p>
           )}
-          {vague.poidsObjectifKg != null && vague.poidsObjectifKg > 0 && (
-            <div className="mt-2">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>{td("objectifLabel")}</span>
-                <span>{formatNum(vague.biomasse ?? 0, 1)} / {formatNum(vague.poidsObjectifKg, 0)} kg</span>
+          {vague.poidsObjectifKg != null && vague.poidsObjectifKg > 0 && (() => {
+            const totalProduction = (vague.biomasse ?? 0) + (vague.totalVenduKg ?? 0);
+            const pct = Math.round((totalProduction / vague.poidsObjectifKg) * 100);
+            return (
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>{td("objectifLabel")}</span>
+                  <span>{formatNum(totalProduction, 1)} / {formatNum(vague.poidsObjectifKg, 0)} kg</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-accent-green transition-all"
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 text-right">
+                  {pct}%
+                </p>
               </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-accent-green transition-all"
-                  style={{ width: `${Math.min(100, Math.round(((vague.biomasse ?? 0) / vague.poidsObjectifKg) * 100))}%` }}
-                />
+            );
+          })()}
+          {(vague.totalVenduKg ?? 0) > 0 && (() => {
+            const totalProduction = (vague.biomasse ?? 0) + (vague.totalVenduKg ?? 0);
+            const pct = Math.round(((vague.totalVenduKg ?? 0) / (totalProduction || 1)) * 100);
+            return (
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>{td("ventesLabel")}</span>
+                  <span>{formatNum(vague.totalVenduKg ?? 0, 1)} / {formatNum(totalProduction, 1)} kg</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-accent-blue transition-all"
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 text-right">
+                  {pct}%
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 text-right">
-                {Math.round(((vague.biomasse ?? 0) / vague.poidsObjectifKg) * 100)}%
-              </p>
-            </div>
-          )}
-          {(vague.totalVenduKg ?? 0) > 0 && (vague.biomasse ?? 0) > 0 && (
-            <div className="mt-2">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>{td("ventesLabel")}</span>
-                <span>{formatNum(vague.totalVenduKg ?? 0, 1)} / {formatNum(vague.biomasse ?? 0, 1)} kg</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-accent-blue transition-all"
-                  style={{ width: `${Math.min(100, Math.round(((vague.totalVenduKg ?? 0) / (vague.biomasse ?? 1)) * 100))}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 text-right">
-                {Math.round(((vague.totalVenduKg ?? 0) / (vague.biomasse ?? 1)) * 100)}%
-              </p>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
     </Link>

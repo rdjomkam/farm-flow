@@ -224,6 +224,10 @@
     "poissonsActuels": "{count} actuels ({initial} au départ)"
   },
   "poidsChartSection": "le graphique d'évolution du poids",
+  "progress": {
+    "objectifLabel": "Production vs objectif",
+    "ventesLabel": "Vendu / Production totale"
+  },
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",
     "hide": "Masquer",

@@ -21,8 +21,8 @@
     "createWave": "Créer une vague",
     "biomasse": "{value} kg de biomasse",
     "objectif": "Objectif : {vendu} / {objectif} kg ({pct}%)",
-    "objectifLabel": "Objectif biomasse",
-    "ventesLabel": "Ventes / Production",
+    "objectifLabel": "Production vs objectif",
+    "ventesLabel": "Vendu / Production totale",
     "sansObjectif": "Aucun objectif défini"
   },
   "benchmarks": {

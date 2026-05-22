@@ -224,6 +224,10 @@
     "poissonsActuels": "{count} current ({initial} at start)"
   },
   "poidsChartSection": "the weight evolution chart",
+  "progress": {
+    "objectifLabel": "Production vs objective",
+    "ventesLabel": "Sold / Total production"
+  },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",
     "hide": "Hide",

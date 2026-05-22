@@ -23,8 +23,9 @@ import { getCalibrages } from "@/lib/queries/calibrages";
 import { getCoutProductionVague } from "@/lib/queries/finances";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { formatNum } from "@/lib/format";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
-import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
+import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Bac, BacResponse, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
@@ -51,7 +52,7 @@ export default async function VagueDetailPage({
   const locale = await getLocale();
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction, ventesAggregate] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -91,9 +92,20 @@ export default async function VagueDetailPage({
       select: { id: true, code: true, nom: true, type: true },
       orderBy: { nom: "asc" },
     }),
+    // Total vendu (kg) pour les barres de progression
+    prisma.vente.aggregate({
+      where: {
+        vagueId: id,
+        siteId: session.activeSiteId,
+        statut: { in: [StatutVente.LIVREE, StatutVente.CLOTUREE] },
+      },
+      _sum: { poidsTotalKg: true },
+    }),
   ]);
 
   if (!vague) notFound();
+
+  const totalVenduKg = ventesAggregate._sum.poidsTotalKg ?? 0;
 
   // Fetch poidsObjectif from ConfigElevage if linked to this vague
   const configElevage = vague.configElevageId
@@ -359,6 +371,58 @@ export default async function VagueDetailPage({
 
         {/* Indicateurs */}
         <IndicateursCards indicateurs={indicateurs ?? defaultIndicateurs} />
+
+        {/* Progress bars — production vs objectif + ventes */}
+        {(() => {
+          const biomasse = (indicateurs ?? defaultIndicateurs).biomasse ?? 0;
+          const totalProduction = biomasse + totalVenduKg;
+          const poidsObj = vague.poidsObjectifKg;
+          const showObjectif = poidsObj != null && poidsObj > 0;
+          const showVentes = totalVenduKg > 0;
+
+          if (!showObjectif && !showVentes) return null;
+
+          return (
+            <div className="flex flex-col gap-3">
+              {showObjectif && (() => {
+                const pct = Math.round((totalProduction / poidsObj!) * 100);
+                return (
+                  <div>
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>{t("progress.objectifLabel")}</span>
+                      <span>{formatNum(totalProduction, 1)} / {formatNum(poidsObj!, 0)} kg</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-accent-green transition-all"
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 text-right">{pct}%</p>
+                  </div>
+                );
+              })()}
+              {showVentes && (() => {
+                const pct = Math.round((totalVenduKg / (totalProduction || 1)) * 100);
+                return (
+                  <div>
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>{t("progress.ventesLabel")}</span>
+                      <span>{formatNum(totalVenduKg, 1)} / {formatNum(totalProduction, 1)} kg</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-accent-blue transition-all"
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 text-right">{pct}%</p>
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
         {/* Chart */}
         <PoidsChart
