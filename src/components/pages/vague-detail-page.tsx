@@ -23,6 +23,8 @@ import { getCalibrages } from "@/lib/queries/calibrages";
 import { getCoutProductionVague } from "@/lib/queries/finances";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { computeBacPerformance } from "@/lib/bac-performance";
+import { BacPerformanceSection } from "@/components/vagues/bac-performance-section";
 import { formatNum } from "@/lib/format";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
 import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission } from "@/types";
@@ -136,12 +138,37 @@ export default async function VagueDetailPage({
 
   // Build chart data from biometrie releves — aggregate by date (weighted avg across bacs)
   // Note: vivantsByBac needs mortalite + comptage releves — load them separately (ADR-038 A-D2)
-  const relevesForVivants = await prisma.releve.findMany({
+  // Single query for both vivants calculation and bac performance (superset of fields)
+  const relevesForPerf = await prisma.releve.findMany({
     where: { vagueId: id, siteId: session.activeSiteId },
     orderBy: { date: "asc" },
-    select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreCompte: true, bacId: true },
+    select: {
+      bacId: true,
+      typeReleve: true,
+      date: true,
+      poidsMoyen: true,
+      nombreMorts: true,
+      nombreCompte: true,
+      nombreVendus: true,
+      quantiteAliment: true,
+      consommations: {
+        select: {
+          quantite: true,
+          produit: { select: { prixUnitaire: true } },
+        },
+      },
+    },
   });
-  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForVivants, vague.nombreInitial);
+  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForPerf, vague.nombreInitial);
+
+  // Compute per-bac performance data
+  const bacPerfData = computeBacPerformance({
+    bacs: vague.bacs.map((b) => ({ id: b.id, nom: b.nom, nombreInitial: b.nombreInitial })),
+    releves: relevesForPerf,
+    nombreInitialVague: vague.nombreInitial,
+    dateDebutVague: new Date(vague.dateDebut),
+    poidsMoyenInitial: vague.poidsMoyenInitial,
+  });
   const biometries = biometriesData.filter(
     (r) => r.poidsMoyen !== null
   );
@@ -423,6 +450,9 @@ export default async function VagueDetailPage({
             </div>
           );
         })()}
+
+        {/* Performance par Bac */}
+        <BacPerformanceSection data={bacPerfData} vagueId={vague.id} />
 
         {/* Chart */}
         <PoidsChart

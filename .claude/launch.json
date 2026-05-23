@@ -4,7 +4,7 @@
     {
       "name": "landing-preview",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "export NVM_DIR=$HOME/.nvm && . $NVM_DIR/nvm.sh && npx -y serve public -l 4201 --no-clipboard"],
+      "runtimeArgs": ["-c", "export PATH=/Users/ronald/.nvm/versions/node/v20.19.4/bin:$PATH && npx -y http-server public -p 4201 --cors -c-1"],
       "port": 4201
     },
     {
@@ -12,6 +12,12 @@
       "runtimeExecutable": "/bin/bash",
       "runtimeArgs": ["-c", "export PATH=/Users/ronald/.nvm/versions/node/v20.19.4/bin:$PATH && npm run dev"],
       "port": 4200
+    },
+    {
+      "name": "design-docs",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/ronald/.nvm/versions/node/v20.19.4/bin:$PATH && npx -y http-server docs/design -p 9876 --cors -c-1"],
+      "port": 9876
     }
   ]
 }
