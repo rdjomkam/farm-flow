@@ -394,5 +394,8 @@
     "produitLabel": "Product",
     "icaFinal": "Final FCR",
     "icaVague": "Batch FCR"
+  },
+  "recommendation": {
+    "title": "Recommendation"
   }
 }

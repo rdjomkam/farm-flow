@@ -1,4 +1,13 @@
 {
+  "metadata": {
+    "remises": "Discounts",
+    "commissions": "Commissions",
+    "sites": "Sites",
+    "dashboard": "Dashboard",
+    "abonnements": "Subscriptions",
+    "modules": "Modules",
+    "plans": "Plans"
+  },
   "modulesEditor": {
     "updateError": "Error updating modules."
   },

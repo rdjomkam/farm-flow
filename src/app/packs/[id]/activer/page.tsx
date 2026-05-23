@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { PackActiverClient } from "@/components/packs/pack-activer-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -25,9 +26,11 @@ export default async function PackActiverPage({ params }: PageProps) {
     redirect(`/packs/${id}`);
   }
 
+  const t = await getTranslations("packs");
+
   return (
     <>
-      <Header title={`Activer — ${pack.nom}`} />
+      <Header title={t("activer.pageTitle", { name: pack.nom })} />
       <div className="p-4">
         <PackActiverClient
           pack={JSON.parse(JSON.stringify(pack))}

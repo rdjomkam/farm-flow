@@ -110,7 +110,13 @@
     "donneesInsuffisantes": "Donnees insuffisantes pour calculer la recommandation d'alimentation.",
     "detailParBac": "Detail par bac ({count} bacs)",
     "stockLabel": "Stock :",
-    "daysShort": "{count} j"
+    "daysShort": "{count} j",
+    "mealsPerDayValue": "{count} repas / jour",
+    "gramsPerMeal": "{count} g / repas",
+    "projected": "projeté",
+    "bacFishRate": "{fish} poissons · taux {rate}%/j",
+    "badgeAuto": "Auto",
+    "badgeManual": "Manuelle"
   },
   "placeholders": {
     "retourRegles": "Retour aux regles",

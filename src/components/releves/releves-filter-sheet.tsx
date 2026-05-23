@@ -538,7 +538,7 @@ export function RelevesFilterSheet({
                   type="text"
                   value={localDescriptionSearch}
                   onChange={(e) => setLocalDescriptionSearch(e.target.value)}
-                  placeholder='Ex : "stress", "coloration"...'
+                  placeholder={t("global.filtres.rechercheDescriptionPlaceholder")}
                   className="h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
