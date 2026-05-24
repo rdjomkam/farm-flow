@@ -349,7 +349,7 @@ function PeriodCard({
     ? "border-dashed border-accent-blue/50 bg-accent-blue/5"
     : snapshot.hasCalibrage
       ? "border-dashed border-accent-amber/50 bg-accent-amber/5"
-      : "";
+      : "border-border/50";
 
   const badgeClass = snapshot.enCours
     ? "bg-accent-blue-muted text-accent-blue"
