@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe — Performance par Bac</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #0f172a; padding: 32px; }
+
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  h2 { font-size: 18px; margin-bottom: 16px; color: #334155; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .subtitle { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+
+  .section { margin-bottom: 64px; padding-bottom: 48px; border-bottom: 2px dashed #cbd5e1; }
+  .annotation { font-size: 11px; color: #dc2626; font-style: italic; margin-top: 4px; }
+  .label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ===== MOBILE FRAME ===== */
+  .mobile-frame {
+    width: 360px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 auto 24px;
+    box-shadow: 0 4px 24px rgb(0 0 0 / 0.08);
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, #0d9488, #0f766e);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .page-header .back { font-size: 18px; }
+
+  .page-content { padding: 12px; }
+
+  /* Existing sections (collapsed representation) */
+  .existing-section {
+    background: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #64748b;
+    text-align: center;
+  }
+
+  /* NEW SECTION */
+  .perf-section { margin-bottom: 12px; }
+  .perf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .perf-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .perf-title .icon {
+    width: 18px; height: 18px;
+    background: #dbeafe;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+
+  /* Toggle tabs */
+  .toggle-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 6px;
+    padding: 2px;
+    font-size: 11px;
+  }
+  .toggle-tab {
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #64748b;
+  }
+  .toggle-tab.active {
+    background: white;
+    color: #0f172a;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+
+  /* Bac Card */
+  .bac-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .bac-card:hover {
+    box-shadow: 0 8px 16px -4px rgb(13 148 136 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  }
+
+  .bac-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .bac-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .bac-rank {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .rank-1 { background: #dcfce7; color: #16a34a; }
+  .rank-2 { background: #dbeafe; color: #2563eb; }
+  .rank-3 { background: #fef3c7; color: #d97706; }
+  .rank-4 { background: #fee2e2; color: #dc2626; }
+
+  .bac-card-body {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Sparkline placeholder */
+  .sparkline {
+    width: 64px;
+    height: 28px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .sparkline svg { width: 100%; height: 100%; }
+
+  /* Metrics grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .metric {
+    min-width: 0;
+  }
+  .metric-value {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .metric-label {
+    font-size: 9px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Color coding for values */
+  .val-blue { color: #2563eb; }
+  .val-purple { color: #7c3aed; }
+  .val-green { color: #16a34a; }
+  .val-amber { color: #d97706; }
+  .val-cyan { color: #0891b2; }
+  .val-red { color: #dc2626; }
+  .val-teal { color: #0d9488; }
+
+  .bac-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #f1f5f9;
+  }
+  .last-bio {
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .gmq-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .gmq-good { background: #dcfce7; color: #16a34a; }
+  .gmq-ok { background: #f1f5f9; color: #64748b; }
+  .gmq-bad { background: #fee2e2; color: #dc2626; }
+
+  /* ===== DESKTOP FRAME ===== */
+  .desktop-frame {
+    width: 1024px;
+    max-width: 100%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 auto 24px;
+    box-shadow: 0 4px 24px rgb(0 0 0 / 0.08);
+  }
+  .desktop-content { padding: 20px 24px; }
+
+  .desktop-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* ===== ANNOTATED CARD ===== */
+  .annotated-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .annotated-card {
+    width: 320px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .annotation-list {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.8;
+    flex: 1;
+  }
+  .annotation-list li { margin-bottom: 4px; }
+  .ann-num {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background: #dc2626;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 10px;
+    line-height: 18px;
+    margin-right: 4px;
+    font-weight: 700;
+  }
+  .callout {
+    position: absolute;
+    width: 16px; height: 16px;
+    background: #dc2626;
+    color: white;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 32px 24px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+  }
+  .empty-icon {
+    width: 48px; height: 48px;
+    background: #dbeafe;
+    border-radius: 12px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .empty-desc {
+    font-size: 12px;
+    color: #64748b;
+    max-width: 260px;
+    margin: 0 auto 12px;
+    line-height: 1.5;
+  }
+  .empty-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    background: #0d9488;
+    color: white;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  /* Cost view variant */
+  .cost-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    flex: 1;
+  }
+
+  /* Responsive preview */
+  @media (max-width: 1060px) {
+    .desktop-frame { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<h1>Wireframe: Performance par Bac</h1>
+<p class="subtitle">New section for the Vague Detail Page. Position: after Indicateurs + Progress bars, before Weight Chart.</p>
+<!-- ============================================================ -->
+
+
+<!-- ============================================================ -->
+<div class="section">
+<h2>1. Mobile View (360px) — Growth Tab</h2>
+<p class="annotation" style="margin-bottom: 16px;">Primary view. Each bac = one card, stacked. Ranked by FCR (best first). Toggle between Croissance/Couts tabs.</p>
+
+<div class="mobile-frame">
+  <div class="page-header">
+    <span class="back">&larr;</span> 26-01
+  </div>
+  <div class="page-content">
+
+    <!-- Collapsed existing sections -->
+    <div class="existing-section">Indicateurs Cards (taux survie, biomasse, poids moyen, SGR, FCR)</div>
+    <div class="existing-section">Progress bars (objectif + ventes)</div>
+
+    <!-- === NEW SECTION === -->
+    <div class="perf-section">
+      <div class="perf-header">
+        <div class="perf-title">
+          <div class="icon">📊</div>
+          Performance par Bac
+        </div>
+        <div class="toggle-tabs">
+          <div class="toggle-tab active">Croissance</div>
+          <div class="toggle-tab">Couts</div>
+        </div>
+      </div>
+
+      <!-- Bac Card 1 — Best performer -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 03</div>
+          <div class="bac-rank rank-1">#1 Meilleur FCR</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="sparkline">
+            <svg viewBox="0 0 64 28" preserveAspectRatio="none">
+              <polyline points="2,24 10,22 18,19 26,16 34,13 42,10 50,7 58,4" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-purple">312 g</div>
+              <div class="metric-label">Poids moy.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">181 kg</div>
+              <div class="metric-label">Biomasse</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">1.38</div>
+              <div class="metric-label">FCR</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">93.5%</div>
+              <div class="metric-label">Survie</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">580</div>
+              <div class="metric-label">Vivants</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-cyan">78 kg</div>
+              <div class="metric-label">Aliment</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">Biometrie: il y a 3j</span>
+          <span class="gmq-badge gmq-good">+4.8 g/j</span>
+        </div>
+      </div>
+
+      <!-- Bac Card 2 -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 01</div>
+          <div class="bac-rank rank-2">#2</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="sparkline">
+            <svg viewBox="0 0 64 28" preserveAspectRatio="none">
+              <polyline points="2,25 12,22 22,18 32,15 42,12 52,10 60,8" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-purple">287 g</div>
+              <div class="metric-label">Poids moy.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">158 kg</div>
+              <div class="metric-label">Biomasse</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">1.62</div>
+              <div class="metric-label">FCR</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">91.2%</div>
+              <div class="metric-label">Survie</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">550</div>
+              <div class="metric-label">Vivants</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-cyan">82 kg</div>
+              <div class="metric-label">Aliment</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">Biometrie: il y a 5j</span>
+          <span class="gmq-badge gmq-ok">+3.2 g/j</span>
+        </div>
+      </div>
+
+      <!-- Bac Card 3 — Struggling -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 07</div>
+          <div class="bac-rank rank-3">#3</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="sparkline">
+            <svg viewBox="0 0 64 28" preserveAspectRatio="none">
+              <polyline points="2,22 12,21 22,19 32,18 42,17 52,17 60,16" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-purple">206 g</div>
+              <div class="metric-label">Poids moy.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">104 kg</div>
+              <div class="metric-label">Biomasse</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" style="color: #dc2626;">2.31</div>
+              <div class="metric-label">FCR</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">84.0%</div>
+              <div class="metric-label">Survie</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">505</div>
+              <div class="metric-label">Vivants</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-cyan">91 kg</div>
+              <div class="metric-label">Aliment</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">Biometrie: il y a 8j</span>
+          <span class="gmq-badge gmq-bad">+1.1 g/j</span>
+        </div>
+      </div>
+
+      <!-- Bac Card 4 -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 05</div>
+          <div class="bac-rank rank-2">#4</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="sparkline">
+            <svg viewBox="0 0 64 28" preserveAspectRatio="none">
+              <polyline points="2,24 12,21 22,17 32,14 42,11 52,9 60,6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-purple">298 g</div>
+              <div class="metric-label">Poids moy.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">149 kg</div>
+              <div class="metric-label">Biomasse</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">1.71</div>
+              <div class="metric-label">FCR</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">89.6%</div>
+              <div class="metric-label">Survie</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">500</div>
+              <div class="metric-label">Vivants</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-cyan">85 kg</div>
+              <div class="metric-label">Aliment</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">Biometrie: il y a 4j</span>
+          <span class="gmq-badge gmq-ok">+3.9 g/j</span>
+        </div>
+      </div>
+
+    </div>
+    <!-- === END NEW SECTION === -->
+
+    <div class="existing-section">Weight Chart (Courbe de poids + Gompertz)</div>
+    <div class="existing-section">Cout de production card</div>
+    <div class="existing-section">Calibrages, Bacs, Releves...</div>
+
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<div class="section">
+<h2>2. Mobile View (360px) — Costs Tab</h2>
+<p class="annotation" style="margin-bottom: 16px;">Same section, "Couts" tab selected. Shows financial metrics per bac instead of growth metrics.</p>
+
+<div class="mobile-frame">
+  <div class="page-header">
+    <span class="back">&larr;</span> 26-01
+  </div>
+  <div class="page-content">
+
+    <div class="existing-section">Indicateurs + Progress bars</div>
+
+    <div class="perf-section">
+      <div class="perf-header">
+        <div class="perf-title">
+          <div class="icon">📊</div>
+          Performance par Bac
+        </div>
+        <div class="toggle-tabs">
+          <div class="toggle-tab">Croissance</div>
+          <div class="toggle-tab active">Couts</div>
+        </div>
+      </div>
+
+      <!-- Cost Card 1 -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 03</div>
+          <div class="bac-rank rank-1">#1 Cout le + bas</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="cost-metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-cyan" style="font-size: 16px;">620 F/kg</div>
+              <div class="metric-label">Cout / kg produit</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">47 100 F</div>
+              <div class="metric-label">Cout aliment total</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">78.5 kg</div>
+              <div class="metric-label">Aliment consomme</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">76.0 kg</div>
+              <div class="metric-label">Gain biomasse</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">FCR: 1.38 &middot; Biomasse: 181 kg</span>
+          <span class="gmq-badge gmq-good" style="font-size: 10px;">Excellent</span>
+        </div>
+      </div>
+
+      <!-- Cost Card 2 -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 01</div>
+          <div class="bac-rank rank-2">#2</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="cost-metrics-grid">
+            <div class="metric">
+              <div class="metric-value val-cyan" style="font-size: 16px;">780 F/kg</div>
+              <div class="metric-label">Cout / kg produit</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">52 300 F</div>
+              <div class="metric-label">Cout aliment total</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">82 kg</div>
+              <div class="metric-label">Aliment consomme</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-green">67.1 kg</div>
+              <div class="metric-label">Gain biomasse</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">FCR: 1.62 &middot; Biomasse: 158 kg</span>
+          <span class="gmq-badge gmq-ok" style="font-size: 10px;">Bon</span>
+        </div>
+      </div>
+
+      <!-- Cost Card 3 — Poor -->
+      <div class="bac-card">
+        <div class="bac-card-top">
+          <div class="bac-name">Bac 07</div>
+          <div class="bac-rank rank-4">#3 Cout eleve</div>
+        </div>
+        <div class="bac-card-body">
+          <div class="cost-metrics-grid">
+            <div class="metric">
+              <div class="metric-value" style="font-size: 16px; color: #dc2626;">1 410 F/kg</div>
+              <div class="metric-label">Cout / kg produit</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-amber">58 200 F</div>
+              <div class="metric-label">Cout aliment total</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value val-blue">91 kg</div>
+              <div class="metric-label">Aliment consomme</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" style="color: #dc2626;">41.3 kg</div>
+              <div class="metric-label">Gain biomasse</div>
+            </div>
+          </div>
+        </div>
+        <div class="bac-card-footer">
+          <span class="last-bio">FCR: 2.31 &middot; Biomasse: 104 kg</span>
+          <span class="gmq-badge gmq-bad" style="font-size: 10px;">Mauvais</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="existing-section">Weight Chart, Cout production, etc.</div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<div class="section">
+<h2>3. Desktop View (1024px) — Growth Tab</h2>
+<p class="annotation" style="margin-bottom: 16px;">3-column grid. Cards are wider, sparklines bigger. Same data, more breathing room.</p>
+
+<div class="desktop-frame">
+  <div class="page-header" style="padding: 14px 24px; font-size: 16px;">
+    <span class="back">&larr;</span> Vague 26-01
+  </div>
+  <div class="desktop-content">
+    <div class="existing-section">Indicateurs Cards + Progress Bars</div>
+
+    <div class="perf-section">
+      <div class="perf-header" style="margin-bottom: 14px;">
+        <div class="perf-title" style="font-size: 16px;">
+          <div class="icon" style="width: 22px; height: 22px; font-size: 12px;">📊</div>
+          Performance par Bac
+        </div>
+        <div class="toggle-tabs" style="font-size: 12px;">
+          <div class="toggle-tab active" style="padding: 5px 14px;">Croissance</div>
+          <div class="toggle-tab" style="padding: 5px 14px;">Couts</div>
+        </div>
+      </div>
+
+      <div class="desktop-grid">
+        <!-- Card 1 -->
+        <div class="bac-card" style="margin-bottom: 0;">
+          <div class="bac-card-top">
+            <div class="bac-name" style="font-size: 14px;">Bac 03</div>
+            <div class="bac-rank rank-1">#1 Meilleur FCR</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="sparkline" style="width: 100%; height: 36px;">
+              <svg viewBox="0 0 280 36" preserveAspectRatio="none">
+                <polyline points="4,32 30,29 60,26 90,22 120,18 150,14 180,11 210,8 240,5 270,3" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="metrics-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="metric">
+                <div class="metric-value val-purple">312 g</div>
+                <div class="metric-label">Poids moy.</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-blue">181 kg</div>
+                <div class="metric-label">Biomasse</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-amber">1.38</div>
+                <div class="metric-label">FCR</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-green">93.5%</div>
+                <div class="metric-label">Survie</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">580</div>
+                <div class="metric-label">Vivants</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-cyan">78 kg</div>
+                <div class="metric-label">Aliment</div>
+              </div>
+            </div>
+          </div>
+          <div class="bac-card-footer">
+            <span class="last-bio">il y a 3j</span>
+            <span class="gmq-badge gmq-good">+4.8 g/j</span>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bac-card" style="margin-bottom: 0;">
+          <div class="bac-card-top">
+            <div class="bac-name" style="font-size: 14px;">Bac 01</div>
+            <div class="bac-rank rank-2">#2</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="sparkline" style="width: 100%; height: 36px;">
+              <svg viewBox="0 0 280 36" preserveAspectRatio="none">
+                <polyline points="4,32 40,28 80,23 120,18 160,14 200,11 240,8 270,6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="metrics-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="metric">
+                <div class="metric-value val-purple">287 g</div>
+                <div class="metric-label">Poids moy.</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-blue">158 kg</div>
+                <div class="metric-label">Biomasse</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-amber">1.62</div>
+                <div class="metric-label">FCR</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-green">91.2%</div>
+                <div class="metric-label">Survie</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">550</div>
+                <div class="metric-label">Vivants</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-cyan">82 kg</div>
+                <div class="metric-label">Aliment</div>
+              </div>
+            </div>
+          </div>
+          <div class="bac-card-footer">
+            <span class="last-bio">il y a 5j</span>
+            <span class="gmq-badge gmq-ok">+3.2 g/j</span>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="bac-card" style="margin-bottom: 0;">
+          <div class="bac-card-top">
+            <div class="bac-name" style="font-size: 14px;">Bac 07</div>
+            <div class="bac-rank rank-3">#3</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="sparkline" style="width: 100%; height: 36px;">
+              <svg viewBox="0 0 280 36" preserveAspectRatio="none">
+                <polyline points="4,30 40,28 80,26 120,24 160,23 200,22 240,21 270,20" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="metrics-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="metric">
+                <div class="metric-value val-purple">206 g</div>
+                <div class="metric-label">Poids moy.</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-blue">104 kg</div>
+                <div class="metric-label">Biomasse</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value" style="color: #dc2626;">2.31</div>
+                <div class="metric-label">FCR</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-green">84.0%</div>
+                <div class="metric-label">Survie</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">505</div>
+                <div class="metric-label">Vivants</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value val-cyan">91 kg</div>
+                <div class="metric-label">Aliment</div>
+              </div>
+            </div>
+          </div>
+          <div class="bac-card-footer">
+            <span class="last-bio">il y a 8j</span>
+            <span class="gmq-badge gmq-bad">+1.1 g/j</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="existing-section" style="margin-top: 16px;">Weight Chart + remaining sections</div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<div class="section">
+<h2>4. Annotated Single Card — Mobile Close-up</h2>
+<p class="annotation" style="margin-bottom: 16px;">Every element labeled with its purpose, data source, and color token.</p>
+
+<div class="annotated-wrapper">
+  <div class="annotated-card">
+    <div class="bac-card" style="position: relative;">
+      <div class="callout" style="top: 8px; left: 50px;">1</div>
+      <div class="callout" style="top: 8px; right: 12px;">2</div>
+      <div class="callout" style="top: 42px; left: 8px;">3</div>
+      <div class="callout" style="top: 42px; left: 80px;">4</div>
+      <div class="callout" style="top: 68px; left: 80px;">5</div>
+      <div class="callout" style="top: 68px; left: 170px;">6</div>
+      <div class="callout" style="top: 68px; right: 22px;">7</div>
+      <div class="callout" style="bottom: 10px; left: 60px;">8</div>
+      <div class="callout" style="bottom: 10px; right: 30px;">9</div>
+
+      <div class="bac-card-top">
+        <div class="bac-name">Bac 03</div>
+        <div class="bac-rank rank-1">#1 Meilleur FCR</div>
+      </div>
+      <div class="bac-card-body">
+        <div class="sparkline">
+          <svg viewBox="0 0 64 28" preserveAspectRatio="none">
+            <polyline points="2,24 10,22 18,19 26,16 34,13 42,10 50,7 58,4" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric">
+            <div class="metric-value val-purple">312 g</div>
+            <div class="metric-label">Poids moy.</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value val-blue">181 kg</div>
+            <div class="metric-label">Biomasse</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value val-amber">1.38</div>
+            <div class="metric-label">FCR</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value val-green">93.5%</div>
+            <div class="metric-label">Survie</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">580</div>
+            <div class="metric-label">Vivants</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value val-cyan">78 kg</div>
+            <div class="metric-label">Aliment</div>
+          </div>
+        </div>
+      </div>
+      <div class="bac-card-footer">
+        <span class="last-bio">Biometrie: il y a 3j</span>
+        <span class="gmq-badge gmq-good">+4.8 g/j</span>
+      </div>
+    </div>
+  </div>
+
+  <ol class="annotation-list">
+    <li><span class="ann-num">1</span> <strong>Bac name</strong> — <code>bac.nom</code>, font-weight: 600, 13px</li>
+    <li><span class="ann-num">2</span> <strong>Rank badge</strong> — Sorted by FCR (best first). Background color-coded: <code>accent-green-muted</code> for #1, <code>accent-blue-muted</code> for mid, <code>accent-red-muted</code> for worst. Shows ranking reason.</li>
+    <li><span class="ann-num">3</span> <strong>Sparkline</strong> — 64x28px SVG polyline. All BIOMETRIE releve poidsMoyen values for this bac, chronologically. Stroke color matches rank: green=good, blue=ok, amber=warning.</li>
+    <li><span class="ann-num">4</span> <strong>Poids moyen</strong> — Latest biometrie poidsMoyen. <code>accent-purple</code> text.</li>
+    <li><span class="ann-num">5</span> <strong>Survie</strong> — vivants/nombreInitial. <code>success</code> text.</li>
+    <li><span class="ann-num">6</span> <strong>Biomasse</strong> — poidsMoyen x vivants / 1000. <code>accent-blue</code> text.</li>
+    <li><span class="ann-num">7</span> <strong>FCR</strong> — totalAlimentKg / gainBiomasseKg. <code>accent-amber</code> text. Turns <code>accent-red</code> if FCR > 2.0.</li>
+    <li><span class="ann-num">8</span> <strong>Last biometry date</strong> — Relative time ("il y a Xj"). <code>muted-foreground</code> text, 10px.</li>
+    <li><span class="ann-num">9</span> <strong>GMQ badge</strong> — Daily growth rate in g/day. Color-coded: green > 4 g/j, gray 2-4 g/j, red &lt; 2 g/j. Key actionable metric.</li>
+  </ol>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<div class="section">
+<h2>5. Empty State</h2>
+<p class="annotation" style="margin-bottom: 16px;">Shown when no bac has any biometry data yet for this vague.</p>
+
+<div class="mobile-frame">
+  <div class="page-header">
+    <span class="back">&larr;</span> 26-01
+  </div>
+  <div class="page-content">
+    <div class="existing-section">Indicateurs + Progress bars</div>
+
+    <div class="perf-section">
+      <div class="perf-header">
+        <div class="perf-title">
+          <div class="icon">📊</div>
+          Performance par Bac
+        </div>
+      </div>
+
+      <div class="empty-state">
+        <div class="empty-icon">📏</div>
+        <div class="empty-title">Aucune biometrie</div>
+        <div class="empty-desc">Enregistrez un releve de biometrie pour voir les performances de croissance par bac.</div>
+        <a href="#" class="empty-cta">+ Nouveau releve</a>
+      </div>
+    </div>
+
+    <div class="existing-section">Weight Chart, etc.</div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<div class="section" style="border-bottom: none;">
+<h2>6. Design Decisions Summary</h2>
+<table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+  <tr style="border-bottom: 1px solid #e2e8f0;">
+    <th style="text-align: left; padding: 8px; color: #64748b;">Decision</th>
+    <th style="text-align: left; padding: 8px; color: #64748b;">Choice</th>
+    <th style="text-align: left; padding: 8px; color: #64748b;">Rationale</th>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">Tab toggle</td>
+    <td style="padding: 8px;">Croissance / Couts</td>
+    <td style="padding: 8px;">Keeps mobile cards compact. Farmers check growth daily, costs weekly.</td>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">Sort order</td>
+    <td style="padding: 8px;">By FCR ascending</td>
+    <td style="padding: 8px;">FCR is the most actionable metric — best performer first motivates.</td>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">Sparkline position</td>
+    <td style="padding: 8px;">Left of metrics (mobile), above metrics (desktop)</td>
+    <td style="padding: 8px;">Mobile: saves vertical space. Desktop: full-width sparkline is more readable.</td>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">GMQ badge</td>
+    <td style="padding: 8px;">Bottom-right with color coding</td>
+    <td style="padding: 8px;">Daily growth rate is the "glanceable" stat — green/gray/red instantly shows trend.</td>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">Ranking badge</td>
+    <td style="padding: 8px;">Top-right, subtle</td>
+    <td style="padding: 8px;">Creates healthy comparison without being aggressive. Gamification element.</td>
+  </tr>
+  <tr style="border-bottom: 1px solid #f1f5f9;">
+    <td style="padding: 8px;">6 metrics (growth tab)</td>
+    <td style="padding: 8px;">3x2 grid</td>
+    <td style="padding: 8px;">Poids, Biomasse, FCR (row 1) + Survie, Vivants, Aliment (row 2) — prioritized.</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px;">Card interaction</td>
+    <td style="padding: 8px;">Tap → /bacs/{id}</td>
+    <td style="padding: 8px;">Consistent with existing VagueBacsSection behavior.</td>
+  </tr>
+</table>
+</div>
+
+</body>
+</html>

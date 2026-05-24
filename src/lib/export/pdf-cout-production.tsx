@@ -292,7 +292,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdfa",
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
-    borderLeftStyle: "solid" as const,
     borderRadius: 3,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -331,7 +330,14 @@ function InsightBlock({ lines }: { lines: string[] }) {
 export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }) {
   const { coutProduction: cp, site, dateGeneration } = data;
   const { vague, resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
-  const insights = generatePdfInsights(cp);
+
+  // Generate insights with safe fallback
+  let insights: ReturnType<typeof generatePdfInsights>;
+  try {
+    insights = generatePdfInsights(cp);
+  } catch {
+    insights = { executive: [], production: [], couts: [], alimentation: [], rentabilite: [], ventes: [] };
+  }
 
   return (
     <Document title="Rapport Coût de Production" author="FarmFlow">
