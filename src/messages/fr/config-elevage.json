@@ -5,7 +5,7 @@
     "phasesCroissance": "Phases de croissance",
     "phasesCroissanceDesc": "Seuils de poids pour chaque phase (en grammes)",
     "benchmarksPerformance": "Benchmarks de performance",
-    "benchmarksPerformanceDesc": "Seuils FCR, SGR, survie, densite, mortalite",
+    "benchmarksPerformanceDesc": "Seuils ICA, TCS, survie, densite, mortalite",
     "qualiteEau": "Qualite de l'eau",
     "qualiteEauDesc": "Seuils pH, temperature, oxygene, ammoniac, nitrite",
     "alertesMortalite": "Alertes mortalite",
@@ -61,7 +61,7 @@
     "ammoniacOptimal": "Optimal",
     "alerteMortaliteQuotidienne": "Alerte mortalite quotidienne",
     "critiqueMortaliteQuotidienne": "Critique mortalite quotidienne",
-    "fcrAlerteMax": "FCR alerte max",
+    "fcrAlerteMax": "ICA alerte max",
     "stockJoursAlerte": "Stock jours restants (alerte)",
     "triPoidsMin": "Tri poids min",
     "triPoidsMax": "Tri poids max",
@@ -81,8 +81,8 @@
     "gompertzMinPoints": "Points de biometrie minimum pour Gompertz"
   },
   "benchmarks": {
-    "fcrTitle": "FCR (plus bas = meilleur)",
-    "sgrTitle": "SGR %/j (plus haut = meilleur)",
+    "fcrTitle": "ICA (plus bas = meilleur)",
+    "sgrTitle": "TCS %/j (plus haut = meilleur)",
     "survieTitle": "Survie % (plus haut = meilleur)",
     "densiteTitle": "Densite poissons/m³ (plus bas = meilleur)",
     "mortaliteTitle": "Mortalite cumulative % (plus bas = meilleur)"

@@ -25,9 +25,9 @@
     "profitabilityChart": "le graphique de rentabilité",
     "growthChart": "le graphique de croissance",
     "releveForm": "le formulaire de relevé",
-    "fcrChart": "le graphique FCR",
+    "fcrChart": "le graphique ICA",
     "perWaveChart": "le graphique par vague",
-    "weeklyFcrChart": "le graphique FCR hebdomadaire",
+    "weeklyFcrChart": "le graphique ICA hebdomadaire",
     "historyChart": "le graphique historique",
     "saleForm": "le formulaire de vente"
   },

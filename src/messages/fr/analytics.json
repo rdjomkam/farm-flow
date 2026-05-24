@@ -11,7 +11,7 @@
     "noWaveInProgress": "Aucune vague en cours.",
     "waveNotFound": "Vague introuvable.",
     "missingVagueId": "Paramètre vagueId manquant.",
-    "fcrSgrNote": "Pour FCR, SGR et survie,",
+    "fcrSgrNote": "Pour ICA, TCS et survie,",
     "viewVagueIndicators": "voir les indicateurs de performance par vague",
     "backToComparison": "Retour à la comparaison",
     "feedNotFound": "Produit aliment introuvable.",
@@ -30,8 +30,8 @@
     "alertesPerformance": "Alertes performance",
     "actives": "Actives",
     "toutEstOk": "Tout est OK",
-    "tendanceFCR": "Tendance FCR",
-    "dernierFCR": "Dernier : FCR {value}",
+    "tendanceFCR": "Tendance ICA",
+    "dernierFCR": "Dernier : ICA {value}",
     "vueGenerale": "Vue générale",
     "vaguesEnCours": "Vagues en cours",
     "bacsActifs": "Bacs actifs",
@@ -131,9 +131,9 @@
     "remainingFeed": "Aliment restant",
     "expectedRevenue": "Revenu attendu",
     "growthCurve": "Courbe de croissance",
-    "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel",
+    "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection TCS actuel",
     "tooltipDayLabel": "Jour {day} — {date}",
-    "sgrHarvest": "Recolte SGR",
+    "sgrHarvest": "Recolte TCS",
     "gompertzHarvest": "Recolte Gompertz",
     "harvestInDays": "~{count} j",
     "gompertzBadge": {
@@ -164,15 +164,15 @@
     }
   },
   "errorSection": {
-    "fcrChart": "le graphique FCR",
+    "fcrChart": "le graphique ICA",
     "perWaveChart": "le graphique par vague",
-    "weeklyFcrChart": "le graphique FCR hebdomadaire",
+    "weeklyFcrChart": "le graphique ICA hebdomadaire",
     "historyChart": "le graphique historique",
     "growthChart": "le graphique de croissance"
   },
   "bacs": {
     "noBacs": "Aucun bac assigné à cette vague.",
-    "vagueTracking": "FCR, SGR et survie sont suivis au niveau de la vague.",
+    "vagueTracking": "ICA, TCS et survie sont suivis au niveau de la vague.",
     "viewVagueAnalytics": "Voir les analytiques par vague",
     "alertCount": "{count} alerte(s)",
     "detail": "Détail",
@@ -203,7 +203,7 @@
     "survieAssociee": "Survie associée",
     "fcrMoyen": "ICA moyen",
     "sgrMoyen": "TCS moyen",
-    "evolutionFCR": "Évolution du FCR",
+    "evolutionFCR": "Évolution de l'ICA",
     "pasAssezDonnees": "Pas assez de données pour afficher l'évolution.",
     "performanceParVague": "Performance par vague",
     "aucuneDonneeVague": "Aucune donnée par vague disponible.",
@@ -212,7 +212,7 @@
     "vagues": "{count} vague(s)",
     "kgUtilisesMeta": "{qty} kg utilisés",
     "cout": "Coût",
-    "fcrHebdoTitle": "FCR hebdomadaire",
+    "fcrHebdoTitle": "ICA hebdomadaire",
     "changementGranule": "Chgt granulé",
     "correlationMortalite": "Corrélation mortalité",
     "aucuneDonneeMortalite": "Aucune donnée de mortalité disponible.",
@@ -282,7 +282,7 @@
     "nonDisponible": "N/D"
   },
   "avertissement": {
-    "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison du FCR peut être biaisée."
+    "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison de l'ICA peut être biaisée."
   },
   "simulerChangementButton": "Simuler un changement d'aliment",
   "simulation": {
