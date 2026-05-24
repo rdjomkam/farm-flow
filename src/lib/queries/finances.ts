@@ -1012,16 +1012,20 @@ export async function getCoutProductionVague(
       },
     }),
 
-    // 2f. Ventes de la vague (quantitePoissons pour biomasse produite)
-    prisma.vente.findMany({
+    // 2f. Lignes de vente de la vague (source de vérité multi-vague)
+    prisma.ligneVente.findMany({
       where: { siteId, vagueId },
       select: {
         createdAt: true,
-        quantitePoissons: true,
+        nombrePoissons: true,
         poidsTotalKg: true,
-        prixUnitaireKg: true,
-        montantTotal: true,
-        client: { select: { nom: true } },
+        vente: {
+          select: {
+            prixUnitaireKg: true,
+            createdAt: true,
+            client: { select: { nom: true } },
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -1054,7 +1058,7 @@ export async function getCoutProductionVague(
   //
   // Utilise excludeVentes=true pour ignorer les releves de type VENTE
   // (qui peuvent etre incoherents avec les ventes reelles).
-  // A la place, on soustrait les poissons reellement vendus (ventes.quantitePoissons)
+  // A la place, on soustrait les poissons reellement vendus (lignesVente.nombrePoissons)
   // pour obtenir la biomasse restante en ferme.
   //
   // biomasseProduite = biomasseKg (restante) + poidsTotalVendu (reel)
@@ -1068,8 +1072,8 @@ export async function getCoutProductionVague(
   // Les ventes reelles seront soustraites plus bas via quantitePoissons
   const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { excludeVentes: true });
 
-  // Nombre total de poissons reellement vendus (source de verite : Vente)
-  const totalPoissonsVendus = ventes.reduce((acc, v) => acc + v.quantitePoissons, 0);
+  // Nombre total de poissons reellement vendus (source de verite : LigneVente)
+  const totalPoissonsVendus = ventes.reduce((acc, lv) => acc + lv.nombrePoissons, 0);
 
   let biomasseKg: number | null = null;
 
@@ -1338,15 +1342,16 @@ export async function getCoutProductionVague(
   let poidsTotalVendu = 0;
   const ventesResult: CoutProductionVente[] = [];
 
-  for (const v of ventes) {
-    revenus += v.montantTotal;
-    poidsTotalVendu += v.poidsTotalKg;
+  for (const lv of ventes) {
+    const montantLigne = lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+    revenus += montantLigne;
+    poidsTotalVendu += lv.poidsTotalKg;
     ventesResult.push({
-      date: v.createdAt,
-      client: v.client.nom,
-      poidsKg: Math.round(v.poidsTotalKg * 100) / 100,
-      prixKg: Math.round(v.prixUnitaireKg * 100) / 100,
-      montant: Math.round(v.montantTotal),
+      date: lv.vente.createdAt,
+      client: lv.vente.client.nom,
+      poidsKg: Math.round(lv.poidsTotalKg * 100) / 100,
+      prixKg: Math.round(lv.vente.prixUnitaireKg * 100) / 100,
+      montant: Math.round(montantLigne),
     });
   }
 
@@ -1523,10 +1528,10 @@ export async function getResumeFinancierParUnite(
       select: { id: true, uniteProductionId: true },
     }),
 
-    // 1c. Toutes les ventes du site (pour mapper via vague -> unite)
-    prisma.vente.findMany({
+    // 1c. Toutes les lignes de vente du site (pour mapper via vague -> unite)
+    prisma.ligneVente.findMany({
       where: { siteId },
-      select: { vagueId: true, montantTotal: true },
+      select: { vagueId: true, poidsTotalKg: true, vente: { select: { prixUnitaireKg: true } } },
     }),
 
     // 1d. Toutes les depenses du site (source unique pour les couts)
@@ -1570,12 +1575,13 @@ export async function getResumeFinancierParUnite(
   // -------------------------------------------------------------------------
 
   const revenusByUnite = new Map<string, number>();
-  for (const vente of ventes) {
-    const uniteId = vente.vagueId ? vagueToUnite.get(vente.vagueId) ?? null : null;
+  for (const lv of ventes) {
+    const uniteId = lv.vagueId ? vagueToUnite.get(lv.vagueId) ?? null : null;
     if (uniteId && uniteIds.has(uniteId)) {
-      revenusByUnite.set(uniteId, (revenusByUnite.get(uniteId) ?? 0) + vente.montantTotal);
+      const montantLigne = lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+      revenusByUnite.set(uniteId, (revenusByUnite.get(uniteId) ?? 0) + montantLigne);
     }
-    // ventes sans unite ou unite inactive sont ignorees pour la ventilation
+    // lignes sans unite ou unite inactive sont ignorees pour la ventilation
   }
 
   // -------------------------------------------------------------------------
