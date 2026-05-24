@@ -170,10 +170,8 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
             {expanded && (
               <div className="mt-4 space-y-4 border-t border-border pt-3">
 
-                {/* Biomasse estimée */}
-                {resume.biomasseKg !== null && (
-                  <BiomasseBanner biomasseKg={resume.biomasseKg} />
-                )}
+                {/* Bilan Production & Ventes */}
+                <ProductionBilan resume={resume} />
 
                 {/* Répartition par catégorie */}
                 {coutParCategorie.length > 0 && (
@@ -299,26 +297,42 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                   </DetailSection>
                 )}
 
-                {/* Revenus et marge */}
-                <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Revenus</span>
-                    <span className="font-medium tabular-nums">
-                      {formatNumber(resume.revenus)} FCFA
-                    </span>
+                {/* Rentabilité */}
+                <DetailSection title="Rentabilité">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Coût total production</span>
+                      <span className="font-medium tabular-nums text-destructive">
+                        -{formatNumber(resume.coutTotal)} FCFA
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Revenus ventes</span>
+                      <span className="font-medium tabular-nums text-success">
+                        +{formatNumber(resume.revenus)} FCFA
+                      </span>
+                    </div>
+                    <div className="border-t border-border pt-1.5 flex justify-between text-sm">
+                      <span className="font-medium">Marge brute</span>
+                      <span
+                        className={`font-bold tabular-nums ${
+                          resume.marge >= 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        {resume.marge >= 0 ? "+" : ""}
+                        {formatNumber(resume.marge)} FCFA
+                      </span>
+                    </div>
+                    {resume.roi !== null && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Retour sur investissement</span>
+                        <span className={`font-medium ${resume.roi >= 0 ? "text-success" : "text-destructive"}`}>
+                          {resume.roi >= 0 ? "+" : ""}{resume.roi.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Marge brute</span>
-                    <span
-                      className={`font-semibold tabular-nums ${
-                        resume.marge >= 0 ? "text-success" : "text-destructive"
-                      }`}
-                    >
-                      {resume.marge >= 0 ? "+" : ""}
-                      {formatNumber(resume.marge)} FCFA
-                    </span>
-                  </div>
-                </div>
+                </DetailSection>
               </div>
             )}
           </>
@@ -329,22 +343,37 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 }
 
 // ---------------------------------------------------------------------------
-// BiomasseBanner — affiche la biomasse estimée en évidence
+// ProductionBilan — bilan production vs ventes
 // ---------------------------------------------------------------------------
 
-function BiomasseBanner({ biomasseKg }: { biomasseKg: number }) {
+function ProductionBilan({ resume }: { resume: CoutProductionVague["resume"] }) {
   return (
-    <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-2 flex items-center justify-between gap-2">
-      <div>
-        <p className="text-xs text-muted-foreground">Biomasse estimée</p>
-        <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
-          {formatNumber(Math.round(biomasseKg * 10) / 10)} kg
-        </p>
+    <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2.5 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bilan production</p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+        {resume.biomasseProduite !== null && (
+          <BilanRow label="Biomasse produite" value={`${formatNumber(Math.round(resume.biomasseProduite * 10) / 10)} kg`} bold />
+        )}
+        {resume.poidsTotalVendu > 0 && (
+          <BilanRow label="Biomasse vendue" value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`} />
+        )}
+        {resume.biomasseKg !== null && resume.biomasseKg > 0 && (
+          <BilanRow label="Biomasse vivante" value={`${formatNumber(Math.round(resume.biomasseKg * 10) / 10)} kg`} />
+        )}
+        {resume.nombrePoissonsVendus > 0 && (
+          <BilanRow label="Poissons vendus" value={`${formatNumber(resume.nombrePoissonsVendus)}`} />
+        )}
       </div>
-      <p className="text-xs text-muted-foreground text-right leading-tight max-w-[160px]">
-        Base du calcul coût/kg
-      </p>
     </div>
+  );
+}
+
+function BilanRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={`text-sm tabular-nums text-right ${bold ? "font-semibold" : "font-medium"}`}>{value}</span>
+    </>
   );
 }
 

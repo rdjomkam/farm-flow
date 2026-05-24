@@ -824,7 +824,9 @@ export interface CoutProductionVague {
   resume: {
     coutTotal: number;
     poidsTotalVendu: number;
-    biomasseKg: number | null;
+    nombrePoissonsVendus: number;
+    biomasseKg: number | null;         // biomasse vivante restante en ferme
+    biomasseProduite: number | null;   // biomasse totale produite (vivante + vendue)
     coutParKg: number | null;
     prixMoyenVenteKg: number | null;
     margeParKg: number | null;
@@ -1446,7 +1448,9 @@ export async function getCoutProductionVague(
     resume: {
       coutTotal: Math.round(coutTotal),
       poidsTotalVendu: Math.round(poidsTotalVendu * 100) / 100,
+      nombrePoissonsVendus: totalPoissonsVendus,
       biomasseKg: biomasseKg !== null ? Math.round(biomasseKg * 100) / 100 : null,
+      biomasseProduite: biomasseProduite !== null ? Math.round(biomasseProduite * 100) / 100 : null,
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
       prixMoyenVenteKg:
         prixMoyenVenteKg !== null

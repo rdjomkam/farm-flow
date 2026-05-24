@@ -62,6 +62,9 @@ const dataWithCosts: CoutProductionVague = {
   resume: {
     coutTotal: 500000,
     poidsTotalVendu: 200,
+    nombrePoissonsVendus: 400,
+    biomasseKg: 150,
+    biomasseProduite: 350,
     coutParKg: 2500,
     prixMoyenVenteKg: 3000,
     margeParKg: 500,
@@ -86,6 +89,7 @@ const dataWithCosts: CoutProductionVague = {
     coutRecurrents: 0,
     coutTotal: 500000,
     poidsVendu: 200,
+    biomasseKg: 150,
     coutParKg: 2500,
   },
 };
@@ -96,6 +100,9 @@ const dataEmpty: CoutProductionVague = {
   resume: {
     coutTotal: 0,
     poidsTotalVendu: 0,
+    nombrePoissonsVendus: 0,
+    biomasseKg: null,
+    biomasseProduite: null,
     coutParKg: null,
     prixMoyenVenteKg: null,
     margeParKg: null,
@@ -116,6 +123,7 @@ const dataEmpty: CoutProductionVague = {
     coutRecurrents: 0,
     coutTotal: 0,
     poidsVendu: 0,
+    biomasseKg: null,
     coutParKg: null,
   },
 };
@@ -126,6 +134,9 @@ const dataWithNulls: CoutProductionVague = {
   resume: {
     coutTotal: 300000,
     poidsTotalVendu: 0,
+    nombrePoissonsVendus: 0,
+    biomasseKg: null,
+    biomasseProduite: null,
     coutParKg: null,
     prixMoyenVenteKg: null,
     margeParKg: null,
@@ -148,6 +159,7 @@ const dataWithNulls: CoutProductionVague = {
     coutRecurrents: 0,
     coutTotal: 300000,
     poidsVendu: 0,
+    biomasseKg: null,
     coutParKg: null,
   },
 };
@@ -291,7 +303,7 @@ describe("CoutProductionCard — Expand / Collapse", () => {
     render(<CoutProductionCard data={dataWithCosts} vagueId="vague-1" />);
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
-    expect(screen.getByText("Revenus")).toBeInTheDocument();
+    expect(screen.getByText("Revenus ventes")).toBeInTheDocument();
     expect(screen.getByText("Marge brute")).toBeInTheDocument();
   });
 });
@@ -374,9 +386,11 @@ describe("CoutProductionCard — Couleurs marge / ROI", () => {
     render(<CoutProductionCard data={dataWithCosts} vagueId="vague-1" />);
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
-    // marge = 100000 → "+" prefix + text-success
-    const margeElement = screen.getByText(/\+/);
-    expect(margeElement).toHaveClass("text-success");
+    // marge = 100000 → "Marge brute" label with text-success on the value span
+    const margeLabel = screen.getByText("Marge brute");
+    const margeRow = margeLabel.closest("div")!;
+    const valueSpan = margeRow.querySelector(".text-success");
+    expect(valueSpan).toBeTruthy();
   });
 
   it("la marge brute dans le détail a la classe text-destructive quand négative", () => {

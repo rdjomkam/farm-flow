@@ -68,6 +68,9 @@ function buildFullCoutProduction(
     resume: {
       coutTotal: 150000,
       poidsTotalVendu: 250,
+      nombrePoissonsVendus: 500,
+      biomasseKg: 100,
+      biomasseProduite: 350,
       coutParKg: 600,
       prixMoyenVenteKg: 2500,
       margeParKg: 1900,
@@ -118,10 +121,11 @@ function buildFullCoutProduction(
       {
         description: "Électricité",
         categorie: CategorieDepense.ELECTRICITE,
-        coutMensuel: 25000,
-        moisImputes: 2,
+        montantPayeTotal: 50000,
+        moisCouverts: 2,
         ratioMoyen: 0.5,
         montantImpute: 25000,
+        ratioDetail: [],
       },
     ],
     ventes: [
@@ -140,6 +144,7 @@ function buildFullCoutProduction(
       coutRecurrents: 25000,
       coutTotal: 195000,
       poidsVendu: 250,
+      biomasseKg: 100,
       coutParKg: 780,
     },
   };
@@ -197,6 +202,9 @@ describe("renderCoutProductionPDF", () => {
       resume: {
         coutTotal: 150000,
         poidsTotalVendu: 0,
+        nombrePoissonsVendus: 0,
+        biomasseKg: null,
+        biomasseProduite: null,
         coutParKg: null,
         prixMoyenVenteKg: null,
         margeParKg: null,
@@ -218,6 +226,7 @@ describe("renderCoutProductionPDF", () => {
         coutRecurrents: 0,
         coutTotal: 10000,
         poidsVendu: 0,
+        biomasseKg: null,
         coutParKg: null,
       },
     });
@@ -352,6 +361,9 @@ describe("renderCoutProductionPDF", () => {
       resume: {
         coutTotal: 30000,
         poidsTotalVendu: 0,
+        nombrePoissonsVendus: 0,
+        biomasseKg: null,
+        biomasseProduite: null,
         coutParKg: null,
         prixMoyenVenteKg: null,
         margeParKg: null,
@@ -373,6 +385,9 @@ describe("renderCoutProductionPDF", () => {
       resume: {
         coutTotal: 0,
         poidsTotalVendu: 0,
+        nombrePoissonsVendus: 0,
+        biomasseKg: null,
+        biomasseProduite: null,
         coutParKg: null,
         prixMoyenVenteKg: null,
         margeParKg: null,
@@ -393,6 +408,7 @@ describe("renderCoutProductionPDF", () => {
         coutRecurrents: 0,
         coutTotal: 0,
         poidsVendu: 0,
+        biomasseKg: null,
         coutParKg: null,
       },
     });
@@ -405,6 +421,9 @@ describe("renderCoutProductionPDF", () => {
       resume: {
         coutTotal: 0,
         poidsTotalVendu: 0,
+        nombrePoissonsVendus: 0,
+        biomasseKg: null,
+        biomasseProduite: null,
         coutParKg: null,
         prixMoyenVenteKg: null,
         margeParKg: null,
