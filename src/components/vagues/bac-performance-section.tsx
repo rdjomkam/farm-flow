@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, TrendingUp, Scale } from "lucide-react";
+import { BarChart3, TrendingUp, Scale, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatNum } from "@/lib/format";
-import type { BacPerformanceData } from "@/lib/bac-performance";
+import type { BacPerformanceData, BiometryPeriodSnapshot } from "@/lib/bac-performance";
 
 interface BacPerformanceSectionProps {
   data: BacPerformanceData[];
@@ -90,6 +90,12 @@ function rankBadgeClass(rank: number, total: number): string {
   return "bg-accent-amber-muted text-accent-amber";
 }
 
+/** Build i18n rank label: "#1 Meilleur ICA" (FR) / "#1 Best FCR" (EN) for rank 1, "#N" for others */
+function getRankLabel(rank: number, fcr: number | null, t: ReturnType<typeof useTranslations>): string {
+  if (rank === 1 && fcr !== null) return t("bacPerf.rankMeilleurIca");
+  return `#${rank}`;
+}
+
 function gmqBadgeClass(gmq: number | null): string {
   if (gmq === null) return "bg-muted text-muted-foreground";
   if (gmq > 4) return "bg-accent-green-muted text-accent-green";
@@ -115,6 +121,13 @@ function benchmarkClass(fcr: number | null): string {
   if (fcr < 1.5) return "bg-accent-green-muted text-accent-green";
   if (fcr <= 2.0) return "bg-muted text-muted-foreground";
   return "bg-accent-red-muted text-accent-red";
+}
+
+function periodGmqClass(gmq: number): string {
+  if (gmq > 4) return "text-accent-green";
+  if (gmq >= 2) return "text-foreground";
+  if (gmq > 0) return "text-accent-amber";
+  return "text-accent-red";
 }
 
 // ── Last biometry date helper ─────────────────────────────────────────────────
@@ -146,6 +159,7 @@ function GrowthCard({
   total: number;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const rankDisplay = getRankLabel(item.rank, item.fcr, t);
   return (
     <Link href={`/bacs/${item.bacId}`} className="block">
       <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
@@ -156,7 +170,7 @@ function GrowthCard({
             <span
               className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${rankBadgeClass(item.rank, total)}`}
             >
-              {item.rankLabel}
+              {rankDisplay}
             </span>
           </div>
 
@@ -190,7 +204,7 @@ function GrowthCard({
                   {formatNum(item.biomasse, 1)} kg
                 </p>
               </div>
-              {/* FCR */}
+              {/* FCR/ICA */}
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.fcr")}</p>
                 <p className={`text-sm font-medium leading-tight truncate ${fcrTextClass(item.fcr)}`}>
@@ -249,6 +263,7 @@ function CostCard({
   total: number;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const rankDisplay = getRankLabel(item.rank, item.fcr, t);
   return (
     <Link href={`/bacs/${item.bacId}`} className="block">
       <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
@@ -259,7 +274,7 @@ function CostCard({
             <span
               className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${rankBadgeClass(item.rank, total)}`}
             >
-              {item.rankLabel}
+              {rankDisplay}
             </span>
           </div>
 
@@ -316,11 +331,161 @@ function CostCard({
   );
 }
 
+// ── Periods tab ──────────────────────────────────────────────────────────────
+
+function PeriodCard({
+  snapshot,
+  t,
+}: {
+  snapshot: BiometryPeriodSnapshot;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const dateDebut = new Date(snapshot.dateDebut).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  const dateFin = new Date(snapshot.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+
+  return (
+    <div className="border rounded-lg p-3 space-y-2">
+      {/* Period header */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full">
+            {t("bacPerf.periodeTitle", { index: snapshot.periodIndex + 1 })}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {dateDebut} → {dateFin}
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {t("bacPerf.periodeDuree", { jours: snapshot.dureeJours })}
+        </span>
+      </div>
+
+      {/* Metrics grid */}
+      <div className="grid grid-cols-3 gap-x-3 gap-y-1.5">
+        {/* Croissance */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeCroissance")}</p>
+          <p className="text-sm font-medium leading-tight">
+            {snapshot.croissanceG > 0 ? "+" : ""}{formatNum(snapshot.croissanceG, 1)} g
+          </p>
+        </div>
+        {/* GMQ */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeGmq")}</p>
+          <p className={`text-sm font-medium leading-tight ${periodGmqClass(snapshot.gmq)}`}>
+            {formatNum(snapshot.gmq, 1)} {t("bacPerf.gmqUnit")}
+          </p>
+        </div>
+        {/* ICA/FCR */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeIca")}</p>
+          <p className={`text-sm font-medium leading-tight ${fcrTextClass(snapshot.fcrPeriode)}`}>
+            {formatNum(snapshot.fcrPeriode, 2)}
+          </p>
+        </div>
+        {/* Aliment */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeAliment")}</p>
+          <p className="text-sm font-medium leading-tight">
+            {formatNum(snapshot.alimentKg, 1)} kg
+          </p>
+        </div>
+        {/* Cout */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeCout")}</p>
+          <p className="text-sm font-medium leading-tight">
+            {Math.round(snapshot.coutAlimentPeriode).toLocaleString("fr-FR")} F
+          </p>
+        </div>
+        {/* Mortalites */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeMortalites")}</p>
+          <p className={`text-sm font-medium leading-tight ${snapshot.mortalites > 0 ? "text-accent-red" : ""}`}>
+            {snapshot.mortalites > 0 ? `-${snapshot.mortalites}` : "0"}
+          </p>
+        </div>
+      </div>
+
+      {/* Biomasse row */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5 border-t">
+        <span>
+          {t("bacPerf.periodeBiomasse")}: {formatNum(snapshot.biomasseDebut, 1)} → {formatNum(snapshot.biomasseFin, 1)} kg
+        </span>
+        <span>
+          {t("bacPerf.periodeVivants")}: {snapshot.vivantsDebut} → {snapshot.vivantsFin}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function BacPeriodsCard({
+  item,
+  t,
+}: {
+  item: BacPerformanceData;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const snapshots = item.periodSnapshots;
+
+  if (snapshots.length === 0) return null;
+
+  // Show last 2 periods by default, expand to show all
+  const visibleSnapshots = expanded ? snapshots : snapshots.slice(-2);
+  const hasMore = snapshots.length > 2;
+
+  return (
+    <Card>
+      <CardContent className="p-3 space-y-2">
+        {/* Bac header */}
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-medium text-sm">{item.bacNom}</p>
+          <span className="text-xs text-muted-foreground">
+            {snapshots.length} {snapshots.length === 1 ? "periode" : "periodes"}
+          </span>
+        </div>
+
+        {/* Period cards */}
+        <div className="space-y-2">
+          {visibleSnapshots.map((snapshot) => (
+            <PeriodCard key={snapshot.periodIndex} snapshot={snapshot} t={t} />
+          ))}
+        </div>
+
+        {/* Show more/less */}
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-center pt-1"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="h-3 w-3" />
+                Masquer
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3" />
+                {snapshots.length - 2} periodes precedentes
+              </>
+            )}
+          </button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function BacPerformanceSection({ data, vagueId: _vagueId }: BacPerformanceSectionProps) {
   const t = useTranslations("vagues");
-  const [activeTab, setActiveTab] = useState<"croissance" | "couts">("croissance");
+  const [activeTab, setActiveTab] = useState<"croissance" | "couts" | "periodes">("croissance");
+
+  // Check if any bac has period snapshots
+  const hasPeriods = data.some((d) => d.periodSnapshots.length > 0);
 
   if (data.length === 0) {
     return (
@@ -377,19 +542,56 @@ export function BacPerformanceSection({ data, vagueId: _vagueId }: BacPerformanc
               {t("bacPerf.tabCouts")}
             </span>
           </button>
+          {hasPeriods && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("periodes")}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                activeTab === "periodes"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {t("bacPerf.tabPeriodes")}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {activeTab === "croissance"
-          ? data.map((item) => (
-              <GrowthCard key={item.bacId} item={item} total={data.length} t={t} />
-            ))
-          : data.map((item) => (
-              <CostCard key={item.bacId} item={item} total={data.length} t={t} />
+      {activeTab === "periodes" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {data
+            .filter((item) => item.periodSnapshots.length > 0)
+            .map((item) => (
+              <BacPeriodsCard key={item.bacId} item={item} t={t} />
             ))}
-      </div>
+          {!hasPeriods && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="font-medium text-sm">{t("bacPerf.periodeEmptyTitle")}</p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                  {t("bacPerf.periodeEmptyDescription")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {activeTab === "croissance"
+            ? data.map((item) => (
+                <GrowthCard key={item.bacId} item={item} total={data.length} t={t} />
+              ))
+            : data.map((item) => (
+                <CostCard key={item.bacId} item={item} total={data.length} t={t} />
+              ))}
+        </div>
+      )}
     </section>
   );
 }

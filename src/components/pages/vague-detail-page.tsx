@@ -154,7 +154,7 @@ export default async function VagueDetailPage({
       consommations: {
         select: {
           quantite: true,
-          produit: { select: { prixUnitaire: true } },
+          produit: { select: { prixUnitaire: true, unite: true, uniteAchat: true, contenance: true } },
         },
       },
     },
@@ -165,6 +165,7 @@ export default async function VagueDetailPage({
   const bacPerfData = computeBacPerformance({
     bacs: vague.bacs.map((b) => ({ id: b.id, nom: b.nom, nombreInitial: b.nombreInitial })),
     releves: relevesForPerf,
+    ventes: [],
     nombreInitialVague: vague.nombreInitial,
     dateDebutVague: new Date(vague.dateDebut),
     poidsMoyenInitial: vague.poidsMoyenInitial,

@@ -5,9 +5,36 @@
  * All functions are side-effect-free and testable.
  *
  * Sprint 12 — Story: Performance par Bac section on Vague Detail Page
+ *
+ * Fixes applied:
+ * - Cost uses getPrixParUniteBase() + convertirUniteStock() for correct unit handling
+ * - FCR accounts for sold fish biomass: totalFeedKg / (biomasse + soldBiomasse - initialBiomasse)
+ * - Biometry period snapshots for long-term evaluation
+ * - rankLabel no longer hardcodes French — component handles i18n
  */
 
-import { computeVivantsByBac } from "@/lib/calculs";
+import { computeVivantsByBac, getPrixParUniteBase, convertirUniteStock } from "@/lib/calculs";
+
+// ── Interfaces ───────────────────────────────────────────────────────────────
+
+export interface BiometryPeriodSnapshot {
+  periodIndex: number;           // 0-based
+  dateDebut: string;             // ISO date (start biometry)
+  dateFin: string;               // ISO date (end biometry)
+  dureeJours: number;
+  poidsMoyenDebut: number;       // g
+  poidsMoyenFin: number;         // g
+  croissanceG: number;           // weight gain in grams
+  gmq: number;                   // g/day for this period
+  alimentKg: number;             // feed consumed during this period
+  coutAlimentPeriode: number;    // feed cost during this period
+  mortalites: number;            // deaths during this period
+  vivantsDebut: number;
+  vivantsFin: number;
+  biomasseDebut: number;         // kg
+  biomasseFin: number;           // kg
+  fcrPeriode: number | null;     // period-specific FCR/ICA
+}
 
 export interface BacPerformanceData {
   bacId: string;
@@ -21,37 +48,113 @@ export interface BacPerformanceData {
   biomasse: number; // poidsMoyenActuel * vivants / 1000 in kg
   tauxSurvie: number; // vivants / nombreInitial * 100
   // Feed metrics
-  totalAlimentKg: number; // SUM of ALIMENTATION relevés quantiteAliment for this bac
-  fcr: number | null; // totalAlimentKg / gainBiomasseKg (null if no gain)
+  totalAlimentKg: number; // SUM of feed from ReleveConsommation converted to KG
+  fcr: number | null; // totalAlimentKg / totalGainBiomasseKg (includes sold fish)
   // Cost metrics
-  coutAliment: number; // SUM of ReleveConsommation quantities × product price
-  coutParKgProduit: number | null; // coutAliment / gainBiomasseKg
-  gainBiomasseKg: number; // current biomasse - initial biomasse
+  coutAliment: number; // SUM of ReleveConsommation quantities × getPrixParUniteBase
+  coutParKgProduit: number | null; // coutAliment / totalGainBiomasseKg
+  gainBiomasseKg: number; // (biomasse + soldBiomasseKg) - initialBiomasse
+  soldBiomasseKg: number; // biomass of sold fish
   // Sparkline
   sparklineData: { jour: number; poidsMoyen: number }[]; // all biometrie points chronologically
+  // Biometry period snapshots
+  periodSnapshots: BiometryPeriodSnapshot[];
   // Meta
   derniereBiometrieDate: string | null; // ISO string (serializable across RSC boundary)
   rank: number; // 1 = best FCR
-  rankLabel: string; // "#1 Meilleur FCR" or "#3" etc.
+  rankLabel: string; // "#1" or "#2" etc. (no hardcoded French — component handles i18n)
+}
+
+export interface ConsommationInput {
+  quantite: number;
+  produit: {
+    prixUnitaire: number;
+    unite: string; // UniteStock
+    uniteAchat?: string | null;
+    contenance?: number | null;
+  };
+}
+
+export interface ReleveInput {
+  bacId: string | null;
+  typeReleve: string;
+  date: Date | string;
+  poidsMoyen: number | null;
+  nombreMorts: number | null;
+  nombreCompte: number | null;
+  nombreVendus: number | null;
+  quantiteAliment: number | null;
+  consommations: ConsommationInput[];
+}
+
+export interface VenteInput {
+  poidsTotalKg: number;
+  /** Per-bac VENTE relevés linked to this vente, with nombreVendus per bac */
+  releveBacIds?: { bacId: string; nombreVendus: number }[];
 }
 
 export interface BacPerformanceInput {
   bacs: { id: string; nom: string; nombreInitial: number | null }[];
-  releves: {
-    bacId: string | null;
-    typeReleve: string;
-    date: Date | string;
-    poidsMoyen: number | null;
-    nombreMorts: number | null;
-    nombreCompte: number | null;
-    nombreVendus: number | null;
-    quantiteAliment: number | null;
-    consommations: { quantite: number; produit: { prixUnitaire: number } }[];
-  }[];
+  releves: ReleveInput[];
+  ventes: VenteInput[];
   nombreInitialVague: number;
   dateDebutVague: Date;
   poidsMoyenInitial: number;
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Compute the feed cost for a single ReleveConsommation line.
+ * Uses getPrixParUniteBase for correct price and convertirUniteStock for quantity.
+ */
+function computeConsommationCost(c: ConsommationInput): { costFcfa: number; quantiteKg: number } {
+  const prixBase = getPrixParUniteBase(c.produit); // price per base unit
+  const quantiteKg = convertirUniteStock(c.quantite, c.produit.unite, "KG", c.produit.contenance ?? 25);
+  const quantiteKgSafe = quantiteKg ?? 0;
+  // Cost = quantity in base unit × price per base unit
+  // getPrixParUniteBase returns price per base unit (e.g. per KG)
+  // We need quantity in base unit (the product's own unit) for cost
+  // But for totalAlimentKg we need KG specifically
+  const quantiteBase = c.quantite; // already in product's base unit
+  const costFcfa = quantiteBase * prixBase;
+  return { costFcfa, quantiteKg: quantiteKgSafe };
+}
+
+/**
+ * Estimate weight of sold fish per bac using biometry data.
+ * For each VENTE type releve on a bac, finds the latest biometry at or before the sale date.
+ */
+function computeSoldBiomassePerBac(
+  bacId: string,
+  releves: ReleveInput[],
+  biometries: ReleveInput[],
+  poidsMoyenInitial: number
+): number {
+  const venteReleves = releves.filter(
+    (r) => r.bacId === bacId && r.typeReleve === "VENTE" && r.nombreVendus != null && r.nombreVendus > 0
+  );
+
+  if (venteReleves.length === 0) return 0;
+
+  let totalSoldKg = 0;
+  for (const vr of venteReleves) {
+    const saleDateMs = new Date(vr.date).getTime();
+    // Find the latest biometry at or before the sale date
+    let weightAtSale = poidsMoyenInitial;
+    for (const bio of biometries) {
+      const bioDateMs = new Date(bio.date).getTime();
+      if (bioDateMs <= saleDateMs && bio.poidsMoyen !== null) {
+        weightAtSale = bio.poidsMoyen;
+      }
+    }
+    totalSoldKg += ((vr.nombreVendus as number) * weightAtSale) / 1000;
+  }
+
+  return Math.round(totalSoldKg * 100) / 100;
+}
+
+// ── Main computation ─────────────────────────────────────────────────────────
 
 /**
  * Compute per-bac performance metrics from a vague's releves.
@@ -151,7 +254,7 @@ export function computeBacPerformance(
       // Vivants
       const nombreVivants = vivantsByBac.get(bac.id) ?? nombreInitialBac;
 
-      // Biomasse actuelle
+      // Biomasse actuelle (vivants only — not including sold fish)
       const biomasse =
         poidsMoyenActuel !== null
           ? Math.round(((poidsMoyenActuel * nombreVivants) / 1000) * 100) / 100
@@ -167,37 +270,45 @@ export function computeBacPerformance(
       const biomasseInitiale =
         Math.round(((poidsMoyenInitial * nombreInitialBac) / 1000) * 100) / 100;
 
-      // Gain biomasse
+      // Sold biomass — estimated from VENTE relevés × weight at time of sale
+      const soldBiomasseKg = computeSoldBiomassePerBac(
+        bac.id, releves, biometries, poidsMoyenInitial
+      );
+
+      // Total gain biomasse (includes sold fish)
       const gainBiomasseKg =
-        Math.round((biomasse - biomasseInitiale) * 100) / 100;
+        Math.round((biomasse + soldBiomasseKg - biomasseInitiale) * 100) / 100;
 
-      // Total aliment (kg) from ALIMENTATION relevés
-      const totalAlimentKg = releves
-        .filter(
-          (r) => r.bacId === bac.id && r.typeReleve === "ALIMENTATION"
-        )
-        .reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
+      // ── Feed metrics from ReleveConsommation (with unit conversion) ─────────
+      const alimentationReleves = releves.filter(
+        (r) => r.bacId === bac.id && r.typeReleve === "ALIMENTATION"
+      );
 
-      // FCR
+      let totalAlimentKg = 0;
+      let coutAliment = 0;
+
+      for (const rel of alimentationReleves) {
+        if (rel.consommations.length > 0) {
+          // Use ReleveConsommation data (precise per-product breakdown)
+          for (const c of rel.consommations) {
+            const { costFcfa, quantiteKg } = computeConsommationCost(c);
+            totalAlimentKg += quantiteKg;
+            coutAliment += costFcfa;
+          }
+        } else if (rel.quantiteAliment != null) {
+          // Fallback: use Releve.quantiteAliment (assumed KG, no cost info)
+          totalAlimentKg += rel.quantiteAliment;
+        }
+      }
+
+      totalAlimentKg = Math.round(totalAlimentKg * 1000) / 1000;
+      coutAliment = Math.round(coutAliment);
+
+      // FCR — accounts for sold fish: totalFeed / (biomasse + soldBiomasse - initialBiomasse)
       const fcr =
         gainBiomasseKg > 0
           ? Math.round((totalAlimentKg / gainBiomasseKg) * 100) / 100
           : null;
-
-      // Feed cost from consommations
-      const coutAliment = releves
-        .filter(
-          (r) => r.bacId === bac.id && r.typeReleve === "ALIMENTATION"
-        )
-        .reduce(
-          (sum, r) =>
-            sum +
-            r.consommations.reduce(
-              (cs, c) => cs + c.quantite * c.produit.prixUnitaire,
-              0
-            ),
-          0
-        );
 
       // Cost per kg produced
       const coutParKgProduit =
@@ -210,6 +321,16 @@ export function computeBacPerformance(
         biometries.length > 0
           ? new Date(biometries[biometries.length - 1].date).toISOString()
           : null;
+
+      // ── Biometry period snapshots ───────────────────────────────────────────
+      const periodSnapshots = computePeriodSnapshots(
+        bac.id,
+        biometries,
+        releves,
+        nombreInitialBac,
+        poidsMoyenInitial,
+        vagueStartMs
+      );
 
       return {
         bacId: bac.id,
@@ -226,7 +347,9 @@ export function computeBacPerformance(
         coutAliment,
         coutParKgProduit,
         gainBiomasseKg,
+        soldBiomasseKg,
         sparklineData,
+        periodSnapshots,
         derniereBiometrieDate,
       };
     }
@@ -240,11 +363,151 @@ export function computeBacPerformance(
     return a.fcr - b.fcr;
   });
 
-  // Assign ranks
+  // Assign ranks — no hardcoded French, component handles i18n
   return sorted.map((item, idx) => {
     const rank = idx + 1;
-    const rankLabel =
-      rank === 1 && item.fcr !== null ? `#1 Meilleur FCR` : `#${rank}`;
+    const rankLabel = `#${rank}`;
     return { ...item, rank, rankLabel };
   });
+}
+
+// ── Period snapshots computation ─────────────────────────────────────────────
+
+function computePeriodSnapshots(
+  bacId: string,
+  biometries: ReleveInput[],
+  allReleves: ReleveInput[],
+  nombreInitialBac: number,
+  poidsMoyenInitial: number,
+  vagueStartMs: number
+): BiometryPeriodSnapshot[] {
+  if (biometries.length < 2) return [];
+
+  const snapshots: BiometryPeriodSnapshot[] = [];
+
+  // Track cumulative vivants: start from initial count, subtract mortalities
+  let cumulativeVivants = nombreInitialBac;
+
+  for (let i = 0; i < biometries.length - 1; i++) {
+    const bioStart = biometries[i];
+    const bioEnd = biometries[i + 1];
+
+    const dateDebutMs = new Date(bioStart.date).getTime();
+    const dateFinMs = new Date(bioEnd.date).getTime();
+    const dureeJours = Math.max(1, Math.floor((dateFinMs - dateDebutMs) / 86400000));
+
+    const poidsMoyenDebut = bioStart.poidsMoyen as number;
+    const poidsMoyenFin = bioEnd.poidsMoyen as number;
+    const croissanceG = Math.round((poidsMoyenFin - poidsMoyenDebut) * 100) / 100;
+    const gmq = Math.round((croissanceG / dureeJours) * 100) / 100;
+
+    // Filter ALIMENTATION relevés in this period (start exclusive, end inclusive)
+    const periodAlimentReleves = allReleves.filter((r) => {
+      if (r.bacId !== bacId || r.typeReleve !== "ALIMENTATION") return false;
+      const rDateMs = new Date(r.date).getTime();
+      return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
+    });
+
+    let alimentKg = 0;
+    let coutAlimentPeriode = 0;
+    for (const rel of periodAlimentReleves) {
+      if (rel.consommations.length > 0) {
+        for (const c of rel.consommations) {
+          const { costFcfa, quantiteKg } = computeConsommationCost(c);
+          alimentKg += quantiteKg;
+          coutAlimentPeriode += costFcfa;
+        }
+      } else if (rel.quantiteAliment != null) {
+        alimentKg += rel.quantiteAliment;
+      }
+    }
+    alimentKg = Math.round(alimentKg * 1000) / 1000;
+    coutAlimentPeriode = Math.round(coutAlimentPeriode);
+
+    // Mortalites in this period
+    const mortalites = allReleves
+      .filter((r) => {
+        if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
+        const rDateMs = new Date(r.date).getTime();
+        return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
+      })
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+
+    // Sold fish in this period
+    const soldInPeriod = allReleves
+      .filter((r) => {
+        if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
+        const rDateMs = new Date(r.date).getTime();
+        return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
+      })
+      .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
+
+    const vivantsDebut = cumulativeVivants;
+
+    // Count mortalities and sales BEFORE this period's start (from vague start to this bio)
+    if (i === 0) {
+      // For the first period, vivantsDebut = initial count - mortality/sales before first bio
+      const mortsBeforeFirst = allReleves
+        .filter((r) => {
+          if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
+          const rDateMs = new Date(r.date).getTime();
+          return rDateMs <= dateDebutMs;
+        })
+        .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+      const soldBeforeFirst = allReleves
+        .filter((r) => {
+          if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
+          const rDateMs = new Date(r.date).getTime();
+          return rDateMs <= dateDebutMs;
+        })
+        .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
+      cumulativeVivants = nombreInitialBac - mortsBeforeFirst - soldBeforeFirst;
+    }
+
+    const vivantsDebutFinal = cumulativeVivants;
+    cumulativeVivants = cumulativeVivants - mortalites - soldInPeriod;
+    const vivantsFin = cumulativeVivants;
+
+    const biomasseDebut = Math.round(((poidsMoyenDebut * vivantsDebutFinal) / 1000) * 100) / 100;
+    const biomasseFin = Math.round(((poidsMoyenFin * vivantsFin) / 1000) * 100) / 100;
+
+    // Period FCR: feed consumed / biomass gain (including sold fish weight in this period)
+    const soldBiomassePeriod = allReleves
+      .filter((r) => {
+        if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
+        const rDateMs = new Date(r.date).getTime();
+        return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
+      })
+      .reduce((sum, r) => {
+        // Estimate weight at sale — use end of period weight as approximation
+        return sum + ((r.nombreVendus ?? 0) * poidsMoyenFin) / 1000;
+      }, 0);
+
+    const gainBiomassePeriod = biomasseFin + soldBiomassePeriod - biomasseDebut;
+    const fcrPeriode =
+      gainBiomassePeriod > 0 && alimentKg > 0
+        ? Math.round((alimentKg / gainBiomassePeriod) * 100) / 100
+        : null;
+
+    snapshots.push({
+      periodIndex: i,
+      dateDebut: new Date(bioStart.date).toISOString(),
+      dateFin: new Date(bioEnd.date).toISOString(),
+      dureeJours,
+      poidsMoyenDebut,
+      poidsMoyenFin,
+      croissanceG,
+      gmq,
+      alimentKg,
+      coutAlimentPeriode,
+      mortalites,
+      vivantsDebut: vivantsDebutFinal,
+      vivantsFin,
+      biomasseDebut,
+      biomasseFin,
+      fcrPeriode,
+    });
+  }
+
+  return snapshots;
 }
