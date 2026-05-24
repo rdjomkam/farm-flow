@@ -17,6 +17,7 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateRapportVaguePDFDTO } from "@/types/export";
 import { StatutVague, TypeReleve } from "@/types";
+import { generateRapportVagueInsights } from "./pdf-rapport-vague-insights";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -305,6 +306,23 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: colors.muted,
   },
+  // Insight block
+  insightBox: {
+    backgroundColor: "#f0fdfa",
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    borderRadius: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  insightText: {
+    fontSize: 8,
+    color: "#115e59",
+    lineHeight: 1.5,
+    marginBottom: 2,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -343,10 +361,35 @@ function getReleveDataText(r: CreateRapportVaguePDFDTO["releves"][number]): stri
 }
 
 // ---------------------------------------------------------------------------
+// InsightBlock — bloc d'analyse contextuelle
+// ---------------------------------------------------------------------------
+
+function InsightBlock({ lines }: { lines: string[] }) {
+  if (lines.length === 0) return null;
+  return (
+    <View style={styles.insightBox} wrap={false}>
+      {lines.map((line, i) => (
+        <Text key={i} style={styles.insightText}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Composant
 // ---------------------------------------------------------------------------
 
 export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
+  // Generate insights with safe fallback
+  let insights: ReturnType<typeof generateRapportVagueInsights>;
+  try {
+    insights = generateRapportVagueInsights(data);
+  } catch {
+    insights = { executive: [], zootechnique: [], croissance: [], mortalite: [], alimentation: [], ventes: [], rentabilite: [] };
+  }
+
   const statutColors: Record<
     StatutVague,
     { bg: string; text: string }
@@ -400,6 +443,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             </View>
           </View>
         </View>
+
+        {/* Résumé exécutif */}
+        <InsightBlock lines={insights.executive} />
 
         {/* ===================== KPIs ===================== */}
         <Text style={styles.sectionTitle}>Indicateurs zootechniques</Text>
@@ -459,6 +505,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
           </View>
         </View>
 
+        {/* Insight zootechnique */}
+        <InsightBlock lines={insights.zootechnique} />
+
         {/* ===================== COÛT DE PRODUCTION ===================== */}
         {data.coutProduction && (
           <View wrap={false}>
@@ -487,6 +536,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             </View>
           </View>
         )}
+
+        {/* Insight rentabilité */}
+        {data.coutProduction && <InsightBlock lines={insights.rentabilite} />}
 
         {/* ===================== BACS ===================== */}
         {data.bacs.length > 0 && (
@@ -601,6 +653,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
           </View>
         )}
 
+        {/* Insight croissance */}
+        <InsightBlock lines={insights.croissance} />
+
         {/* ===================== MODÈLE DE CROISSANCE (GOMPERTZ) ===================== */}
         {data.gompertz && (
           <View wrap={false}>
@@ -699,6 +754,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             )}
           </View>
         )}
+
+        {/* Insight mortalité */}
+        {data.mortalitySummary && <InsightBlock lines={insights.mortalite} />}
 
         {/* ===================== VENTES ===================== */}
         {data.salesSummary && (
@@ -806,6 +864,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
           </View>
         )}
 
+        {/* Insight ventes */}
+        {data.salesSummary && <InsightBlock lines={insights.ventes} />}
+
         {/* ===================== RÉSUMÉ ALIMENTATION ===================== */}
         {data.feedingSummary && (
           <View wrap={false}>
@@ -838,6 +899,9 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             )}
           </View>
         )}
+
+        {/* Insight alimentation */}
+        {data.feedingSummary && <InsightBlock lines={insights.alimentation} />}
 
         {/* ===================== RÉSUMÉ QUALITÉ EAU ===================== */}
         {data.waterQualitySummary && (data.waterQualitySummary.temperature || data.waterQualitySummary.ph || data.waterQualitySummary.oxygene || data.waterQualitySummary.ammoniac) && (
