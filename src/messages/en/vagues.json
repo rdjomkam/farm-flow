@@ -301,5 +301,62 @@
       "revenuVentes": "Sales revenue",
       "margeBrute": "Gross margin"
     }
+  },
+  "coutProduction": {
+    "title": "Production cost",
+    "empty": "No costs recorded for this batch.",
+    "exportPdf": "Export PDF",
+    "expandLabel": "Show details",
+    "collapseLabel": "Hide details",
+    "summary": {
+      "coutTotal": "Total cost",
+      "coutParKg": "Cost / kg",
+      "prixVenteKg": "Sale price / kg",
+      "margeParKg": "Margin / kg",
+      "roi": "ROI"
+    },
+    "sections": {
+      "bilanProduction": "Production summary",
+      "bilanProductionDesc": "Total biomass produced = live + sold",
+      "repartitionCategorie": "Breakdown by category",
+      "repartitionCategorieDesc": "Share of each item in total cost",
+      "detailAlimentation": "Feed details",
+      "detailAlimentationDesc": "Quantities and costs by feed type consumed",
+      "depensesDirectes": "Direct expenses",
+      "depensesDirectesDesc": "Expenses specific to this batch",
+      "depensesPartagees": "Shared expenses (multi-batch)",
+      "depensesPartageesDesc": "Common costs allocated proportionally to this batch",
+      "depensesRecurrentes": "Recurring expenses",
+      "depensesRecurrentesDesc": "Fixed charges allocated by days × fish ratio",
+      "rentabilite": "Profitability",
+      "rentabiliteDesc": "Production costs vs sales revenue comparison"
+    },
+    "bilan": {
+      "biomasseProduite": "Biomass produced",
+      "biomasseVendue": "Biomass sold",
+      "biomasseVivante": "Live biomass",
+      "poissonsVendus": "Fish sold"
+    },
+    "rentabilite": {
+      "coutTotalProduction": "Total production cost",
+      "revenusVentes": "Sales revenue",
+      "margeBrute": "Gross margin",
+      "retourInvestissement": "Return on investment"
+    },
+    "categories": {
+      "ALIMENT": "Feed",
+      "INTRANT": "Inputs",
+      "EQUIPEMENT": "Equipment",
+      "ELECTRICITE": "Electricity",
+      "EAU": "Water",
+      "LOYER": "Rent",
+      "SALAIRE": "Wages",
+      "TRANSPORT": "Transport",
+      "VETERINAIRE": "Veterinary",
+      "REPARATION": "Repairs",
+      "INVESTISSEMENT": "Investment",
+      "AUTRE": "Other",
+      "MULTI_VAGUE": "Shared costs"
+    }
   }
 }

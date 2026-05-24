@@ -6,54 +6,31 @@
  * Affiche :
  * - Résumé toujours visible : coût total, coût/kg, prix vente/kg, marge/kg, ROI
  * - Détail expandable :
- *   - Biomasse estimée
+ *   - Bilan production (biomasse produite/vendue/vivante)
  *   - Répartition par catégorie
  *   - Détail alimentation
  *   - Dépenses directes
  *   - Dépenses partagées multi-vagues
  *   - Dépenses récurrentes
- *   - Revenus et marge
+ *   - Rentabilité (coûts vs revenus)
  * - Bouton d'export PDF via ExportButton
  *
  * Story CP-3 — Mobile-first (360px), règles R2 + R6
+ * i18n: uses vagues.coutProduction namespace
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, TrendingDown, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
 import { formatNumber } from "@/lib/format";
 import type { CoutProductionVague, CoutProductionDepenseRecurrente } from "@/lib/queries/finances";
-import { CategorieDepense } from "@/types";
 
 interface CoutProductionCardProps {
   data: CoutProductionVague;
   vagueId: string;
-}
-
-// ---------------------------------------------------------------------------
-// Labels des catégories
-// ---------------------------------------------------------------------------
-
-const CATEGORIE_LABELS: Record<string, string> = {
-  [CategorieDepense.ALIMENT]: "Alimentation",
-  [CategorieDepense.INTRANT]: "Intrants",
-  [CategorieDepense.EQUIPEMENT]: "Équipement",
-  [CategorieDepense.ELECTRICITE]: "Électricité",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaires",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Vétérinaire",
-  [CategorieDepense.REPARATION]: "Réparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
-  MULTI_VAGUE: "Coûts partagés",
-};
-
-function getCategorieLabel(categorie: string): string {
-  return CATEGORIE_LABELS[categorie] ?? categorie;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +39,7 @@ function getCategorieLabel(categorie: string): string {
 
 export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations("vagues.coutProduction");
 
   const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes } = data;
   const isEmpty = resume.coutTotal === 0;
@@ -84,12 +62,12 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
     <Card className="overflow-hidden">
       <CardHeader className="p-3 pb-0">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Coût de production</h2>
+          <h2 className="text-base font-semibold">{t("title")}</h2>
           <div className="flex items-center gap-2">
             <ExportButton
               href={`/api/export/vague/${vagueId}/cout-production`}
               filename={`cout-production-vague-${vagueId}.pdf`}
-              label="Exporter PDF"
+              label={t("exportPdf")}
               variant="outline"
               className="text-xs px-2"
             />
@@ -99,7 +77,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 size="sm"
                 className="h-8 w-8 p-0"
                 onClick={() => setExpanded((v) => !v)}
-                aria-label={expanded ? "Réduire le détail" : "Voir le détail"}
+                aria-label={expanded ? t("collapseLabel") : t("expandLabel")}
               >
                 {expanded ? (
                   <ChevronUp className="h-4 w-4" />
@@ -115,18 +93,18 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
       <CardContent className="p-3 pt-2">
         {isEmpty ? (
           <p className="text-sm text-muted-foreground text-center py-3">
-            Aucun coût enregistré pour cette vague.
+            {t("empty")}
           </p>
         ) : (
           <>
             {/* Résumé — toujours visible */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
               <SummaryItem
-                label="Coût total"
+                label={t("summary.coutTotal")}
                 value={`${formatNumber(resume.coutTotal)} FCFA`}
               />
               <SummaryItem
-                label="Coût / kg"
+                label={t("summary.coutParKg")}
                 value={
                   resume.coutParKg !== null
                     ? `${formatNumber(Math.round(resume.coutParKg))} FCFA`
@@ -134,7 +112,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 }
               />
               <SummaryItem
-                label="Prix vente / kg"
+                label={t("summary.prixVenteKg")}
                 value={
                   resume.prixMoyenVenteKg !== null
                     ? `${formatNumber(Math.round(resume.prixMoyenVenteKg))} FCFA`
@@ -142,7 +120,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 }
               />
               <SummaryItem
-                label="Marge / kg"
+                label={t("summary.margeParKg")}
                 value={
                   resume.margeParKg !== null
                     ? `${formatNumber(Math.round(resume.margeParKg))} FCFA`
@@ -158,7 +136,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 }
               />
               <SummaryItem
-                label="ROI"
+                label={t("summary.roi")}
                 value={
                   resume.roi !== null ? `${resume.roi.toFixed(1)} %` : "—"
                 }
@@ -171,17 +149,20 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
               <div className="mt-4 space-y-4 border-t border-border pt-3">
 
                 {/* Bilan Production & Ventes */}
-                <ProductionBilan resume={resume} />
+                <ProductionBilan resume={resume} t={t} />
 
                 {/* Répartition par catégorie */}
                 {coutParCategorie.length > 0 && (
-                  <DetailSection title="Répartition par catégorie">
+                  <DetailSection
+                    title={t("sections.repartitionCategorie")}
+                    description={t("sections.repartitionCategorieDesc")}
+                  >
                     <div className="space-y-2">
                       {coutParCategorie.map((item) => (
                         <div key={item.categorie} className="space-y-1">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-foreground">
-                              {getCategorieLabel(item.categorie)}
+                              {t(`categories.${item.categorie}`)}
                             </span>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-muted-foreground text-xs">
@@ -206,7 +187,10 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 
                 {/* Détail alimentation */}
                 {detailAliments.length > 0 && (
-                  <DetailSection title="Détail alimentation">
+                  <DetailSection
+                    title={t("sections.detailAlimentation")}
+                    description={t("sections.detailAlimentationDesc")}
+                  >
                     <div className="space-y-2">
                       {detailAliments.map((aliment) => (
                         <div
@@ -229,7 +213,10 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 
                 {/* Dépenses directes */}
                 {depensesDirectes.length > 0 && (
-                  <DetailSection title="Dépenses directes">
+                  <DetailSection
+                    title={t("sections.depensesDirectes")}
+                    description={t("sections.depensesDirectesDesc")}
+                  >
                     <div className="space-y-2">
                       {depensesDirectes.map((dep, i) => (
                         <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
@@ -239,7 +226,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                                 {dep.description}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {getCategorieLabel(dep.categorie)} ·{" "}
+                                {t(`categories.${dep.categorie}`)} ·{" "}
                                 {dep.date
                                   ? new Date(dep.date).toLocaleDateString("fr-FR", {
                                       day: "2-digit",
@@ -261,7 +248,10 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 
                 {/* Dépenses partagées multi-vagues */}
                 {depensesMultiVagues.length > 0 && (
-                  <DetailSection title="Dépenses partagées (multi-vagues)">
+                  <DetailSection
+                    title={t("sections.depensesPartagees")}
+                    description={t("sections.depensesPartageesDesc")}
+                  >
                     <div className="space-y-2">
                       {depensesMultiVagues.map((dep, i) => (
                         <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
@@ -285,10 +275,10 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 
                 {/* Dépenses récurrentes */}
                 {depensesRecurrentes.length > 0 && (
-                  <DetailSection title="Dépenses récurrentes">
-                    <p className="text-xs text-muted-foreground -mt-1 mb-2">
-                      Ratio = (jours × poissons initiaux) / total toutes vagues
-                    </p>
+                  <DetailSection
+                    title={t("sections.depensesRecurrentes")}
+                    description={t("sections.depensesRecurrentesDesc")}
+                  >
                     <div className="space-y-2">
                       {depensesRecurrentes.map((dep, i) => (
                         <RecurringExpenseCard key={i} dep={dep} />
@@ -298,22 +288,25 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 )}
 
                 {/* Rentabilité */}
-                <DetailSection title="Rentabilité">
+                <DetailSection
+                  title={t("sections.rentabilite")}
+                  description={t("sections.rentabiliteDesc")}
+                >
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Coût total production</span>
+                      <span className="text-muted-foreground">{t("rentabilite.coutTotalProduction")}</span>
                       <span className="font-medium tabular-nums text-destructive">
                         -{formatNumber(resume.coutTotal)} FCFA
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Revenus ventes</span>
+                      <span className="text-muted-foreground">{t("rentabilite.revenusVentes")}</span>
                       <span className="font-medium tabular-nums text-success">
                         +{formatNumber(resume.revenus)} FCFA
                       </span>
                     </div>
                     <div className="border-t border-border pt-1.5 flex justify-between text-sm">
-                      <span className="font-medium">Marge brute</span>
+                      <span className="font-medium">{t("rentabilite.margeBrute")}</span>
                       <span
                         className={`font-bold tabular-nums ${
                           resume.marge >= 0 ? "text-success" : "text-destructive"
@@ -325,7 +318,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                     </div>
                     {resume.roi !== null && (
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Retour sur investissement</span>
+                        <span>{t("rentabilite.retourInvestissement")}</span>
                         <span className={`font-medium ${resume.roi >= 0 ? "text-success" : "text-destructive"}`}>
                           {resume.roi >= 0 ? "+" : ""}{resume.roi.toFixed(1)}%
                         </span>
@@ -346,25 +339,29 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
 // ProductionBilan — bilan production vs ventes
 // ---------------------------------------------------------------------------
 
-function ProductionBilan({ resume }: { resume: CoutProductionVague["resume"] }) {
+function ProductionBilan({ resume, t }: { resume: CoutProductionVague["resume"]; t: (key: string) => string }) {
   return (
-    <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2.5 space-y-2">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bilan production</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-        {resume.biomasseProduite !== null && (
-          <BilanRow label="Biomasse produite" value={`${formatNumber(Math.round(resume.biomasseProduite * 10) / 10)} kg`} bold />
-        )}
-        {resume.poidsTotalVendu > 0 && (
-          <BilanRow label="Biomasse vendue" value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`} />
-        )}
-        {resume.biomasseKg !== null && resume.biomasseKg > 0 && (
-          <BilanRow label="Biomasse vivante" value={`${formatNumber(Math.round(resume.biomasseKg * 10) / 10)} kg`} />
-        )}
-        {resume.nombrePoissonsVendus > 0 && (
-          <BilanRow label="Poissons vendus" value={`${formatNumber(resume.nombrePoissonsVendus)}`} />
-        )}
+    <DetailSection
+      title={t("sections.bilanProduction")}
+      description={t("sections.bilanProductionDesc")}
+    >
+      <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2.5">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {resume.biomasseProduite !== null && (
+            <BilanRow label={t("bilan.biomasseProduite")} value={`${formatNumber(Math.round(resume.biomasseProduite * 10) / 10)} kg`} bold />
+          )}
+          {resume.poidsTotalVendu > 0 && (
+            <BilanRow label={t("bilan.biomasseVendue")} value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`} />
+          )}
+          {resume.biomasseKg !== null && resume.biomasseKg > 0 && (
+            <BilanRow label={t("bilan.biomasseVivante")} value={`${formatNumber(Math.round(resume.biomasseKg * 10) / 10)} kg`} />
+          )}
+          {resume.nombrePoissonsVendus > 0 && (
+            <BilanRow label={t("bilan.poissonsVendus")} value={`${formatNumber(resume.nombrePoissonsVendus)}`} />
+          )}
+        </div>
       </div>
-    </div>
+    </DetailSection>
   );
 }
 
@@ -438,18 +435,24 @@ function RecurringExpenseCard({ dep }: { dep: CoutProductionDepenseRecurrente })
 }
 
 // ---------------------------------------------------------------------------
-// DetailSection — section avec titre dans le détail expandable
+// DetailSection — section avec titre + description dans le détail expandable
 // ---------------------------------------------------------------------------
 
 interface DetailSectionProps {
   title: string;
+  description?: string;
   children: React.ReactNode;
 }
 
-function DetailSection({ title, children }: DetailSectionProps) {
+function DetailSection({ title, description, children }: DetailSectionProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+        {description && (
+          <p className="text-xs text-muted-foreground/70 mt-0.5">{description}</p>
+        )}
+      </div>
       {children}
     </div>
   );

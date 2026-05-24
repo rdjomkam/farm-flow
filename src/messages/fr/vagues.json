@@ -301,5 +301,62 @@
       "revenuVentes": "Revenu ventes",
       "margeBrute": "Marge brute"
     }
+  },
+  "coutProduction": {
+    "title": "Coût de production",
+    "empty": "Aucun coût enregistré pour cette vague.",
+    "exportPdf": "Exporter PDF",
+    "expandLabel": "Voir le détail",
+    "collapseLabel": "Réduire le détail",
+    "summary": {
+      "coutTotal": "Coût total",
+      "coutParKg": "Coût / kg",
+      "prixVenteKg": "Prix vente / kg",
+      "margeParKg": "Marge / kg",
+      "roi": "ROI"
+    },
+    "sections": {
+      "bilanProduction": "Bilan production",
+      "bilanProductionDesc": "Biomasse totale produite = vivante + vendue",
+      "repartitionCategorie": "Répartition par catégorie",
+      "repartitionCategorieDesc": "Part de chaque poste dans le coût total",
+      "detailAlimentation": "Détail alimentation",
+      "detailAlimentationDesc": "Quantités et coûts par type d'aliment consommé",
+      "depensesDirectes": "Dépenses directes",
+      "depensesDirectesDesc": "Dépenses spécifiques à cette vague",
+      "depensesPartagees": "Dépenses partagées (multi-vagues)",
+      "depensesPartageesDesc": "Coûts communs répartis au prorata de cette vague",
+      "depensesRecurrentes": "Dépenses récurrentes",
+      "depensesRecurrentesDesc": "Charges fixes imputées selon le ratio jours × poissons",
+      "rentabilite": "Rentabilité",
+      "rentabiliteDesc": "Comparaison coûts de production vs revenus des ventes"
+    },
+    "bilan": {
+      "biomasseProduite": "Biomasse produite",
+      "biomasseVendue": "Biomasse vendue",
+      "biomasseVivante": "Biomasse vivante",
+      "poissonsVendus": "Poissons vendus"
+    },
+    "rentabilite": {
+      "coutTotalProduction": "Coût total production",
+      "revenusVentes": "Revenus ventes",
+      "margeBrute": "Marge brute",
+      "retourInvestissement": "Retour sur investissement"
+    },
+    "categories": {
+      "ALIMENT": "Alimentation",
+      "INTRANT": "Intrants",
+      "EQUIPEMENT": "Équipement",
+      "ELECTRICITE": "Électricité",
+      "EAU": "Eau",
+      "LOYER": "Loyer",
+      "SALAIRE": "Salaires",
+      "TRANSPORT": "Transport",
+      "VETERINAIRE": "Vétérinaire",
+      "REPARATION": "Réparation",
+      "INVESTISSEMENT": "Investissement",
+      "AUTRE": "Autre",
+      "MULTI_VAGUE": "Coûts partagés"
+    }
   }
 }
