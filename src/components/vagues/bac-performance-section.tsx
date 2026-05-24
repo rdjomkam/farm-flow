@@ -341,15 +341,19 @@ function PeriodCard({
   t: ReturnType<typeof useTranslations>;
 }) {
   const dateDebut = new Date(snapshot.dateDebut).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
-  const dateFin = new Date(snapshot.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  const dateFin = snapshot.enCours
+    ? t("bacPerf.periodeAujourdhui")
+    : new Date(snapshot.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 
   return (
-    <div className="border rounded-lg p-3 space-y-2">
+    <div className={`border rounded-lg p-3 space-y-2 ${snapshot.enCours ? "border-dashed border-accent-blue/50 bg-accent-blue/5" : ""}`}>
       {/* Period header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full">
-            {t("bacPerf.periodeTitle", { index: snapshot.periodIndex + 1 })}
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${snapshot.enCours ? "bg-accent-blue-muted text-accent-blue" : "bg-muted"}`}>
+            {snapshot.enCours
+              ? t("bacPerf.periodeEnCours")
+              : t("bacPerf.periodeTitle", { index: snapshot.periodIndex + 1 })}
           </span>
           <span className="text-xs text-muted-foreground">
             {dateDebut} → {dateFin}
@@ -366,14 +370,16 @@ function PeriodCard({
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeCroissance")}</p>
           <p className="text-sm font-medium leading-tight">
-            {snapshot.croissanceG > 0 ? "+" : ""}{formatNum(snapshot.croissanceG, 1)} g
+            {snapshot.croissanceG != null
+              ? `${snapshot.croissanceG > 0 ? "+" : ""}${formatNum(snapshot.croissanceG, 1)} g`
+              : "—"}
           </p>
         </div>
         {/* GMQ */}
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeGmq")}</p>
-          <p className={`text-sm font-medium leading-tight ${periodGmqClass(snapshot.gmq)}`}>
-            {formatNum(snapshot.gmq, 1)} {t("bacPerf.gmqUnit")}
+          <p className={`text-sm font-medium leading-tight ${snapshot.gmq != null ? periodGmqClass(snapshot.gmq) : "text-muted-foreground"}`}>
+            {snapshot.gmq != null ? `${formatNum(snapshot.gmq, 1)} ${t("bacPerf.gmqUnit")}` : "—"}
           </p>
         </div>
         {/* ICA/FCR */}
@@ -409,7 +415,8 @@ function PeriodCard({
       {/* Biomasse row */}
       <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5 border-t">
         <span>
-          {t("bacPerf.periodeBiomasse")}: {formatNum(snapshot.biomasseDebut, 1)} → {formatNum(snapshot.biomasseFin, 1)} kg
+          {t("bacPerf.periodeBiomasse")}: {formatNum(snapshot.biomasseDebut, 1)}
+          {snapshot.biomasseFin != null ? ` → ${formatNum(snapshot.biomasseFin, 1)} kg` : " kg"}
         </span>
         <span>
           {t("bacPerf.periodeVivants")}: {snapshot.vivantsDebut} → {snapshot.vivantsFin}

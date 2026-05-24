@@ -265,8 +265,10 @@
     "periodeVivants": "Alive",
     "periodeBiomasse": "Biomass",
     "periodeGmq": "ADG",
-    "periodeEmptyTitle": "Not enough biometries",
-    "periodeEmptyDescription": "At least 2 biometries are needed to display periods."
+    "periodeEnCours": "Ongoing",
+    "periodeAujourdhui": "today",
+    "periodeEmptyTitle": "No biometry",
+    "periodeEmptyDescription": "At least 1 biometry is needed to display periods."
   },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",

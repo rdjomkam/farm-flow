@@ -20,19 +20,20 @@ import { computeVivantsByBac, getPrixParUniteBase, convertirUniteStock } from "@
 export interface BiometryPeriodSnapshot {
   periodIndex: number;           // 0-based
   dateDebut: string;             // ISO date (start biometry)
-  dateFin: string;               // ISO date (end biometry)
+  dateFin: string;               // ISO date (end biometry or today if enCours)
   dureeJours: number;
+  enCours: boolean;              // true = open period (last biometry → today)
   poidsMoyenDebut: number;       // g
-  poidsMoyenFin: number;         // g
-  croissanceG: number;           // weight gain in grams
-  gmq: number;                   // g/day for this period
+  poidsMoyenFin: number | null;  // g — null when enCours (no closing biometry yet)
+  croissanceG: number | null;    // weight gain in grams — null when enCours
+  gmq: number | null;            // g/day for this period — null when enCours
   alimentKg: number;             // feed consumed during this period
   coutAlimentPeriode: number;    // feed cost during this period
   mortalites: number;            // deaths during this period
   vivantsDebut: number;
   vivantsFin: number;
   biomasseDebut: number;         // kg
-  biomasseFin: number;           // kg
+  biomasseFin: number | null;    // kg — null when enCours (no poidsMoyenFin)
   fcrPeriode: number | null;     // period-specific FCR/ICA
 }
 
@@ -100,6 +101,8 @@ export interface BacPerformanceInput {
   nombreInitialVague: number;
   dateDebutVague: Date;
   poidsMoyenInitial: number;
+  /** Override "now" for period snapshots (defaults to Date.now()). Useful for testing. */
+  now?: Date;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -329,7 +332,8 @@ export function computeBacPerformance(
         releves,
         nombreInitialBac,
         poidsMoyenInitial,
-        vagueStartMs
+        vagueStartMs,
+        input.now
       );
 
       return {
@@ -379,29 +383,19 @@ function computePeriodSnapshots(
   allReleves: ReleveInput[],
   nombreInitialBac: number,
   poidsMoyenInitial: number,
-  vagueStartMs: number
+  vagueStartMs: number,
+  now?: Date
 ): BiometryPeriodSnapshot[] {
-  if (biometries.length < 2) return [];
+  if (biometries.length < 1) return [];
 
+  const nowMs = (now ?? new Date()).getTime();
   const snapshots: BiometryPeriodSnapshot[] = [];
 
   // Track cumulative vivants: start from initial count, subtract mortalities
   let cumulativeVivants = nombreInitialBac;
 
-  for (let i = 0; i < biometries.length - 1; i++) {
-    const bioStart = biometries[i];
-    const bioEnd = biometries[i + 1];
-
-    const dateDebutMs = new Date(bioStart.date).getTime();
-    const dateFinMs = new Date(bioEnd.date).getTime();
-    const dureeJours = Math.max(1, Math.floor((dateFinMs - dateDebutMs) / 86400000));
-
-    const poidsMoyenDebut = bioStart.poidsMoyen as number;
-    const poidsMoyenFin = bioEnd.poidsMoyen as number;
-    const croissanceG = Math.round((poidsMoyenFin - poidsMoyenDebut) * 100) / 100;
-    const gmq = Math.round((croissanceG / dureeJours) * 100) / 100;
-
-    // Filter ALIMENTATION relevés in this period (start exclusive, end inclusive)
+  // Helper: compute feed/mortality/sales in a date range (start exclusive, end inclusive)
+  function computePeriodData(dateDebutMs: number, dateFinMs: number) {
     const periodAlimentReleves = allReleves.filter((r) => {
       if (r.bacId !== bacId || r.typeReleve !== "ALIMENTATION") return false;
       const rDateMs = new Date(r.date).getTime();
@@ -424,7 +418,6 @@ function computePeriodSnapshots(
     alimentKg = Math.round(alimentKg * 1000) / 1000;
     coutAlimentPeriode = Math.round(coutAlimentPeriode);
 
-    // Mortalites in this period
     const mortalites = allReleves
       .filter((r) => {
         if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
@@ -433,7 +426,6 @@ function computePeriodSnapshots(
       })
       .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
 
-    // Sold fish in this period
     const soldInPeriod = allReleves
       .filter((r) => {
         if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
@@ -442,23 +434,38 @@ function computePeriodSnapshots(
       })
       .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
 
-    const vivantsDebut = cumulativeVivants;
+    return { alimentKg, coutAlimentPeriode, mortalites, soldInPeriod };
+  }
 
-    // Count mortalities and sales BEFORE this period's start (from vague start to this bio)
+  // Closed periods: between consecutive biometries
+  for (let i = 0; i < biometries.length - 1; i++) {
+    const bioStart = biometries[i];
+    const bioEnd = biometries[i + 1];
+
+    const dateDebutMs = new Date(bioStart.date).getTime();
+    const dateFinMs = new Date(bioEnd.date).getTime();
+    const dureeJours = Math.max(1, Math.floor((dateFinMs - dateDebutMs) / 86400000));
+
+    const poidsMoyenDebut = bioStart.poidsMoyen as number;
+    const poidsMoyenFin = bioEnd.poidsMoyen as number;
+    const croissanceG = Math.round((poidsMoyenFin - poidsMoyenDebut) * 100) / 100;
+    const gmq = Math.round((croissanceG / dureeJours) * 100) / 100;
+
+    const { alimentKg, coutAlimentPeriode, mortalites, soldInPeriod } =
+      computePeriodData(dateDebutMs, dateFinMs);
+
+    // Count mortalities and sales BEFORE this period's start (only for first period)
     if (i === 0) {
-      // For the first period, vivantsDebut = initial count - mortality/sales before first bio
       const mortsBeforeFirst = allReleves
         .filter((r) => {
           if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
-          const rDateMs = new Date(r.date).getTime();
-          return rDateMs <= dateDebutMs;
+          return new Date(r.date).getTime() <= dateDebutMs;
         })
         .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
       const soldBeforeFirst = allReleves
         .filter((r) => {
           if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
-          const rDateMs = new Date(r.date).getTime();
-          return rDateMs <= dateDebutMs;
+          return new Date(r.date).getTime() <= dateDebutMs;
         })
         .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
       cumulativeVivants = nombreInitialBac - mortsBeforeFirst - soldBeforeFirst;
@@ -479,7 +486,6 @@ function computePeriodSnapshots(
         return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
       })
       .reduce((sum, r) => {
-        // Estimate weight at sale — use end of period weight as approximation
         return sum + ((r.nombreVendus ?? 0) * poidsMoyenFin) / 1000;
       }, 0);
 
@@ -494,6 +500,7 @@ function computePeriodSnapshots(
       dateDebut: new Date(bioStart.date).toISOString(),
       dateFin: new Date(bioEnd.date).toISOString(),
       dureeJours,
+      enCours: false,
       poidsMoyenDebut,
       poidsMoyenFin,
       croissanceG,
@@ -506,6 +513,61 @@ function computePeriodSnapshots(
       biomasseDebut,
       biomasseFin,
       fcrPeriode,
+    });
+  }
+
+  // ── Open period: from last biometry to today ────────────────────────────────
+  const lastBio = biometries[biometries.length - 1];
+  const lastBioDateMs = new Date(lastBio.date).getTime();
+  const dureeJoursEnCours = Math.max(1, Math.floor((nowMs - lastBioDateMs) / 86400000));
+
+  // Only add the open period if at least 1 day has passed since the last biometry
+  if (nowMs > lastBioDateMs) {
+    const poidsMoyenDebut = lastBio.poidsMoyen as number;
+
+    // For the first biometry case (no closed periods), initialize cumulativeVivants
+    if (biometries.length === 1) {
+      const mortsBeforeFirst = allReleves
+        .filter((r) => {
+          if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
+          return new Date(r.date).getTime() <= lastBioDateMs;
+        })
+        .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+      const soldBeforeFirst = allReleves
+        .filter((r) => {
+          if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
+          return new Date(r.date).getTime() <= lastBioDateMs;
+        })
+        .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
+      cumulativeVivants = nombreInitialBac - mortsBeforeFirst - soldBeforeFirst;
+    }
+
+    const { alimentKg, coutAlimentPeriode, mortalites, soldInPeriod } =
+      computePeriodData(lastBioDateMs, nowMs);
+
+    const vivantsDebutEnCours = cumulativeVivants;
+    const vivantsFinEnCours = cumulativeVivants - mortalites - soldInPeriod;
+
+    const biomasseDebut = Math.round(((poidsMoyenDebut * vivantsDebutEnCours) / 1000) * 100) / 100;
+
+    snapshots.push({
+      periodIndex: snapshots.length,
+      dateDebut: new Date(lastBio.date).toISOString(),
+      dateFin: new Date(nowMs).toISOString(),
+      dureeJours: dureeJoursEnCours,
+      enCours: true,
+      poidsMoyenDebut,
+      poidsMoyenFin: null,
+      croissanceG: null,
+      gmq: null,
+      alimentKg,
+      coutAlimentPeriode,
+      mortalites,
+      vivantsDebut: vivantsDebutEnCours,
+      vivantsFin: vivantsFinEnCours,
+      biomasseDebut,
+      biomasseFin: null,
+      fcrPeriode: null,
     });
   }
 

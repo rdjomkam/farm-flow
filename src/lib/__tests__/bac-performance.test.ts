@@ -134,16 +134,25 @@ describe("computeBacPerformance — single bac with 2 biometries", () => {
     expect(iso).toBe("2026-01-21");
   });
 
-  it("generates 1 period snapshot for 2 biometries", () => {
-    const result = computeBacPerformance(makeInput({ releves }));
-    expect(result[0].periodSnapshots).toHaveLength(1);
-    const snap = result[0].periodSnapshots[0];
-    expect(snap.periodIndex).toBe(0);
-    expect(snap.poidsMoyenDebut).toBe(10);
-    expect(snap.poidsMoyenFin).toBe(20);
-    expect(snap.dureeJours).toBe(10);
-    expect(snap.croissanceG).toBe(10);
-    expect(snap.gmq).toBe(1);
+  it("generates 1 closed + 1 open period snapshot for 2 biometries", () => {
+    const now = new Date("2026-01-31"); // 10 days after last biometry
+    const result = computeBacPerformance(makeInput({ releves, now }));
+    // 1 closed period (bio1 → bio2) + 1 open period (bio2 → today)
+    expect(result[0].periodSnapshots).toHaveLength(2);
+    const closed = result[0].periodSnapshots[0];
+    expect(closed.periodIndex).toBe(0);
+    expect(closed.enCours).toBe(false);
+    expect(closed.poidsMoyenDebut).toBe(10);
+    expect(closed.poidsMoyenFin).toBe(20);
+    expect(closed.dureeJours).toBe(10);
+    expect(closed.croissanceG).toBe(10);
+    expect(closed.gmq).toBe(1);
+
+    const open = result[0].periodSnapshots[1];
+    expect(open.enCours).toBe(true);
+    expect(open.poidsMoyenDebut).toBe(20);
+    expect(open.poidsMoyenFin).toBeNull();
+    expect(open.croissanceG).toBeNull();
   });
 });
 
@@ -171,12 +180,20 @@ describe("computeBacPerformance — single bac with 1 biometry", () => {
     expect(result[0].poidsMoyenPrecedent).toBeNull();
   });
 
-  it("returns empty periodSnapshots with only 1 biometry", () => {
+  it("returns 1 open period snapshot with only 1 biometry", () => {
     const releves = [
       makeReleve({ date: new Date("2026-01-11"), poidsMoyen: 13 }),
     ];
-    const result = computeBacPerformance(makeInput({ releves }));
-    expect(result[0].periodSnapshots).toEqual([]);
+    const now = new Date("2026-01-21"); // 10 days after biometry
+    const result = computeBacPerformance(makeInput({ releves, now }));
+    expect(result[0].periodSnapshots).toHaveLength(1);
+    const snap = result[0].periodSnapshots[0];
+    expect(snap.enCours).toBe(true);
+    expect(snap.poidsMoyenDebut).toBe(13);
+    expect(snap.poidsMoyenFin).toBeNull();
+    expect(snap.croissanceG).toBeNull();
+    expect(snap.gmq).toBeNull();
+    expect(snap.dureeJours).toBe(10);
   });
 });
 
@@ -660,14 +677,19 @@ describe("computeBacPerformance — coutParKgProduit", () => {
 // ---------------------------------------------------------------------------
 
 describe("computeBacPerformance — period snapshots", () => {
-  it("generates N-1 snapshots for N biometries", () => {
+  it("generates N-1 closed snapshots + 1 open for N biometries", () => {
     const releves = [
       makeReleve({ date: new Date("2026-01-11"), poidsMoyen: 10 }),
       makeReleve({ date: new Date("2026-01-21"), poidsMoyen: 20 }),
       makeReleve({ date: new Date("2026-01-31"), poidsMoyen: 35 }),
     ];
-    const result = computeBacPerformance(makeInput({ releves }));
-    expect(result[0].periodSnapshots).toHaveLength(2);
+    const now = new Date("2026-02-10");
+    const result = computeBacPerformance(makeInput({ releves, now }));
+    // 2 closed + 1 open = 3
+    expect(result[0].periodSnapshots).toHaveLength(3);
+    expect(result[0].periodSnapshots[0].enCours).toBe(false);
+    expect(result[0].periodSnapshots[1].enCours).toBe(false);
+    expect(result[0].periodSnapshots[2].enCours).toBe(true);
   });
 
   it("captures correct period metrics", () => {
@@ -682,7 +704,8 @@ describe("computeBacPerformance — period snapshots", () => {
       // Mortality between two biometries
       makeReleve({ typeReleve: "MORTALITE", date: new Date("2026-01-16"), poidsMoyen: null, nombreMorts: 3 }),
     ];
-    const result = computeBacPerformance(makeInput({ releves }));
+    const now = new Date("2026-01-21"); // same as last biometry — no open period added
+    const result = computeBacPerformance(makeInput({ releves, now }));
     const snap = result[0].periodSnapshots[0];
 
     expect(snap.periodIndex).toBe(0);
@@ -711,7 +734,8 @@ describe("computeBacPerformance — period snapshots", () => {
         poidsMoyen: null, quantiteAliment: 3, consommations: [makeConso(3, 100, "KG")],
       }),
     ];
-    const result = computeBacPerformance(makeInput({ releves }));
+    const now = new Date("2026-01-21");
+    const result = computeBacPerformance(makeInput({ releves, now }));
     expect(result[0].periodSnapshots[0].alimentKg).toBe(3);
   });
 
@@ -724,12 +748,49 @@ describe("computeBacPerformance — period snapshots", () => {
         poidsMoyen: null, quantiteAliment: 5, consommations: [makeConso(5, 100, "KG")],
       }),
     ];
-    const result = computeBacPerformance(makeInput({ releves }));
+    const now = new Date("2026-01-21");
+    const result = computeBacPerformance(makeInput({ releves, now }));
     const snap = result[0].periodSnapshots[0];
     // biomasse debut = 10*500/1000 = 5, biomasse fin = 20*500/1000 = 10
     // gain = 10 - 5 = 5 kg
     // feed = 5 kg → FCR = 5/5 = 1
     expect(snap.fcrPeriode).toBe(1);
+  });
+
+  it("open period captures feed and mortality since last biometry", () => {
+    const releves = [
+      makeReleve({ date: new Date("2026-01-11"), poidsMoyen: 50 }),
+      // Feed after last biometry
+      makeReleve({
+        typeReleve: "ALIMENTATION", date: new Date("2026-01-15"),
+        poidsMoyen: null, quantiteAliment: 8, consommations: [makeConso(8, 300, "KG")],
+      }),
+      // Mortality after last biometry
+      makeReleve({ typeReleve: "MORTALITE", date: new Date("2026-01-18"), poidsMoyen: null, nombreMorts: 5 }),
+    ];
+    const now = new Date("2026-01-21"); // 10 days after biometry
+    const result = computeBacPerformance(makeInput({ releves, now }));
+    const openSnap = result[0].periodSnapshots.find((s) => s.enCours);
+    expect(openSnap).toBeDefined();
+    expect(openSnap!.alimentKg).toBe(8);
+    expect(openSnap!.coutAlimentPeriode).toBe(2400); // 8 * 300
+    expect(openSnap!.mortalites).toBe(5);
+    expect(openSnap!.vivantsFin).toBe(495); // 500 - 5
+  });
+
+  it("open period has null growth metrics", () => {
+    const releves = [
+      makeReleve({ date: new Date("2026-01-11"), poidsMoyen: 50 }),
+    ];
+    const now = new Date("2026-01-21");
+    const result = computeBacPerformance(makeInput({ releves, now }));
+    const openSnap = result[0].periodSnapshots[0];
+    expect(openSnap.enCours).toBe(true);
+    expect(openSnap.poidsMoyenFin).toBeNull();
+    expect(openSnap.croissanceG).toBeNull();
+    expect(openSnap.gmq).toBeNull();
+    expect(openSnap.biomasseFin).toBeNull();
+    expect(openSnap.fcrPeriode).toBeNull();
   });
 });
 
