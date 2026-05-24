@@ -260,6 +260,7 @@
     "periodeCroissance": "Growth",
     "periodeAliment": "Feed",
     "periodeMortalites": "Mortalities",
+    "periodeVendus": "Sold",
     "periodeIca": "Period FCR",
     "periodeCout": "Feed cost",
     "periodeVivants": "Alive",

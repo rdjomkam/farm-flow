@@ -425,6 +425,15 @@ function PeriodCard({
             {snapshot.mortalites > 0 ? `-${snapshot.mortalites}` : "0"}
           </p>
         </div>
+        {/* Vendus */}
+        {snapshot.vendus > 0 && (
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground leading-tight truncate">{t("bacPerf.periodeVendus")}</p>
+            <p className="text-sm font-medium leading-tight text-accent-blue">
+              {snapshot.vendus}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Biomasse row */}

@@ -31,6 +31,7 @@ export interface BiometryPeriodSnapshot {
   alimentKg: number;             // feed consumed during this period
   coutAlimentPeriode: number;    // feed cost during this period
   mortalites: number;            // deaths during this period
+  vendus: number;                // fish sold during this period
   vivantsDebut: number;
   vivantsFin: number;
   biomasseDebut: number;         // kg
@@ -575,6 +576,7 @@ function computePeriodSnapshots(
       alimentKg,
       coutAlimentPeriode,
       mortalites,
+      vendus: soldInPeriod,
       vivantsDebut: vivantsDebutFinal,
       vivantsFin,
       biomasseDebut,
@@ -635,6 +637,7 @@ function computePeriodSnapshots(
       alimentKg,
       coutAlimentPeriode,
       mortalites,
+      vendus: soldInPeriod,
       vivantsDebut: vivantsDebutEnCours,
       vivantsFin: vivantsFinEnCours,
       biomasseDebut,
