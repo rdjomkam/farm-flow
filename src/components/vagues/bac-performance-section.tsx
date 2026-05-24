@@ -345,16 +345,31 @@ function PeriodCard({
     ? t("bacPerf.periodeAujourdhui")
     : new Date(snapshot.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 
+  const borderClass = snapshot.enCours
+    ? "border-dashed border-accent-blue/50 bg-accent-blue/5"
+    : snapshot.hasCalibrage
+      ? "border-dashed border-accent-amber/50 bg-accent-amber/5"
+      : "";
+
+  const badgeClass = snapshot.enCours
+    ? "bg-accent-blue-muted text-accent-blue"
+    : snapshot.hasCalibrage
+      ? "bg-accent-amber/20 text-accent-amber"
+      : "bg-muted";
+
   return (
-    <div className={`border rounded-lg p-3 space-y-2 ${snapshot.enCours ? "border-dashed border-accent-blue/50 bg-accent-blue/5" : ""}`}>
+    <div className={`border rounded-lg p-3 space-y-2 ${borderClass}`}>
       {/* Period header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${snapshot.enCours ? "bg-accent-blue-muted text-accent-blue" : "bg-muted"}`}>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
             {snapshot.enCours
               ? t("bacPerf.periodeEnCours")
               : t("bacPerf.periodeTitle", { index: snapshot.periodIndex + 1 })}
           </span>
+          {snapshot.hasCalibrage && !snapshot.enCours && (
+            <span className="text-xs text-accent-amber font-medium">⚡ Calibrage</span>
+          )}
           <span className="text-xs text-muted-foreground">
             {dateDebut} → {dateFin}
           </span>

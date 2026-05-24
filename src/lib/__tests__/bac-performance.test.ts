@@ -849,3 +849,142 @@ describe("computeBacPerformance — edge cases", () => {
     expect(result[0].soldBiomasseKg).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 16. Calibrage / COMPTAGE resets in period snapshots
+// ---------------------------------------------------------------------------
+
+describe("computeBacPerformance — calibrage resets", () => {
+  it("resets vivants at calibrage COMPTAGE and marks period with hasCalibrage", () => {
+    // Bac starts with 1000 fish. Calibrage on 01/15 resets to 300.
+    const releves: ReleveInput[] = [
+      makeReleve({ date: new Date("2026-01-10"), poidsMoyen: 50 }),
+      makeReleve({ date: new Date("2026-01-15"), poidsMoyen: 120 }),
+      // COMPTAGE at same date as second biometry (calibrage)
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-15"), poidsMoyen: null, nombreCompte: 300 }),
+      // Mortality between bio1 and bio2
+      makeReleve({ typeReleve: "MORTALITE", date: new Date("2026-01-12"), poidsMoyen: null, nombreMorts: 10 }),
+      makeReleve({ date: new Date("2026-01-25"), poidsMoyen: 180 }),
+      // Mortality after calibrage
+      makeReleve({ typeReleve: "MORTALITE", date: new Date("2026-01-20"), poidsMoyen: null, nombreMorts: 5 }),
+    ];
+    const now = new Date("2026-01-30");
+    const result = computeBacPerformance(makeInput({ releves, now, bacs: [{ id: "bac1", nom: "Bac 01", nombreInitial: 1000 }], nombreInitialVague: 1000 }));
+    const snaps = result[0].periodSnapshots;
+
+    // Period 0: bio1(01/10) → bio2(01/15) — calibrage at end resets vivants to 300
+    expect(snaps[0].hasCalibrage).toBe(true);
+    expect(snaps[0].vivantsFin).toBe(300); // reset by COMPTAGE, not 1000-10=990
+    expect(snaps[0].vivantsDebut).toBe(1000); // no morts before or on bio1 date (mort on 01/12 is AFTER bio1)
+
+    // Period 1: bio2(01/15) → bio3(01/25) — starts from 300 (post-calibrage)
+    expect(snaps[1].hasCalibrage).toBe(false);
+    expect(snaps[1].vivantsDebut).toBe(300);
+    expect(snaps[1].vivantsFin).toBe(295); // 300 - 5 morts
+    expect(snaps[1].poidsMoyenDebut).toBe(120);
+    expect(snaps[1].poidsMoyenFin).toBe(180);
+
+    // Open period starts from 295
+    expect(snaps[2].enCours).toBe(true);
+    expect(snaps[2].vivantsDebut).toBe(295);
+  });
+
+  it("handles bac that starts at 0 and receives fish via calibrage", () => {
+    // Bac 08 scenario: starts at 0, gets 2250 fish via calibrage on 01/15
+    const releves: ReleveInput[] = [
+      makeReleve({ date: new Date("2026-01-15"), poidsMoyen: 100 }),
+      // COMPTAGE sets fish count to 2250
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-15"), poidsMoyen: null, nombreCompte: 2250 }),
+      makeReleve({ date: new Date("2026-01-25"), poidsMoyen: 145 }),
+      makeReleve({ typeReleve: "MORTALITE", date: new Date("2026-01-20"), poidsMoyen: null, nombreMorts: 64 }),
+    ];
+    const now = new Date("2026-01-30");
+    const result = computeBacPerformance(makeInput({
+      releves, now,
+      bacs: [{ id: "bac1", nom: "Bac 08", nombreInitial: 0 }],
+      nombreInitialVague: 5500,
+    }));
+    const snaps = result[0].periodSnapshots;
+
+    // Period 0: bio1(01/15) → bio2(01/25)
+    // Bio1 coincides with calibrage → vivantsDebut = 2250 (from COMPTAGE)
+    expect(snaps[0].vivantsDebut).toBe(2250);
+    expect(snaps[0].vivantsFin).toBe(2186); // 2250 - 64
+    expect(snaps[0].poidsMoyenDebut).toBe(100);
+    expect(snaps[0].poidsMoyenFin).toBe(145);
+    // hasCalibrage = false because the calibrage is at the START (sets initial state)
+    // not at the END (which would distort biomass gain)
+    expect(snaps[0].hasCalibrage).toBe(false);
+
+    // Biomass should be positive
+    expect(snaps[0].biomasseDebut).toBe(225); // 2250 * 100 / 1000
+    expect(snaps[0].biomasseFin).toBeCloseTo(316.97, 1); // 2186 * 145 / 1000
+  });
+
+  it("FCR is null for calibrage periods (distorted by transfers)", () => {
+    // Fish move OUT: 1000→200 via calibrage
+    const releves: ReleveInput[] = [
+      makeReleve({ date: new Date("2026-01-10"), poidsMoyen: 50 }),
+      makeReleve({ date: new Date("2026-01-20"), poidsMoyen: 100 }),
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-20"), poidsMoyen: null, nombreCompte: 200 }),
+      makeReleve({
+        typeReleve: "ALIMENTATION", date: new Date("2026-01-15"),
+        poidsMoyen: null, quantiteAliment: 50, consommations: [makeConso(50, 100, "KG")],
+      }),
+    ];
+    const now = new Date("2026-01-20");
+    const result = computeBacPerformance(makeInput({ releves, now, bacs: [{ id: "bac1", nom: "Bac 01", nombreInitial: 1000 }], nombreInitialVague: 1000 }));
+    const snap = result[0].periodSnapshots[0];
+
+    // Has calibrage → FCR should be null (biomass gain distorted by fish leaving)
+    expect(snap.hasCalibrage).toBe(true);
+    expect(snap.fcrPeriode).toBeNull();
+  });
+
+  it("non-calibrage periods still compute FCR normally", () => {
+    const releves: ReleveInput[] = [
+      makeReleve({ date: new Date("2026-01-10"), poidsMoyen: 10 }),
+      // Calibrage at bio2 (end of period 0)
+      makeReleve({ date: new Date("2026-01-15"), poidsMoyen: 50 }),
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-15"), poidsMoyen: null, nombreCompte: 400 }),
+      // bio3: post-calibrage growth period
+      makeReleve({ date: new Date("2026-01-25"), poidsMoyen: 80 }),
+      // Feed between bio2 and bio3
+      makeReleve({
+        typeReleve: "ALIMENTATION", date: new Date("2026-01-20"),
+        poidsMoyen: null, quantiteAliment: 10, consommations: [makeConso(10, 100, "KG")],
+      }),
+    ];
+    const now = new Date("2026-01-25");
+    const result = computeBacPerformance(makeInput({ releves, now, bacs: [{ id: "bac1", nom: "Bac 01", nombreInitial: 500 }], nombreInitialVague: 500 }));
+    const snaps = result[0].periodSnapshots;
+
+    // Period 0 (bio1→bio2) has calibrage at END → hasCalibrage true, null FCR
+    expect(snaps[0].hasCalibrage).toBe(true);
+    expect(snaps[0].fcrPeriode).toBeNull();
+
+    // Period 1 (bio2→bio3) — starts from calibrage count but no calibrage at END
+    expect(snaps[1].hasCalibrage).toBe(false);
+    expect(snaps[1].vivantsDebut).toBe(400); // from COMPTAGE reset at start
+    // biomasse debut = 400*50/1000 = 20 kg
+    // biomasse fin = 400*80/1000 = 32 kg
+    // gain = 12 kg, feed = 10 kg → FCR = 10/12 = 0.83
+    expect(snaps[1].fcrPeriode).toBeCloseTo(0.83, 2);
+  });
+
+  it("multiple comptages — uses last comptage on same day", () => {
+    // Edge case: two COMPTAGE on same day
+    const releves: ReleveInput[] = [
+      makeReleve({ date: new Date("2026-01-10"), poidsMoyen: 20 }),
+      makeReleve({ date: new Date("2026-01-20"), poidsMoyen: 40 }),
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-20"), poidsMoyen: null, nombreCompte: 500 }),
+      makeReleve({ typeReleve: "COMPTAGE", date: new Date("2026-01-20"), poidsMoyen: null, nombreCompte: 600 }),
+    ];
+    const now = new Date("2026-01-25");
+    const result = computeBacPerformance(makeInput({ releves, now, bacs: [{ id: "bac1", nom: "Bac 01", nombreInitial: 1000 }], nombreInitialVague: 1000 }));
+    const snaps = result[0].periodSnapshots;
+
+    // The last COMPTAGE (600) should be used
+    expect(snaps[0].vivantsFin).toBe(600);
+  });
+});

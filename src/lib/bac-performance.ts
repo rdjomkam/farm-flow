@@ -23,6 +23,7 @@ export interface BiometryPeriodSnapshot {
   dateFin: string;               // ISO date (end biometry or today if enCours)
   dureeJours: number;
   enCours: boolean;              // true = open period (last biometry → today)
+  hasCalibrage: boolean;         // true = a calibrage/comptage reset occurred at start of this period
   poidsMoyenDebut: number;       // g
   poidsMoyenFin: number | null;  // g — null when enCours (no closing biometry yet)
   croissanceG: number | null;    // weight gain in grams — null when enCours
@@ -377,6 +378,27 @@ export function computeBacPerformance(
 
 // ── Period snapshots computation ─────────────────────────────────────────────
 
+/**
+ * Build a map of date → comptage count for a bac.
+ * COMPTAGE relevés linked to calibrages reset the fish count on that date.
+ * We take the LAST comptage on each date (in case of duplicates).
+ */
+function buildComptageResets(
+  bacId: string,
+  allReleves: ReleveInput[]
+): Map<number, number> {
+  const resets = new Map<number, number>();
+  // COMPTAGE relevés for this bac, sorted by date
+  const comptages = allReleves
+    .filter((r) => r.bacId === bacId && r.typeReleve === "COMPTAGE" && r.nombreCompte != null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  for (const c of comptages) {
+    const dateMs = new Date(c.date).getTime();
+    resets.set(dateMs, c.nombreCompte as number);
+  }
+  return resets;
+}
+
 function computePeriodSnapshots(
   bacId: string,
   biometries: ReleveInput[],
@@ -391,7 +413,10 @@ function computePeriodSnapshots(
   const nowMs = (now ?? new Date()).getTime();
   const snapshots: BiometryPeriodSnapshot[] = [];
 
-  // Track cumulative vivants: start from initial count, subtract mortalities
+  // Build comptage reset map for this bac (dateMs → fish count)
+  const comptageResets = buildComptageResets(bacId, allReleves);
+
+  // Track cumulative vivants
   let cumulativeVivants = nombreInitialBac;
 
   // Helper: compute feed/mortality/sales in a date range (start exclusive, end inclusive)
@@ -437,6 +462,24 @@ function computePeriodSnapshots(
     return { alimentKg, coutAlimentPeriode, mortalites, soldInPeriod };
   }
 
+  /**
+   * Check if a comptage reset exists at or near a given date (same day).
+   * Returns the reset count or null if no reset found.
+   */
+  function getResetAtDate(targetMs: number): number | null {
+    // Check exact match first
+    if (comptageResets.has(targetMs)) {
+      return comptageResets.get(targetMs)!;
+    }
+    // Check same calendar day (comptage and biometry may have slightly different timestamps)
+    const targetDay = new Date(targetMs).toISOString().slice(0, 10);
+    for (const [dateMs, count] of comptageResets) {
+      const resetDay = new Date(dateMs).toISOString().slice(0, 10);
+      if (resetDay === targetDay) return count;
+    }
+    return null;
+  }
+
   // Closed periods: between consecutive biometries
   for (let i = 0; i < biometries.length - 1; i++) {
     const bioStart = biometries[i];
@@ -454,8 +497,14 @@ function computePeriodSnapshots(
     const { alimentKg, coutAlimentPeriode, mortalites, soldInPeriod } =
       computePeriodData(dateDebutMs, dateFinMs);
 
-    // Count mortalities and sales BEFORE this period's start (only for first period)
-    if (i === 0) {
+    // Determine vivants at the START of this period
+    // Check if a comptage reset happened on the start date of this period
+    const resetAtStart = getResetAtDate(dateDebutMs);
+    if (resetAtStart !== null) {
+      // Calibrage reset: use the comptage count as vivants at period start
+      cumulativeVivants = resetAtStart;
+    } else if (i === 0) {
+      // First period: subtract all morts/sales up to and including the start date
       const mortsBeforeFirst = allReleves
         .filter((r) => {
           if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
@@ -472,28 +521,45 @@ function computePeriodSnapshots(
     }
 
     const vivantsDebutFinal = cumulativeVivants;
-    cumulativeVivants = cumulativeVivants - mortalites - soldInPeriod;
+
+    // Determine vivants at the END of this period
+    // Check if a comptage reset happened on the end date
+    const resetAtEnd = getResetAtDate(dateFinMs);
+    if (resetAtEnd !== null) {
+      // Calibrage at end: vivantsFin is the reset count
+      cumulativeVivants = resetAtEnd;
+    } else {
+      cumulativeVivants = cumulativeVivants - mortalites - soldInPeriod;
+    }
     const vivantsFin = cumulativeVivants;
 
     const biomasseDebut = Math.round(((poidsMoyenDebut * vivantsDebutFinal) / 1000) * 100) / 100;
     const biomasseFin = Math.round(((poidsMoyenFin * vivantsFin) / 1000) * 100) / 100;
 
-    // Period FCR: feed consumed / biomass gain (including sold fish weight in this period)
-    const soldBiomassePeriod = allReleves
-      .filter((r) => {
-        if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
-        const rDateMs = new Date(r.date).getTime();
-        return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
-      })
-      .reduce((sum, r) => {
-        return sum + ((r.nombreVendus ?? 0) * poidsMoyenFin) / 1000;
-      }, 0);
+    // A period "has calibrage" if fish were moved IN or OUT at the END of this period.
+    // resetAtStart just means we start from a known post-calibrage count (previous period ended with a calibrage).
+    const hasCalibrage = resetAtEnd !== null;
 
-    const gainBiomassePeriod = biomasseFin + soldBiomassePeriod - biomasseDebut;
-    const fcrPeriode =
-      gainBiomassePeriod > 0 && alimentKg > 0
-        ? Math.round((alimentKg / gainBiomassePeriod) * 100) / 100
-        : null;
+    // Period FCR: feed consumed / biomass gain (including sold fish weight)
+    // Skip FCR for calibrage periods — biomass gain is distorted by fish transfers
+    let fcrPeriode: number | null = null;
+    if (!hasCalibrage) {
+      const soldBiomassePeriod = allReleves
+        .filter((r) => {
+          if (r.bacId !== bacId || r.typeReleve !== "VENTE") return false;
+          const rDateMs = new Date(r.date).getTime();
+          return rDateMs > dateDebutMs && rDateMs <= dateFinMs;
+        })
+        .reduce((sum, r) => {
+          return sum + ((r.nombreVendus ?? 0) * poidsMoyenFin) / 1000;
+        }, 0);
+
+      const gainBiomassePeriod = biomasseFin + soldBiomassePeriod - biomasseDebut;
+      fcrPeriode =
+        gainBiomassePeriod > 0 && alimentKg > 0
+          ? Math.round((alimentKg / gainBiomassePeriod) * 100) / 100
+          : null;
+    }
 
     snapshots.push({
       periodIndex: i,
@@ -501,6 +567,7 @@ function computePeriodSnapshots(
       dateFin: new Date(bioEnd.date).toISOString(),
       dureeJours,
       enCours: false,
+      hasCalibrage,
       poidsMoyenDebut,
       poidsMoyenFin,
       croissanceG,
@@ -525,8 +592,12 @@ function computePeriodSnapshots(
   if (nowMs > lastBioDateMs) {
     const poidsMoyenDebut = lastBio.poidsMoyen as number;
 
-    // For the first biometry case (no closed periods), initialize cumulativeVivants
-    if (biometries.length === 1) {
+    // Check if last biometry coincides with a comptage reset
+    const resetAtLastBio = getResetAtDate(lastBioDateMs);
+    if (resetAtLastBio !== null) {
+      cumulativeVivants = resetAtLastBio;
+    } else if (biometries.length === 1) {
+      // Single biometry case: compute vivants at that point
       const mortsBeforeFirst = allReleves
         .filter((r) => {
           if (r.bacId !== bacId || r.typeReleve !== "MORTALITE") return false;
@@ -556,6 +627,7 @@ function computePeriodSnapshots(
       dateFin: new Date(nowMs).toISOString(),
       dureeJours: dureeJoursEnCours,
       enCours: true,
+      hasCalibrage: false, // open period starts from known state, no calibrage within
       poidsMoyenDebut,
       poidsMoyenFin: null,
       croissanceG: null,
