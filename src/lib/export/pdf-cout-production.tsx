@@ -18,6 +18,7 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateCoutProductionPDFDTO } from "@/types/export";
 import { StatutVague, CategorieDepense } from "@/types";
+import { generatePdfInsights } from "./pdf-cout-production-insights";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -286,7 +287,42 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: colors.muted,
   },
+  // Insight block
+  insightBox: {
+    backgroundColor: "#f0fdfa",
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    borderLeftStyle: "solid" as const,
+    borderRadius: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  insightText: {
+    fontSize: 8,
+    color: "#115e59",
+    lineHeight: 1.5,
+    marginBottom: 2,
+  },
 });
+
+// ---------------------------------------------------------------------------
+// InsightBlock — bloc d'analyse contextuelle
+// ---------------------------------------------------------------------------
+
+function InsightBlock({ lines }: { lines: string[] }) {
+  if (lines.length === 0) return null;
+  return (
+    <View style={styles.insightBox} wrap={false}>
+      {lines.map((line, i) => (
+        <Text key={i} style={styles.insightText}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Composant
@@ -295,6 +331,7 @@ const styles = StyleSheet.create({
 export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }) {
   const { coutProduction: cp, site, dateGeneration } = data;
   const { vague, resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
+  const insights = generatePdfInsights(cp);
 
   return (
     <Document title="Rapport Coût de Production" author="FarmFlow">
@@ -331,6 +368,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             </View>
           </View>
         </View>
+
+        {/* ===================== RÉSUMÉ EXÉCUTIF ===================== */}
+        <InsightBlock lines={insights.executive} />
 
         {/* ===================== RÉSUMÉ ===================== */}
         <Text style={styles.sectionTitle}>Résumé financier</Text>
@@ -407,6 +447,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
           </View>
         </View>
 
+        {/* Insight production */}
+        <InsightBlock lines={insights.production} />
+
         {/* ===================== COÛTS PAR CATÉGORIE ===================== */}
         {coutParCategorie.length > 0 && (
           <>
@@ -440,6 +483,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
           </>
         )}
 
+        {/* Insight coûts */}
+        {coutParCategorie.length > 0 && <InsightBlock lines={insights.couts} />}
+
         {/* ===================== DÉTAIL ALIMENTATION ===================== */}
         {detailAliments.length > 0 && (
           <>
@@ -470,6 +516,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             ))}
           </>
         )}
+
+        {/* Insight alimentation */}
+        {detailAliments.length > 0 && <InsightBlock lines={insights.alimentation} />}
 
         {/* ===================== DÉPENSES DIRECTES ===================== */}
         {depensesDirectes.length > 0 && (
@@ -630,6 +679,12 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             ))}
           </>
         )}
+
+        {/* Insight ventes */}
+        {ventes.length > 0 && <InsightBlock lines={insights.ventes} />}
+
+        {/* Insight rentabilité */}
+        <InsightBlock lines={insights.rentabilite} />
 
         {/* ===================== FORMULE ===================== */}
         <Text style={styles.sectionTitle}>Formule de calcul</Text>
