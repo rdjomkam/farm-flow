@@ -16,8 +16,9 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { CreateRapportVaguePDFDTO } from "@/types/export";
-import { StatutVague, TypeReleve } from "@/types";
+import { StatutVague, TypeReleve, CategorieDepense } from "@/types";
 import { generateRapportVagueInsights } from "./pdf-rapport-vague-insights";
+import { generatePdfInsights } from "./pdf-cout-production-insights";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,6 +43,40 @@ function formatFCFA(n: number | null | undefined): string {
   const abs = Math.abs(Math.round(n));
   const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   return (n < 0 ? "-" : "") + s + " FCFA";
+}
+
+function formatMontant(n: number): string {
+  const abs = Math.abs(Math.round(n));
+  const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return (n < 0 ? "-" : "") + s + " FCFA";
+}
+
+function formatMontantNullable(n: number | null): string {
+  if (n === null) return "—";
+  return formatMontant(n);
+}
+
+function formatPct(ratio: number): string {
+  return (ratio * 100).toFixed(2) + " %";
+}
+
+function labelCategorie(categorie: CategorieDepense | "MULTI_VAGUE"): string {
+  switch (categorie) {
+    case CategorieDepense.ALIMENT: return "Alimentation";
+    case CategorieDepense.INTRANT: return "Intrants";
+    case CategorieDepense.EQUIPEMENT: return "Équipements";
+    case CategorieDepense.ELECTRICITE: return "Électricité";
+    case CategorieDepense.EAU: return "Eau";
+    case CategorieDepense.LOYER: return "Loyer";
+    case CategorieDepense.SALAIRE: return "Salaires";
+    case CategorieDepense.TRANSPORT: return "Transport";
+    case CategorieDepense.VETERINAIRE: return "Vétérinaire";
+    case CategorieDepense.REPARATION: return "Réparation";
+    case CategorieDepense.INVESTISSEMENT: return "Investissement";
+    case CategorieDepense.AUTRE: return "Autres";
+    case "MULTI_VAGUE": return "Coûts partagés";
+    default: return String(categorie);
+  }
 }
 
 const typeReleveLabels: Record<TypeReleve, string> = {
@@ -73,6 +108,7 @@ const colors = {
   border: "#e2e8f0",
   lightBg: "#f8fafc",
   success: "#16a34a",
+  danger: "#dc2626",
 };
 
 const styles = StyleSheet.create({
@@ -289,6 +325,54 @@ const styles = StyleSheet.create({
   colBac: { width: 60 },
   colData: { flex: 1 },
   colNotes: { flex: 1 },
+  // Coût de production — catégories
+  colCat: { flex: 3 },
+  colCatMontant: { flex: 2, textAlign: "right" as const },
+  colCatPct: { flex: 1, textAlign: "right" as const },
+  colCatKg: { flex: 2, textAlign: "right" as const },
+  // Coût de production — aliments
+  colAlProduit: { flex: 3 },
+  colAlQte: { flex: 1, textAlign: "right" as const },
+  colAlPrix: { flex: 2, textAlign: "right" as const },
+  colAlTotal: { flex: 2, textAlign: "right" as const },
+  // Coût de production — dépenses directes
+  colDepDate: { flex: 2 },
+  colDepDesc: { flex: 4 },
+  colDepCat: { flex: 2 },
+  colDepMontant: { flex: 2, textAlign: "right" as const },
+  // Coût de production — dépenses multi-vagues
+  colMvDesc: { flex: 4 },
+  colMvTotal: { flex: 2, textAlign: "right" as const },
+  colMvRatio: { flex: 1, textAlign: "right" as const },
+  colMvPart: { flex: 2, textAlign: "right" as const },
+  // Coût de production — dépenses récurrentes
+  colRecDesc: { flex: 3 },
+  colRecPaye: { flex: 2, textAlign: "right" as const },
+  colRecRatio: { flex: 1, textAlign: "right" as const },
+  colRecPart: { flex: 2, textAlign: "right" as const },
+  colRecMois: { flex: 1, textAlign: "right" as const },
+  // Coût de production — ventes
+  colVClient: { flex: 3 },
+  colVPoids: { flex: 2, textAlign: "right" as const },
+  colVMontant: { flex: 2, textAlign: "right" as const },
+  colVDate: { flex: 2 },
+  // Formule de calcul
+  formuleBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 4,
+    padding: 10,
+  },
+  formuleText: {
+    fontSize: 8,
+    color: "#1e293b",
+    marginBottom: 3,
+  },
+  formuleTotal: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold" as const,
+    color: "#0d9488",
+    marginTop: 4,
+  },
   // Footer
   footer: {
     position: "absolute",
@@ -508,36 +592,282 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
         {/* Insight zootechnique */}
         <InsightBlock lines={insights.zootechnique} />
 
-        {/* ===================== COÛT DE PRODUCTION ===================== */}
-        {data.coutProduction && (
-          <View wrap={false}>
-            <Text style={styles.sectionTitle}>Coût de production</Text>
-            <View style={styles.kpisGrid}>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Coût total</Text>
-                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.coutTotal)}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Coût / kg</Text>
-                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.coutParKg)}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Prix vente / kg</Text>
-                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.prixMoyenVenteKg)}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>Marge / kg</Text>
-                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.margeParKg)}</Text>
-              </View>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiLabel}>ROI</Text>
-                <Text style={styles.kpiValue}>{formatNum(data.coutProduction.roi, 1, "%")}</Text>
-              </View>
-            </View>
-          </View>
-        )}
+        {/* ===================== COÛT DE PRODUCTION (COMPLET) ===================== */}
+        {data.coutProduction && (() => {
+          const cp = data.coutProduction!;
+          const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
+          let cpInsights: ReturnType<typeof generatePdfInsights>;
+          try { cpInsights = generatePdfInsights(cp); } catch { cpInsights = { executive: [], production: [], couts: [], alimentation: [], rentabilite: [], ventes: [] }; }
+          return (
+            <>
+              <Text style={styles.sectionTitle}>Coût de production</Text>
 
-        {/* Insight rentabilité */}
+              {/* KPIs résumé financier */}
+              <View style={styles.kpisGrid}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Coût total</Text>
+                  <Text style={[styles.kpiValue, { color: colors.danger }]}>{formatMontant(resume.coutTotal)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Revenus</Text>
+                  <Text style={[styles.kpiValue, { color: colors.success }]}>{formatMontant(resume.revenus)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Marge</Text>
+                  <Text style={[styles.kpiValue, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>{formatMontant(resume.marge)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>ROI</Text>
+                  <Text style={[styles.kpiValue, { color: resume.roi !== null && resume.roi >= 0 ? colors.success : colors.danger }]}>
+                    {resume.roi !== null ? resume.roi.toFixed(2) + " %" : "—"}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.kpisGrid, { marginTop: 6 }]}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Coût / kg</Text>
+                  <Text style={styles.kpiValue}>{formatMontantNullable(resume.coutParKg)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Prix moyen vente / kg</Text>
+                  <Text style={styles.kpiValue}>{formatMontantNullable(resume.prixMoyenVenteKg)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Marge / kg</Text>
+                  <Text style={[styles.kpiValue, { color: resume.margeParKg !== null && resume.margeParKg >= 0 ? colors.success : colors.danger }]}>
+                    {formatMontantNullable(resume.margeParKg)}
+                  </Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Biomasse estimée</Text>
+                  <Text style={styles.kpiValue}>{resume.biomasseKg !== null ? formatNum(resume.biomasseKg, 1, "kg") : "—"}</Text>
+                </View>
+              </View>
+
+              {/* Insight production */}
+              <InsightBlock lines={cpInsights.production} />
+
+              {/* Bilan production */}
+              {(resume.biomasseProduite !== null || resume.poidsTotalVendu > 0) && (
+                <View style={[styles.kpisGrid, { marginTop: 8 }]}>
+                  {resume.biomasseProduite !== null && (
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiLabel}>Biomasse produite</Text>
+                      <Text style={styles.kpiValue}>{formatNum(resume.biomasseProduite, 1, "kg")}</Text>
+                      <Text style={styles.kpiUnit}>vivante + vendue</Text>
+                    </View>
+                  )}
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>Biomasse vendue</Text>
+                    <Text style={styles.kpiValue}>{formatNum(resume.poidsTotalVendu, 1, "kg")}</Text>
+                  </View>
+                  {resume.biomasseKg !== null && (
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiLabel}>Biomasse vivante</Text>
+                      <Text style={styles.kpiValue}>{formatNum(resume.biomasseKg, 1, "kg")}</Text>
+                      <Text style={styles.kpiUnit}>restante en bassin</Text>
+                    </View>
+                  )}
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>Poissons vendus</Text>
+                    <Text style={styles.kpiValue}>{resume.nombrePoissonsVendus}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Répartition par catégorie */}
+              {coutParCategorie.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Coûts par catégorie</Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colCat]}>Catégorie</Text>
+                    <Text style={[styles.tableHeaderText, styles.colCatMontant]}>Montant</Text>
+                    <Text style={[styles.tableHeaderText, styles.colCatPct]}>%</Text>
+                    <Text style={[styles.tableHeaderText, styles.colCatKg]}>Par kg</Text>
+                  </View>
+                  {coutParCategorie.map((c, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, styles.colCat]}>{labelCategorie(c.categorie)}</Text>
+                      <Text style={[styles.tableCell, styles.colCatMontant, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(c.montant)}</Text>
+                      <Text style={[styles.tableCell, styles.colCatPct]}>{c.pourcentage.toFixed(1)} %</Text>
+                      <Text style={[styles.tableCell, styles.colCatKg]}>{c.parKg !== null ? formatMontant(c.parKg) : "—"}</Text>
+                    </View>
+                  ))}
+                  <InsightBlock lines={cpInsights.couts} />
+                </>
+              )}
+
+              {/* Détail alimentation */}
+              {detailAliments.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>
+                    Détail alimentation ({detailAliments.length} produit{detailAliments.length > 1 ? "s" : ""})
+                  </Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colAlProduit]}>Produit</Text>
+                    <Text style={[styles.tableHeaderText, styles.colAlQte]}>Qté</Text>
+                    <Text style={[styles.tableHeaderText, styles.colAlPrix]}>Prix unit.</Text>
+                    <Text style={[styles.tableHeaderText, styles.colAlTotal]}>Total</Text>
+                  </View>
+                  {detailAliments.map((a, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, styles.colAlProduit]}>{a.produit}</Text>
+                      <Text style={[styles.tableCell, styles.colAlQte]}>{a.quantite}</Text>
+                      <Text style={[styles.tableCell, styles.colAlPrix]}>{formatMontant(a.prixUnitaire)}</Text>
+                      <Text style={[styles.tableCell, styles.colAlTotal, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(a.total)}</Text>
+                    </View>
+                  ))}
+                  <InsightBlock lines={cpInsights.alimentation} />
+                </>
+              )}
+
+              {/* Dépenses directes */}
+              {depensesDirectes.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Dépenses directes ({depensesDirectes.length})</Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colDepDate]}>Date</Text>
+                    <Text style={[styles.tableHeaderText, styles.colDepDesc]}>Description</Text>
+                    <Text style={[styles.tableHeaderText, styles.colDepCat]}>Catégorie</Text>
+                    <Text style={[styles.tableHeaderText, styles.colDepMontant]}>Montant</Text>
+                  </View>
+                  {depensesDirectes.map((d, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, styles.colDepDate]}>{formatDate(d.date)}</Text>
+                      <Text style={[styles.tableCell, styles.colDepDesc]}>{d.description}</Text>
+                      <Text style={[styles.tableCell, styles.colDepCat]}>{labelCategorie(d.categorie)}</Text>
+                      <Text style={[styles.tableCell, styles.colDepMontant, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(d.montant)}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* Dépenses multi-vagues */}
+              {depensesMultiVagues.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Dépenses multi-vagues ({depensesMultiVagues.length})</Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colMvDesc]}>Description</Text>
+                    <Text style={[styles.tableHeaderText, styles.colMvTotal]}>Total</Text>
+                    <Text style={[styles.tableHeaderText, styles.colMvRatio]}>Ratio</Text>
+                    <Text style={[styles.tableHeaderText, styles.colMvPart]}>Part allouée</Text>
+                  </View>
+                  {depensesMultiVagues.map((m, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, styles.colMvDesc]}>{m.description}</Text>
+                      <Text style={[styles.tableCell, styles.colMvTotal]}>{formatMontant(m.montantTotal)}</Text>
+                      <Text style={[styles.tableCell, styles.colMvRatio]}>{formatPct(m.ratio)}</Text>
+                      <Text style={[styles.tableCell, styles.colMvPart, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(m.montantImpute)}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* Dépenses récurrentes */}
+              {depensesRecurrentes.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Dépenses récurrentes ({depensesRecurrentes.length})</Text>
+                  <Text style={{ fontSize: 7, color: colors.muted, marginBottom: 6 }}>
+                    Ratio = (jours × poissons initiaux) / total toutes vagues
+                  </Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colRecDesc]}>Description</Text>
+                    <Text style={[styles.tableHeaderText, styles.colRecPaye]}>Payé</Text>
+                    <Text style={[styles.tableHeaderText, styles.colRecRatio]}>Ratio moy.</Text>
+                    <Text style={[styles.tableHeaderText, styles.colRecPart]}>Part allouée</Text>
+                    <Text style={[styles.tableHeaderText, styles.colRecMois]}>Mois</Text>
+                  </View>
+                  {depensesRecurrentes.map((r, i) => (
+                    <View key={i} wrap={false}>
+                      <View style={styles.tableRow}>
+                        <Text style={[styles.tableCell, styles.colRecDesc]}>{r.description}</Text>
+                        <Text style={[styles.tableCell, styles.colRecPaye]}>{formatMontant(r.montantPayeTotal)}</Text>
+                        <Text style={[styles.tableCell, styles.colRecRatio]}>{formatPct(r.ratioMoyen)}</Text>
+                        <Text style={[styles.tableCell, styles.colRecPart, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(r.montantImpute)}</Text>
+                        <Text style={[styles.tableCell, styles.colRecMois]}>{r.moisCouverts}</Text>
+                      </View>
+                      {r.ratioDetail.map((rd) => (
+                        <View key={rd.mois} style={{ paddingLeft: 12, paddingVertical: 2, paddingRight: 8 }}>
+                          <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.muted, marginBottom: 1 }}>{rd.mois}</Text>
+                          {rd.vagues.map((v) => (
+                            <View key={v.code} style={{ flexDirection: "row", justifyContent: "space-between", paddingLeft: 6 }}>
+                              <Text style={{ fontSize: 7, color: colors.muted }}>{v.code}</Text>
+                              <Text style={{ fontSize: 7, color: colors.muted }}>{v.jours}j × {v.nombreInitial} = {v.poids}</Text>
+                            </View>
+                          ))}
+                          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingLeft: 6, borderTopWidth: 0.5, borderTopColor: colors.border, borderTopStyle: "solid", marginTop: 1, paddingTop: 1 }}>
+                            <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.dark }}>Cette vague</Text>
+                            <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.dark }}>{rd.poidsCible} / {rd.totalPoids} = {(rd.ratio * 100).toFixed(1)} %</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* Ventes (depuis le rapport coût de production) */}
+              {ventes.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Ventes ({ventes.length})</Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.colVClient]}>Client</Text>
+                    <Text style={[styles.tableHeaderText, styles.colVPoids]}>Poids (kg)</Text>
+                    <Text style={[styles.tableHeaderText, styles.colVMontant]}>Montant</Text>
+                    <Text style={[styles.tableHeaderText, styles.colVDate]}>Date</Text>
+                  </View>
+                  {ventes.map((v, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, styles.colVClient]}>{v.client}</Text>
+                      <Text style={[styles.tableCell, styles.colVPoids]}>{v.poidsKg.toFixed(2)} kg</Text>
+                      <Text style={[styles.tableCell, styles.colVMontant, { fontFamily: "Helvetica-Bold" }]}>{formatMontant(v.montant)}</Text>
+                      <Text style={[styles.tableCell, styles.colVDate]}>{formatDate(v.date)}</Text>
+                    </View>
+                  ))}
+                  <InsightBlock lines={cpInsights.ventes} />
+                </>
+              )}
+
+              {/* Rentabilité */}
+              <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Rentabilité</Text>
+              <View style={styles.kpisGrid}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Coûts totaux</Text>
+                  <Text style={[styles.kpiValue, { color: colors.danger }]}>{formatMontant(resume.coutTotal)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Revenus</Text>
+                  <Text style={[styles.kpiValue, { color: colors.success }]}>{formatMontant(resume.revenus)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Marge brute</Text>
+                  <Text style={[styles.kpiValue, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>{formatMontant(resume.marge)}</Text>
+                </View>
+              </View>
+              <InsightBlock lines={cpInsights.rentabilite} />
+
+              {/* Formule de calcul */}
+              <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Formule de calcul</Text>
+              <View style={styles.formuleBox}>
+                <Text style={styles.formuleText}>Aliments : {formatMontant(formule.coutAliments)}</Text>
+                <Text style={styles.formuleText}>+ Dépenses directes : {formatMontant(formule.coutDepensesDirectes)}</Text>
+                <Text style={styles.formuleText}>+ Dépenses multi-vagues : {formatMontant(formule.coutMultiVagues)}</Text>
+                <Text style={styles.formuleText}>+ Dépenses récurrentes : {formatMontant(formule.coutRecurrents)}</Text>
+                <Text style={styles.formuleTotal}>= Coût total : {formatMontant(formule.coutTotal)}</Text>
+                {formule.coutParKg !== null && formule.biomasseKg !== null && (
+                  <Text style={[styles.formuleText, { marginTop: 4 }]}>
+                    Coût par kg (biomasse estimée : {formatNum(formule.biomasseKg, 1, "kg")}) : {formatMontant(formule.coutParKg)}
+                  </Text>
+                )}
+              </View>
+
+              {/* Insight global rentabilité du rapport coût */}
+              <InsightBlock lines={cpInsights.executive} />
+            </>
+          );
+        })()}
+
+        {/* Insight rentabilité (rapport vague) */}
         {data.coutProduction && <InsightBlock lines={insights.rentabilite} />}
 
         {/* ===================== BACS ===================== */}
@@ -758,114 +1088,8 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
         {/* Insight mortalité */}
         {data.mortalitySummary && <InsightBlock lines={insights.mortalite} />}
 
-        {/* ===================== VENTES ===================== */}
-        {data.salesSummary && (
-          <View wrap={false}>
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
-              {data.locale === "en" ? "Sales" : "Ventes"}
-            </Text>
-            {data.salesSummary.ventes.length === 0 ? (
-              <Text style={styles.emptyText}>
-                {data.locale === "en" ? "No sales" : "Aucune vente"}
-              </Text>
-            ) : (
-              <View>
-                {/* Table header */}
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.tableHeaderText, { width: 55 }]}>N°</Text>
-                  <Text style={[styles.tableHeaderText, { width: 65 }]}>
-                    {data.locale === "en" ? "Client" : "Client"}
-                  </Text>
-                  <Text style={[styles.tableHeaderText, { width: 50 }]}>
-                    {data.locale === "en" ? "Date" : "Date"}
-                  </Text>
-                  <Text style={[styles.tableHeaderText, { width: 45 }]}>
-                    {data.locale === "en" ? "Fish" : "Poissons"}
-                  </Text>
-                  <Text style={[styles.tableHeaderText, { width: 55 }]}>
-                    {data.locale === "en" ? "Weight (kg)" : "Poids (kg)"}
-                  </Text>
-                  <Text style={[styles.tableHeaderText, { width: 50 }]}>
-                    {data.locale === "en" ? "Price/kg" : "Prix/kg"}
-                  </Text>
-                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>
-                    {data.locale === "en" ? "Amount" : "Montant"}
-                  </Text>
-                </View>
-
-                {/* Table rows */}
-                {data.salesSummary.ventes.map((v, i) => (
-                  <View key={i} style={[styles.tableRow]} wrap={false}>
-                    <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
-                      {v.numero}
-                    </Text>
-                    <Text style={[styles.tableCell, { width: 65 }]}>{v.clientNom}</Text>
-                    <Text style={[styles.tableCell, { width: 50 }]}>{formatDate(v.date)}</Text>
-                    <Text style={[styles.tableCell, { width: 45 }]}>{v.quantitePoissons}</Text>
-                    <Text style={[styles.tableCell, { width: 55 }]}>{formatNum(v.poidsTotalKg, 2)}</Text>
-                    <Text style={[styles.tableCell, { width: 50 }]}>{formatFCFA(v.prixUnitaireKg)}</Text>
-                    <Text style={[styles.tableCell, { flex: 1 }]}>{formatFCFA(v.montantTotal)}</Text>
-                  </View>
-                ))}
-
-                {/* Totals row */}
-                <View
-                  style={[
-                    styles.tableRow,
-                    {
-                      backgroundColor: "#f1f5f9",
-                      borderTopWidth: 1,
-                      borderTopColor: colors.border,
-                      borderTopStyle: "solid",
-                    },
-                  ]}
-                  wrap={false}
-                >
-                  <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
-                    {data.locale === "en" ? "Total" : "Total"}
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 65 }]}></Text>
-                  <Text style={[styles.tableCell, { width: 50 }]}></Text>
-                  <Text style={[styles.tableCell, { width: 45, fontFamily: "Helvetica-Bold" }]}>
-                    {data.salesSummary.totalPoissonsVendus}
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
-                    {formatNum(data.salesSummary.totalPoidsKg, 2)}
-                  </Text>
-                  <Text style={[styles.tableCell, { width: 50 }]}></Text>
-                  <Text style={[styles.tableCell, { flex: 1, fontFamily: "Helvetica-Bold" }]}>
-                    {formatFCFA(data.salesSummary.totalMontant)}
-                  </Text>
-                </View>
-
-                {/* Objective progress */}
-                {data.salesSummary.poidsObjectifKg !== null && (
-                  <Text
-                    style={[
-                      styles.emptyText,
-                      { marginTop: 4, fontStyle: "normal", color: colors.muted },
-                    ]}
-                  >
-                    {data.locale === "en" ? "Objective" : "Objectif"}:{" "}
-                    {formatNum(data.salesSummary.totalPoidsKg, 2)} /{" "}
-                    {formatNum(data.salesSummary.poidsObjectifKg, 2)} kg (
-                    {formatNum(
-                      data.salesSummary.poidsObjectifKg > 0
-                        ? (data.salesSummary.totalPoidsKg / data.salesSummary.poidsObjectifKg) * 100
-                        : 0,
-                      1,
-                      "%"
-                    )}
-                    )
-                  </Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Insight ventes */}
-        {data.salesSummary && <InsightBlock lines={insights.ventes} />}
+        {/* Insight ventes (rapport vague) — visible si pas de section coût de production */}
+        {!data.coutProduction && data.salesSummary && <InsightBlock lines={insights.ventes} />}
 
         {/* ===================== RÉSUMÉ ALIMENTATION ===================== */}
         {data.feedingSummary && (

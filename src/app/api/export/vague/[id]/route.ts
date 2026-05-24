@@ -49,7 +49,6 @@ export async function GET(
       gompertzRecord,
       configElevageData,
       mouvementsStock,
-      ventesDb,
     ] = await Promise.all([
       getVagueById(id, auth.activeSiteId),
       prisma.releve.findMany({
@@ -97,12 +96,6 @@ export async function GET(
         where: { vagueId: id, siteId: auth.activeSiteId, type: TypeMouvement.SORTIE },
         include: { produit: { select: { nom: true, categorie: true, unite: true } } },
       }),
-      // Ventes for this vague
-      prisma.vente.findMany({
-        where: { vagueId: id, siteId: auth.activeSiteId },
-        include: { client: { select: { nom: true } } },
-        orderBy: { dateCommande: "asc" },
-      }),
     ]);
 
     if (!vague) {
@@ -124,14 +117,7 @@ export async function GET(
     let coutProductionSection = null;
     if (hasFinancesPermission) {
       try {
-        const coutProd = await getCoutProductionVague(id, auth.activeSiteId);
-        coutProductionSection = {
-          coutTotal: coutProd.resume.coutTotal,
-          coutParKg: coutProd.resume.coutParKg,
-          prixMoyenVenteKg: coutProd.resume.prixMoyenVenteKg,
-          margeParKg: coutProd.resume.margeParKg,
-          roi: coutProd.resume.roi,
-        };
+        coutProductionSection = await getCoutProductionVague(id, auth.activeSiteId);
       } catch {
         // Cost computation may fail — section simply omitted
       }
@@ -305,19 +291,19 @@ export async function GET(
       waterQualitySummary,
       stockConsumption,
       salesSummary: {
-        ventes: ventesDb.map((v) => ({
-          numero: v.numero,
-          clientNom: v.client.nom,
-          date: v.dateCommande,
-          quantitePoissons: v.quantitePoissons,
-          poidsTotalKg: v.poidsTotalKg,
-          prixUnitaireKg: v.prixUnitaireKg,
-          montantTotal: v.montantTotal,
-          statut: v.statut,
-        })),
-        totalPoidsKg: ventesDb.reduce((s, v) => s + v.poidsTotalKg, 0),
-        totalMontant: ventesDb.reduce((s, v) => s + v.montantTotal, 0),
-        totalPoissonsVendus: ventesDb.reduce((s, v) => s + v.quantitePoissons, 0),
+        ventes: coutProductionSection?.ventes.map((v) => ({
+          numero: "",
+          clientNom: v.client,
+          date: new Date(v.date),
+          quantitePoissons: 0,
+          poidsTotalKg: v.poidsKg,
+          prixUnitaireKg: v.prixKg ?? 0,
+          montantTotal: v.montant,
+          statut: "LIVREE",
+        })) ?? [],
+        totalPoidsKg: coutProductionSection?.resume.poidsTotalVendu ?? 0,
+        totalMontant: coutProductionSection?.resume.revenus ?? 0,
+        totalPoissonsVendus: coutProductionSection?.resume.nombrePoissonsVendus ?? 0,
         poidsObjectifKg: vague.poidsObjectifKg ?? null,
       },
     };

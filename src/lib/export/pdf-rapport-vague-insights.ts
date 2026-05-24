@@ -71,7 +71,7 @@ export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): Ra
 
   // Verdict rentabilité en résumé
   if (data.coutProduction && data.salesSummary) {
-    const cp = data.coutProduction;
+    const cp = data.coutProduction.resume;
     if (cp.roi !== null && cp.roi > 0) {
       insights.executive.push(
         `Rentabilité positive : ROI de ${cp.roi.toFixed(0)}% avec une marge de ${cp.margeParKg !== null ? Math.round(cp.margeParKg) : "—"} FCFA/kg.`
@@ -278,8 +278,8 @@ export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): Ra
 
       // Coût aliment par kg de poisson produit
       if (data.kpis.fcr !== null && data.coutProduction) {
-        const coutAlimentParKg = data.coutProduction.coutParKg !== null
-          ? Math.round(data.coutProduction.coutParKg * 0.7) // Approximation : alimentation ~70% du coût
+        const coutAlimentParKg = data.coutProduction.resume.coutParKg !== null
+          ? Math.round(data.coutProduction.resume.coutParKg * 0.7) // Approximation : alimentation ~70% du coût
           : null;
         if (coutAlimentParKg !== null) {
           insights.alimentation.push(
@@ -345,7 +345,7 @@ export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): Ra
   // -------------------------------------------------------------------------
 
   if (data.coutProduction) {
-    const cp = data.coutProduction;
+    const cp = data.coutProduction.resume;
     if (cp.coutTotal > 0) {
       insights.rentabilite.push(
         `Coût de production total : ${fmtFCFA(cp.coutTotal)} (${fmtFCFA(cp.coutParKg)}/kg).`

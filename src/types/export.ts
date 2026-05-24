@@ -381,8 +381,8 @@ export interface CreateRapportVaguePDFDTO {
   evolutionPoids: EvolutionPoidsExport[];
 
   // --- Sections enrichies (optionnelles) ---
-  /** Résumé des coûts de production (null si permission FINANCES_VOIR absente) */
-  coutProduction?: CoutProductionPDFSection | null;
+  /** Données complètes de coût de production (null si permission FINANCES_VOIR absente) */
+  coutProduction?: CoutProductionVague | null;
   /** Tableau détaillé d'évolution du poids par bac */
   evolutionPoidsTable: EvolutionPoidsTableRow[];
   /** Tableau d'évolution du poids moyen pondéré (tous bacs) avec Gompertz */
