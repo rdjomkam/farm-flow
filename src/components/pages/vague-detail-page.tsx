@@ -94,12 +94,12 @@ export default async function VagueDetailPage({
       select: { id: true, code: true, nom: true, type: true },
       orderBy: { nom: "asc" },
     }),
-    // Total vendu (kg) pour les barres de progression
-    prisma.vente.aggregate({
+    // Total vendu (kg) pour les barres de progression — via LigneVente (source de vérité par vague)
+    prisma.ligneVente.aggregate({
       where: {
         vagueId: id,
         siteId: session.activeSiteId,
-        statut: { in: [StatutVente.LIVREE, StatutVente.CLOTUREE] },
+        vente: { statut: { in: [StatutVente.LIVREE, StatutVente.CLOTUREE] } },
       },
       _sum: { poidsTotalKg: true },
     }),

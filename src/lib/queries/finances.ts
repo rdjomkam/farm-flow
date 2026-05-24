@@ -300,10 +300,15 @@ export async function getRentabiliteParVague(
 
   const vagueIds = vagues.map((v) => v.id);
 
-  // Charger toutes les ventes de ces vagues en une seule requete
-  const toutesVentes = await prisma.vente.findMany({
+  // Charger toutes les lignes de vente de ces vagues (source de vérité multi-vague)
+  const toutesLignesVente = await prisma.ligneVente.findMany({
     where: { siteId, vagueId: { in: vagueIds } },
-    select: { vagueId: true, montantTotal: true, poidsTotalKg: true },
+    select: {
+      vagueId: true,
+      poidsTotalKg: true,
+      venteId: true,
+      vente: { select: { prixUnitaireKg: true } },
+    },
   });
 
   // Charger toutes les consommations associees aux releves de ces vagues
@@ -350,22 +355,24 @@ export async function getRentabiliteParVague(
     },
   });
 
-  // Agreger par vagueId en memoire
+  // Agreger par vagueId en memoire (via LigneVente — multi-vague safe)
   const ventesByVague = new Map<
     string,
-    { revenus: number; poidsTotalKg: number; nombreVentes: number }
+    { revenus: number; poidsTotalKg: number; nombreVentes: number; venteIds: Set<string> }
   >();
-  for (const v of toutesVentes) {
-    if (!v.vagueId) continue;
-    const existing = ventesByVague.get(v.vagueId) ?? {
+  for (const lv of toutesLignesVente) {
+    if (!lv.vagueId) continue;
+    const existing = ventesByVague.get(lv.vagueId) ?? {
       revenus: 0,
       poidsTotalKg: 0,
       nombreVentes: 0,
+      venteIds: new Set<string>(),
     };
-    existing.revenus += v.montantTotal;
-    existing.poidsTotalKg += v.poidsTotalKg;
-    existing.nombreVentes += 1;
-    ventesByVague.set(v.vagueId, existing);
+    existing.revenus += lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+    existing.poidsTotalKg += lv.poidsTotalKg;
+    existing.venteIds.add(lv.venteId);
+    existing.nombreVentes = existing.venteIds.size;
+    ventesByVague.set(lv.vagueId, existing);
   }
 
   const coutsByVague = new Map<string, number>();

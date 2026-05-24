@@ -1350,9 +1350,9 @@ export async function getComparaisonVagues(
         },
       },
     }),
-    prisma.vente.findMany({
+    prisma.ligneVente.findMany({
       where: { vagueId: { in: ids }, siteId },
-      select: { vagueId: true, montantTotal: true },
+      select: { vagueId: true, poidsTotalKg: true, vente: { select: { prixUnitaireKg: true } } },
     }),
   ]);
 
@@ -1365,11 +1365,13 @@ export async function getComparaisonVagues(
     relevesByVague.set(vagueKey, existing);
   }
 
+  // Revenus par vague via LigneVente (multi-vague safe)
   const ventesByVague = new Map<string, number>();
-  for (const v of allVentes) {
-    if (v.vagueId) {
-      const current = ventesByVague.get(v.vagueId) ?? 0;
-      ventesByVague.set(v.vagueId, current + v.montantTotal);
+  for (const lv of allVentes) {
+    if (lv.vagueId) {
+      const revenuLigne = lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+      const current = ventesByVague.get(lv.vagueId) ?? 0;
+      ventesByVague.set(lv.vagueId, current + revenuLigne);
     }
   }
 
