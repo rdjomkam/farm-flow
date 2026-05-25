@@ -141,8 +141,10 @@ export async function GET(
     }));
 
     const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut, bacNameMap);
-    const calibrageMorts = calibragesDb.reduce((sum, c) => sum + (c.nombreMorts ?? 0), 0);
-    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial, calibrageMorts);
+    // FIX: Ne pas ajouter calibrageMorts séparément — les calibrages créent déjà
+    // un relevé MORTALITE auto (étape 8a de createCalibrage), donc rawReleves
+    // contient déjà ces mortalités. Les ajouter en plus = double-comptage.
+    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial, 0);
     const feedingSummary = buildFeedingSummary(rawReleves);
     const waterQualitySummary = buildWaterQualitySummary(rawReleves);
     const targetWeight = configElevageData?.poidsObjectif ?? null;
