@@ -195,6 +195,8 @@ export enum TypeReleve {
   TRI = "TRI",
   /** Releve auto-cree lors d'une vente — tracabilite deduction poissons */
   VENTE = "VENTE",
+  /** Releve auto-cree lors d'un transfert inter-vagues — tracabilite cote source (PRE_GROSSISSEMENT) */
+  TRANSFERT = "TRANSFERT",
 }
 
 /** Type d'aliment distribue */

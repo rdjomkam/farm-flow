@@ -41,6 +41,7 @@ export async function getIndicateursVague(
           tailleMoyenne: true,
           nombreMorts: true,
           nombreVendus: true,
+          nombreTransferes: true,
           quantiteAliment: true,
           nombreCompte: true,
         },

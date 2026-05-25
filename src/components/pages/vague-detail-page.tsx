@@ -155,6 +155,7 @@ export default async function VagueDetailPage({
       nombreMorts: true,
       nombreCompte: true,
       nombreVendus: true,
+      nombreTransferes: true,
       quantiteAliment: true,
       consommations: {
         select: {
@@ -427,8 +428,9 @@ export default async function VagueDetailPage({
           </div>
         )}
 
-        {/* Section "En attente de transfert" — GROSSISSEMENT vide */}
-        {vague.type === TypeVague.GROSSISSEMENT && vague.nombreInitial === 0 && isEnCours && (
+        {/* Section "En attente de transfert" — GROSSISSEMENT sans bac assigné
+            (vague vide à la création OU alimentée par transfert sans bac dest spécifié) */}
+        {vague.type === TypeVague.GROSSISSEMENT && nombreBacs === 0 && isEnCours && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 flex flex-col gap-2">
             <div>
               <p className="text-sm font-medium">{t("attendreTransfert")}</p>

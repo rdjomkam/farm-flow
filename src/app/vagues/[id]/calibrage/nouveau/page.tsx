@@ -44,7 +44,7 @@ export default async function NouveauCalibragePage({
   const relevesForVivants = await prisma.releve.findMany({
     where: { vagueId: id, siteId: session.activeSiteId },
     orderBy: { date: "asc" },
-    select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreCompte: true, bacId: true },
+    select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, bacId: true },
   });
   const vivantsByBac = computeVivantsByBac(
     vague.bacs,

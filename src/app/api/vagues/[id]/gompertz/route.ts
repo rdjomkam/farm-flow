@@ -67,6 +67,7 @@ export async function GET(
         poidsMoyen: true,
         nombreMorts: true,
         nombreVendus: true,
+        nombreTransferes: true,
         nombreCompte: true,
         bacId: true,
       },

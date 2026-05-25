@@ -246,6 +246,7 @@ export async function createTransfert(
             typeReleve: true,
             nombreMorts: true,
             nombreVendus: true,
+            nombreTransferes: true,
             nombreCompte: true,
             date: true,
           },
@@ -390,7 +391,9 @@ export async function createTransfert(
       let accTotal = vagueDest.nombreInitial;
       let accAvg = vagueDest.poidsMoyenInitial;
 
-      for (const groupe of dto.groupes) {
+      for (let groupeIdx = 0; groupeIdx < dto.groupes.length; groupeIdx++) {
+        const groupe = dto.groupes[groupeIdx];
+        const transfertGroupeId = transfert.groupes[groupeIdx]?.id ?? null;
         const vagueSourceId = groupe.vagueSourceId;
         const bacSourceId = groupe.bacSourceId ?? null;
         const bacDestId = groupe.bacDestId ?? null;
@@ -518,6 +521,24 @@ export async function createTransfert(
             siteId,
           },
         });
+
+        // TRANSFERT sur la vague source (traçabilité déduction poissons sortants).
+        // Le relevé existe uniquement côté PRE_GROSSISSEMENT (source), pas côté
+        // GROSSISSEMENT (destination) qui reçoit le BIOMETRIE ci-dessus.
+        if (bacSourceId !== null && nombrePoissons > 0) {
+          await tx.releve.create({
+            data: {
+              date: transfertDate,
+              typeReleve: TypeReleve.TRANSFERT,
+              nombreTransferes: nombrePoissons,
+              transfertGroupeId,
+              notes: "Transfert vers grossissement",
+              vagueId: vagueSourceId,
+              bacId: bacSourceId,
+              siteId,
+            },
+          });
+        }
 
       }
 

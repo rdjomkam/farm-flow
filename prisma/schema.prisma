@@ -38,6 +38,12 @@ enum TypeReleve {
    * Relevé auto-créé lors d'une vente — traçabilité déduction poissons
    */
   VENTE
+  /**
+   * Relevé auto-créé lors d'un transfert inter-vagues (PG.4) — traçabilité
+   * déduction poissons sortants d'une vague PRE_GROSSISSEMENT vers GROSSISSEMENT.
+   * Côté source uniquement (la destination reçoit un BIOMETRIE).
+   */
+  TRANSFERT
 }
 
 enum TypeAliment {
@@ -1345,6 +1351,12 @@ model Releve {
   nombreVendus Int?
   venteId      String?
   vente        Vente?  @relation("VenteReleves", fields: [venteId], references: [id], onDelete: SetNull)
+
+  // Champs transfert (typeReleve = TRANSFERT) — nombre de poissons transférés
+  // depuis ce bac vers une autre vague. Côté source uniquement.
+  nombreTransferes  Int?
+  transfertGroupeId String?
+  transfertGroupe   TransfertGroupe? @relation("TransfertReleves", fields: [transfertGroupeId], references: [id], onDelete: SetNull)
 
   // Champs alimentation
   typeAliment      TypeAliment?
@@ -3844,6 +3856,7 @@ model TransfertGroupe {
   snapshotAvantModif Json?
 
   modifications TransfertModification[]
+  releves       Releve[]                @relation("TransfertReleves")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

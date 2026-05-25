@@ -51,6 +51,7 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
           poidsMoyen: true,
           nombreMorts: true,
           nombreVendus: true,
+          nombreTransferes: true,
           nombreCompte: true,
           quantiteAliment: true,
           bacId: true,

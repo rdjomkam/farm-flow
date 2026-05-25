@@ -141,7 +141,7 @@ export async function createCalibrage(
         typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
       },
       orderBy: { date: "asc" },
-      select: { bacId: true, typeReleve: true, nombreMorts: true, nombreVendus: true, nombreCompte: true, date: true },
+      select: { bacId: true, typeReleve: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, date: true },
     });
     const vivantsByBac = computeVivantsByBac(
       allBacsVague,

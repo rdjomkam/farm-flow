@@ -266,7 +266,7 @@ export function calculerROI(
  */
 export function computeVivantsByBac(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null }[],
   nombreInitialVague: number,
   options?: { excludeVentes?: boolean }
 ): Map<string, number> {
@@ -310,6 +310,17 @@ export function computeVivantsByBac(
       const comptage = comptagesParBac.get(r.bacId);
       if (comptage && r.date && new Date(r.date) > comptage.date) {
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + vendus);
+      }
+    }
+    // TRANSFERT — toujours soustrait (concerne uniquement les vagues PRE_GROSSISSEMENT)
+    // Crée côté source par createTransfert pour traçabilité de la déduction.
+    if (r.typeReleve === "TRANSFERT" && r.bacId) {
+      const transferes = r.nombreTransferes ?? 0;
+      mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + transferes);
+
+      const comptage = comptagesParBac.get(r.bacId);
+      if (comptage && r.date && new Date(r.date) > comptage.date) {
+        mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + transferes);
       }
     }
   }

@@ -558,6 +558,7 @@ async function computeAlimentMetrics(
           poidsMoyen: true,
           nombreMorts: true,
           nombreVendus: true,
+          nombreTransferes: true,
           nombreCompte: true,
         },
       })
@@ -1561,12 +1562,12 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
         }),
         prisma.releve.findMany({
           where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.MORTALITE },
-          select: { bacId: true, nombreMorts: true, nombreVendus: true, typeReleve: true, nombreCompte: true },
+          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true },
         }),
         prisma.releve.findMany({
           where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.COMPTAGE },
           orderBy: { date: "asc" },
-          select: { bacId: true, nombreMorts: true, nombreVendus: true, typeReleve: true, nombreCompte: true },
+          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true },
         }),
       ]);
 
@@ -1897,6 +1898,7 @@ export async function getFCRHebdomadaire(
       typeReleve: true,
       nombreMorts: true,
       nombreVendus: true,
+      nombreTransferes: true,
       nombreCompte: true,
     },
   });

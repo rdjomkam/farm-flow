@@ -70,6 +70,7 @@ export default async function IngenieurClientDetailPage({
           tailleMoyenne: true,
           nombreMorts: true,
           nombreVendus: true,
+          nombreTransferes: true,
           nombreCompte: true,
           bacId: true,
           notes: true,

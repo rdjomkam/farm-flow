@@ -48,6 +48,7 @@ export default async function NouveauTransfertPage({
       date: true,
       nombreMorts: true,
       nombreVendus: true,
+      nombreTransferes: true,
       nombreCompte: true,
       bacId: true,
     },
