@@ -141,10 +141,20 @@ export async function GET(
     }));
 
     const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut, bacNameMap);
-    // FIX: Ne pas ajouter calibrageMorts séparément — les calibrages créent déjà
-    // un relevé MORTALITE auto (étape 8a de createCalibrage), donc rawReleves
-    // contient déjà ces mortalités. Les ajouter en plus = double-comptage.
-    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial, 0);
+    // FIX: Use indicateurs (computeVivantsByBac with COMPTAGE support) as source of truth
+    // for mortality rate. buildMortalitySummary's naive sum of nombreMorts is inconsistent
+    // with the dashboard's survival rate when COMPTAGE records reset baselines.
+    const mortalitySummaryRaw = buildMortalitySummary(rawReleves, vague.nombreInitial, 0);
+    // Override totalMorts and tauxMortalite from indicateurs (consistent with dashboard)
+    const tauxSurvieRef = indicateurs?.tauxSurvie ?? 100;
+    const tauxMortaliteRef = Math.max(0, 100 - tauxSurvieRef);
+    const totalMortsRef = Math.round(vague.nombreInitial * tauxMortaliteRef / 100);
+    const mortalitySummary = {
+      ...mortalitySummaryRaw,
+      totalMorts: totalMortsRef,
+      tauxMortalite: tauxMortaliteRef,
+      // topCauses kept from raw relevés (informational breakdown)
+    };
     const feedingSummary = buildFeedingSummary(rawReleves);
     const waterQualitySummary = buildWaterQualitySummary(rawReleves);
     const targetWeight = configElevageData?.poidsObjectif ?? null;
