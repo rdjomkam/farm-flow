@@ -361,8 +361,10 @@
     "bilan": {
       "biomasseProduite": "Biomass produced",
       "biomasseVendue": "Biomass sold",
+      "biomasseTransferee": "Biomass transferred",
       "biomasseVivante": "Live biomass",
-      "poissonsVendus": "Fish sold"
+      "poissonsVendus": "Fish sold",
+      "poissonsTransferes": "Fish transferred"
     },
     "rentabilite": {
       "coutTotalProduction": "Total production cost",

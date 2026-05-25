@@ -361,8 +361,10 @@
     "bilan": {
       "biomasseProduite": "Biomasse produite",
       "biomasseVendue": "Biomasse vendue",
+      "biomasseTransferee": "Biomasse transférée",
       "biomasseVivante": "Biomasse vivante",
-      "poissonsVendus": "Poissons vendus"
+      "poissonsVendus": "Poissons vendus",
+      "poissonsTransferes": "Poissons transférés"
     },
     "rentabilite": {
       "coutTotalProduction": "Coût total production",

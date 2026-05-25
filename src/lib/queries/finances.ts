@@ -826,8 +826,10 @@ export interface CoutProductionVague {
     coutTotal: number;
     poidsTotalVendu: number;
     nombrePoissonsVendus: number;
-    biomasseKg: number | null;         // biomasse vivante restante en ferme
-    biomasseProduite: number | null;   // biomasse totale produite (vivante + vendue)
+    biomasseKg: number | null;             // biomasse vivante restante en ferme
+    biomasseTransferee: number | null;     // biomasse transférée à d'autres vagues (sortants — PRE_GROSSISSEMENT)
+    nombrePoissonsTransferes: number;      // nombre de poissons transférés sortants
+    biomasseProduite: number | null;       // biomasse totale produite (vivante + vendue + transférée)
     coutParKg: number | null;
     prixMoyenVenteKg: number | null;
     margeParKg: number | null;
@@ -1071,6 +1073,7 @@ export async function getCoutProductionVague(
     ventes,
     bacsVague,
     relevesVague,
+    transfertsSortants,
   ] = await Promise.all([
     // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
     // Filtre par dateFin : exclure les releves posterieurs a la cloture
@@ -1207,6 +1210,19 @@ export async function getCoutProductionVague(
         poidsMoyen: true,
       },
       orderBy: { date: "asc" },
+    }),
+
+    // 2i. Transferts sortants — biomasse transférée hors de cette vague (PRE_GROSSISSEMENT)
+    // Filtre par dateFin : ne considérer que les transferts antérieurs à la clôture
+    prisma.transfertGroupe.findMany({
+      where: {
+        vagueSourceId: vagueId,
+        transfert: { siteId, date: { lte: dateFin } },
+      },
+      select: {
+        nombrePoissons: true,
+        poidsMoyenG: true,
+      },
     }),
   ]);
 
@@ -1519,11 +1535,27 @@ export async function getCoutProductionVague(
   const coutTotal =
     coutAliments + coutDepensesDirectes + coutMultiVagues + coutRecurrents;
 
-  // biomasseProduite = biomasse restante en ferme + biomasse deja vendue
-  // Pour le cout de production, on divise par la biomasse TOTALE produite,
-  // pas seulement ce qui reste apres les ventes.
-  const biomasseProduite =
-    biomasseKg !== null ? biomasseKg + poidsTotalVendu : poidsTotalVendu > 0 ? poidsTotalVendu : null;
+  // Biomasse transférée hors de cette vague (sortants vers d'autres vagues — PRE_GROSSISSEMENT)
+  // Convertit poidsMoyenG (g) en kg : (g × nb) / 1000
+  let biomasseTransferee = 0;
+  let nombrePoissonsTransferes = 0;
+  for (const tg of transfertsSortants) {
+    biomasseTransferee += (tg.poidsMoyenG * tg.nombrePoissons) / 1000;
+    nombrePoissonsTransferes += tg.nombrePoissons;
+  }
+  biomasseTransferee = Math.round(biomasseTransferee * 100) / 100;
+  const biomasseTransfereeForResume = biomasseTransferee > 0 ? biomasseTransferee : null;
+
+  // biomasseProduite = biomasse restante en ferme + biomasse deja vendue + biomasse transférée sortante.
+  // Pour le cout de production, on divise par la biomasse TOTALE produite par cette vague,
+  // c'est-à-dire tout ce qui en est sorti (vivants + vendus + transférés vers d'autres vagues).
+  const partsBiomasse: number[] = [];
+  if (biomasseKg !== null) partsBiomasse.push(biomasseKg);
+  if (poidsTotalVendu > 0) partsBiomasse.push(poidsTotalVendu);
+  if (biomasseTransferee > 0) partsBiomasse.push(biomasseTransferee);
+  const biomasseProduite = partsBiomasse.length > 0
+    ? Math.round(partsBiomasse.reduce((s, v) => s + v, 0) * 100) / 100
+    : null;
   const coutParKg =
     biomasseProduite !== null && biomasseProduite > 0 ? coutTotal / biomasseProduite : null;
   const prixMoyenVenteKg = poidsTotalVendu > 0 ? revenus / poidsTotalVendu : null;
@@ -1605,6 +1637,8 @@ export async function getCoutProductionVague(
       poidsTotalVendu: Math.round(poidsTotalVendu * 100) / 100,
       nombrePoissonsVendus: totalPoissonsVendus,
       biomasseKg: biomasseKg !== null ? Math.round(biomasseKg * 100) / 100 : null,
+      biomasseTransferee: biomasseTransfereeForResume !== null ? Math.round(biomasseTransfereeForResume * 100) / 100 : null,
+      nombrePoissonsTransferes,
       biomasseProduite: biomasseProduite !== null ? Math.round(biomasseProduite * 100) / 100 : null,
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
       prixMoyenVenteKg:

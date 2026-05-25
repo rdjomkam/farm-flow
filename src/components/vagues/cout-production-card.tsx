@@ -387,11 +387,17 @@ function ProductionBilan({ resume, t }: { resume: CoutProductionVague["resume"];
           {resume.poidsTotalVendu > 0 && (
             <BilanRow label={t("bilan.biomasseVendue")} value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`} />
           )}
+          {resume.biomasseTransferee !== null && resume.biomasseTransferee > 0 && (
+            <BilanRow label={t("bilan.biomasseTransferee")} value={`${formatNumber(Math.round(resume.biomasseTransferee * 10) / 10)} kg`} />
+          )}
           {resume.biomasseKg !== null && resume.biomasseKg > 0 && (
             <BilanRow label={t("bilan.biomasseVivante")} value={`${formatNumber(Math.round(resume.biomasseKg * 10) / 10)} kg`} />
           )}
           {resume.nombrePoissonsVendus > 0 && (
             <BilanRow label={t("bilan.poissonsVendus")} value={`${formatNumber(resume.nombrePoissonsVendus)}`} />
+          )}
+          {resume.nombrePoissonsTransferes > 0 && (
+            <BilanRow label={t("bilan.poissonsTransferes")} value={`${formatNumber(resume.nombrePoissonsTransferes)}`} />
           )}
         </div>
       </div>
