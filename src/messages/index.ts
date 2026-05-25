@@ -8,6 +8,6 @@
  * (alevins-page.tsx, alevins-lots-page.tsx) still depend on it; migrate those
  * components before removing this namespace.
  */
-export const namespaces = ["common", "format", "navigation", "abonnements", "permissions", "settings", "analytics", "errors", "stock", "ventes", "vagues", "releves", "alevins", "users", "commissions", "activites", "admin", "alertes", "backoffice", "bacs", "besoins", "calibrage", "config-elevage", "dashboard", "depenses", "ingenieur", "layout", "notes", "observations", "packs", "planning", "remises", "reproduction", "sites"] as const;
+export const namespaces = ["common", "format", "navigation", "abonnements", "permissions", "settings", "analytics", "errors", "stock", "ventes", "vagues", "releves", "alevins", "users", "commissions", "activites", "admin", "alertes", "backoffice", "bacs", "besoins", "calibrage", "config-elevage", "dashboard", "depenses", "ingenieur", "layout", "notes", "observations", "packs", "planning", "remises", "reproduction", "sites", "transferts"] as const;
 
 export type Namespace = (typeof namespaces)[number];

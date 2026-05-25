@@ -1,0 +1,110 @@
+{
+  "page": {
+    "title": "Transférer vers grossissement",
+    "retour": "Retour"
+  },
+  "etapes": {
+    "mode": "Mode",
+    "vague": "Vague",
+    "groupes": "Groupes",
+    "confirmation": "Confirmation"
+  },
+  "stepMode": {
+    "title": "Choisir le mode de transfert",
+    "description": "Comment voulez-vous gérer la vague de destination ?",
+    "modeA": {
+      "titre": "Créer une nouvelle vague",
+      "description": "Un nouvelle vague de grossissement sera créée lors du transfert."
+    },
+    "modeB": {
+      "titre": "Cibler une vague existante",
+      "description": "Les poissons rejoindront une vague de grossissement déjà en cours."
+    },
+    "suivant": "Continuer"
+  },
+  "stepNouvelleVague": {
+    "title": "Nouvelle vague de grossissement",
+    "description": "Renseignez les informations de la nouvelle vague.",
+    "code": "Code de la vague",
+    "codePlaceholder": "Ex : GROSS-2025-001",
+    "dateDebut": "Date de début",
+    "poidsObjectif": "Objectif biomasse (kg, optionnel)",
+    "uniteProduction": "Unité de production (optionnel)",
+    "uniteProductionPlaceholder": "Choisir une unité",
+    "notes": "Notes (optionnel)",
+    "notesPlaceholder": "Observations sur la nouvelle vague...",
+    "retour": "Retour",
+    "suivant": "Continuer"
+  },
+  "stepVagueExistante": {
+    "title": "Vague de grossissement existante",
+    "description": "Sélectionnez la vague de destination.",
+    "vagueDestination": "Vague de destination",
+    "choisirVague": "Choisir une vague",
+    "vagueVide": "Vide",
+    "poissonsInitiaux": "{count} poissons",
+    "poidsMoyen": "{poids}g/poisson",
+    "noteRecalcul": "Le poids moyen initial sera recalculé de façon pondérée après le transfert.",
+    "aucuneVague": "Aucune vague de grossissement en cours disponible.",
+    "retour": "Retour",
+    "suivant": "Continuer"
+  },
+  "stepGroupes": {
+    "title": "Groupes de transfert",
+    "description": "Configurez les groupes de poissons à transférer.",
+    "groupeLabel": "Groupe {index}",
+    "bacSource": "Bac source",
+    "choisirBacSource": "Choisir un bac source",
+    "bacSourceHint": "{vivants} vivants estimés",
+    "bacDest": "Bac destination",
+    "choisirBacDest": "Choisir un bac destination",
+    "nombrePoissons": "Nombre de poissons à transférer",
+    "poidsMoyenG": "Poids moyen (g)",
+    "nombreMorts": "Morts durant le transfert",
+    "ajouterGroupe": "Ajouter un groupe",
+    "supprimerGroupe": "Supprimer ce groupe",
+    "totalTransfere": "Total transféré : {count} poissons",
+    "totalSource": "{vivants} vivants dans les bacs source",
+    "depassement": "Dépassement de {count} poissons",
+    "retour": "Retour",
+    "suivant": "Continuer"
+  },
+  "stepConfirmation": {
+    "title": "Confirmation du transfert",
+    "description": "Vérifiez les informations avant de confirmer.",
+    "source": "Source",
+    "destination": "Destination",
+    "modeA": "Nouvelle vague : {code}",
+    "modeB": "Vague existante : {code}",
+    "groupes": "Groupes",
+    "groupeResume": "Bac {source} → {dest} : {poissons} poissons @ {poids}g",
+    "groupeResumeNoBacs": "{poissons} poissons @ {poids}g",
+    "notes": "Notes globales (optionnel)",
+    "notesPlaceholder": "Observations sur l'opération de transfert...",
+    "total": "Total",
+    "poissonsTotal": "{count} poissons",
+    "mortsTotal": "{count} mort(s)",
+    "retour": "Retour",
+    "confirmer": "Confirmer le transfert",
+    "confirmation": "Transfert en cours..."
+  },
+  "validation": {
+    "modeRequis": "Veuillez choisir un mode.",
+    "codeRequis": "Le code de la vague est obligatoire.",
+    "datDebutRequise": "La date de début est obligatoire.",
+    "vagueDestRequise": "La vague de destination est obligatoire.",
+    "auMoinsUnGroupe": "Au moins un groupe est obligatoire.",
+    "nombrePoissonsPositif": "Le nombre de poissons doit être > 0.",
+    "poidsMoyenPositif": "Le poids moyen doit être > 0.",
+    "nombreMortsPositif": "Le nombre de morts doit être >= 0.",
+    "bacSourceRequis": "Le bac source est obligatoire.",
+    "depassementVivants": "Dépasse les vivants estimés du bac.",
+    "vagueDestMemeQueSource": "La vague destination ne peut pas être la vague source."
+  },
+  "success": "Le transfert a été enregistré avec succès.",
+  "error": {
+    "conservation": "Conflit de conservation : les données ont changé. Veuillez recharger et réessayer.",
+    "validation": "Erreurs de validation. Vérifiez les champs et réessayez.",
+    "generic": "Une erreur est survenue. Veuillez réessayer."
+  }
+}

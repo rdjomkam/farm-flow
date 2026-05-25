@@ -1,15 +1,17 @@
 import { prisma } from "@/lib/db";
-import { StatutVague, StatutActivite, TypeReleve, MethodeComptage } from "@/types";
+import { StatutVague, StatutActivite, TypeReleve, MethodeComptage, TypeVague } from "@/types";
 import type { CreateVagueDTO, UpdateVagueDTO } from "@/types";
+import { canDeleteVague } from "@/lib/queries/transferts";
 
-/** Liste les vagues d'un site avec filtre optionnel sur le statut et pagination */
+/** Liste les vagues d'un site avec filtre optionnel sur le statut, le type et pagination */
 export async function getVagues(
   siteId: string,
-  filters?: { statut?: string },
+  filters?: { statut?: string; type?: string },
   pagination?: { limit: number; offset: number }
 ) {
   const where: Record<string, unknown> = { siteId };
   if (filters?.statut) where.statut = filters.statut;
+  if (filters?.type) where.type = filters.type as TypeVague;
 
   const limit = pagination?.limit ?? 50;
   const offset = pagination?.offset ?? 0;
@@ -273,6 +275,13 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
  *  12. Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague, NoteIngenieur SetNull, Depense SetNull)
  */
 export async function deleteVague(id: string, siteId: string): Promise<void> {
+  // Vérifier les contraintes de transfert avant d'ouvrir la transaction
+  // (onDelete: Restrict sur TransfertGroupe — ADR-046)
+  const { canDelete, reason } = await canDeleteVague(siteId, id);
+  if (!canDelete) {
+    throw new Error(reason ?? "Suppression bloquée par des transferts existants");
+  }
+
   return prisma.$transaction(async (tx) => {
     // Vérifier l'existence et le siteId
     const vague = await tx.vague.findFirst({ where: { id, siteId } });

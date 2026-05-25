@@ -12,7 +12,14 @@
       "enCours": "Active ({count})",
       "terminees": "Completed ({count})",
       "annulees": "Cancelled ({count})"
+    },
+    "typeFilter": {
+      "toutes": "All"
     }
+  },
+  "type": {
+    "preGrossissement": "Pre-growing",
+    "grossissement": "Growing"
   },
   "card": {
     "bac": "{count} tank",
@@ -42,7 +49,17 @@
       "releves": "Records ({count})"
     }
   },
+  "transferer": "Transfer to growing",
+  "transfererHint": "Create a transfer to a growing batch.",
+  "attendreTransfert": "Awaiting transfer",
+  "attendreTransfertHint": "To populate this wave, create a transfer from a pre-growing wave.",
+  "recevoirTransfert": "Receive a transfer",
+  "voirVaguesPreGrossissement": "View pre-growing waves",
   "form": {
+    "typeLabel": "Batch type",
+    "demarrerVide": "Start empty (fed by transfer)",
+    "demarrerVideHint": "The batch will be created with no fish and will receive a transfer from a pre-growing batch.",
+    "preGrossissementHint": "Track fry from 10g to 15g before growing.",
     "create": {
       "title": "New batch",
       "description": "Create a new fish lot to track.",
@@ -121,7 +138,15 @@
     "gererBacs": "Manage tanks",
     "rapportPdf": "PDF Report",
     "exportReleves": "Export records",
-    "cloturer": "Close"
+    "cloturer": "Close",
+    "includeParents": "Include pre-growing"
+  },
+  "rapport": {
+    "origineMaterielle": "Fish origin",
+    "dureeCycle": "Total cycle duration",
+    "poidsInitialCycle": "Full cycle initial weight",
+    "gainCumule": "Cumulative weight gain",
+    "includeParents": "Include pre-growing"
   },
   "gererBacs": {
     "title": "Manage tanks",
@@ -308,6 +333,8 @@
     "exportPdf": "Export PDF",
     "expandLabel": "Show details",
     "collapseLabel": "Hide details",
+    "includeParents": "Include pre-growout costs",
+    "cycleComplet": "Full cycle",
     "summary": {
       "coutTotal": "Total cost",
       "coutParKg": "Cost / kg",

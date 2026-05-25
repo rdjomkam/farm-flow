@@ -5,6 +5,7 @@
  *
  * Affiche :
  * - Résumé toujours visible : coût total, coût/kg, prix vente/kg, marge/kg, ROI
+ * - Toggle "Inclure pré-grossissement" si la vague a des transferts entrants
  * - Détail expandable :
  *   - Bilan production (biomasse produite/vendue/vivante)
  *   - Répartition par catégorie
@@ -13,9 +14,9 @@
  *   - Dépenses partagées multi-vagues
  *   - Dépenses récurrentes
  *   - Rentabilité (coûts vs revenus)
- * - Bouton d'export PDF via ExportButton
+ * - Bouton d'export PDF via ExportButton (avec ?includeParents=true si activé)
  *
- * Story CP-3 — Mobile-first (360px), règles R2 + R6
+ * Story PG.9 — includeParents toggle, mobile-first (360px), règles R2 + R6
  * i18n: uses vagues.coutProduction namespace
  */
 
@@ -31,14 +32,17 @@ import type { CoutProductionVague, CoutProductionDepenseRecurrente } from "@/lib
 interface CoutProductionCardProps {
   data: CoutProductionVague;
   vagueId: string;
+  /** Si true, le toggle "Inclure pré-grossissement" est affiché (vague a des transferts entrants) */
+  hasParents?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Composant
 // ---------------------------------------------------------------------------
 
-export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
+export function CoutProductionCard({ data, vagueId, hasParents = false }: CoutProductionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [includeParents, setIncludeParents] = useState(false);
   const t = useTranslations("vagues.coutProduction");
 
   const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes } = data;
@@ -58,6 +62,10 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
       ? "text-success"
       : "text-destructive";
 
+  const exportHref = includeParents
+    ? `/api/export/vague/${vagueId}/cout-production?includeParents=true`
+    : `/api/export/vague/${vagueId}/cout-production`;
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="p-3 pb-0">
@@ -65,7 +73,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
           <h2 className="text-base font-semibold">{t("title")}</h2>
           <div className="flex items-center gap-2">
             <ExportButton
-              href={`/api/export/vague/${vagueId}/cout-production`}
+              href={exportHref}
               filename={`cout-production-vague-${vagueId}.pdf`}
               label={t("exportPdf")}
               variant="outline"
@@ -88,6 +96,32 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
             )}
           </div>
         </div>
+        {/* Toggle pré-grossissement — affiché uniquement si la vague a des parents */}
+        {hasParents && !isEmpty && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={includeParents}
+              onClick={() => setIncludeParents((v) => !v)}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                includeParents ? "bg-primary" : "bg-input"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                  includeParents ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </button>
+            <label
+              className="text-xs text-muted-foreground cursor-pointer select-none"
+              onClick={() => setIncludeParents((v) => !v)}
+            >
+              {t("includeParents")}
+            </label>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-3 pt-2">

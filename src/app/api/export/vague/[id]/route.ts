@@ -22,8 +22,9 @@ import {
 import type { RawReleve, BacInfo } from "@/lib/export/pdf-rapport-vague-helpers";
 import { renderRapportVaguePDF } from "@/lib/export/pdf-rapport-vague";
 import { Permission, TypeReleve, StatutVague, CauseMortalite, TypeMouvement } from "@/types";
-import type { CreateRapportVaguePDFDTO, ReleveRapportPDF, StockConsumptionPDFRow } from "@/types/export";
+import type { CreateRapportVaguePDFDTO, ReleveRapportPDF, StockConsumptionPDFRow, LineagePDFSection } from "@/types/export";
 import { prisma } from "@/lib/db";
+import { getLineage } from "@/lib/queries/transferts";
 
 export async function GET(
   request: NextRequest,
@@ -37,6 +38,8 @@ export async function GET(
     );
 
     const { id } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const includeParents = searchParams.get("includeParents") === "true";
 
     // Récupérer la vague + relevés + données enrichies en parallèle
     const [
@@ -110,6 +113,76 @@ export async function GET(
         { status: 404, message: "Site introuvable" },
         { status: 404 }
       );
+    }
+
+    // Lineage data — only if includeParents=true
+    let lineageSection: LineagePDFSection | null = null;
+    if (includeParents) {
+      try {
+        const lineageData = await getLineage(auth.activeSiteId, id, 5);
+        if (lineageData.parents.length > 0) {
+          // Collect unique parent vague IDs to fetch their dateDebut
+          const parentVagueIds = [...new Set(lineageData.parents.map((p) => p.vagueSourceId))];
+          const parentVagues = await prisma.vague.findMany({
+            where: { id: { in: parentVagueIds }, siteId: auth.activeSiteId },
+            select: { id: true, dateDebut: true, poidsMoyenInitial: true },
+          });
+          const parentVagueMap = new Map(parentVagues.map((v) => [v.id, v]));
+
+          // Build parent rows with dateDebut enriched
+          const parentRows = lineageData.parents.map((p) => {
+            const pv = parentVagueMap.get(p.vagueSourceId);
+            return {
+              vagueSourceCode: p.vagueSourceCode,
+              dateTransfert: p.dateTransfert,
+              nombrePoissons: p.nombrePoissons,
+              poidsMoyenG: p.poidsMoyenG,
+              nombreMorts: p.nombreMorts,
+              dateDebutSource: pv ? pv.dateDebut.toISOString() : null,
+            };
+          });
+
+          // Compute cycle KPIs
+          // dateDebutCycle = min of all parent vagues' dateDebut, vs current vague dateDebut
+          const allStartDates: Date[] = [new Date(vague.dateDebut)];
+          for (const pv of parentVagues) {
+            allStartDates.push(new Date(pv.dateDebut));
+          }
+          const dateDebutCycle = allStartDates.reduce(
+            (min, d) => (d < min ? d : min),
+            allStartDates[0]
+          );
+
+          const today = vague.dateFin ? new Date(vague.dateFin) : new Date();
+          const dureeTotaleCycle = Math.ceil(
+            (today.getTime() - dateDebutCycle.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          // poidsInitialCycle = poidsMoyenInitial of the oldest parent vague
+          // (the one with the earliest dateDebut)
+          const oldestParent = parentVagues.reduce(
+            (oldest, pv) =>
+              !oldest || new Date(pv.dateDebut) < new Date(oldest.dateDebut) ? pv : oldest,
+            null as (typeof parentVagues)[number] | null
+          );
+          const poidsInitialCycle = oldestParent?.poidsMoyenInitial ?? vague.poidsMoyenInitial;
+
+          // gainPoidsCumule = poidsMoyenFinal - poidsInitialCycle
+          const poidsMoyenFinal = indicateurs?.poidsMoyen ?? null;
+          const gainPoidsCumule =
+            poidsMoyenFinal !== null ? poidsMoyenFinal - poidsInitialCycle : null;
+
+          lineageSection = {
+            parents: parentRows,
+            dateDebutCycle: dateDebutCycle.toISOString(),
+            dureeTotaleCycle,
+            poidsInitialCycle,
+            gainPoidsCumule,
+          };
+        }
+      } catch {
+        // Lineage fetch failure is non-blocking — section simply omitted
+      }
     }
 
     // Conditional cost of production fetch (requires FINANCES_VOIR permission)
@@ -318,6 +391,7 @@ export async function GET(
         totalPoissonsVendus: coutProductionSection?.resume.nombrePoissonsVendus ?? 0,
         poidsObjectifKg: vague.poidsObjectifKg ?? null,
       },
+      lineage: lineageSection,
     };
 
     // Générer le PDF (renderRapportVaguePDF utilise JSX natif dans le fichier .tsx)

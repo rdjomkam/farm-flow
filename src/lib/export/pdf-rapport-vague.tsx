@@ -471,7 +471,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
   try {
     insights = generateRapportVagueInsights(data);
   } catch {
-    insights = { executive: [], zootechnique: [], croissance: [], mortalite: [], alimentation: [], ventes: [], rentabilite: [] };
+    insights = { executive: [], zootechnique: [], croissance: [], mortalite: [], alimentation: [], ventes: [], rentabilite: [], lineage: [] };
   }
 
   const statutColors: Record<
@@ -530,6 +530,80 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
 
         {/* Résumé exécutif */}
         <InsightBlock lines={insights.executive} />
+
+        {/* ===================== ORIGINE DES POISSONS (LINEAGE) ===================== */}
+        {data.lineage && data.lineage.parents.length > 0 && (() => {
+          const lineage = data.lineage!;
+          return (
+            <View break>
+              <Text style={styles.sectionTitle}>Origine des poissons</Text>
+
+              {/* Tableau des vagues parentes */}
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, { flex: 2 }]}>Vague source</Text>
+                <Text style={[styles.tableHeaderText, { width: 65 }]}>Date transfert</Text>
+                <Text style={[styles.tableHeaderText, { width: 55 }]}>Nb poissons</Text>
+                <Text style={[styles.tableHeaderText, { width: 60 }]}>Poids (g)</Text>
+                <Text style={[styles.tableHeaderText, { width: 50 }]}>Morts transfert</Text>
+              </View>
+              {lineage.parents.map((p, i) => (
+                <View key={i} style={styles.tableRow} wrap={false}>
+                  <Text style={[styles.tableCell, { flex: 2, fontFamily: "Helvetica-Bold" }]}>{p.vagueSourceCode}</Text>
+                  <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(p.dateTransfert)}</Text>
+                  <Text style={[styles.tableCell, { width: 55 }]}>{p.nombrePoissons}</Text>
+                  <Text style={[styles.tableCell, { width: 60 }]}>{formatNum(p.poidsMoyenG, 0, "g")}</Text>
+                  <Text style={[styles.tableCell, { width: 50, color: p.nombreMorts > 0 ? colors.danger : colors.muted }]}>
+                    {p.nombreMorts > 0 ? p.nombreMorts : "—"}
+                  </Text>
+                </View>
+              ))}
+
+              {/* KPIs cycle complet */}
+              <Text style={[styles.sectionTitle, { marginTop: 14 }]}>KPIs cycle complet</Text>
+              <View style={styles.kpisGrid}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Début du cycle</Text>
+                  <Text style={styles.kpiValue}>{formatDate(lineage.dateDebutCycle)}</Text>
+                  <Text style={styles.kpiUnit}>Vague parente la plus ancienne</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Durée totale du cycle</Text>
+                  <Text style={styles.kpiValue}>{lineage.dureeTotaleCycle} j</Text>
+                  <Text style={styles.kpiUnit}>Depuis le pré-grossissement</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>Poids initial cycle</Text>
+                  <Text style={styles.kpiValue}>{formatNum(lineage.poidsInitialCycle, 0, "g")}</Text>
+                  <Text style={styles.kpiUnit}>Alevins au départ</Text>
+                </View>
+                {lineage.gainPoidsCumule !== null && (
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>Gain de poids cumulé</Text>
+                    <Text style={[styles.kpiValue, { color: lineage.gainPoidsCumule >= 0 ? colors.success : colors.danger }]}>
+                      {formatNum(lineage.gainPoidsCumule, 0, "g")}
+                    </Text>
+                    <Text style={styles.kpiUnit}>Depuis le début du cycle</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Notes dates des vagues parentes */}
+              <View style={[styles.infoCard, { marginTop: 8 }]}>
+                {lineage.parents
+                  .filter((p) => p.dateDebutSource !== null)
+                  .map((p, i) => (
+                    <View key={i} style={[styles.infoRow, { borderBottomWidth: i < lineage.parents.length - 1 ? 1 : 0 }]}>
+                      <Text style={styles.infoLabel}>{p.vagueSourceCode} — début</Text>
+                      <Text style={styles.infoValue}>{formatDate(p.dateDebutSource)}</Text>
+                    </View>
+                  ))}
+              </View>
+
+              {/* Insight lineage */}
+              <InsightBlock lines={insights.lineage} />
+            </View>
+          );
+        })()}
 
         {/* ===================== KPIs ===================== */}
         <Text style={styles.sectionTitle}>Indicateurs zootechniques</Text>

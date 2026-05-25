@@ -7,7 +7,7 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
-import { StatutVague, Permission, TypeSystemeBac } from "@/types";
+import { StatutVague, TypeVague, TypeUniteProduction, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 export default async function VaguesPage() {
@@ -45,6 +45,7 @@ export default async function VaguesPage() {
         dateDebut: v.dateDebut,
         dateFin: v.dateFin,
         statut: v.statut as StatutVague,
+        type: (v as { type?: TypeVague }).type ?? TypeVague.GROSSISSEMENT,
         nombreInitial: v.nombreInitial,
         poidsMoyenInitial: v.poidsMoyenInitial,
         origineAlevins: v.origineAlevins,
@@ -77,7 +78,13 @@ export default async function VaguesPage() {
     return (
       <>
         <Header title={t("page.title")} />
-        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} configElevages={configElevages} unitesProduction={unitesProduction} />
+        <VaguesListClient
+          vagues={vagues}
+          bacsLibres={bacsLibres}
+          permissions={permissions}
+          configElevages={configElevages}
+          unitesProduction={unitesProduction.map((u) => ({ ...u, type: u.type as TypeUniteProduction }))}
+        />
       </>
     );
   } catch (error: unknown) {

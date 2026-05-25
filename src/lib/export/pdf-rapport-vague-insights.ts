@@ -23,6 +23,8 @@ export interface RapportVagueInsights {
   ventes: string[];
   /** Insight sur le coût de production / rentabilité */
   rentabilite: string[];
+  /** Insight sur le lineage (origine des poissons, cycle complet) */
+  lineage: string[];
 }
 
 export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): RapportVagueInsights {
@@ -34,6 +36,7 @@ export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): Ra
     alimentation: [],
     ventes: [],
     rentabilite: [],
+    lineage: [],
   };
 
   const dureeJours = Math.ceil(
@@ -399,6 +402,63 @@ export function generateRapportVagueInsights(data: CreateRapportVaguePDFDTO): Ra
       } else if (data.salesSummary.totalPoidsKg > 0) {
         insights.rentabilite.push(
           `Seuil de rentabilité : ${seuilKg.toFixed(0)} kg. Encore ${(seuilKg - data.salesSummary.totalPoidsKg).toFixed(0)} kg à vendre pour couvrir les coûts.`
+        );
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Lineage (origine des poissons / cycle complet)
+  // -------------------------------------------------------------------------
+
+  if (data.lineage && data.lineage.parents.length > 0) {
+    const lineage = data.lineage;
+    const nbParents = lineage.parents.length;
+    const dateDebutStr = fmtDate(lineage.dateDebutCycle);
+
+    insights.executive.push(
+      `Cycle complet : poissons issus de ${nbParents} vague${nbParents > 1 ? "s" : ""} de pré-grossissement, démarrage initial le ${dateDebutStr}.`
+    );
+
+    insights.lineage.push(
+      `Cycle total de ${lineage.dureeTotaleCycle} jours (depuis le ${dateDebutStr}). Poids initial au départ du cycle : ${lineage.poidsInitialCycle}g/poisson.`
+    );
+
+    if (lineage.gainPoidsCumule !== null) {
+      const gainCycle = lineage.gainPoidsCumule;
+      const gainGrossissement = data.kpis.poidsMoyenFinal !== null
+        ? data.kpis.poidsMoyenFinal - data.poidsMoyenInitial
+        : null;
+
+      if (gainGrossissement !== null) {
+        insights.lineage.push(
+          `Gain de poids cumulé : ${Math.round(gainCycle)}g sur ${lineage.dureeTotaleCycle} jours (vs ${Math.round(gainGrossissement)}g depuis le grossissement seul sur ${dureeJours} jours).`
+        );
+      } else {
+        insights.lineage.push(
+          `Gain de poids cumulé depuis le début du cycle : ${Math.round(gainCycle)}g.`
+        );
+      }
+    }
+
+    // Mortalité au transfert
+    const totalMortsTransfert = lineage.parents.reduce((sum, p) => sum + p.nombreMorts, 0);
+    if (totalMortsTransfert > 0) {
+      const totalTransferes = lineage.parents.reduce((sum, p) => sum + p.nombrePoissons, 0);
+      const tauxPerte = totalTransferes > 0
+        ? ((totalMortsTransfert / (totalTransferes + totalMortsTransfert)) * 100).toFixed(1)
+        : "0";
+      insights.lineage.push(
+        `Pertes au(x) transfert(s) : ${totalMortsTransfert} poissons (${tauxPerte}% des poissons manipulés).`
+      );
+    }
+
+    // Insight rentabilité cycle complet si coût disponible
+    if (data.coutProduction && lineage.gainPoidsCumule !== null) {
+      const cp = data.coutProduction.resume;
+      if (cp.coutParKg !== null) {
+        insights.lineage.push(
+          `Coût de revient du cycle complet : ${fmtFCFA(cp.coutParKg)}/kg (basé sur ${lineage.dureeTotaleCycle} jours de production totale).`
         );
       }
     }

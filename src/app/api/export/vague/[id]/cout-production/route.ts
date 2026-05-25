@@ -26,10 +26,12 @@ export async function GET(
     );
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const includeParents = searchParams.get("includeParents") === "true";
 
     // Charger les données de coût de production et les infos du site en parallèle
     const [coutProduction, site] = await Promise.all([
-      getCoutProductionVague(id, auth.activeSiteId),
+      getCoutProductionVague(id, auth.activeSiteId, { includeParents }),
       prisma.site.findUnique({
         where: { id: auth.activeSiteId },
         select: { name: true, address: true },

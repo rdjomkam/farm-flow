@@ -6,7 +6,7 @@ import { Calendar, Container, Clock } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StatutVague } from "@/types";
+import { StatutVague, TypeVague } from "@/types";
 import type { VagueSummaryResponse } from "@/types";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
@@ -28,7 +28,18 @@ function VagueCardBase({ vague }: VagueCardProps) {
     <Link href={`/vagues/${vague.id}`}>
       <Card className="transition-shadow hover:shadow-md">
         <CardHeader className="flex-row items-center justify-between gap-2 pb-2">
-          <CardTitle className="text-base">{vague.code}</CardTitle>
+          <div className="flex items-center gap-2 min-w-0">
+            <CardTitle className="text-base truncate">{vague.code}</CardTitle>
+            {vague.type === TypeVague.PRE_GROSSISSEMENT ? (
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-secondary/20 text-secondary-foreground border border-secondary/30">
+                PRE
+              </span>
+            ) : (
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                GROS
+              </span>
+            )}
+          </div>
           <Badge variant={statutVariants[statut]}>{t(`statuts.${statut}`)}</Badge>
         </CardHeader>
         <CardContent>

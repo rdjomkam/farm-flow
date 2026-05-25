@@ -25,6 +25,8 @@ export interface PdfInsights {
 
 export function generatePdfInsights(cp: CoutProductionVague): PdfInsights {
   const { vague, resume, coutParCategorie, detailAliments, ventes, formule } = cp;
+  const coutsParents = cp.coutsParents;
+  const cycleComplet = cp.cycleComplet;
 
   const insights: PdfInsights = {
     executive: [],
@@ -38,6 +40,17 @@ export function generatePdfInsights(cp: CoutProductionVague): PdfInsights {
   // -------------------------------------------------------------------------
   // Résumé exécutif
   // -------------------------------------------------------------------------
+
+  // Cycle complet (si includeParents)
+  if (coutsParents && coutsParents.coutTotalImpute > 0) {
+    const ratioMoyen =
+      coutsParents.details.length > 0
+        ? coutsParents.details.reduce((s, d) => s + d.ratio, 0) / coutsParents.details.length
+        : 0;
+    insights.executive.push(
+      `Cycle complet : ${formatK(coutsParents.coutTotalImpute)} de coûts pré-grossissement imputés sur ${coutsParents.details.length} vague${coutsParents.details.length > 1 ? "s" : ""} parente${coutsParents.details.length > 1 ? "s" : ""} (ratio moyen ${(ratioMoyen * 100).toFixed(0)}%).`
+    );
+  }
 
   // Statut de la vague
   if (vague.statut === StatutVague.TERMINEE) {
@@ -259,6 +272,14 @@ export function generatePdfInsights(cp: CoutProductionVague): PdfInsights {
   // -------------------------------------------------------------------------
   // Rentabilité
   // -------------------------------------------------------------------------
+
+  // ROI cycle complet vs vague isolée
+  if (cycleComplet && cycleComplet.roiCycleComplet !== null && resume.roi !== null) {
+    const diff = cycleComplet.roiCycleComplet - resume.roi;
+    insights.rentabilite.push(
+      `ROI cycle complet : ${cycleComplet.roiCycleComplet.toFixed(1)}% (ROI vague isolée : ${resume.roi.toFixed(1)}% — écart : ${diff >= 0 ? "+" : ""}${diff.toFixed(1)}%).`
+    );
+  }
 
   if (resume.revenus > 0) {
     // Seuil de rentabilité

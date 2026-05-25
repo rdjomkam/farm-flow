@@ -17,6 +17,11 @@ enum StatutVague {
   ANNULEE
 }
 
+enum TypeVague {
+  PRE_GROSSISSEMENT
+  GROSSISSEMENT
+}
+
 enum TypeReleve {
   BIOMETRIE
   MORTALITE
@@ -25,9 +30,13 @@ enum TypeReleve {
   COMPTAGE
   OBSERVATION
   RENOUVELLEMENT
-  /** Tri des poissons par taille dans un bac — Sprint Reproduction R1 */
+  /**
+   * Tri des poissons par taille dans un bac — Sprint Reproduction R1
+   */
   TRI
-  /** Relevé auto-créé lors d'une vente — traçabilité déduction poissons */
+  /**
+   * Relevé auto-créé lors d'une vente — traçabilité déduction poissons
+   */
   VENTE
 }
 
@@ -276,19 +285,33 @@ enum TypeAlerte {
   AUCUN_RELEVE_QUALITE_EAU
   DENSITE_CRITIQUE_QUALITE_EAU
   ABONNEMENT_RAPPEL_RENOUVELLEMENT
-  /** Notification envoyee quand un essai gratuit expire — Sprint 49 */
+  /**
+   * Notification envoyee quand un essai gratuit expire — Sprint 49
+   */
   ABONNEMENT_ESSAI_EXPIRE
-  /** Nombre de males reproducteurs actifs insuffisant — Sprint R1 */
+  /**
+   * Nombre de males reproducteurs actifs insuffisant — Sprint R1
+   */
   MALES_STOCK_BAS
-  /** Femelle sollicitee trop frequemment (risque d'epuisement) — Sprint R1 */
+  /**
+   * Femelle sollicitee trop frequemment (risque d'epuisement) — Sprint R1
+   */
   FEMELLE_SUREXPLOITEE
-  /** Taux de consanguinite estime elevee entre geniteurs — Sprint R1 */
+  /**
+   * Taux de consanguinite estime elevee entre geniteurs — Sprint R1
+   */
   CONSANGUINITE_RISQUE
-  /** Alerte pendant la phase d'incubation/eclosion d'un lot — Sprint R1 */
+  /**
+   * Alerte pendant la phase d'incubation/eclosion d'un lot — Sprint R1
+   */
   INCUBATION_ECLOSION
-  /** Taux de survie d'un lot d'alevins sous le seuil critique — Sprint R1 */
+  /**
+   * Taux de survie d'un lot d'alevins sous le seuil critique — Sprint R1
+   */
   TAUX_SURVIE_CRITIQUE_LOT
-  /** Activite planifiee dont la date de fin est depassee */
+  /**
+   * Activite planifiee dont la date de fin est depassee
+   */
   ACTIVITE_EN_RETARD
 }
 
@@ -486,10 +509,14 @@ enum SexeReproducteur {
 
 enum StatutReproducteur {
   ACTIF
-  /** Reproducteur en periode de repos physiologique — Sprint R1 */
+  /**
+   * Reproducteur en periode de repos physiologique — Sprint R1
+   */
   EN_REPOS
   REFORME
-  /** Reproducteur sacrifie pour extraction de sperme ou autopsy — Sprint R1 */
+  /**
+   * Reproducteur sacrifie pour extraction de sperme ou autopsy — Sprint R1
+   */
   SACRIFIE
   MORT
 }
@@ -712,12 +739,16 @@ model Site {
   // Unités de production & transferts internes
   unitesProduction       UniteProduction[]
   transfertsInternes     TransfertInterne[]
+  // PG.2 — Transferts pré-grossissement
+  transferts             Transfert[]
+  transfertModifications TransfertModification[]
   // R1-S3 — Module Reproduction : lots géniteurs, incubations, traitements
   lotGeniteurs           LotGeniteurs[]
   incubations            Incubation[]
   traitementsIncubation  TraitementIncubation[]
   // ADR-020 — Subscription refactoring
   /**
+   * /**
    * Propriétaire du site — administrateur principal responsable de l'abonnement.
    */
   ownerId                String
@@ -728,6 +759,7 @@ model Site {
   isBlocked              Boolean                  @default(false)
   // ADR-021 — Cycle de vie & audit
   /**
+   * /**
    * /** Null si non suspendu. Non-null = site suspendu (accès restreint).
    */
   suspendedAt            DateTime?
@@ -767,6 +799,7 @@ model ConfigElevage {
 
   // ── Objectif de production ──────────────────────
   /**
+   * /**
    * /** Poids cible par poisson a la recolte (g) — ex: 800
    */
   poidsObjectif      Float
@@ -781,6 +814,7 @@ model ConfigElevage {
 
   // ── Phases de croissance (seuils de poids en g) ─
   /**
+   * /**
    * /** 0 → seuilAcclimatation g
    */
   seuilAcclimatation   Float @default(15)
@@ -804,6 +838,7 @@ model ConfigElevage {
 
   // ── Alimentation : taille de granule par poids ──
   /**
+   * /**
    * /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}]
    */
   alimentTailleConfig Json
@@ -865,6 +900,7 @@ model ConfigElevage {
 
   // ── Mortalite : seuils d'alerte quotidiens ──────
   /**
+   * /**
    * /** % morts/jour → investigation
    */
   mortaliteQuotidienneAlerte   Float @default(1.0)
@@ -875,6 +911,7 @@ model ConfigElevage {
 
   // ── Alimentation : seuils d'alerte ──────────────
   /**
+   * /**
    * /** FCR au-dela de ce seuil → reduire dose
    */
   fcrAlerteMax     Float @default(2.0)
@@ -903,6 +940,7 @@ model ConfigElevage {
 
   // ── Seuils de densité par type de système (kg/m3) — utilisés par le UI badge ─
   /**
+   * /**
    * /** Bac béton / plastique — seuil alerte orange
    */
   densiteBacBetonAlerte   Float @default(150)
@@ -929,6 +967,7 @@ model ConfigElevage {
 
   // ── Renouvellement ───────────────────────────────
   /**
+   * /**
    * /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours)
    */
   fenetreRenouvellementJours Int @default(7)
@@ -939,6 +978,7 @@ model ConfigElevage {
 
   // ── Calibrage Gompertz : parametres initiaux par defaut ─────────────────
   /**
+   * /**
    * /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200
    */
   gompertzWInfDefault Float?
@@ -955,9 +995,9 @@ model ConfigElevage {
    */
   gompertzMinPoints   Int    @default(5)
 
-
   // ── Metadonnees ─────────────────────────────────
   /**
+   * /**
    * /** Profil par defaut du site (un seul isDefault=true par site)
    */
   isDefault Boolean @default(false)
@@ -1084,6 +1124,7 @@ model User {
   platformAuditLogs      PlatformAuditLog[]
   // ADR-020 — Subscription refactoring
   /**
+   * /**
    * Solde de crédit prépayé (FCFA) — utilisé pour les plans EXONERATION ou crédits offerts.
    */
   soldeCredit            Decimal                 @default(0)
@@ -1092,6 +1133,9 @@ model User {
   auditsAbonnement       AbonnementAudit[]       @relation("AuditsAbonnement")
   savedFilters           SavedFilter[]           @relation("SavedFilters")
   transfertsInternes     TransfertInterne[]
+  // PG.2 — Transferts pré-grossissement
+  transferts             Transfert[]             @relation("TransfertUser")
+  transfertModifications TransfertModification[] @relation("TransfertModificationUser")
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   fraisPaiementDepenses  FraisPaiementDepense[]
@@ -1140,6 +1184,9 @@ model Bac {
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
   lignesVente         LigneVente[]      @relation("BacLignesVente")
+  // PG.2 — Transferts pré-grossissement
+  transfertsBacSource TransfertGroupe[] @relation("TransfertsBacSource")
+  transfertsBacDest   TransfertGroupe[] @relation("TransfertsBacDest")
   // ADR-043 Phase 3 — AssignationBac is the single source of truth for wave assignment & fish counts
   assignations        AssignationBac[]
   // R1-S3 — Lots géniteurs hébergés dans ce bac
@@ -1161,6 +1208,10 @@ model Vague {
   poidsMoyenInitial      Float
   origineAlevins         String?
   statut                 StatutVague              @default(EN_COURS)
+  /**
+   * Type de vague : pré-grossissement ou grossissement standard
+   */
+  type                   TypeVague                @default(GROSSISSEMENT)
   /**
    * Vague bloquée — ADR-020.
    */
@@ -1203,6 +1254,9 @@ model Vague {
   assignations           AssignationBac[]
   // Transferts internes entrants depuis une unité de production
   transfertsEntrants     TransfertInterne[]       @relation("TransfertEntrant")
+  // PG.2 — Transferts pré-grossissement
+  transfertsSource       TransfertGroupe[]        @relation("TransfertsSource")
+  transfertsDestination  TransfertGroupe[]        @relation("TransfertsDestination")
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
@@ -1214,39 +1268,46 @@ model Vague {
 
 /**
  * AssignationBac — table d'association Bac <-> Vague avec historique.
- *
  * ADR-043 Phase 3 : source de vérité UNIQUE pour l'assignation d'un bac à une vague
  * et pour les compteurs de production (nombreActuel, nombreInitial, poidsMoyenInitial).
  * Les champs Bac.vagueId, Bac.nombrePoissons, Bac.nombreInitial, Bac.poidsMoyenInitial
  * ont été supprimés.
- *
  * dateFin = null  : assignation active (bac actuellement dans la vague)
  * dateFin non-null: assignation terminée (bac retiré ou vague clôturée)
- *
  * Contrainte d'unicité : un bac ne peut avoir qu'une seule assignation active
  * (dateFin IS NULL) à la fois. Cette contrainte est un index unique partiel SQL
  * ajouté manuellement dans la migration (non générée par Prisma).
  */
 model AssignationBac {
-  id              String    @id @default(cuid())
-  bacId           String
-  bac             Bac       @relation(fields: [bacId], references: [id], onDelete: Cascade)
-  vagueId         String
-  vague           Vague     @relation(fields: [vagueId], references: [id], onDelete: Cascade)
-  siteId          String
-  site            Site      @relation(fields: [siteId], references: [id])
-  /** Date de début de l'assignation (= date de création de la vague ou d'ajout du bac) */
-  dateAssignation DateTime  @default(now())
-  /** Date de fin de l'assignation — null = assignation active */
-  dateFin         DateTime?
-  /** Nombre de poissons reçus à l'ouverture de cette assignation — immuable après création */
-  nombreInitial   Int?      @map("nombrePoissonsInitial")
-  /** Poids moyen initial des poissons en grammes au démarrage de l'assignation */
+  id                String    @id @default(cuid())
+  bacId             String
+  bac               Bac       @relation(fields: [bacId], references: [id], onDelete: Cascade)
+  vagueId           String
+  vague             Vague     @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  siteId            String
+  site              Site      @relation(fields: [siteId], references: [id])
+  /**
+   * Date de début de l'assignation (= date de création de la vague ou d'ajout du bac)
+   */
+  dateAssignation   DateTime  @default(now())
+  /**
+   * Date de fin de l'assignation — null = assignation active
+   */
+  dateFin           DateTime?
+  /**
+   * Nombre de poissons reçus à l'ouverture de cette assignation — immuable après création
+   */
+  nombreInitial     Int?      @map("nombrePoissonsInitial")
+  /**
+   * Poids moyen initial des poissons en grammes au démarrage de l'assignation
+   */
   poidsMoyenInitial Float?
-  /** Nombre de poissons réellement présents maintenant (décrémenté par mortalité/vente, override par comptage) */
-  nombreActuel    Int?      @map("nombrePoissons")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  /**
+   * Nombre de poissons réellement présents maintenant (décrémenté par mortalité/vente, override par comptage)
+   */
+  nombreActuel      Int?      @map("nombrePoissons")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([bacId])
   @@index([vagueId])
@@ -1306,7 +1367,7 @@ model Releve {
   ecartConstate   Int?
 
   // ADR-049 — delta appliqué sur AssignationBac.nombreActuel (pour idempotence edit/delete)
-  appliedDelta    Int?
+  appliedDelta Int?
 
   // Champs observation
   description String?
@@ -1450,31 +1511,31 @@ model MouvementStock {
 }
 
 model Commande {
-  id            String           @id @default(cuid())
-  numero        String           @unique
-  fournisseurId String
-  fournisseur   Fournisseur      @relation(fields: [fournisseurId], references: [id])
-  statut        StatutCommande   @default(BROUILLON)
-  dateCommande  DateTime
-  dateLivraison DateTime?
-  montantTotal  Float            @default(0)
-  montantRecu   Float?
+  id             String           @id @default(cuid())
+  numero         String           @unique
+  fournisseurId  String
+  fournisseur    Fournisseur      @relation(fields: [fournisseurId], references: [id])
+  statut         StatutCommande   @default(BROUILLON)
+  dateCommande   DateTime
+  dateLivraison  DateTime?
+  montantTotal   Float            @default(0)
+  montantRecu    Float?
   /**
    * URL de la facture fournisseur stockee sur Hetzner Object Storage (nullable)
    */
-  factureUrl    String?
-  userId        String
-  user          User             @relation(fields: [userId], references: [id])
-  siteId        String
-  site          Site             @relation(fields: [siteId], references: [id])
-  lignes        LigneCommande[]
-  mouvements    MouvementStock[]
-  depenses      Depense[]
+  factureUrl     String?
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  siteId         String
+  site           Site             @relation(fields: [siteId], references: [id])
+  lignes         LigneCommande[]
+  mouvements     MouvementStock[]
+  depenses       Depense[]
   listeBesoinsId String?
-  listeBesoins   ListeBesoins?   @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
-  lignesBesoins LigneBesoin[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  listeBesoins   ListeBesoins?    @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
+  lignesBesoins  LigneBesoin[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([siteId])
   @@index([fournisseurId])
@@ -1543,35 +1604,35 @@ model Client {
 }
 
 model Vente {
-  id               String      @id @default(cuid())
-  numero           String      @unique
-  clientId         String
-  client           Client      @relation(fields: [clientId], references: [id])
-  vagueId          String?
-  vague            Vague?      @relation(fields: [vagueId], references: [id])
+  id                String           @id @default(cuid())
+  numero            String           @unique
+  clientId          String
+  client            Client           @relation(fields: [clientId], references: [id])
+  vagueId           String?
+  vague             Vague?           @relation(fields: [vagueId], references: [id])
   uniteProductionId String?
-  uniteProduction  UniteProduction? @relation(fields: [uniteProductionId], references: [id])
-  quantitePoissons Int
-  poidsTotalKg     Float
-  prixUnitaireKg   Float
-  montantTotal     Float
-  dateCommande     DateTime    @default(now())
-  statut           StatutVente @default(EN_PREPARATION)
-  dateLivraison    DateTime?
-  poidsCommandeKg  Float?
+  uniteProduction   UniteProduction? @relation(fields: [uniteProductionId], references: [id])
+  quantitePoissons  Int
+  poidsTotalKg      Float
+  prixUnitaireKg    Float
+  montantTotal      Float
+  dateCommande      DateTime         @default(now())
+  statut            StatutVente      @default(EN_PREPARATION)
+  dateLivraison     DateTime?
+  poidsCommandeKg   Float?
   quantiteCommandee Int?
-  poidsLivreKg     Float?
-  quantiteLivree   Int?
-  notes            String?
-  siteId           String
-  site             Site        @relation(fields: [siteId], references: [id])
-  userId           String
-  user             User        @relation("VenteUser", fields: [userId], references: [id])
-  facture          Facture?
-  releves          Releve[]    @relation("VenteReleves")
-  lignes           LigneVente[] @relation("VenteLignes")
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  poidsLivreKg      Float?
+  quantiteLivree    Int?
+  notes             String?
+  siteId            String
+  site              Site             @relation(fields: [siteId], references: [id])
+  userId            String
+  user              User             @relation("VenteUser", fields: [userId], references: [id])
+  facture           Facture?
+  releves           Releve[]         @relation("VenteReleves")
+  lignes            LigneVente[]     @relation("VenteLignes")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([siteId])
   @@index([clientId])
@@ -1684,47 +1745,51 @@ model Reproducteur {
 }
 
 model Ponte {
-  id                    String                 @id @default(cuid())
-  code                  String                 @unique
-  femelleId             String
-  femelle               Reproducteur           @relation("PonteFemelle", fields: [femelleId], references: [id])
-  maleId                String?
-  male                  Reproducteur?          @relation("PonteMale", fields: [maleId], references: [id])
-  datePonte             DateTime
-  nombreOeufs           Int?
-  tauxFecondation       Float?
-  statut                StatutPonte            @default(EN_COURS)
-  notes                 String?
+  id                   String                 @id @default(cuid())
+  code                 String                 @unique
+  femelleId            String
+  femelle              Reproducteur           @relation("PonteFemelle", fields: [femelleId], references: [id])
+  maleId               String?
+  male                 Reproducteur?          @relation("PonteMale", fields: [maleId], references: [id])
+  datePonte            DateTime
+  nombreOeufs          Int?
+  tauxFecondation      Float?
+  statut               StatutPonte            @default(EN_COURS)
+  notes                String?
   // R1-S4 — Champs étendus
-  typeHormone           TypeHormone?
-  doseHormone           Float?
-  doseMgKg              Float?
-  coutHormone           Float?
-  heureInjection        DateTime?
-  temperatureEauC       Float?
-  latenceTheorique      Int?
-  heureStripping        DateTime?
-  poidsOeufsPontesG     Float?
-  nombreOeufsEstime     Int?
-  qualiteOeufs          QualiteOeufs?
-  methodeMale           MethodeExtractionMale?
-  motiliteSperme        MotiliteSperme?
-  tauxEclosion          Float?
-  nombreLarvesViables   Int?
-  coutTotal             Float?
-  causeEchec            CauseEchecPonte?
-  siteId                String
-  site                  Site                   @relation(fields: [siteId], references: [id])
-  lots                  LotAlevins[]
-  /** FK vers le groupe de femelles geniteurs (LotGeniteurs) — R1-S3 */
-  lotGeniteursFemellId  String?
-  lotGeniteursFemelle   LotGeniteurs?          @relation("PonteGroupeFemelle", fields: [lotGeniteursFemellId], references: [id])
-  /** FK vers le groupe de males geniteurs (LotGeniteurs) — R1-S3 */
-  lotGeniteursMaleId    String?
-  lotGeniteursMale      LotGeniteurs?          @relation("PonteGroupeMale", fields: [lotGeniteursMaleId], references: [id])
-  incubations           Incubation[]
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  typeHormone          TypeHormone?
+  doseHormone          Float?
+  doseMgKg             Float?
+  coutHormone          Float?
+  heureInjection       DateTime?
+  temperatureEauC      Float?
+  latenceTheorique     Int?
+  heureStripping       DateTime?
+  poidsOeufsPontesG    Float?
+  nombreOeufsEstime    Int?
+  qualiteOeufs         QualiteOeufs?
+  methodeMale          MethodeExtractionMale?
+  motiliteSperme       MotiliteSperme?
+  tauxEclosion         Float?
+  nombreLarvesViables  Int?
+  coutTotal            Float?
+  causeEchec           CauseEchecPonte?
+  siteId               String
+  site                 Site                   @relation(fields: [siteId], references: [id])
+  lots                 LotAlevins[]
+  /**
+   * FK vers le groupe de femelles geniteurs (LotGeniteurs) — R1-S3
+   */
+  lotGeniteursFemellId String?
+  lotGeniteursFemelle  LotGeniteurs?          @relation("PonteGroupeFemelle", fields: [lotGeniteursFemellId], references: [id])
+  /**
+   * FK vers le groupe de males geniteurs (LotGeniteurs) — R1-S3
+   */
+  lotGeniteursMaleId   String?
+  lotGeniteursMale     LotGeniteurs?          @relation("PonteGroupeMale", fields: [lotGeniteursMaleId], references: [id])
+  incubations          Incubation[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   @@index([siteId])
   @@index([femelleId])
@@ -1734,40 +1799,42 @@ model Ponte {
 }
 
 model LotAlevins {
-  id                    String           @id @default(cuid())
-  code                  String           @unique
+  id                    String             @id @default(cuid())
+  code                  String             @unique
   ponteId               String
-  ponte                 Ponte            @relation(fields: [ponteId], references: [id])
+  ponte                 Ponte              @relation(fields: [ponteId], references: [id])
   nombreInitial         Int
   nombreActuel          Int
-  ageJours              Int              @default(0)
+  ageJours              Int                @default(0)
   poidsMoyen            Float?
-  statut                StatutLotAlevins @default(EN_INCUBATION)
+  statut                StatutLotAlevins   @default(EN_INCUBATION)
   bacId                 String?
-  bac                   Bac?             @relation(fields: [bacId], references: [id])
+  bac                   Bac?               @relation(fields: [bacId], references: [id])
   vagueDestinationId    String?
-  vagueDestination      Vague?           @relation(fields: [vagueDestinationId], references: [id])
+  vagueDestination      Vague?             @relation(fields: [vagueDestinationId], references: [id])
   dateTransfert         DateTime?
   notes                 String?
-  /** FK vers l'incubation source — R1-S3 */
+  /**
+   * FK vers l'incubation source — R1-S3
+   */
   incubationId          String?
-  incubation            Incubation?      @relation(fields: [incubationId], references: [id])
+  incubation            Incubation?        @relation(fields: [incubationId], references: [id])
   // R1-S4 — Champs étendus
-  phase                 PhaseLot         @default(INCUBATION)
+  phase                 PhaseLot           @default(INCUBATION)
   parentLotId           String?
-  parentLot             LotAlevins?      @relation("LotSplits", fields: [parentLotId], references: [id])
-  sousLots              LotAlevins[]     @relation("LotSplits")
-  dateDebutPhase        DateTime         @default(now())
-  nombreDeformesRetires Int              @default(0)
+  parentLot             LotAlevins?        @relation("LotSplits", fields: [parentLotId], references: [id])
+  sousLots              LotAlevins[]       @relation("LotSplits")
+  dateDebutPhase        DateTime           @default(now())
+  nombreDeformesRetires Int                @default(0)
   poidsObjectifG        Float?
   destinationSortie     DestinationLot?
   releves               Releve[]
   transfertsInternes    TransfertInterne[]
-  lignesVente           LigneVente[]     @relation("LotAlevinsLignesVente")
+  lignesVente           LigneVente[]       @relation("LotAlevinsLignesVente")
   siteId                String
-  site                  Site             @relation(fields: [siteId], references: [id])
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  site                  Site               @relation(fields: [siteId], references: [id])
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@index([siteId])
   @@index([ponteId])
@@ -1787,31 +1854,31 @@ model LotAlevins {
  * leurs geniteurs par lots. ADR-044 §3.2.
  */
 model LotGeniteurs {
-  id                           String             @id @default(cuid())
-  code                         String             @unique
-  nom                          String
-  sexe                         SexeReproducteur
-  nombrePoissons               Int
-  poidsMoyenG                  Float?
-  poidsMinG                    Float?
-  poidsMaxG                    Float?
-  origine                      String?
-  sourcing                     SourcingGeniteur   @default(ACHAT_FERMIER)
-  generation                   GenerationGeniteur @default(INCONNUE)
-  dateAcquisition              DateTime           @default(now())
-  nombreMalesDisponibles       Int?
-  seuilAlerteMales             Int?
-  dateRenouvellementGenetique  DateTime?
-  bacId                        String?
-  bac                          Bac?               @relation(fields: [bacId], references: [id])
-  statut                       StatutReproducteur @default(ACTIF)
-  notes                        String?
-  siteId                       String
-  site                         Site               @relation(fields: [siteId], references: [id])
-  pontesAsFemelle              Ponte[]            @relation("PonteGroupeFemelle")
-  pontesAsMale                 Ponte[]            @relation("PonteGroupeMale")
-  createdAt                    DateTime           @default(now())
-  updatedAt                    DateTime           @updatedAt
+  id                          String             @id @default(cuid())
+  code                        String             @unique
+  nom                         String
+  sexe                        SexeReproducteur
+  nombrePoissons              Int
+  poidsMoyenG                 Float?
+  poidsMinG                   Float?
+  poidsMaxG                   Float?
+  origine                     String?
+  sourcing                    SourcingGeniteur   @default(ACHAT_FERMIER)
+  generation                  GenerationGeniteur @default(INCONNUE)
+  dateAcquisition             DateTime           @default(now())
+  nombreMalesDisponibles      Int?
+  seuilAlerteMales            Int?
+  dateRenouvellementGenetique DateTime?
+  bacId                       String?
+  bac                         Bac?               @relation(fields: [bacId], references: [id])
+  statut                      StatutReproducteur @default(ACTIF)
+  notes                       String?
+  siteId                      String
+  site                        Site               @relation(fields: [siteId], references: [id])
+  pontesAsFemelle             Ponte[]            @relation("PonteGroupeFemelle")
+  pontesAsMale                Ponte[]            @relation("PonteGroupeMale")
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
 
   @@index([siteId])
   @@index([siteId, sexe])
@@ -1824,30 +1891,30 @@ model LotGeniteurs {
  * Un enregistrement par cuvette/bac d'incubation. ADR-044 §3.4.
  */
 model Incubation {
-  id                    String             @id @default(cuid())
-  code                  String             @unique
-  ponteId               String
-  ponte                 Ponte              @relation(fields: [ponteId], references: [id])
-  substrat              SubstratIncubation @default(RACINES_PISTIA)
-  temperatureEauC       Float?
-  dureeIncubationH      Int?
-  dateDebutIncubation   DateTime           @default(now())
-  dateEclosionPrevue    DateTime?
-  dateEclosionReelle    DateTime?
-  nombreOeufsPlaces     Int?
-  nombreLarvesEcloses   Int?
-  tauxEclosion          Float?
-  nombreDeformes        Int?
-  nombreLarvesViables   Int?
-  notesRetrait          String?
-  statut                StatutIncubation   @default(EN_COURS)
-  notes                 String?
-  siteId                String
-  site                  Site               @relation(fields: [siteId], references: [id])
-  traitements           TraitementIncubation[]
-  lotAlevins            LotAlevins[]
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  id                  String                 @id @default(cuid())
+  code                String                 @unique
+  ponteId             String
+  ponte               Ponte                  @relation(fields: [ponteId], references: [id])
+  substrat            SubstratIncubation     @default(RACINES_PISTIA)
+  temperatureEauC     Float?
+  dureeIncubationH    Int?
+  dateDebutIncubation DateTime               @default(now())
+  dateEclosionPrevue  DateTime?
+  dateEclosionReelle  DateTime?
+  nombreOeufsPlaces   Int?
+  nombreLarvesEcloses Int?
+  tauxEclosion        Float?
+  nombreDeformes      Int?
+  nombreLarvesViables Int?
+  notesRetrait        String?
+  statut              StatutIncubation       @default(EN_COURS)
+  notes               String?
+  siteId              String
+  site                Site                   @relation(fields: [siteId], references: [id])
+  traitements         TraitementIncubation[]
+  lotAlevins          LotAlevins[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   @@index([siteId])
   @@index([ponteId])
@@ -2111,65 +2178,65 @@ model ConditionRegle {
 // ──────────────────────────────────────────
 
 model Depense {
-  id               String              @id @default(cuid())
+  id                  String              @id @default(cuid())
   /**
    * Numéro auto-généré format DEP-YYYY-NNN
    */
-  numero           String              @unique
-  description      String
-  categorieDepense CategorieDepense
-  montantTotal     Float
-  montantPaye      Float               @default(0)
+  numero              String              @unique
+  description         String
+  categorieDepense    CategorieDepense
+  montantTotal        Float
+  montantPaye         Float               @default(0)
   /**
    * Cumul des frais supplémentaires de tous les paiements associés
    */
-  montantFraisSupp Float               @default(0)
-  statut           StatutDepense       @default(NON_PAYEE)
-  date             DateTime
-  dateEcheance     DateTime?
+  montantFraisSupp    Float               @default(0)
+  statut              StatutDepense       @default(NON_PAYEE)
+  date                DateTime
+  dateEcheance        DateTime?
   /**
    * URL facture fournisseur sur Hetzner Object Storage
    */
-  factureUrl       String?
-  notes            String?
+  factureUrl          String?
+  notes               String?
   /**
    * Lien optionnel vers la commande d'origine
    */
-  commandeId       String?
-  commande         Commande?           @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  commandeId          String?
+  commande            Commande?           @relation(fields: [commandeId], references: [id], onDelete: SetNull)
   /**
    * Lien optionnel vers la vague concernée
    */
-  vagueId          String?
-  vague            Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+  vagueId             String?
+  vague               Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
   /**
    * Unité de production concernée (REPRODUCTION ou GROSSISSEMENT) — nullable
    */
-  uniteProductionId String?
-  uniteProduction   UniteProduction?   @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
+  uniteProductionId   String?
+  uniteProduction     UniteProduction?    @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
   /**
    * Lien optionnel vers le template récurrent d'origine
    */
   depenseRecurrenteId String?
-  depenseRecurrente   DepenseRecurrente? @relation(fields: [depenseRecurrenteId], references: [id], onDelete: SetNull)
+  depenseRecurrente   DepenseRecurrente?  @relation(fields: [depenseRecurrenteId], references: [id], onDelete: SetNull)
   /**
    * Lien optionnel vers la liste de besoins d'origine
    */
-  listeBesoinsId   String?
-  listeBesoins     ListeBesoins?       @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
-  userId           String
-  user             User                @relation(fields: [userId], references: [id])
-  siteId           String
-  site             Site                @relation(fields: [siteId], references: [id])
-  paiements        PaiementDepense[]
-  ajustements      AjustementDepense[]
+  listeBesoinsId      String?
+  listeBesoins        ListeBesoins?       @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
+  userId              String
+  user                User                @relation(fields: [userId], references: [id])
+  siteId              String
+  site                Site                @relation(fields: [siteId], references: [id])
+  paiements           PaiementDepense[]
+  ajustements         AjustementDepense[]
   /**
    * Lignes de détail catégorielles (ADR-027) — optionnelles pour les dépenses manuelles
    */
-  lignes           LigneDepense[]
-  mouvements       MouvementStock[]
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  lignes              LigneDepense[]
+  mouvements          MouvementStock[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, categorieDepense])
@@ -2270,7 +2337,6 @@ model AjustementDepense {
 
 /**
  * LigneDepense — ligne de détail catégorielle d'une dépense.
- *
  * Satellite analytique de Depense : permet la ventilation des coûts
  * par CategorieDepense au sein d'une même dépense.
  * Auto-populé par traiterBesoins() ; optionnel pour les dépenses manuelles.
@@ -2365,51 +2431,51 @@ model DepenseRecurrente {
 // ──────────────────────────────────────────
 
 model ListeBesoins {
-  id            String              @id @default(cuid())
+  id                String              @id @default(cuid())
   /**
    * Numéro auto-généré format BES-YYYY-NNN
    */
-  numero        String              @unique
-  titre         String
-  demandeurId   String
-  demandeur     User                @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
-  valideurId    String?
-  valideur      User?               @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
-  statut        StatutBesoins       @default(SOUMISE)
+  numero            String              @unique
+  titre             String
+  demandeurId       String
+  demandeur         User                @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
+  valideurId        String?
+  valideur          User?               @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
+  statut            StatutBesoins       @default(SOUMISE)
   /**
    * Somme estimée des besoins (SUM quantite * prixEstime)
    */
-  montantEstime Float               @default(0)
+  montantEstime     Float               @default(0)
   /**
    * Montant réel après clôture (nullable)
    */
-  montantReel   Float?
+  montantReel       Float?
   /**
    * Motif de rejet (nullable, rempli si REJETEE)
    */
-  motifRejet    String?
-  notes         String?
+  motifRejet        String?
+  notes             String?
   /**
    * Date limite de traitement (optionnelle — R7 nullabilite explicite)
    */
-  dateLimite    DateTime?
-  siteId        String
-  site          Site                @relation(fields: [siteId], references: [id])
-  lignes        LigneBesoin[]
-  depenses      Depense[]
-  commandes     Commande[]
+  dateLimite        DateTime?
+  siteId            String
+  site              Site                @relation(fields: [siteId], references: [id])
+  lignes            LigneBesoin[]
+  depenses          Depense[]
+  commandes         Commande[]
   /**
    * Vagues associées avec leurs ratios de répartition (remplace vagueId direct)
    */
-  vagues              ListeBesoinsVague[]
+  vagues            ListeBesoinsVague[]
   /**
    * Unité de production rattachée (GROSSISSEMENT ou REPRODUCTION).
    * Nullable pour rétrocompatibilité avec les listes existantes.
    */
-  uniteProductionId   String?
-  uniteProduction     UniteProduction?    @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  uniteProductionId String?
+  uniteProduction   UniteProduction?    @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, statut])
@@ -3025,31 +3091,32 @@ model PlanAbonnement {
  * R7 : dateFinGrace nullable (absent pour plan gratuit).
  */
 model Abonnement {
-  id                         String             @id @default(cuid())
+  id                         String              @id @default(cuid())
   siteId                     String?
-  site                       Site?              @relation("AbonnementsSite", fields: [siteId], references: [id])
+  site                       Site?               @relation("AbonnementsSite", fields: [siteId], references: [id])
   planId                     String
-  plan                       PlanAbonnement     @relation(fields: [planId], references: [id])
+  plan                       PlanAbonnement      @relation(fields: [planId], references: [id])
   periode                    PeriodeFacturation
-  statut                     StatutAbonnement   @default(EN_ATTENTE_PAIEMENT)
+  statut                     StatutAbonnement    @default(EN_ATTENTE_PAIEMENT)
   dateDebut                  DateTime
   dateFin                    DateTime
   dateProchainRenouvellement DateTime
   dateFinGrace               DateTime?
   prixPaye                   Decimal
   userId                     String
-  user                       User               @relation("AbonnementsUser", fields: [userId], references: [id])
+  user                       User                @relation("AbonnementsUser", fields: [userId], references: [id])
   remiseId                   String?
-  remise                     Remise?            @relation(fields: [remiseId], references: [id])
+  remise                     Remise?             @relation(fields: [remiseId], references: [id])
   // ADR-020 — Subscription refactoring fields
   /**
+   * /**
    * Motif de l'exonération (obligatoire si typePlan = EXONERATION).
    */
   motifExoneration           String?
   /**
    * Vrai si cet abonnement est un essai gratuit.
    */
-  isEssai                    Boolean            @default(false)
+  isEssai                    Boolean             @default(false)
   /**
    * Durée de l'essai en jours (null si pas un essai).
    */
@@ -3058,7 +3125,7 @@ model Abonnement {
    * Plan de downgrade programmé (null si aucun downgrade en attente).
    */
   downgradeVersId            String?
-  downgradeVers              PlanAbonnement?    @relation("DowngradeVers", fields: [downgradeVersId], references: [id])
+  downgradeVers              PlanAbonnement?     @relation("DowngradeVers", fields: [downgradeVersId], references: [id])
   /**
    * Période de facturation du downgrade.
    */
@@ -3414,6 +3481,7 @@ model HistoriqueNutritionnel {
 
   // Métriques agrégées pour cette phase
   /**
+   * /**
    * /** FCR moyen sur la phase (kg aliment / kg gain)
    */
   fcrMoyen          Float?
@@ -3605,7 +3673,7 @@ model EssaiUtilise {
  * Sprint 52 : abonnement.siteId est désormais nullable (abonnement au niveau user).
  * onDelete: Restrict sur abonnement (pas de suppression silencieuse d'un abonnement audité).
  * Actions possibles : CREATION, UPGRADE, DOWNGRADE, RENOUVELLEMENT, ANNULATION,
- *   ESSAI_DEBUT, ESSAI_CONVERSION, EXONERATION, CHANGEMENT_PERIODE, DOWNGRADE_ANNULE.
+ * ESSAI_DEBUT, ESSAI_CONVERSION, EXONERATION, CHANGEMENT_PERIODE, DOWNGRADE_ANNULE.
  */
 model AbonnementAudit {
   id           String     @id @default(cuid())
@@ -3629,7 +3697,7 @@ model AbonnementAudit {
 model SavedFilter {
   id        String   @id @default(cuid())
   name      String
-  page      String   // "besoins" | "commandes" | "releves"
+  page      String // "besoins" | "commandes" | "releves"
   filters   Json
   userId    String
   user      User     @relation("SavedFilters", fields: [userId], references: [id], onDelete: Cascade)
@@ -3659,8 +3727,8 @@ model UniteProduction {
   description String?
   isActive    Boolean             @default(true)
 
-  siteId      String
-  site        Site                @relation(fields: [siteId], references: [id])
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
 
   vagues              Vague[]
   ventes              Vente[]
@@ -3671,8 +3739,8 @@ model UniteProduction {
   besoins             ListeBesoins[]
   releves             Releve[]
 
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([siteId, code])
   @@index([siteId])
@@ -3686,31 +3754,31 @@ model UniteProduction {
  * R8 : siteId obligatoire.
  */
 model TransfertInterne {
-  id                 String          @id @default(cuid())
-  code               String          @unique
-  date               DateTime        @default(now())
+  id   String   @id @default(cuid())
+  code String   @unique
+  date DateTime @default(now())
 
-  uniteSourceId      String
-  uniteSource        UniteProduction @relation("TransfertSource", fields: [uniteSourceId], references: [id])
+  uniteSourceId String
+  uniteSource   UniteProduction @relation("TransfertSource", fields: [uniteSourceId], references: [id])
 
   uniteDestinationId String
   uniteDestination   UniteProduction @relation("TransfertDestination", fields: [uniteDestinationId], references: [id])
 
-  lotAlevinsId          String?
-  lotAlevins            LotAlevins?  @relation(fields: [lotAlevinsId], references: [id])
-  vagueDestinationId    String?
-  vagueDestination      Vague?       @relation("TransfertEntrant", fields: [vagueDestinationId], references: [id])
+  lotAlevinsId       String?
+  lotAlevins         LotAlevins? @relation(fields: [lotAlevinsId], references: [id])
+  vagueDestinationId String?
+  vagueDestination   Vague?      @relation("TransfertEntrant", fields: [vagueDestinationId], references: [id])
 
-  nombrePoissons        Int
-  poidsMoyenG           Float?
-  prixUnitaire          Float
+  nombrePoissons Int
+  poidsMoyenG    Float?
+  prixUnitaire   Float
   /**
    * Base de calcul du prix : "PAR_POISSON" ou "PAR_KG"
    */
-  prixBase              String       @default("PAR_POISSON")
-  montantTotal          Float
+  prixBase       String @default("PAR_POISSON")
+  montantTotal   Float
 
-  description           String?
+  description String?
 
   siteId String
   site   Site   @relation(fields: [siteId], references: [id])
@@ -3724,4 +3792,90 @@ model TransfertInterne {
   @@index([uniteSourceId])
   @@index([uniteDestinationId])
   @@index([lotAlevinsId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Transferts Pré-Grossissement (PG.2)
+// ──────────────────────────────────────────
+
+/**
+ * Transfert — Opération de transfert de poissons d'une vague source vers une vague destination.
+ * Peut contenir plusieurs groupes (TransfertGroupe) pour des catégories de taille différentes.
+ * R8 : siteId obligatoire.
+ */
+model Transfert {
+  id        String            @id @default(cuid())
+  siteId    String
+  site      Site              @relation(fields: [siteId], references: [id])
+  date      DateTime          @default(now())
+  notes     String?
+  userId    String
+  user      User              @relation("TransfertUser", fields: [userId], references: [id])
+  groupes   TransfertGroupe[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([siteId])
+  @@index([userId])
+}
+
+/**
+ * TransfertGroupe — Un groupe de poissons transféré d'un bac/vague source vers un bac/vague destination.
+ * Un Transfert peut avoir plusieurs groupes (ex: petits dans bac A, grands dans bac B).
+ */
+model TransfertGroupe {
+  id          String    @id @default(cuid())
+  transfertId String
+  transfert   Transfert @relation(fields: [transfertId], references: [id], onDelete: Cascade)
+
+  vagueSourceId String
+  vagueSource   Vague   @relation("TransfertsSource", fields: [vagueSourceId], references: [id], onDelete: Restrict)
+  bacSourceId   String?
+  bacSource     Bac?    @relation("TransfertsBacSource", fields: [bacSourceId], references: [id])
+
+  vagueDestId String
+  vagueDest   Vague   @relation("TransfertsDestination", fields: [vagueDestId], references: [id], onDelete: Restrict)
+  bacDestId   String?
+  bacDest     Bac?    @relation("TransfertsBacDest", fields: [bacDestId], references: [id])
+
+  nombrePoissons     Int
+  poidsMoyenG        Float
+  nombreMorts        Int   @default(0)
+  snapshotAvantModif Json?
+
+  modifications TransfertModification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vagueSourceId])
+  @@index([vagueDestId])
+  @@index([transfertId])
+}
+
+/**
+ * TransfertModification — Traçabilité des modifications apportées à un TransfertGroupe.
+ * Cascade DELETE avec TransfertGroupe.
+ * R8 : siteId obligatoire (pattern CalibrageModification).
+ */
+model TransfertModification {
+  id                String          @id @default(cuid())
+  transfertGroupeId String
+  transfertGroupe   TransfertGroupe @relation(fields: [transfertGroupeId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("TransfertModificationUser", fields: [userId], references: [id])
+
+  raison        String
+  snapshotAvant Json
+  snapshotApres Json
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([transfertGroupeId])
+  @@index([userId])
+  @@index([siteId])
 }

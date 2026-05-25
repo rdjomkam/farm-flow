@@ -21,9 +21,9 @@ export function useExportService() {
   const { download } = useApi();
 
   const vaguePdf = useCallback(
-    (vagueId: string, vagueCode: string) =>
+    (vagueId: string, vagueCode: string, includeParents = false) =>
       download(
-        `/api/export/vague/${vagueId}`,
+        `/api/export/vague/${vagueId}${includeParents ? "?includeParents=true" : ""}`,
         `rapport-vague-${vagueCode}.pdf`
       ),
     [download]

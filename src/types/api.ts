@@ -87,6 +87,7 @@ import {
   LogiqueCondition,
   MethodeComptage,
   MethodeExtractionMale,
+  ModeTransfert,
   ModePaiement,
   MotiliteSperme,
   MotifFraisSupp,
@@ -128,6 +129,7 @@ import {
   TypePlan,
   TypeReleve,
   TypeRemise,
+  TypeVague,
   UniteBesoin,
   UniteStock,
   VisibiliteNote,
@@ -245,14 +247,16 @@ export interface CreateVagueDTO {
   poidsMoyenInitial: number;
   /** Provenance des alevins */
   origineAlevins?: string;
-  /** Configuration d'elevage liee a cette vague */
-  configElevageId: string;
+  /** Configuration d'elevage liee a cette vague (optionnel pour PRE_GROSSISSEMENT) */
+  configElevageId?: string;
   /** Objectif biomasse en kg (poids total a vendre) */
   poidsObjectifKg?: number | null;
   /** Unite de production associee (REPRODUCTION ou GROSSISSEMENT) */
   uniteProductionId?: string;
   /** Distribution des alevins par bac */
   bacDistribution: BacStockingEntry[];
+  /** Type de vague : PRE_GROSSISSEMENT ou GROSSISSEMENT (defaut GROSSISSEMENT) */
+  type?: TypeVague;
 }
 
 /** DTO pour modifier/cloturer une vague */
@@ -288,6 +292,8 @@ export interface VagueSummaryResponse {
   dateDebut: Date;
   dateFin: Date | null;
   statut: StatutVague;
+  /** Type de vague : PRE_GROSSISSEMENT ou GROSSISSEMENT */
+  type: TypeVague;
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
@@ -3164,4 +3170,145 @@ export interface CreateTransfertInterneDTO {
   prixBase?: string;
   date?: string;
   description?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Transferts Pré-Grossissement — DTOs (PG.3, ADR-046)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un groupe = un flux source → destination dans le transfert.
+ *
+ * Règles :
+ * - vagueSourceId doit etre type=PRE_GROSSISSEMENT, statut=EN_COURS, meme site
+ * - nombrePoissons > 0, poidsMoyenG > 0
+ * - nombreMorts >= 0, defaut 0
+ */
+export interface TransfertGroupeInputDTO {
+  /** Vague source (doit etre type=PRE_GROSSISSEMENT, statut=EN_COURS, meme site) */
+  vagueSourceId: string;
+  /** Bac precis dans la vague source (optionnel) */
+  bacSourceId?: string | null;
+  /** Bac precis dans la vague destination (optionnel) */
+  bacDestId?: string | null;
+  /** Nombre de poissons transferes — doit etre > 0 */
+  nombrePoissons: number;
+  /** Poids moyen au moment du transfert, en grammes — doit etre > 0 */
+  poidsMoyenG: number;
+  /** Nombre de poissons morts pendant l'operation — doit etre >= 0, defaut 0 */
+  nombreMorts?: number;
+}
+
+/**
+ * Mode A : creer une nouvelle vague de destination GROSSISSEMENT dans le meme acte.
+ *
+ * La vague GROSSISSEMENT est creee dans la meme transaction atomique.
+ * La vague est initialisee avec `nombreInitial = 0` et recoit les poissons
+ * par le recalcul pondere de chaque groupe.
+ */
+export interface CreateTransfertModeADTO {
+  /** Discriminateur — toujours ModeTransfert.CREATE_NEW pour ce mode */
+  mode: ModeTransfert.CREATE_NEW;
+  /** Nouvelle vague GROSSISSEMENT a creer */
+  nouvelleVague: {
+    /** Code unique de la vague (ex: "VAGUE-2024-001") */
+    code: string;
+    /** Date de debut (ISO 8601) */
+    dateDebut: string;
+    /** Objectif biomasse en kg (optionnel) */
+    poidsObjectifKg?: number | null;
+    /** Unite de production associee (optionnel) */
+    uniteProductionId?: string | null;
+    /** Notes libres (optionnel) */
+    notes?: string | null;
+  };
+  /** Groupes de transfert (au moins 1 requis) */
+  groupes: TransfertGroupeInputDTO[];
+  /** Notes sur l'operation de transfert (optionnel) */
+  notes?: string | null;
+  /** Date du transfert (ISO 8601, optionnel — defaut : maintenant) */
+  date?: string;
+}
+
+/**
+ * Mode B : transferer vers une vague GROSSISSEMENT existante.
+ *
+ * La vague destination doit etre type=GROSSISSEMENT et statut=EN_COURS.
+ * Ses champs `nombreInitial` et `poidsMoyenInitial` sont mis a jour
+ * par recalcul pondere (ADR-046 section 2.3).
+ */
+export interface CreateTransfertModeBDTO {
+  /** Discriminateur — toujours ModeTransfert.USE_EXISTING pour ce mode */
+  mode: ModeTransfert.USE_EXISTING;
+  /** ID de la vague GROSSISSEMENT existante (doit etre statut=EN_COURS) */
+  vagueDestId: string;
+  /** Groupes de transfert (au moins 1 requis) */
+  groupes: TransfertGroupeInputDTO[];
+  /** Notes sur l'operation de transfert (optionnel) */
+  notes?: string | null;
+  /** Date du transfert (ISO 8601, optionnel — defaut : maintenant) */
+  date?: string;
+}
+
+/**
+ * Union discriminee pour la creation d'un transfert.
+ *
+ * Le champ `mode` est le discriminateur (enum ModeTransfert) :
+ * - ModeTransfert.CREATE_NEW  → CreateTransfertModeADTO (nouvelle vague destination)
+ * - ModeTransfert.USE_EXISTING → CreateTransfertModeBDTO (vague destination existante)
+ *
+ * ERR-094 : tous les champs non-discriminants (groupes, notes, date) sont
+ * presants dans les deux branches, pas dans une base commune.
+ */
+export type CreateTransfertDTO = CreateTransfertModeADTO | CreateTransfertModeBDTO;
+
+/**
+ * Patch sur un TransfertGroupe (modification retroactive avec audit).
+ *
+ * La raison est obligatoire. L'API sauvegarde un snapshot avant modification
+ * et cree un enregistrement TransfertModification (ADR-046 section 2.8).
+ * La transaction re-execute le recalcul pondere et les auto-releves.
+ */
+export interface UpdateTransfertGroupeDTO {
+  /** Motif de la modification — obligatoire, non vide */
+  raison: string;
+  /** Nouveau nombre de poissons transferes (optionnel) */
+  nombrePoissons?: number;
+  /** Nouveau poids moyen au transfert en grammes (optionnel) */
+  poidsMoyenG?: number;
+  /** Nouveau nombre de morts pendant l'operation (optionnel) */
+  nombreMorts?: number;
+  /** Nouveau bac source (null pour retirer, optionnel) */
+  bacSourceId?: string | null;
+  /** Nouveau bac destination (null pour retirer, optionnel) */
+  bacDestId?: string | null;
+}
+
+/**
+ * Lineage d'une vague : tous les TransfertGroupe entrants (multi-parent).
+ *
+ * Retourne la chaine de vagues parentes, recursif jusqu'a N niveaux
+ * (limite a 5 niveaux cote API — ADR-046 section consequences).
+ * Utilise pour le toggle `?includeParents=true` sur les rapports PDF.
+ */
+export interface VagueLineage {
+  /** ID de la vague dont on calcule le lineage */
+  vagueId: string;
+  /** Vagues parentes ayant contribue des poissons via transfert */
+  parents: {
+    /** ID du TransfertGroupe ayant alimente cette vague */
+    transfertGroupeId: string;
+    /** ID de la vague source */
+    vagueSourceId: string;
+    /** Code de la vague source (pour affichage UI) */
+    vagueSourceCode: string;
+    /** Date du transfert (ISO 8601) */
+    dateTransfert: string;
+    /** Nombre de poissons transferes depuis cette source */
+    nombrePoissons: number;
+    /** Poids moyen au moment du transfert, en grammes */
+    poidsMoyenG: number;
+    /** Nombre de morts lors du transfert */
+    nombreMorts: number;
+  }[];
 }

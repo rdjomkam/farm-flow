@@ -327,9 +327,36 @@ function InsightBlock({ lines }: { lines: string[] }) {
 // Composant
 // ---------------------------------------------------------------------------
 
+// Colonnes — parents imputés
+const styles2 = StyleSheet.create({
+  colParentVague: { flex: 3 },
+  colParentDate: { flex: 2 },
+  colParentNb: { flex: 1, textAlign: "right" },
+  colParentRatio: { flex: 1, textAlign: "right" },
+  colParentCout: { flex: 2, textAlign: "right" },
+  colParentImpute: { flex: 2, textAlign: "right" },
+  noteBox: {
+    backgroundColor: "#fef9c3",
+    borderLeftWidth: 3,
+    borderLeftColor: "#ca8a04",
+    borderRadius: 3,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  noteText: {
+    fontSize: 8,
+    color: "#713f12",
+    lineHeight: 1.4,
+  },
+});
+
 export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }) {
   const { coutProduction: cp, site, dateGeneration } = data;
   const { vague, resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
+  const coutsParents = cp.coutsParents;
+  const cycleComplet = cp.cycleComplet;
 
   // Generate insights with safe fallback
   let insights: ReturnType<typeof generatePdfInsights>;
@@ -374,6 +401,15 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             </View>
           </View>
         </View>
+
+        {/* ===================== NOTE CYCLE COMPLET ===================== */}
+        {coutsParents && coutsParents.coutTotalImpute > 0 && (
+          <View style={styles2.noteBox}>
+            <Text style={styles2.noteText}>
+              Rapport incluant les coûts pré-grossissement imputés des vagues parentes ({coutsParents.details.length} vague{coutsParents.details.length > 1 ? "s" : ""} parente{coutsParents.details.length > 1 ? "s" : ""}). Les KPIs « Cycle complet » intègrent ces coûts additionnels.
+            </Text>
+          </View>
+        )}
 
         {/* ===================== RÉSUMÉ EXÉCUTIF ===================== */}
         <InsightBlock lines={insights.executive} />
@@ -453,6 +489,36 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
           </View>
         </View>
 
+        {/* KPIs cycle complet (si includeParents) */}
+        {cycleComplet && coutsParents && coutsParents.coutTotalImpute > 0 && (
+          <View style={[styles.kpisGrid, { marginTop: 8 }]}>
+            <View style={[styles.kpiCard, { backgroundColor: "#fef3c7" }]}>
+              <Text style={styles.kpiLabel}>Coût total cycle complet</Text>
+              <Text style={[styles.kpiValue, { color: colors.danger }]}>
+                {formatMontant(cycleComplet.coutTotalCycleComplet)}
+              </Text>
+            </View>
+            <View style={[styles.kpiCard, { backgroundColor: "#fef3c7" }]}>
+              <Text style={styles.kpiLabel}>Marge cycle complet</Text>
+              <Text style={[styles.kpiValue, { color: cycleComplet.margesCycleComplet >= 0 ? colors.success : colors.danger }]}>
+                {formatMontant(cycleComplet.margesCycleComplet)}
+              </Text>
+            </View>
+            <View style={[styles.kpiCard, { backgroundColor: "#fef3c7" }]}>
+              <Text style={styles.kpiLabel}>ROI cycle complet</Text>
+              <Text style={[styles.kpiValue, { color: cycleComplet.roiCycleComplet !== null && cycleComplet.roiCycleComplet >= 0 ? colors.success : colors.danger }]}>
+                {formatRoi(cycleComplet.roiCycleComplet)}
+              </Text>
+            </View>
+            <View style={[styles.kpiCard, { backgroundColor: "#fef3c7" }]}>
+              <Text style={styles.kpiLabel}>Coûts pré-gross. imputés</Text>
+              <Text style={[styles.kpiValue, { color: colors.muted }]}>
+                {formatMontant(coutsParents.coutTotalImpute)}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Insight production */}
         <InsightBlock lines={insights.production} />
 
@@ -491,6 +557,48 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
 
         {/* Insight coûts */}
         {coutParCategorie.length > 0 && <InsightBlock lines={insights.couts} />}
+
+        {/* ===================== COÛTS PRÉ-GROSSISSEMENT IMPUTÉS ===================== */}
+        {coutsParents && coutsParents.details.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>
+              Coûts pré-grossissement imputés ({coutsParents.details.length} vague{coutsParents.details.length > 1 ? "s" : ""} parente{coutsParents.details.length > 1 ? "s" : ""})
+            </Text>
+            <Text style={{ fontSize: 7, color: colors.muted, marginBottom: 6 }}>
+              ratio = poissons transférés / nombreInitial du parent · coût imputé = (coût parent + coûts amont) × ratio
+            </Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, styles2.colParentVague]}>Vague parente</Text>
+              <Text style={[styles.tableHeaderText, styles2.colParentDate]}>Transfert</Text>
+              <Text style={[styles.tableHeaderText, styles2.colParentNb]}>Poissons</Text>
+              <Text style={[styles.tableHeaderText, styles2.colParentRatio]}>Ratio</Text>
+              <Text style={[styles.tableHeaderText, styles2.colParentCout]}>Coût parent</Text>
+              <Text style={[styles.tableHeaderText, styles2.colParentImpute]}>Coût imputé</Text>
+            </View>
+            {coutsParents.details.map((d, i) => (
+              <View key={i} style={[styles.tableRow]} wrap={false}>
+                <Text style={[styles.tableCell, styles2.colParentVague]}>{d.vagueParentCode}</Text>
+                <Text style={[styles.tableCell, styles2.colParentDate]}>{formatDate(d.dateTransfert)}</Text>
+                <Text style={[styles.tableCell, styles2.colParentNb]}>{d.nombrePoissons}</Text>
+                <Text style={[styles.tableCell, styles2.colParentRatio]}>{(d.ratio * 100).toFixed(1)} %</Text>
+                <Text style={[styles.tableCell, styles2.colParentCout]}>{formatMontant(d.parentCoutTotal)}</Text>
+                <Text style={[styles.tableCell, styles2.colParentImpute, { fontFamily: "Helvetica-Bold" }]}>
+                  {formatMontant(d.coutImpute)}
+                </Text>
+              </View>
+            ))}
+            <View style={[styles.tableRow, { backgroundColor: "#fef9c3" }]} wrap={false}>
+              <Text style={[styles.tableCell, styles2.colParentVague, { fontFamily: "Helvetica-Bold" }]}>Total imputé</Text>
+              <Text style={[styles.tableCell, styles2.colParentDate]} />
+              <Text style={[styles.tableCell, styles2.colParentNb]} />
+              <Text style={[styles.tableCell, styles2.colParentRatio]} />
+              <Text style={[styles.tableCell, styles2.colParentCout]} />
+              <Text style={[styles.tableCell, styles2.colParentImpute, { fontFamily: "Helvetica-Bold", color: colors.danger }]}>
+                {formatMontant(coutsParents.coutTotalImpute)}
+              </Text>
+            </View>
+          </>
+        )}
 
         {/* ===================== DÉTAIL ALIMENTATION ===================== */}
         {detailAliments.length > 0 && (

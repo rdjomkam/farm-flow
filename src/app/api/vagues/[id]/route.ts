@@ -228,6 +228,7 @@ export async function DELETE(
     return handleApiError("DELETE /api/vagues/[id]", error, "Erreur lors de la suppression de la vague.", {
       statusMap: [
         { match: ["introuvable", "accès refusé"], status: 404 },
+        { match: ["suppression bloquée", "transferts existants"], status: 409 },
       ],
     });
   }

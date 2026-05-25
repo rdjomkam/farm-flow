@@ -11,6 +11,7 @@
  * + Sprint 30 : TypePlan, PeriodeFacturation, StatutAbonnement, StatutPaiementAbo, TypeRemise, StatutCommissionIng, FournisseurPaiement (7 enums) + 8 nouvelles permissions
  * + Sprint FA : TailleGranule, FormeAliment, ComportementAlimentaire (3 enums)
  * + Module Reproduction R1-S1/S4 : ModeGestionGeniteur, GenerationGeniteur, SourcingGeniteur, TypeHormone, QualiteOeufs, MethodeExtractionMale, MotiliteSperme, CauseEchecPonte, SubstratIncubation, StatutIncubation, PhaseLot, DestinationLot (12 enums)
+ * + Sprint PG.3 : ModeTransfert (1 enum), TypeVague (existant), Transfert, TransfertGroupe, TransfertModification, TransfertGroupeWithRelations, TransfertWithGroupes (5 modeles)
  */
 
 // ---------------------------------------------------------------------------
@@ -161,6 +162,23 @@ export enum StatutVague {
   EN_COURS = "EN_COURS",
   TERMINEE = "TERMINEE",
   ANNULEE = "ANNULEE",
+}
+
+/** Type de vague : pré-grossissement (alevinage court) ou grossissement standard */
+export enum TypeVague {
+  PRE_GROSSISSEMENT = "PRE_GROSSISSEMENT",
+  GROSSISSEMENT = "GROSSISSEMENT",
+}
+
+/**
+ * ModeTransfert — discriminateur de l'union CreateTransfertDTO.
+ *
+ * CREATE_NEW  : nouvelle vague GROSSISSEMENT creee dans la meme transaction.
+ * USE_EXISTING: vague GROSSISSEMENT existante mise a jour par recalcul pondere.
+ */
+export enum ModeTransfert {
+  CREATE_NEW = "CREATE_NEW",
+  USE_EXISTING = "USE_EXISTING",
 }
 
 /** Type de releve effectue sur un bac */
@@ -549,6 +567,8 @@ export interface Vague {
   origineAlevins: string | null;
   /** Statut actuel de la vague */
   statut: StatutVague;
+  /** Type de vague : pré-grossissement ou grossissement standard */
+  type: TypeVague;
   /** True si la vague est bloquée (accès restreint suite à abonnement expiré) — Sprint 45 */
   isBlocked: boolean;
   /** Objectif biomasse en kg (poids total a vendre) */
@@ -3676,4 +3696,87 @@ export interface TransfertInterneWithRelations extends TransfertInterne {
   lotAlevins: { id: string; code: string } | null;
   vagueDestination: { id: string; code: string } | null;
   user: { id: string; name: string };
+}
+
+// ──────────────────────────────────────────
+// Modèles — Transferts Pré-Grossissement (PG.2)
+// ──────────────────────────────────────────
+
+/**
+ * Transfert — Opération de transfert de poissons d'une vague source vers une vague destination.
+ * Contient un ou plusieurs groupes (TransfertGroupe).
+ */
+export interface Transfert {
+  id: string;
+  siteId: string;
+  date: Date;
+  notes: string | null;
+  userId: string;
+  groupes?: TransfertGroupe[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * TransfertGroupe — Un groupe de poissons transféré d'un bac/vague source vers un bac/vague destination.
+ */
+export interface TransfertGroupe {
+  id: string;
+  transfertId: string;
+  vagueSourceId: string;
+  bacSourceId: string | null;
+  vagueDestId: string;
+  bacDestId: string | null;
+  nombrePoissons: number;
+  poidsMoyenG: number;
+  nombreMorts: number;
+  snapshotAvantModif: unknown | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * TransfertModification — Traçabilité des modifications apportées à un TransfertGroupe.
+ */
+export interface TransfertModification {
+  id: string;
+  transfertGroupeId: string;
+  userId: string;
+  raison: string;
+  snapshotAvant: unknown;
+  snapshotApres: unknown;
+  siteId: string;
+  createdAt: Date;
+}
+
+/**
+ * TransfertGroupe avec relations chargées (pour affichage UI).
+ *
+ * Les relations sont optionnelles : l'appelant doit s'assurer du `include` Prisma.
+ * En pratique, toujours chargées via les queries de l'API publique.
+ * Etend TransfertGroupe avec les entites liees partiellement chargees.
+ * Utilise dans les listes et vues detail de transfert.
+ */
+export interface TransfertGroupeWithRelations extends TransfertGroupe {
+  /** Vague source avec son code et type */
+  vagueSource?: { id: string; code: string; type: TypeVague };
+  /** Vague destination avec son code et type */
+  vagueDest?: { id: string; code: string; type: TypeVague };
+  /** Bac source (null si non specifie ou non charge) */
+  bacSource?: { id: string; nom: string } | null;
+  /** Bac destination (null si non specifie ou non charge) */
+  bacDest?: { id: string; nom: string } | null;
+}
+
+/**
+ * Transfert avec ses groupes et relations chargees (pour vue detail).
+ *
+ * Utilise pour l'affichage de la page detail d'un transfert et
+ * pour le PDF rapport avec toggle includeParents.
+ */
+export interface TransfertWithGroupes extends Transfert {
+  /** Groupes de transfert avec leurs relations chargees */
+  groupes: TransfertGroupeWithRelations[];
+  /** Utilisateur ayant cree le transfert (partiel) */
+  user?: { id: string; name: string };
 }

@@ -1,0 +1,110 @@
+{
+  "page": {
+    "title": "Transfer to grow-out",
+    "retour": "Back"
+  },
+  "etapes": {
+    "mode": "Mode",
+    "vague": "Wave",
+    "groupes": "Groups",
+    "confirmation": "Confirm"
+  },
+  "stepMode": {
+    "title": "Choose transfer mode",
+    "description": "How do you want to manage the destination wave?",
+    "modeA": {
+      "titre": "Create a new wave",
+      "description": "A new grow-out wave will be created during the transfer."
+    },
+    "modeB": {
+      "titre": "Target an existing wave",
+      "description": "Fish will join an already in-progress grow-out wave."
+    },
+    "suivant": "Continue"
+  },
+  "stepNouvelleVague": {
+    "title": "New grow-out wave",
+    "description": "Enter the information for the new wave.",
+    "code": "Wave code",
+    "codePlaceholder": "E.g. GROW-2025-001",
+    "dateDebut": "Start date",
+    "poidsObjectif": "Biomass target (kg, optional)",
+    "uniteProduction": "Production unit (optional)",
+    "uniteProductionPlaceholder": "Choose a unit",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Notes about the new wave...",
+    "retour": "Back",
+    "suivant": "Continue"
+  },
+  "stepVagueExistante": {
+    "title": "Existing grow-out wave",
+    "description": "Select the destination wave.",
+    "vagueDestination": "Destination wave",
+    "choisirVague": "Choose a wave",
+    "vagueVide": "Empty",
+    "poissonsInitiaux": "{count} fish",
+    "poidsMoyen": "{poids}g/fish",
+    "noteRecalcul": "The initial average weight will be recalculated in a weighted manner after the transfer.",
+    "aucuneVague": "No in-progress grow-out wave available.",
+    "retour": "Back",
+    "suivant": "Continue"
+  },
+  "stepGroupes": {
+    "title": "Transfer groups",
+    "description": "Configure the fish groups to transfer.",
+    "groupeLabel": "Group {index}",
+    "bacSource": "Source tank",
+    "choisirBacSource": "Choose a source tank",
+    "bacSourceHint": "{vivants} estimated alive",
+    "bacDest": "Destination tank",
+    "choisirBacDest": "Choose a destination tank",
+    "nombrePoissons": "Number of fish to transfer",
+    "poidsMoyenG": "Average weight (g)",
+    "nombreMorts": "Deaths during transfer",
+    "ajouterGroupe": "Add a group",
+    "supprimerGroupe": "Remove this group",
+    "totalTransfere": "Total transferred: {count} fish",
+    "totalSource": "{vivants} alive in source tanks",
+    "depassement": "Overflow by {count} fish",
+    "retour": "Back",
+    "suivant": "Continue"
+  },
+  "stepConfirmation": {
+    "title": "Transfer confirmation",
+    "description": "Check the information before confirming.",
+    "source": "Source",
+    "destination": "Destination",
+    "modeA": "New wave: {code}",
+    "modeB": "Existing wave: {code}",
+    "groupes": "Groups",
+    "groupeResume": "Tank {source} → {dest}: {poissons} fish @ {poids}g",
+    "groupeResumeNoBacs": "{poissons} fish @ {poids}g",
+    "notes": "Global notes (optional)",
+    "notesPlaceholder": "Notes about the transfer operation...",
+    "total": "Total",
+    "poissonsTotal": "{count} fish",
+    "mortsTotal": "{count} death(s)",
+    "retour": "Back",
+    "confirmer": "Confirm transfer",
+    "confirmation": "Transferring..."
+  },
+  "validation": {
+    "modeRequis": "Please choose a mode.",
+    "codeRequis": "Wave code is required.",
+    "datDebutRequise": "Start date is required.",
+    "vagueDestRequise": "Destination wave is required.",
+    "auMoinsUnGroupe": "At least one group is required.",
+    "nombrePoissonsPositif": "Number of fish must be > 0.",
+    "poidsMoyenPositif": "Average weight must be > 0.",
+    "nombreMortsPositif": "Number of deaths must be >= 0.",
+    "bacSourceRequis": "Source tank is required.",
+    "depassementVivants": "Exceeds estimated alive fish in tank.",
+    "vagueDestMemeQueSource": "Destination wave cannot be the same as the source wave."
+  },
+  "success": "Transfer recorded successfully.",
+  "error": {
+    "conservation": "Conservation conflict: data has changed. Please reload and try again.",
+    "validation": "Validation errors. Check the fields and retry.",
+    "generic": "An error occurred. Please try again."
+  }
+}

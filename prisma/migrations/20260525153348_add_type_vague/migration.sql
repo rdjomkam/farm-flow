@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "TypeVague" AS ENUM ('PRE_GROSSISSEMENT', 'GROSSISSEMENT');
+
+-- AlterTable
+ALTER TABLE "Vague" ADD COLUMN     "type" "TypeVague" NOT NULL DEFAULT 'GROSSISSEMENT';

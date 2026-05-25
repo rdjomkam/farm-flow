@@ -12,7 +12,14 @@
       "enCours": "En cours ({count})",
       "terminees": "Terminées ({count})",
       "annulees": "Annulées ({count})"
+    },
+    "typeFilter": {
+      "toutes": "Toutes"
     }
+  },
+  "type": {
+    "preGrossissement": "Pré-grossissement",
+    "grossissement": "Grossissement"
   },
   "card": {
     "bac": "{count} bac",
@@ -42,7 +49,17 @@
       "releves": "Relevés ({count})"
     }
   },
+  "transferer": "Transférer vers grossissement",
+  "transfererHint": "Créez un transfert vers une vague de grossissement.",
+  "attendreTransfert": "En attente de transfert",
+  "attendreTransfertHint": "Pour alimenter cette vague, créez un transfert depuis une vague de pré-grossissement.",
+  "recevoirTransfert": "Recevoir un transfert",
+  "voirVaguesPreGrossissement": "Voir les vagues de pré-grossissement",
   "form": {
+    "typeLabel": "Type de vague",
+    "demarrerVide": "Démarrer vide (alimenté par transfert)",
+    "demarrerVideHint": "La vague sera créée sans poissons et recevra un transfert depuis une vague de pré-grossissement.",
+    "preGrossissementHint": "Permet de suivre les alevins de 10g à 15g avant grossissement.",
     "create": {
       "title": "Nouvelle vague",
       "description": "Créez un nouveau lot de poissons à suivre.",
@@ -121,7 +138,15 @@
     "gererBacs": "Gérer les bacs",
     "rapportPdf": "Rapport PDF",
     "exportReleves": "Export relevés",
-    "cloturer": "Clôturer"
+    "cloturer": "Clôturer",
+    "includeParents": "Inclure pré-grossissement"
+  },
+  "rapport": {
+    "origineMaterielle": "Origine des poissons",
+    "dureeCycle": "Durée totale du cycle",
+    "poidsInitialCycle": "Poids initial cycle complet",
+    "gainCumule": "Gain de poids cumulé",
+    "includeParents": "Inclure pré-grossissement"
   },
   "gererBacs": {
     "title": "Gérer les bacs",
@@ -308,6 +333,8 @@
     "exportPdf": "Exporter PDF",
     "expandLabel": "Voir le détail",
     "collapseLabel": "Réduire le détail",
+    "includeParents": "Inclure coûts pré-grossissement",
+    "cycleComplet": "Cycle complet",
     "summary": {
       "coutTotal": "Coût total",
       "coutParKg": "Coût / kg",

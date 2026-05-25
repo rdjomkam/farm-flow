@@ -20,7 +20,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { VagueCard } from "./vague-card";
 import { BlockedResourceOverlay } from "@/components/ui/blocked-resource-overlay";
-import { StatutVague, Permission } from "@/types";
+import { StatutVague, TypeVague, TypeUniteProduction, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse, BacStockingEntry } from "@/types";
 import { useCreateVague, useVaguesList } from "@/hooks/queries/use-vagues-queries";
 
@@ -29,7 +29,7 @@ interface VaguesListClientProps {
   bacsLibres: BacResponse[];
   permissions: Permission[];
   configElevages: { id: string; nom: string }[];
-  unitesProduction: { id: string; code: string; nom: string; type: string }[];
+  unitesProduction: { id: string; code: string; nom: string; type: TypeUniteProduction }[];
 }
 
 export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions, configElevages, unitesProduction }: VaguesListClientProps) {
@@ -39,6 +39,8 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Form state
+  const [typeVague, setTypeVague] = useState<TypeVague>(TypeVague.GROSSISSEMENT);
+  const [demarrerVide, setDemarrerVide] = useState(false);
   const [code, setCode] = useState("");
   const [dateDebut, setDateDebut] = useState("");
   const [nombreInitial, setNombreInitial] = useState("");
@@ -47,25 +49,35 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
   const [configElevageId, setConfigElevageId] = useState("");
   const [uniteProductionId, setUniteProductionId] = useState(
     // Auto-select grossissement unit if only one exists
-    unitesProduction.find((u) => u.type === "GROSSISSEMENT")?.id ?? ""
+    unitesProduction.find((u) => u.type === TypeUniteProduction.GROSSISSEMENT)?.id ?? ""
   );
   const [selectedBacs, setSelectedBacs] = useState<string[]>([]);
   // distribution: bacId -> nombrePoissons string (kept as string for input binding)
   const [distributionMap, setDistributionMap] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const enCours = useMemo(() => vagues.filter((v) => v.statut === StatutVague.EN_COURS), [vagues]);
-  const terminees = useMemo(() => vagues.filter((v) => v.statut === StatutVague.TERMINEE), [vagues]);
-  const annulees = useMemo(() => vagues.filter((v) => v.statut === StatutVague.ANNULEE), [vagues]);
+  // Type filter
+  const [typeFilter, setTypeFilter] = useState<TypeVague | "TOUTES">("TOUTES");
+
+  const filteredVagues = useMemo(
+    () => typeFilter === "TOUTES" ? vagues : vagues.filter((v) => v.type === typeFilter),
+    [vagues, typeFilter]
+  );
+
+  const enCours = useMemo(() => filteredVagues.filter((v) => v.statut === StatutVague.EN_COURS), [filteredVagues]);
+  const terminees = useMemo(() => filteredVagues.filter((v) => v.statut === StatutVague.TERMINEE), [filteredVagues]);
+  const annulees = useMemo(() => filteredVagues.filter((v) => v.statut === StatutVague.ANNULEE), [filteredVagues]);
 
   function resetForm() {
+    setTypeVague(TypeVague.GROSSISSEMENT);
+    setDemarrerVide(false);
     setCode("");
     setDateDebut("");
     setNombreInitial("");
     setPoidsMoyenInitial("");
     setOrigineAlevins("");
     setConfigElevageId("");
-    setUniteProductionId(unitesProduction.find((u) => u.type === "GROSSISSEMENT")?.id ?? "");
+    setUniteProductionId(unitesProduction.find((u) => u.type === TypeUniteProduction.GROSSISSEMENT)?.id ?? "");
     setSelectedBacs([]);
     setDistributionMap({});
     setErrors({});
@@ -108,33 +120,42 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     return sum + (Number.isFinite(v) && v > 0 ? v : 0);
   }, 0);
 
+  // Derived: mode "vide" = GROSSISSEMENT + demarrerVide checked
+  const isVide = typeVague === TypeVague.GROSSISSEMENT && demarrerVide;
+  // PRE_GROSSISSEMENT does not require configElevage
+  const configRequired = typeVague !== TypeVague.PRE_GROSSISSEMENT && !isVide;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
-    const nombreInitialNum = Number(nombreInitial);
+    const nombreInitialNum = isVide ? 0 : Number(nombreInitial);
 
     if (!code.trim()) newErrors.code = t("form.errors.code");
     if (!dateDebut) newErrors.dateDebut = t("form.errors.dateDebut");
-    if (!nombreInitial || nombreInitialNum <= 0)
-      newErrors.nombreInitial = t("form.errors.nombreInitial");
-    if (!poidsMoyenInitial || Number(poidsMoyenInitial) <= 0)
-      newErrors.poidsMoyenInitial = t("form.errors.poidsMoyenInitial");
-    if (!configElevageId) newErrors.configElevageId = t("form.errors.configElevageRequired");
-    if (selectedBacs.length === 0) {
-      newErrors.bacIds = t("form.errors.bacIds");
-    } else {
-      // Validate each selected bac has a valid distribution
-      const hasIncomplete = selectedBacs.some((id) => {
-        const v = Number(distributionMap[id]);
-        return !Number.isInteger(v) || v <= 0;
-      });
-      if (hasIncomplete) {
-        newErrors.bacIds = t("form.errors.distributionIncomplete");
-      } else if (totalDistribue !== nombreInitialNum) {
-        newErrors.bacIds = t("form.errors.distributionDesequilibree", {
-          total: totalDistribue,
-          nombreInitial: nombreInitialNum,
+
+    if (!isVide) {
+      if (!nombreInitial || nombreInitialNum <= 0)
+        newErrors.nombreInitial = t("form.errors.nombreInitial");
+      if (!poidsMoyenInitial || Number(poidsMoyenInitial) <= 0)
+        newErrors.poidsMoyenInitial = t("form.errors.poidsMoyenInitial");
+      if (configRequired && !configElevageId)
+        newErrors.configElevageId = t("form.errors.configElevageRequired");
+      if (selectedBacs.length === 0) {
+        newErrors.bacIds = t("form.errors.bacIds");
+      } else {
+        // Validate each selected bac has a valid distribution
+        const hasIncomplete = selectedBacs.some((id) => {
+          const v = Number(distributionMap[id]);
+          return !Number.isInteger(v) || v <= 0;
         });
+        if (hasIncomplete) {
+          newErrors.bacIds = t("form.errors.distributionIncomplete");
+        } else if (totalDistribue !== nombreInitialNum) {
+          newErrors.bacIds = t("form.errors.distributionDesequilibree", {
+            total: totalDistribue,
+            nombreInitial: nombreInitialNum,
+          });
+        }
       }
     }
 
@@ -145,21 +166,24 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
 
     setErrors({});
 
-    const bacDistribution: BacStockingEntry[] = selectedBacs.map((bacId) => ({
-      bacId,
-      nombrePoissons: Number(distributionMap[bacId]),
-    }));
+    const bacDistribution: BacStockingEntry[] = isVide
+      ? []
+      : selectedBacs.map((bacId) => ({
+          bacId,
+          nombrePoissons: Number(distributionMap[bacId]),
+        }));
 
     try {
       await createVagueMutation.mutateAsync({
         code: code.trim(),
         dateDebut,
         nombreInitial: nombreInitialNum,
-        poidsMoyenInitial: Number(poidsMoyenInitial),
+        poidsMoyenInitial: isVide ? 0 : Number(poidsMoyenInitial),
         origineAlevins: origineAlevins.trim() || undefined,
-        configElevageId,
+        configElevageId: configElevageId || undefined,
         uniteProductionId: uniteProductionId || undefined,
         bacDistribution,
+        type: typeVague,
       });
       setDialogOpen(false);
       resetForm();
@@ -219,6 +243,68 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+              {/* Type de vague */}
+              <FormSection title={t("form.typeLabel")}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                  <label
+                    className={`flex min-h-[44px] flex-1 cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      typeVague === TypeVague.GROSSISSEMENT
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="typeVague"
+                      checked={typeVague === TypeVague.GROSSISSEMENT}
+                      onChange={() => { setTypeVague(TypeVague.GROSSISSEMENT); }}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <div>
+                      <span className="font-medium">{t("type.grossissement")}</span>
+                    </div>
+                  </label>
+                  <label
+                    className={`flex min-h-[44px] flex-1 cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      typeVague === TypeVague.PRE_GROSSISSEMENT
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="typeVague"
+                      checked={typeVague === TypeVague.PRE_GROSSISSEMENT}
+                      onChange={() => { setTypeVague(TypeVague.PRE_GROSSISSEMENT); setDemarrerVide(false); }}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <div>
+                      <span className="font-medium">{t("type.preGrossissement")}</span>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{t("form.preGrossissementHint")}</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Checkbox "démarrer vide" — uniquement pour GROSSISSEMENT */}
+                {typeVague === TypeVague.GROSSISSEMENT && (
+                  <label className={`mt-1 flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                    demarrerVide ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={demarrerVide}
+                      onChange={(e) => setDemarrerVide(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <div>
+                      <span className="font-medium">{t("form.demarrerVide")}</span>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{t("form.demarrerVideHint")}</p>
+                    </div>
+                  </label>
+                )}
+              </FormSection>
+
               <FormSection title={t("form.sections.identification.title")} description={t("form.sections.identification.description")}>
                 <Input
                   id="code"
@@ -253,144 +339,151 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                 </FormSection>
               )}
 
-              <FormSection title={t("form.sections.population.title")} description={t("form.sections.population.description")}>
-                <Input
-                  id="nombreInitial"
-                  label={t("form.fields.nombreInitial")}
-                  type="number"
-                  min="1"
-                  value={nombreInitial}
-                  onChange={(e) => setNombreInitial(e.target.value)}
-                  error={errors.nombreInitial}
-                />
-                <Input
-                  id="poidsMoyenInitial"
-                  label={t("form.fields.poidsMoyenInitial")}
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={poidsMoyenInitial}
-                  onChange={(e) => setPoidsMoyenInitial(e.target.value)}
-                  error={errors.poidsMoyenInitial}
-                />
-                <Input
-                  id="origineAlevins"
-                  label={t("form.fields.origineAlevins")}
-                  placeholder={t("form.fields.origineAlevinsFr")}
-                  value={origineAlevins}
-                  onChange={(e) => setOrigineAlevins(e.target.value)}
-                />
-              </FormSection>
+              {/* Population + bacs — masqués si mode vide */}
+              {!isVide && (
+                <>
+                  <FormSection title={t("form.sections.population.title")} description={t("form.sections.population.description")}>
+                    <Input
+                      id="nombreInitial"
+                      label={t("form.fields.nombreInitial")}
+                      type="number"
+                      min="1"
+                      value={nombreInitial}
+                      onChange={(e) => setNombreInitial(e.target.value)}
+                      error={errors.nombreInitial}
+                    />
+                    <Input
+                      id="poidsMoyenInitial"
+                      label={t("form.fields.poidsMoyenInitial")}
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={poidsMoyenInitial}
+                      onChange={(e) => setPoidsMoyenInitial(e.target.value)}
+                      error={errors.poidsMoyenInitial}
+                    />
+                    <Input
+                      id="origineAlevins"
+                      label={t("form.fields.origineAlevins")}
+                      placeholder={t("form.fields.origineAlevinsFr")}
+                      value={origineAlevins}
+                      onChange={(e) => setOrigineAlevins(e.target.value)}
+                    />
+                  </FormSection>
 
-              <FormSection title={t("form.fields.configElevage")}>
-                <Select value={configElevageId} onValueChange={setConfigElevageId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("form.fields.configElevagePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {configElevages.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.configElevageId && (
-                  <p className="text-sm text-danger">{errors.configElevageId}</p>
-                )}
-              </FormSection>
+                  {configRequired && (
+                    <FormSection title={t("form.fields.configElevage")}>
+                      <Select value={configElevageId} onValueChange={setConfigElevageId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("form.fields.configElevagePlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {configElevages.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.configElevageId && (
+                        <p className="text-sm text-danger">{errors.configElevageId}</p>
+                      )}
+                    </FormSection>
+                  )}
 
-              <FormSection title={t("form.sections.bacs.title")} description={t("form.sections.bacs.description")}>
-                {bacsLibres.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t("form.fields.aucunBacLibre")}
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {bacsLibres.map((bac) => {
-                      const isSelected = selectedBacs.includes(bac.id);
-                      return (
-                        <div key={bac.id} className="flex flex-col gap-1">
-                          <label
-                            className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                              isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:bg-muted"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleBac(bac.id)}
-                              className="h-4 w-4 accent-primary"
-                            />
-                            <div>
-                              <span className="font-medium">{bac.nom}</span>
-                              <span className="ml-1 text-muted-foreground">
-                                ({bac.volume}L)
-                              </span>
+                  <FormSection title={t("form.sections.bacs.title")} description={t("form.sections.bacs.description")}>
+                    {bacsLibres.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t("form.fields.aucunBacLibre")}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {bacsLibres.map((bac) => {
+                          const isSelected = selectedBacs.includes(bac.id);
+                          return (
+                            <div key={bac.id} className="flex flex-col gap-1">
+                              <label
+                                className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:bg-muted"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleBac(bac.id)}
+                                  className="h-4 w-4 accent-primary"
+                                />
+                                <div>
+                                  <span className="font-medium">{bac.nom}</span>
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({bac.volume}L)
+                                  </span>
+                                </div>
+                              </label>
+                              {isSelected && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  placeholder={t("form.distribution.placeholder")}
+                                  value={distributionMap[bac.id] ?? ""}
+                                  onChange={(e) => handleDistributionChange(bac.id, e.target.value)}
+                                  className="w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  required
+                                />
+                              )}
                             </div>
-                          </label>
-                          {isSelected && (
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              placeholder={t("form.distribution.placeholder")}
-                              value={distributionMap[bac.id] ?? ""}
-                              onChange={(e) => handleDistributionChange(bac.id, e.target.value)}
-                              className="w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                              required
-                            />
-                          )}
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Distribution summary — shown when at least one bac is selected */}
+                    {selectedBacs.length > 0 && Number(nombreInitial) > 0 && (
+                      <div className="mt-2 flex flex-col gap-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {t("form.distribution.totalLabel", {
+                              total: totalDistribue,
+                              nombreInitial: Number(nombreInitial),
+                            })}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={distributeEvenly}
+                            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                          >
+                            {t("form.distribution.repartirButton")}
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        {totalDistribue < Number(nombreInitial) && totalDistribue > 0 && (
+                          <p className="text-xs text-warning">
+                            {t("form.distribution.warningManquant", {
+                              diff: Number(nombreInitial) - totalDistribue,
+                            })}
+                          </p>
+                        )}
+                        {totalDistribue > Number(nombreInitial) && (
+                          <p className="text-xs text-danger">
+                            {t("form.distribution.warningExcedent", {
+                              diff: totalDistribue - Number(nombreInitial),
+                            })}
+                          </p>
+                        )}
+                        {totalDistribue === Number(nombreInitial) && totalDistribue > 0 && (
+                          <p className="text-xs text-success">
+                            {t("form.distribution.equilibre")}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
-                {/* Distribution summary — shown when at least one bac is selected */}
-                {selectedBacs.length > 0 && Number(nombreInitial) > 0 && (
-                  <div className="mt-2 flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium">
-                        {t("form.distribution.totalLabel", {
-                          total: totalDistribue,
-                          nombreInitial: Number(nombreInitial),
-                        })}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={distributeEvenly}
-                        className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                      >
-                        {t("form.distribution.repartirButton")}
-                      </button>
-                    </div>
-                    {totalDistribue < Number(nombreInitial) && totalDistribue > 0 && (
-                      <p className="text-xs text-warning">
-                        {t("form.distribution.warningManquant", {
-                          diff: Number(nombreInitial) - totalDistribue,
-                        })}
-                      </p>
+                    {errors.bacIds && (
+                      <p className="text-sm text-danger">{errors.bacIds}</p>
                     )}
-                    {totalDistribue > Number(nombreInitial) && (
-                      <p className="text-xs text-danger">
-                        {t("form.distribution.warningExcedent", {
-                          diff: totalDistribue - Number(nombreInitial),
-                        })}
-                      </p>
-                    )}
-                    {totalDistribue === Number(nombreInitial) && totalDistribue > 0 && (
-                      <p className="text-xs text-success">
-                        {t("form.distribution.equilibre")}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {errors.bacIds && (
-                  <p className="text-sm text-danger">{errors.bacIds}</p>
-                )}
-              </FormSection>
+                  </FormSection>
+                </>
+              )}
 
               <DialogFooter>
                 <Button
@@ -411,6 +504,28 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
       </div>
 
       <div className="p-4">
+        {/* Filtre par type */}
+        <div className="mb-3 flex gap-2 flex-wrap">
+          {(["TOUTES", TypeVague.GROSSISSEMENT, TypeVague.PRE_GROSSISSEMENT] as const).map((tf) => (
+            <button
+              key={tf}
+              type="button"
+              onClick={() => setTypeFilter(tf)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                typeFilter === tf
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tf === "TOUTES"
+                ? t("list.typeFilter.toutes")
+                : tf === TypeVague.GROSSISSEMENT
+                  ? t("type.grossissement")
+                  : t("type.preGrossissement")}
+            </button>
+          ))}
+        </div>
+
         <Tabs defaultValue="en_cours">
           <TabsList>
             <TabsTrigger value="en_cours">

@@ -27,7 +27,8 @@ import { computeBacPerformance } from "@/lib/bac-performance";
 import { BacPerformanceSection } from "@/components/vagues/bac-performance-section";
 import { formatNum } from "@/lib/format";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
-import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission } from "@/types";
+import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission, TypeVague } from "@/types";
+import { getLineage } from "@/lib/queries/transferts";
 import type { Bac, BacResponse, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
@@ -54,7 +55,7 @@ export default async function VagueDetailPage({
   const locale = await getLocale();
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction, ventesAggregate] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction, ventesAggregate, lineageData] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -103,9 +104,13 @@ export default async function VagueDetailPage({
       },
       _sum: { poidsTotalKg: true },
     }),
+    // Lineage — vagues parentes via TransfertGroupe (pour afficher le toggle "Inclure PG")
+    getLineage(session.activeSiteId, id, 5).catch(() => ({ vagueId: id, parents: [] })),
   ]);
 
   if (!vague) notFound();
+
+  const hasIncomingTransferts = lineageData.parents.length > 0;
 
   const totalVenduKg = ventesAggregate._sum.poidsTotalKg ?? 0;
 
@@ -360,6 +365,15 @@ export default async function VagueDetailPage({
         {/* Info section */}
         <section className="flex flex-wrap items-center gap-2 border-b border-border pb-3 min-w-0">
           <Badge variant={statutVariants[statut]}>{t(`statuts.${statut}`)}</Badge>
+          {vague.type === TypeVague.PRE_GROSSISSEMENT ? (
+            <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-secondary/20 text-secondary-foreground border border-secondary/30">
+              {t("type.preGrossissement")}
+            </span>
+          ) : (
+            <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+              {t("type.grossissement")}
+            </span>
+          )}
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             {new Date(vague.dateDebut).toLocaleDateString(locale)}
@@ -391,11 +405,43 @@ export default async function VagueDetailPage({
               permissions={permissions}
               isEnCours={isEnCours}
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}
+              hasIncomingTransferts={hasIncomingTransferts}
               currentBacs={vague.bacs as unknown as BacResponse[]}
               className="ml-auto"
             />
           )}
         </section>
+
+        {/* CTA Transfert — PRE_GROSSISSEMENT en cours */}
+        {vague.type === TypeVague.PRE_GROSSISSEMENT && isEnCours && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">{t("transferer")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("transfererHint")}</p>
+            </div>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link href={`/vagues/${vague.id}/transfert/nouveau`}>
+                {t("transferer")}
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {/* Section "En attente de transfert" — GROSSISSEMENT vide */}
+        {vague.type === TypeVague.GROSSISSEMENT && vague.nombreInitial === 0 && isEnCours && (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 flex flex-col gap-2">
+            <div>
+              <p className="text-sm font-medium">{t("attendreTransfert")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("attendreTransfertHint")}</p>
+            </div>
+            <Link
+              href="/vagues?type=PRE_GROSSISSEMENT"
+              className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              {t("voirVaguesPreGrossissement")}
+            </Link>
+          </div>
+        )}
 
         {/* Indicateurs */}
         <IndicateursCards indicateurs={indicateurs ?? defaultIndicateurs} />
@@ -470,7 +516,7 @@ export default async function VagueDetailPage({
 
         {/* Coût de production */}
         {permissions.includes(Permission.FINANCES_VOIR) && coutProduction && (
-          <CoutProductionCard data={coutProduction} vagueId={id} />
+          <CoutProductionCard data={coutProduction} vagueId={id} hasParents={hasIncomingTransferts} />
         )}
 
         {/* Calibrages */}

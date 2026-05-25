@@ -331,6 +331,36 @@ export interface StockConsumptionPDFRow {
   prixTotal: number | null;
 }
 
+/** Ligne d'une vague parente dans la section lineage du rapport PDF */
+export interface LineageParentPDFRow {
+  /** Code de la vague source */
+  vagueSourceCode: string;
+  /** Date du transfert */
+  dateTransfert: string;
+  /** Nombre de poissons transférés */
+  nombrePoissons: number;
+  /** Poids moyen au moment du transfert (grammes) */
+  poidsMoyenG: number;
+  /** Nombre de morts au transfert */
+  nombreMorts: number;
+  /** Date de début de la vague source (ISO) */
+  dateDebutSource: string | null;
+}
+
+/** Section "Origine des poissons" pour le rapport général avec lineage */
+export interface LineagePDFSection {
+  /** Tableau des vagues parentes ayant contribué à cette vague */
+  parents: LineageParentPDFRow[];
+  /** Date de début du cycle complet (vague parente la plus ancienne) */
+  dateDebutCycle: string;
+  /** Durée totale du cycle en jours (depuis début des parents) */
+  dureeTotaleCycle: number;
+  /** Poids moyen initial du cycle complet (poids des alevins au départ des parents) */
+  poidsInitialCycle: number;
+  /** Gain de poids cumulé depuis le début du cycle (g) */
+  gainPoidsCumule: number | null;
+}
+
 /**
  * DTO pour générer un rapport de vague en PDF.
  *
@@ -405,6 +435,12 @@ export interface CreateRapportVaguePDFDTO {
   stockConsumption: StockConsumptionPDFRow[];
   /** Résumé des ventes de la vague */
   salesSummary: SalesSummaryPDF;
+  /**
+   * Section "Origine des poissons" — présente uniquement si `?includeParents=true`
+   * et si la vague a des vagues parentes (transferts entrants).
+   * null = pas demandé ou vague sans parents.
+   */
+  lineage?: LineagePDFSection | null;
 }
 
 export interface SalesPDFRow {

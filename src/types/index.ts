@@ -12,6 +12,7 @@ export {
   Role,
   Permission,
   StatutVague,
+  TypeVague,
   TypeReleve,
   TypeAliment,
   CauseMortalite,
@@ -658,4 +659,22 @@ export type {
   CreateUniteProductionDTO,
   UpdateUniteProductionDTO,
   CreateTransfertInterneDTO,
+} from "./api";
+
+// Transferts Pré-Grossissement (PG.2 + PG.3, ADR-046)
+export { ModeTransfert } from "./models";
+export type {
+  Transfert,
+  TransfertGroupe,
+  TransfertModification,
+  TransfertGroupeWithRelations,
+  TransfertWithGroupes,
+} from "./models";
+export type {
+  CreateTransfertDTO,
+  CreateTransfertModeADTO,
+  CreateTransfertModeBDTO,
+  TransfertGroupeInputDTO,
+  UpdateTransfertGroupeDTO,
+  VagueLineage,
 } from "./api";

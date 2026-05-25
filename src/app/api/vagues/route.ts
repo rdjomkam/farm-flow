@@ -3,7 +3,7 @@ import { cachedJson } from "@/lib/api-cache";
 import { getVagues } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
-import { Permission, StatutVague, TypePlan, parsePaginationQuery } from "@/types";
+import { Permission, StatutVague, TypePlan, TypeVague, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
@@ -12,11 +12,20 @@ import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import { apiError, handleApiError } from "@/lib/api-utils";
 
+const VALID_TYPE_VAGUE = new Set(Object.values(TypeVague));
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VAGUES_VOIR);
     const { searchParams } = new URL(request.url);
     const statut = searchParams.get("statut");
+    const typeRaw = searchParams.get("type");
+
+    // Valider le type si fourni (R2 — utiliser l'enum)
+    if (typeRaw && !VALID_TYPE_VAGUE.has(typeRaw as TypeVague)) {
+      return apiError(400, `Le parametre 'type' est invalide. Valeurs acceptees : ${Object.values(TypeVague).join(", ")}.`);
+    }
+    const type = typeRaw ?? undefined;
 
     // Pagination
     const paginationResult = parsePaginationQuery(searchParams);
@@ -25,9 +34,11 @@ export async function GET(request: NextRequest) {
     }
     const { limit, offset } = paginationResult.params;
 
+    const filters = statut || type ? { ...(statut && { statut }), ...(type && { type }) } : undefined;
+
     const { data: vaguesRaw, total } = await getVagues(
       auth.activeSiteId,
-      statut ? { statut } : undefined,
+      filters,
       { limit, offset }
     );
 
@@ -42,6 +53,7 @@ export async function GET(request: NextRequest) {
         dateDebut: v.dateDebut,
         dateFin: v.dateFin,
         statut: v.statut,
+        type: v.type,
         nombreInitial: v.nombreInitial,
         poidsMoyenInitial: v.poidsMoyenInitial,
         origineAlevins: v.origineAlevins,
@@ -49,6 +61,7 @@ export async function GET(request: NextRequest) {
         nombreBacs: (v._count as { assignations?: number }).assignations ?? 0,
         joursEcoules,
         createdAt: v.createdAt,
+        isBlocked: false,
       };
     });
 
@@ -67,6 +80,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
+    // Lire et valider le type (défaut GROSSISSEMENT)
+    const typeRaw = body.type ?? TypeVague.GROSSISSEMENT;
+    if (!VALID_TYPE_VAGUE.has(typeRaw)) {
+      errors.push({
+        field: "type",
+        message: `Le type de vague est invalide. Valeurs acceptees : ${Object.values(TypeVague).join(", ")}.`,
+      });
+      return apiError(400, "Erreurs de validation", { errors });
+    }
+    const type = typeRaw as TypeVague;
+    const isPreGrossissement = type === TypeVague.PRE_GROSSISSEMENT;
+
     if (!body.code || typeof body.code !== "string" || body.code.trim() === "") {
       errors.push({ field: "code", message: "Le champ 'code' est obligatoire." });
     }
@@ -83,45 +108,87 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (
-      body.nombreInitial == null ||
-      typeof body.nombreInitial !== "number" ||
-      !Number.isInteger(body.nombreInitial) ||
-      body.nombreInitial <= 0
-    ) {
-      errors.push({
-        field: "nombreInitial",
-        message: "Le nombre initial doit etre un entier superieur a 0.",
-      });
+    if (isPreGrossissement) {
+      // PRE_GROSSISSEMENT : nombreInitial peut etre 0
+      if (
+        body.nombreInitial == null ||
+        typeof body.nombreInitial !== "number" ||
+        !Number.isInteger(body.nombreInitial) ||
+        body.nombreInitial < 0
+      ) {
+        errors.push({
+          field: "nombreInitial",
+          message: "Le nombre initial doit etre un entier >= 0.",
+        });
+      }
+    } else {
+      // GROSSISSEMENT : nombreInitial peut etre 0 si bacDistribution vide (vague vide en attente de transfert)
+      const isVagueVide =
+        (body.nombreInitial === 0 || body.nombreInitial == null) &&
+        (!Array.isArray(body.bacDistribution) || body.bacDistribution.length === 0);
+
+      if (!isVagueVide) {
+        if (
+          body.nombreInitial == null ||
+          typeof body.nombreInitial !== "number" ||
+          !Number.isInteger(body.nombreInitial) ||
+          body.nombreInitial <= 0
+        ) {
+          errors.push({
+            field: "nombreInitial",
+            message: "Le nombre initial doit etre un entier superieur a 0.",
+          });
+        }
+      }
     }
 
     if (
       body.poidsMoyenInitial == null ||
       typeof body.poidsMoyenInitial !== "number" ||
-      body.poidsMoyenInitial <= 0
+      body.poidsMoyenInitial < 0
     ) {
       errors.push({
         field: "poidsMoyenInitial",
-        message: "Le poids moyen initial doit etre un nombre superieur a 0.",
+        message: "Le poids moyen initial doit etre un nombre >= 0.",
       });
     }
 
-    if (!body.configElevageId || typeof body.configElevageId !== "string") {
-      errors.push({
-        field: "configElevageId",
-        message: "La configuration d'elevage est obligatoire.",
-      });
+    if (!isPreGrossissement && body.configElevageId) {
+      // configElevageId valide uniquement pour GROSSISSEMENT, optionnel pour PRE_GROSSISSEMENT
+      if (typeof body.configElevageId !== "string" || body.configElevageId.trim() === "") {
+        errors.push({
+          field: "configElevageId",
+          message: "La configuration d'elevage doit etre un identifiant valide.",
+        });
+      }
+    } else if (!isPreGrossissement && !body.configElevageId) {
+      // Pour GROSSISSEMENT standard (non vide), configElevageId est requis
+      const nombreInitialIsZero = body.nombreInitial === 0 || body.nombreInitial == null;
+      const bacDistributionIsEmpty = !Array.isArray(body.bacDistribution) || body.bacDistribution.length === 0;
+      if (!(nombreInitialIsZero && bacDistributionIsEmpty)) {
+        errors.push({
+          field: "configElevageId",
+          message: "La configuration d'elevage est obligatoire.",
+        });
+      }
     }
 
-    if (!Array.isArray(body.bacDistribution) || body.bacDistribution.length === 0) {
+    // Valider bacDistribution si non vide
+    const bacDistribution = Array.isArray(body.bacDistribution) ? body.bacDistribution : [];
+    const isVagueVideGrossissement =
+      !isPreGrossissement &&
+      (body.nombreInitial === 0 || body.nombreInitial == null) &&
+      bacDistribution.length === 0;
+
+    if (!isPreGrossissement && !isVagueVideGrossissement && bacDistribution.length === 0) {
       errors.push({
         field: "bacDistribution",
         message: "Au moins un bac doit etre selectionne avec sa distribution d'alevins.",
       });
-    } else {
+    } else if (bacDistribution.length > 0) {
       // Valider chaque entree de la distribution
-      for (let i = 0; i < body.bacDistribution.length; i++) {
-        const entry = body.bacDistribution[i];
+      for (let i = 0; i < bacDistribution.length; i++) {
+        const entry = bacDistribution[i];
         if (!entry || typeof entry.bacId !== "string" || entry.bacId.trim() === "") {
           errors.push({
             field: `bacDistribution[${i}].bacId`,
@@ -141,9 +208,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Valider que la somme des nombrePoissons correspond au nombreInitial
-      if (errors.length === 0 && body.nombreInitial != null) {
-        const somme = (body.bacDistribution as Array<{ nombrePoissons: number }>).reduce(
+      // Valider que la somme des nombrePoissons correspond au nombreInitial (sauf si PRE_GROSSISSEMENT)
+      if (errors.length === 0 && body.nombreInitial != null && !isPreGrossissement) {
+        const somme = (bacDistribution as Array<{ nombrePoissons: number }>).reduce(
           (acc, e) => acc + e.nombrePoissons,
           0
         );
@@ -163,13 +230,13 @@ export async function POST(request: NextRequest) {
     const data: CreateVagueDTO = {
       code: body.code.trim(),
       dateDebut: body.dateDebut,
-      nombreInitial: body.nombreInitial,
-      poidsMoyenInitial: body.poidsMoyenInitial,
+      nombreInitial: body.nombreInitial ?? 0,
+      poidsMoyenInitial: body.poidsMoyenInitial ?? 0,
       origineAlevins: body.origineAlevins ?? undefined,
-      configElevageId: body.configElevageId,
+      configElevageId: body.configElevageId ?? undefined,
       poidsObjectifKg: body.poidsObjectifKg != null ? Number(body.poidsObjectifKg) : undefined,
       uniteProductionId: body.uniteProductionId || undefined,
-      bacDistribution: body.bacDistribution,
+      bacDistribution: bacDistribution,
     };
 
     // Vérifier le quota et créer la vague dans une transaction atomique (R4)
@@ -232,11 +299,12 @@ export async function POST(request: NextRequest) {
       const vague = await tx.vague.create({
         data: {
           code: data.code,
+          type,
           dateDebut: new Date(data.dateDebut),
           nombreInitial: data.nombreInitial,
           poidsMoyenInitial: data.poidsMoyenInitial,
           origineAlevins: data.origineAlevins ?? null,
-          configElevageId: data.configElevageId,
+          configElevageId: data.configElevageId ?? null,
           uniteProductionId: data.uniteProductionId ?? null,
           siteId: auth.activeSiteId,
         },
@@ -302,6 +370,8 @@ export async function POST(request: NextRequest) {
         dateDebut: vague.dateDebut,
         dateFin: vague.dateFin,
         statut: vague.statut,
+        type: vague.type,
+        isBlocked: false,
         nombreInitial: vague.nombreInitial,
         poidsMoyenInitial: vague.poidsMoyenInitial,
         origineAlevins: vague.origineAlevins,

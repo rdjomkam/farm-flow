@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container, Trash2 } from "lucide-react";
+import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container, Trash2, GitBranch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,8 @@ interface VagueActionMenuProps {
   permissions: Permission[];
   isEnCours: boolean;
   canExport: boolean;
+  /** Indique si la vague a des transferts entrants (pour afficher le toggle lineage) */
+  hasIncomingTransferts?: boolean;
   currentBacs?: BacResponse[];
   className?: string;
 }
@@ -52,6 +54,7 @@ export function VagueActionMenu({
   permissions,
   isEnCours,
   canExport,
+  hasIncomingTransferts = false,
   currentBacs = [],
   className,
 }: VagueActionMenuProps) {
@@ -62,6 +65,7 @@ export function VagueActionMenu({
   const [cloturerOpen, setCloturerOpen] = useState(false);
   const [gererBacsOpen, setGererBacsOpen] = useState(false);
   const [supprimerOpen, setSupprimerOpen] = useState(false);
+  const [includeParents, setIncludeParents] = useState(false);
 
   const canModifier = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
   const canCalibrage = isEnCours && permissions.includes(Permission.CALIBRAGES_CREER);
@@ -108,14 +112,40 @@ export function VagueActionMenu({
 
           {canExport && (
             <>
+              {/* Toggle "Inclure pré-grossissement" — uniquement si vague a des transferts entrants */}
+              {hasIncomingTransferts && (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setIncludeParents((prev) => !prev);
+                  }}
+                  className="gap-2"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  <span className="flex-1">{t("actionMenu.includeParents")}</span>
+                  <span
+                    className={`ml-auto h-4 w-4 rounded border flex items-center justify-center text-[10px] font-bold transition-colors ${
+                      includeParents
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-border text-transparent"
+                    }`}
+                    aria-hidden
+                  >
+                    ✓
+                  </span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
-                  exportService.vaguePdf(vagueId, vagueCode);
+                  exportService.vaguePdf(vagueId, vagueCode, hasIncomingTransferts && includeParents);
                 }}
               >
                 <FileText className="h-4 w-4" />
                 {t("actionMenu.rapportPdf")}
+                {hasIncomingTransferts && includeParents && (
+                  <span className="ml-auto text-[10px] text-primary font-medium">+ PG</span>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={(e) => {

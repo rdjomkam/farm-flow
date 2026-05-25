@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
+import { getLineage } from "@/lib/queries/transferts";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -857,6 +858,153 @@ export interface CoutProductionVague {
     biomasseKg: number | null;
     coutParKg: number | null;
   };
+
+  /**
+   * Coûts imputés des vagues parentes via le lineage de transfert.
+   * Présent uniquement si l'option `includeParents` a été activée.
+   */
+  coutsParents?: CoutsParentsImpute;
+
+  /**
+   * KPIs du cycle complet (vague courante + coûts pré-grossissement imputés).
+   * Présent uniquement si `coutsParents` est présent.
+   */
+  cycleComplet?: {
+    coutTotalCycleComplet: number;
+    margesCycleComplet: number;
+    roiCycleComplet: number | null;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Interfaces — Coûts pré-grossissement imputés
+// ---------------------------------------------------------------------------
+
+export interface CoutsParentsImputeDetail {
+  vagueParentId: string;
+  vagueParentCode: string;
+  dateTransfert: Date;
+  nombrePoissons: number;
+  parentNombreInitial: number;
+  ratio: number;
+  parentCoutTotal: number;
+  coutImpute: number;
+}
+
+export interface CoutsParentsImpute {
+  coutTotalImpute: number;
+  details: CoutsParentsImputeDetail[];
+}
+
+/**
+ * Calcule le coût imputé proportionnel des vagues parentes via le lineage.
+ * Récursif sur N niveaux (borné à maxDepth pour éviter les boucles infinies).
+ *
+ * Pour chaque parent dans le lineage :
+ *   ratio = nombrePoissonsTransferes / parentNombreInitial
+ *   coutParentImpute = (parentCoutTotal + coutParentsDuParentImpute) × ratio
+ *
+ * @param vagueId  - vague cible (recherche les transferts entrants)
+ * @param siteId   - ID du site (multi-tenancy, R8)
+ * @param maxDepth - profondeur max (défaut 5)
+ * @param visited  - Set de vagueIds déjà traités (anti-boucle)
+ */
+export async function getCoutParentsImpute(
+  vagueId: string,
+  siteId: string,
+  maxDepth: number = 5,
+  visited: Set<string> = new Set()
+): Promise<CoutsParentsImpute> {
+  if (visited.has(vagueId) || maxDepth <= 0) {
+    return { coutTotalImpute: 0, details: [] };
+  }
+  visited.add(vagueId);
+
+  // Récupérer le lineage (parents directs + indirects via getLineage)
+  const lineage = await getLineage(siteId, vagueId, maxDepth);
+
+  if (lineage.parents.length === 0) {
+    return { coutTotalImpute: 0, details: [] };
+  }
+
+  // Récupérer le nombreInitial de la vague cible (pour le ratio)
+  const vagueTarget = await prisma.vague.findUnique({
+    where: { id: vagueId, siteId },
+    select: { nombreInitial: true },
+  });
+  const targetNombreInitial = vagueTarget?.nombreInitial ?? 0;
+
+  if (targetNombreInitial === 0) {
+    return { coutTotalImpute: 0, details: [] };
+  }
+
+  // On ne traite que les parents DIRECTS (level 1) pour éviter les doublons.
+  // getLineage retourne une liste aplatie — on filtre les parents directs
+  // en vérifiant que vagueDestId === vagueId dans les TransfertGroupes.
+  const parentsDirects = await prisma.transfertGroupe.findMany({
+    where: {
+      vagueDestId: vagueId,
+      transfert: { siteId },
+    },
+    include: {
+      vagueSource: { select: { id: true, code: true, nombreInitial: true } },
+      transfert: { select: { date: true } },
+    },
+  });
+
+  let coutTotalImpute = 0;
+  const details: CoutsParentsImputeDetail[] = [];
+
+  for (const g of parentsDirects) {
+    const parentId = g.vagueSourceId;
+
+    if (visited.has(parentId)) continue;
+
+    const parentNombreInitial = g.vagueSource.nombreInitial ?? 0;
+    if (parentNombreInitial === 0) continue;
+
+    const ratio = g.nombrePoissons / parentNombreInitial;
+
+    // Coût total de la vague parente (vague isolée)
+    let parentCoutTotal = 0;
+    try {
+      const parentCout = await getCoutProductionVague(parentId, siteId);
+      parentCoutTotal = parentCout.resume.coutTotal;
+    } catch {
+      // Si la vague parente n'existe plus ou erreur, on ignore
+      continue;
+    }
+
+    // Coûts imputés des grands-parents (récursion)
+    const visitedChild = new Set(visited);
+    const grandParentsCouts = await getCoutParentsImpute(
+      parentId,
+      siteId,
+      maxDepth - 1,
+      visitedChild
+    );
+
+    const coutParentTotal = parentCoutTotal + grandParentsCouts.coutTotalImpute;
+    const coutImpute = Math.round(coutParentTotal * ratio);
+
+    coutTotalImpute += coutImpute;
+
+    details.push({
+      vagueParentId: parentId,
+      vagueParentCode: g.vagueSource.code,
+      dateTransfert: g.transfert.date,
+      nombrePoissons: g.nombrePoissons,
+      parentNombreInitial,
+      ratio: Math.round(ratio * 10000) / 10000,
+      parentCoutTotal: Math.round(coutParentTotal),
+      coutImpute,
+    });
+  }
+
+  return {
+    coutTotalImpute,
+    details,
+  };
 }
 
 /**
@@ -879,12 +1027,18 @@ export interface CoutProductionVague {
  * `dateFin ?? new Date()` est utilise pour le calcul de duree et les
  * allocations de depenses recurrentes.
  *
- * @param vagueId - ID de la vague a analyser
- * @param siteId  - ID du site (multi-tenancy, R8)
+ * ## Toggle includeParents
+ * Si `options.includeParents === true`, appelle `getCoutParentsImpute` et
+ * enrichit le retour avec `coutsParents` et `cycleComplet`.
+ *
+ * @param vagueId  - ID de la vague a analyser
+ * @param siteId   - ID du site (multi-tenancy, R8)
+ * @param options  - Options optionnelles (includeParents)
  */
 export async function getCoutProductionVague(
   vagueId: string,
-  siteId: string
+  siteId: string,
+  options?: { includeParents?: boolean }
 ): Promise<CoutProductionVague> {
   // -------------------------------------------------------------------------
   // 1. Charger la vague cible
@@ -1434,7 +1588,7 @@ export async function getCoutProductionVague(
   // 10. Retour
   // -------------------------------------------------------------------------
 
-  return {
+  const baseResult: CoutProductionVague = {
     vague: {
       id: vague.id,
       code: vague.code,
@@ -1480,6 +1634,31 @@ export async function getCoutProductionVague(
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
     },
   };
+
+  // -------------------------------------------------------------------------
+  // 11. Calcul coûts pré-grossissement (si includeParents)
+  // -------------------------------------------------------------------------
+
+  if (options?.includeParents) {
+    const coutsParents = await getCoutParentsImpute(vagueId, siteId, 5);
+    if (coutsParents.coutTotalImpute > 0) {
+      const coutTotalCycleComplet = Math.round(coutTotal) + coutsParents.coutTotalImpute;
+      const margesCycleComplet = Math.round(revenus) - coutTotalCycleComplet;
+      const roiCycleComplet =
+        coutTotalCycleComplet > 0
+          ? Math.round(((margesCycleComplet / coutTotalCycleComplet) * 100) * 100) / 100
+          : null;
+
+      baseResult.coutsParents = coutsParents;
+      baseResult.cycleComplet = {
+        coutTotalCycleComplet,
+        margesCycleComplet,
+        roiCycleComplet,
+      };
+    }
+  }
+
+  return baseResult;
 }
 
 // ---------------------------------------------------------------------------

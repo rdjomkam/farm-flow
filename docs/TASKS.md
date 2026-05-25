@@ -7375,3 +7375,22 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - BUG-041 — AssignationBac dual-write in POST /api/vagues → FAIT (Haute, 2026-04-23)
 - BUG-042 — Dialog mobile scroll + sticky footer → FAIT (Haute, 2026-04-23)
 - BUG-043 — Mobile bottom nav jitter + safe-area transparency → FAIT (Moyenne, 2026-04-23)
+
+---
+
+## Sprint Pré-Grossissement — Transferts Inter-Vagues
+Voir : [SPRINT-PRE-GROSSISSEMENT.md](sprints/SPRINT-PRE-GROSSISSEMENT.md)
+
+| Story | Type | Statut |
+|-------|------|--------|
+| PG.1 — Enum TypeVague + champ type sur Vague | SCHEMA | TODO |
+| PG.2 — Modèles Transfert/TransfertGroupe/TransfertModification | SCHEMA | TODO |
+| PG.3 — Types TS | TYPES | TODO |
+| PG.4 — Queries Prisma transferts | QUERIES | TODO |
+| PG.5 — ADR règles métier transferts | ADR | TODO |
+| PG.6 — API routes transferts + extension /api/vagues | API | TODO |
+| PG.7 — UI Vague form + liste avec type | UI | TODO |
+| PG.8 — UI Page transfert multi-source mode A/B | UI | TODO |
+| PG.9 — Rapport PDF coût production + toggle | INTEGRATION | TODO |
+| PG.10 — Rapport PDF général + toggle + lineage | INTEGRATION | TODO |
+| PG.11 — Tests E2E + review finale R1-R9 | TEST | TODO |
