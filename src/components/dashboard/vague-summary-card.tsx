@@ -20,7 +20,7 @@ interface VagueSummaryCardProps {
 
 export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
   const t = await getTranslations("vagues");
-  const td = await getTranslations("dashboard.vagues");
+  const td = await getTranslations("dashboard.hero");
 
   return (
     <Link href={`/vagues/${vague.id}`}>
