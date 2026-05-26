@@ -22,6 +22,7 @@ import { useVagueService } from "@/services";
 
 interface ModifierVagueDialogProps {
   vagueId: string;
+  dateDebut: string | Date;
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
@@ -37,6 +38,7 @@ interface ModifierVagueDialogProps {
 
 export function ModifierVagueDialog({
   vagueId,
+  dateDebut,
   nombreInitial,
   poidsMoyenInitial,
   origineAlevins,
@@ -55,6 +57,9 @@ export function ModifierVagueDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
+  // Format date pour input type="date" : YYYY-MM-DD
+  const initialDateStr = new Date(dateDebut).toISOString().slice(0, 10);
+  const [dateDebutStr, setDateDebutStr] = useState(initialDateStr);
   const [nombre, setNombre] = useState(String(nombreInitial));
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
   const [origine, setOrigine] = useState(origineAlevins ?? "");
@@ -64,6 +69,7 @@ export function ModifierVagueDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function resetForm() {
+    setDateDebutStr(initialDateStr);
     setNombre(String(nombreInitial));
     setPoids(String(poidsMoyenInitial));
     setOrigine(origineAlevins ?? "");
@@ -76,6 +82,8 @@ export function ModifierVagueDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
+    if (!dateDebutStr || isNaN(Date.parse(dateDebutStr)))
+      errs.dateDebut = t("form.errors.dateDebut");
     if (!nombre || Number(nombre) <= 0 || !Number.isInteger(Number(nombre)))
       errs.nombreInitial = t("form.errors.nombreInitialEdit");
     if (!poids || Number(poids) <= 0)
@@ -84,7 +92,11 @@ export function ModifierVagueDialog({
 
     setErrors({});
 
+    // N'envoyer dateDebut que si elle a changé
+    const dateDebutChanged = dateDebutStr !== initialDateStr;
+
     const result = await vagueService.update(vagueId, {
+      ...(dateDebutChanged && { dateDebut: new Date(dateDebutStr).toISOString() }),
       nombreInitial: Number(nombre),
       poidsMoyenInitial: Number(poids),
       origineAlevins: origine.trim() || null,
@@ -122,6 +134,14 @@ export function ModifierVagueDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            id="dateDebut"
+            label={t("form.fields.dateDebut")}
+            type="date"
+            value={dateDebutStr}
+            onChange={(e) => setDateDebutStr(e.target.value)}
+            error={errors.dateDebut}
+          />
           <Input
             id="nombreInitial"
             label={t("form.fields.nombreInitial")}

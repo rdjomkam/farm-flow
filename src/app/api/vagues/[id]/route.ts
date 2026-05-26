@@ -167,12 +167,19 @@ export async function PUT(
       }
     }
 
+    if (body.dateDebut !== undefined) {
+      if (typeof body.dateDebut !== "string" || isNaN(Date.parse(body.dateDebut))) {
+        errors.push({ field: "dateDebut", message: "La date de mise en eau n'est pas une date valide (format ISO 8601)." });
+      }
+    }
+
     if (errors.length > 0) {
       return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdateVagueDTO = {};
     if (body.statut != null) data.statut = body.statut;
+    if (body.dateDebut != null) data.dateDebut = body.dateDebut;
     if (body.dateFin != null) data.dateFin = body.dateFin;
     if (body.addBacs != null) data.addBacs = body.addBacs;
     if (body.removeBacIds != null) data.removeBacIds = body.removeBacIds;

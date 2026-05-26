@@ -553,8 +553,20 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
 
     // Bloquer modification champs numeriques si vague TERMINEE
     if (vague.statut === StatutVague.TERMINEE) {
-      if (data.nombreInitial !== undefined || data.poidsMoyenInitial !== undefined || data.origineAlevins !== undefined) {
+      if (data.nombreInitial !== undefined || data.poidsMoyenInitial !== undefined || data.origineAlevins !== undefined || data.dateDebut !== undefined) {
         throw new Error("Impossible de modifier les parametres d'une vague cloturee");
+      }
+    }
+
+    // Validation dateDebut si fournie : doit etre antérieure à dateFin
+    if (data.dateDebut !== undefined) {
+      const newDateDebut = new Date(data.dateDebut);
+      if (isNaN(newDateDebut.getTime())) {
+        throw new Error("La date de mise en eau n'est pas une date valide");
+      }
+      const dateFinRef = data.dateFin ? new Date(data.dateFin) : vague.dateFin;
+      if (dateFinRef && newDateDebut >= dateFinRef) {
+        throw new Error("La date de mise en eau doit etre anterieure a la date de fin");
       }
     }
 
@@ -563,6 +575,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       where: { id },
       data: {
         ...(data.statut && { statut: data.statut }),
+        ...(data.dateDebut && { dateDebut: new Date(data.dateDebut) }),
         ...(data.dateFin && { dateFin: new Date(data.dateFin) }),
         ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
         ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),

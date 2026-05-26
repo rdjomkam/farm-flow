@@ -23,6 +23,7 @@ import { useExportService } from "@/services";
 interface VagueActionMenuProps {
   vagueId: string;
   vagueCode: string;
+  dateDebut: string | Date;
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
@@ -43,6 +44,7 @@ interface VagueActionMenuProps {
 export function VagueActionMenu({
   vagueId,
   vagueCode,
+  dateDebut,
   nombreInitial,
   poidsMoyenInitial,
   origineAlevins,
@@ -186,6 +188,7 @@ export function VagueActionMenu({
 
       <ModifierVagueDialog
         vagueId={vagueId}
+        dateDebut={dateDebut}
         nombreInitial={nombreInitial}
         poidsMoyenInitial={poidsMoyenInitial}
         origineAlevins={origineAlevins}

@@ -263,6 +263,8 @@ export interface CreateVagueDTO {
 export interface UpdateVagueDTO {
   /** Nouveau statut (ex: TERMINEE pour cloturer) */
   statut?: StatutVague;
+  /** Date de mise en eau (ISO 8601) — modifiable si vague EN_COURS */
+  dateDebut?: string;
   /** Date de fin (obligatoire si statut = TERMINEE) */
   dateFin?: string;
   /** Nombre d'alevins au demarrage (non modifiable si vague TERMINEE) */

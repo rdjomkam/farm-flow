@@ -395,6 +395,7 @@ export default async function VagueDetailPage({
             <VagueActionMenu
               vagueId={vague.id}
               vagueCode={vague.code}
+              dateDebut={vague.dateDebut}
               nombreInitial={vague.nombreInitial}
               poidsMoyenInitial={vague.poidsMoyenInitial}
               origineAlevins={vague.origineAlevins}
