@@ -73,11 +73,11 @@ export default async function VaguesPage() {
       const bacsMapped = assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
       const hasPerBacReleves = releves.some((r) => r.bacId !== null);
       if (bacsMapped.length > 0 && hasPerBacReleves) {
+        // Aligné avec indicateurs.ts et finances.ts (fix B5) : vivants déjà après VENTE
         const vivantsByBac = computeVivantsByBac(
           bacsMapped,
           releves as Parameters<typeof computeVivantsByBac>[1],
-          v.nombreInitial,
-          { excludeVentes: true }
+          v.nombreInitial
         );
         const biometriesParBac = new Map<string, number>();
         for (const r of releves) {
@@ -96,7 +96,7 @@ export default async function VaguesPage() {
           }
         }
         if (hasBiomasse) {
-          biomasse = Math.max(0, Math.round((totalBiomasse - totalVenduKg) * 100) / 100);
+          biomasse = Math.round(totalBiomasse * 100) / 100;
         }
       }
 

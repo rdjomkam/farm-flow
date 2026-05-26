@@ -57,8 +57,10 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
           bacId: true,
         },
       },
-      ventes: {
-        where: { statut: { in: ["LIVREE", "CLOTUREE"] } },
+      // FIX : utiliser LigneVente (source de vérité multi-vague) et non Vente
+      // car Vente.vagueId est NULL pour les ventes multi-vagues.
+      // Pas de filtre statut — cohérent avec finances.ts (cout production) et la liste vagues.
+      lignesVente: {
         select: { poidsTotalKg: true },
       },
       configElevage: { select: { poidsObjectif: true } },
@@ -137,9 +139,9 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     }
 
-    const totalVenduKg = (v as Record<string, unknown>).ventes
-      ? ((v as Record<string, unknown>).ventes as { poidsTotalKg: number }[]).reduce(
-          (sum: number, vt: { poidsTotalKg: number }) => sum + vt.poidsTotalKg,
+    const totalVenduKg = (v as Record<string, unknown>).lignesVente
+      ? ((v as Record<string, unknown>).lignesVente as { poidsTotalKg: number }[]).reduce(
+          (sum: number, lv: { poidsTotalKg: number }) => sum + lv.poidsTotalKg,
           0
         )
       : null;
