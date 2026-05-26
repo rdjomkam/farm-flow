@@ -28,6 +28,31 @@ export async function getVagues(
           },
         },
         uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
+        // Pour computeNombreVivantsVague (progress bars)
+        assignations: {
+          where: { dateFin: null },
+          select: { nombreInitial: true, bac: { select: { id: true } } },
+        },
+        // Pour calcul biomasse estimée
+        releves: {
+          where: { OR: [{ typeReleve: "BIOMETRIE" }, { typeReleve: "MORTALITE" }, { typeReleve: "VENTE" }, { typeReleve: "COMPTAGE" }, { typeReleve: "TRANSFERT" }] },
+          orderBy: { date: "asc" },
+          select: {
+            typeReleve: true,
+            date: true,
+            poidsMoyen: true,
+            nombreMorts: true,
+            nombreVendus: true,
+            nombreTransferes: true,
+            nombreCompte: true,
+            bacId: true,
+          },
+        },
+        // Pour totalVenduKg
+        lignesVente: {
+          select: { poidsTotalKg: true },
+        },
+        configElevage: { select: { poidsObjectif: true } },
       },
       orderBy: { dateDebut: "desc" },
       take: limit,

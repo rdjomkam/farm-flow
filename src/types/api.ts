@@ -304,6 +304,12 @@ export interface VagueSummaryResponse {
   createdAt: Date;
   /** Vague bloquee par le plan d'abonnement — ADR-020 */
   isBlocked: boolean;
+  /** Objectif de production en kg (poidsObjectif × nombreInitial / 1000) ou null si pas d'objectif */
+  poidsObjectifKg: number | null;
+  /** Biomasse vivante estimée en kg (vivants × dernier poidsMoyen biometrie) */
+  biomasse: number | null;
+  /** Poids total vendu en kg (SUM LigneVente.poidsTotalKg) */
+  totalVenduKg: number;
 }
 
 /** Reponse liste des vagues */

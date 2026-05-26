@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutVague, TypeVague } from "@/types";
 import type { VagueSummaryResponse } from "@/types";
+import { formatNum } from "@/lib/format";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
@@ -21,8 +22,21 @@ interface VagueCardProps {
 
 function VagueCardBase({ vague }: VagueCardProps) {
   const t = useTranslations("vagues");
+  const td = useTranslations("dashboard.hero");
   const locale = useLocale();
   const statut = vague.statut as StatutVague;
+
+  const biomasseVivante = vague.biomasse ?? 0;
+  const totalVendu = vague.totalVenduKg ?? 0;
+  const totalProduction = biomasseVivante + totalVendu;
+  const hasObjectif = vague.poidsObjectifKg != null && vague.poidsObjectifKg > 0;
+  const pctObjectif = hasObjectif
+    ? Math.min(100, Math.round((totalProduction / (vague.poidsObjectifKg as number)) * 100))
+    : 0;
+  const hasVentes = totalVendu > 0;
+  const pctVendu = hasVentes && totalProduction > 0
+    ? Math.round((totalVendu / totalProduction) * 100)
+    : 0;
 
   return (
     <Link href={`/vagues/${vague.id}`}>
@@ -60,6 +74,44 @@ function VagueCardBase({ vague }: VagueCardProps) {
               <span>{t("card.alevins", { count: vague.nombreInitial })}</span>
             </div>
           </div>
+
+          {/* Progress: Production vs objectif */}
+          {hasObjectif && (
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>{td("objectifLabel")}</span>
+                <span>
+                  {formatNum(totalProduction, 1)} / {formatNum(vague.poidsObjectifKg ?? 0, 0)} kg
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent-green transition-all"
+                  style={{ width: `${pctObjectif}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 text-right">{pctObjectif}%</p>
+            </div>
+          )}
+
+          {/* Progress: Vendu / Production totale */}
+          {hasVentes && totalProduction > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>{td("ventesLabel")}</span>
+                <span>
+                  {formatNum(totalVendu, 1)} / {formatNum(totalProduction, 1)} kg
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, pctVendu)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 text-right">{pctVendu}%</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

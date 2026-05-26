@@ -3,8 +3,9 @@ import { cachedJson } from "@/lib/api-cache";
 import { getVagues } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
-import { Permission, StatutVague, TypePlan, TypeVague, parsePaginationQuery } from "@/types";
+import { Permission, StatutVague, TypePlan, TypeReleve, TypeVague, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
+import { computeVivantsByBac } from "@/lib/calculs";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
@@ -47,6 +48,73 @@ export async function GET(request: NextRequest) {
       const joursEcoules = Math.floor(
         (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
       );
+
+      // Calcul biomasse estimée (vivants × dernier poidsMoyen biometrie)
+      // ADR-043 Phase 3: source = AssignationBac actives
+      const vague = v as typeof v & {
+        assignations?: { nombreInitial: number | null; bac: { id: string } }[];
+        releves?: Array<{
+          typeReleve: TypeReleve | string;
+          date: Date;
+          poidsMoyen: number | null;
+          nombreMorts: number | null;
+          nombreVendus: number | null;
+          nombreTransferes: number | null;
+          nombreCompte: number | null;
+          bacId: string | null;
+        }>;
+        lignesVente?: { poidsTotalKg: number }[];
+        configElevage?: { poidsObjectif: number } | null;
+        poidsObjectifKg?: number | null;
+      };
+
+      const assignations = vague.assignations ?? [];
+      const releves = vague.releves ?? [];
+      const lignesVente = vague.lignesVente ?? [];
+
+      // totalVenduKg
+      const totalVenduKg = lignesVente.reduce((sum, lv) => sum + (lv.poidsTotalKg ?? 0), 0);
+
+      // poidsObjectifKg : direct sur la vague, sinon dérivé du configElevage
+      let poidsObjectifKg: number | null = vague.poidsObjectifKg ?? null;
+      if (poidsObjectifKg == null && vague.configElevage?.poidsObjectif && v.nombreInitial > 0) {
+        poidsObjectifKg = (vague.configElevage.poidsObjectif * v.nombreInitial) / 1000;
+      }
+
+      // biomasse estimée : vivants × dernier poidsMoyen BIOMETRIE
+      let biomasse: number | null = null;
+      const bacsMapped = assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
+      const hasPerBacReleves = releves.some((r) => r.bacId !== null);
+      if (bacsMapped.length > 0 && hasPerBacReleves) {
+        // excludeVentes=true : on garde les vendus comme "vivants" pour la biomasse théorique produite
+        const vivantsByBac = computeVivantsByBac(
+          bacsMapped,
+          releves as Parameters<typeof computeVivantsByBac>[1],
+          v.nombreInitial,
+          { excludeVentes: true }
+        );
+        const biometriesParBac = new Map<string, number>();
+        for (const r of releves) {
+          if (r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null && r.bacId) {
+            biometriesParBac.set(r.bacId, r.poidsMoyen);
+          }
+        }
+        let totalBiomasse = 0;
+        let hasBiomasse = false;
+        for (const bac of bacsMapped) {
+          const poidsMoyen = biometriesParBac.get(bac.id);
+          const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+          if (poidsMoyen && vivantsBac > 0) {
+            totalBiomasse += (poidsMoyen * vivantsBac) / 1000;
+            hasBiomasse = true;
+          }
+        }
+        // Soustraire la biomasse déjà vendue (poissons vendus n'occupent plus les bacs)
+        if (hasBiomasse) {
+          biomasse = Math.max(0, Math.round((totalBiomasse - totalVenduKg) * 100) / 100);
+        }
+      }
+
       return {
         id: v.id,
         code: v.code,
@@ -62,6 +130,9 @@ export async function GET(request: NextRequest) {
         joursEcoules,
         createdAt: v.createdAt,
         isBlocked: false,
+        poidsObjectifKg,
+        biomasse,
+        totalVenduKg: Math.round(totalVenduKg * 100) / 100,
       };
     });
 
@@ -378,6 +449,10 @@ export async function POST(request: NextRequest) {
         nombreBacs: vague.assignations.length,
         joursEcoules,
         createdAt: vague.createdAt,
+        // Nouvelle vague — pas encore de biomasse ni de ventes
+        poidsObjectifKg: vague.poidsObjectifKg ?? null,
+        biomasse: null,
+        totalVenduKg: 0,
       },
       { status: 201 }
     );
