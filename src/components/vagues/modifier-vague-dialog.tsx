@@ -23,6 +23,7 @@ import { useVagueService } from "@/services";
 interface ModifierVagueDialogProps {
   vagueId: string;
   dateDebut: string | Date;
+  dateFin?: string | Date | null;
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
@@ -39,6 +40,7 @@ interface ModifierVagueDialogProps {
 export function ModifierVagueDialog({
   vagueId,
   dateDebut,
+  dateFin,
   nombreInitial,
   poidsMoyenInitial,
   origineAlevins,
@@ -82,8 +84,16 @@ export function ModifierVagueDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!dateDebutStr || isNaN(Date.parse(dateDebutStr)))
+    if (!dateDebutStr || isNaN(Date.parse(dateDebutStr))) {
       errs.dateDebut = t("form.errors.dateDebut");
+    } else if (dateFin) {
+      // Cross-validation : dateDebut doit etre antérieure à dateFin
+      const newDateDebut = new Date(dateDebutStr);
+      const dateFinDate = new Date(dateFin);
+      if (newDateDebut >= dateFinDate) {
+        errs.dateDebut = t("form.errors.dateDebutAvantDateFin");
+      }
+    }
     if (!nombre || Number(nombre) <= 0 || !Number.isInteger(Number(nombre)))
       errs.nombreInitial = t("form.errors.nombreInitialEdit");
     if (!poids || Number(poids) <= 0)

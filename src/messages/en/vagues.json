@@ -60,6 +60,11 @@
     "demarrerVide": "Start empty (assign bacs later)",
     "demarrerVideHint": "The batch will be created without bacs or fish. For pre-growing, add arrivages later. For growing, receive a transfer from a pre-growing batch.",
     "preGrossissementHint": "Track fry from 10g to 15g before growing.",
+    "vide": {
+      "title": "Empty batch — bacs assigned later",
+      "preGrossissementHint": "Once created, add arrivages to assign bacs and record incoming fish.",
+      "grossissementHint": "Once created, it can receive a transfer from a pre-growing batch."
+    },
     "create": {
       "title": "New batch",
       "description": "Create a new fish lot to track.",
@@ -112,6 +117,7 @@
     "errors": {
       "code": "Code is required.",
       "dateDebut": "Start date is required.",
+      "dateDebutAvantDateFin": "Start date must be before end date.",
       "nombreInitial": "Initial count must be greater than 0.",
       "poidsMoyenInitial": "Average weight must be greater than 0.",
       "bacIds": "Select at least one tank.",

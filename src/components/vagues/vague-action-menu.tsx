@@ -24,6 +24,7 @@ interface VagueActionMenuProps {
   vagueId: string;
   vagueCode: string;
   dateDebut: string | Date;
+  dateFin?: string | Date | null;
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
@@ -45,6 +46,7 @@ export function VagueActionMenu({
   vagueId,
   vagueCode,
   dateDebut,
+  dateFin,
   nombreInitial,
   poidsMoyenInitial,
   origineAlevins,
@@ -189,6 +191,7 @@ export function VagueActionMenu({
       <ModifierVagueDialog
         vagueId={vagueId}
         dateDebut={dateDebut}
+        dateFin={dateFin}
         nombreInitial={nombreInitial}
         poidsMoyenInitial={poidsMoyenInitial}
         origineAlevins={origineAlevins}

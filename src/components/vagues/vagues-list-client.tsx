@@ -341,6 +341,18 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                 </FormSection>
               )}
 
+              {/* Info banner — mode vide : explique au technicien comment alimenter ensuite */}
+              {isVide && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                  <p className="font-medium text-primary">{t("form.vide.title")}</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {typeVague === TypeVague.PRE_GROSSISSEMENT
+                      ? t("form.vide.preGrossissementHint")
+                      : t("form.vide.grossissementHint")}
+                  </p>
+                </div>
+              )}
+
               {/* Population + bacs — masqués si mode vide */}
               {!isVide && (
                 <>
