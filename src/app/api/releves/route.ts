@@ -173,6 +173,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // TRANSFERT relevés are auto-created by the transfert flow — block manual creation
+    // TODO: bloquer aussi "ARRIVAGE" quand TypeReleve.ARRIVAGE sera ajouté à l'enum
+    if (body.typeReleve === TypeReleve.TRANSFERT) {
+      return apiError(400, "Les releves de type TRANSFERT sont crees automatiquement lors d'un transfert.", {
+        errors: [{ field: "typeReleve", message: "Type TRANSFERT non autorise en creation manuelle." }],
+      });
+    }
+
     // ADR-044 §R3 — Validation XOR : vagueId et lotAlevinsId sont mutuellement exclusifs
     const hasVagueId = body.vagueId != null && body.vagueId !== "";
     const hasLotAlevinsId = body.lotAlevinsId != null && body.lotAlevinsId !== "";

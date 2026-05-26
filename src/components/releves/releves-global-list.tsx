@@ -24,6 +24,7 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.TRI]: "default",
   [TypeReleve.VENTE]: "warning",
   [TypeReleve.TRANSFERT]: "info",
+  [TypeReleve.ARRIVAGE]: "info",
 };
 
 interface Props {

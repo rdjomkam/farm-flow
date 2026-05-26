@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Container, Calendar, Fish, Scissors } from "lucide-react";
+import { ArrowLeft, Container, Calendar, Fish, Scissors, Plus } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
@@ -413,18 +413,26 @@ export default async function VagueDetailPage({
           )}
         </section>
 
-        {/* CTA Transfert — PRE_GROSSISSEMENT en cours */}
+        {/* CTAs — PRE_GROSSISSEMENT en cours */}
         {vague.type === TypeVague.PRE_GROSSISSEMENT && isEnCours && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-primary">{t("transferer")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{t("transfererHint")}</p>
             </div>
-            <Button variant="outline" size="sm" asChild className="shrink-0">
-              <Link href={`/vagues/${vague.id}/transfert/nouveau`}>
-                {t("transferer")}
-              </Link>
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/vagues/${vague.id}/arrivage/nouveau`}>
+                  <Plus className="h-4 w-4" />
+                  Ajouter un arrivage
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/vagues/${vague.id}/transfert/nouveau`}>
+                  {t("transferer")}
+                </Link>
+              </Button>
+            </div>
           </div>
         )}
 

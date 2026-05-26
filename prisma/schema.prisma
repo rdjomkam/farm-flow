@@ -44,6 +44,11 @@ enum TypeReleve {
    * Côté source uniquement (la destination reçoit un BIOMETRIE).
    */
   TRANSFERT
+  /**
+   * Relevé auto-créé lors de l'enregistrement d'un arrivage (entrée externe de poissons).
+   * Traçabilité de l'ajout de poissons dans une vague PRE_GROSSISSEMENT depuis l'extérieur.
+   */
+  ARRIVAGE
 }
 
 enum TypeAliment {
@@ -722,6 +727,9 @@ model Site {
   notes                  NoteIngenieur[]          @relation("NotesDKFarm")
   // Sprint 24 — Calibrage
   calibrages             Calibrage[]
+  // AR.1 — Arrivages
+  arrivages              Arrivage[]
+  arrivageModifications  ArrivageModification[]
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
@@ -1105,6 +1113,9 @@ model User {
   // Sprint 24 — Calibrage
   calibrages             Calibrage[]             @relation("CalibrageUser")
   releves                Releve[]                @relation("ReleveUser")
+  // AR.1 — Arrivages
+  arrivages              Arrivage[]              @relation("ArrivageUser")
+  arrivageModifications  ArrivageModification[]  @relation("ArrivageModificationUser")
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
@@ -1188,7 +1199,8 @@ model Bac {
   releves             Releve[]
   lotsAlevins         LotAlevins[]
   activites           Activite[]
-  calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
+  calibrageGroupesDst  CalibrageGroupe[]  @relation("GroupeDestBac")
+  arrivagesGroupesDst  ArrivageGroupe[]   @relation("ArrivageGroupeBac")
   lignesVente         LigneVente[]      @relation("BacLignesVente")
   // PG.2 — Transferts pré-grossissement
   transfertsBacSource TransfertGroupe[] @relation("TransfertsBacSource")
@@ -1252,6 +1264,8 @@ model Vague {
   notes                  NoteIngenieur[]
   // Sprint 24 — Calibrage
   calibrages             Calibrage[]
+  // AR.1 — Arrivages
+  arrivages              Arrivage[]             @relation("VagueArrivages")
   // Sprint FD — Feed Analytics
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
@@ -1400,6 +1414,10 @@ model Releve {
   calibrageId String?
   calibrage   Calibrage? @relation("CalibrageReleves", fields: [calibrageId], references: [id], onDelete: SetNull)
 
+  // Lien vers l'arrivage source (nullable — rempli si auto-cree lors d'un arrivage)
+  arrivageId String?
+  arrivage   Arrivage? @relation("ArrivageReleves", fields: [arrivageId], references: [id], onDelete: SetNull)
+
   // Traçabilité modification (Sprint 26, ADR-014)
   modifie       Boolean              @default(false)
   modifications ReleveModification[]
@@ -1419,6 +1437,7 @@ model Releve {
   @@index([bacId])
   @@index([date])
   @@index([calibrageId])
+  @@index([arrivageId])
   @@index([siteId])
   @@index([lotAlevinsId])
   @@index([userId])
@@ -3889,6 +3908,100 @@ model TransfertModification {
   createdAt DateTime @default(now())
 
   @@index([transfertGroupeId])
+  @@index([userId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Arrivage (AR.1)
+// ──────────────────────────────────────────
+
+/**
+ * Arrivage — enregistrement d'une entrée externe de poissons dans une vague PRE_GROSSISSEMENT.
+ * Différent du Transfert (transfert sortant inter-vagues) : ici c'est une entrée depuis
+ * l'extérieur (achat fournisseur, alevinage interne, etc.).
+ * Suit le pattern Calibrage (snapshot avant/après, groupes par bac, modifications auditées).
+ * R8 : siteId obligatoire.
+ */
+model Arrivage {
+  id      String   @id @default(cuid())
+  vagueId String
+  vague   Vague    @relation("VagueArrivages", fields: [vagueId], references: [id], onDelete: Restrict)
+  date    DateTime @default(now())
+  /// Origine de l'arrivage — texte libre : "Achat Fournisseur X", "Alevinage interne", etc.
+  origine String?
+  notes   String?
+
+  userId String
+  user   User   @relation("ArrivageUser", fields: [userId], references: [id])
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  groupes ArrivageGroupe[]
+
+  /// Relevés auto-créés lors de l'arrivage (ARRIVAGE + BIOMETRIE par bac)
+  releves Releve[] @relation("ArrivageReleves")
+
+  /// Flag rapide : true si cet arrivage a été modifié après création
+  modifie       Boolean               @default(false)
+  modifications ArrivageModification[]
+
+  /// Snapshot de l'état vague+bacs avant création de l'arrivage
+  snapshotAvant      Json?
+  /// Snapshot de l'état vague+bacs avant la dernière modification
+  snapshotAvantModif Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vagueId])
+  @@index([siteId])
+  @@index([userId])
+}
+
+/**
+ * ArrivageGroupe — un groupe de poissons arrivant dans un bac de destination.
+ *
+ * Chaque groupe correspond à un bac destinataire avec un nombre de poissons et un poids moyen.
+ * Cascade DELETE avec Arrivage.
+ * Pas de siteId (cohérent avec CalibrageGroupe — le siteId est porté par Arrivage).
+ */
+model ArrivageGroupe {
+  id               String   @id @default(cuid())
+  arrivageId       String
+  arrivage         Arrivage @relation(fields: [arrivageId], references: [id], onDelete: Cascade)
+  destinationBacId String
+  destinationBac   Bac      @relation("ArrivageGroupeBac", fields: [destinationBacId], references: [id])
+  nombrePoissons   Int
+  /// Poids moyen des poissons en grammes
+  poidsMoyen       Float
+  createdAt        DateTime @default(now())
+
+  @@index([arrivageId])
+  @@index([destinationBacId])
+}
+
+/**
+ * ArrivageModification — trace d'une modification d'arrivage avec raison d'audit.
+ *
+ * Stocke les snapshots avant/après complets (JSON) pour permettre l'annulation.
+ * Cascade DELETE avec Arrivage.
+ * R8 : siteId obligatoire (pattern CalibrageModification).
+ */
+model ArrivageModification {
+  id         String   @id @default(cuid())
+  arrivageId String
+  arrivage   Arrivage @relation(fields: [arrivageId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("ArrivageModificationUser", fields: [userId], references: [id])
+  raison        String
+  snapshotAvant Json
+  snapshotApres Json
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([arrivageId])
   @@index([userId])
   @@index([siteId])
 }

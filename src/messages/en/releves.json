@@ -19,7 +19,9 @@
     "OBSERVATION": "Observation",
     "RENOUVELLEMENT": "Water renewal",
     "TRI": "Size sorting",
-    "VENTE": "Sale"
+    "VENTE": "Sale",
+    "TRANSFERT": "Transfer",
+    "ARRIVAGE": "Arrival"
   },
   "list": {
     "title": "Records ({count})",

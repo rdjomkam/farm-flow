@@ -197,6 +197,8 @@ export enum TypeReleve {
   VENTE = "VENTE",
   /** Releve auto-cree lors d'un transfert inter-vagues — tracabilite cote source (PRE_GROSSISSEMENT) */
   TRANSFERT = "TRANSFERT",
+  /** Releve auto-cree lors de l'enregistrement d'un arrivage (entree externe de poissons) */
+  ARRIVAGE = "ARRIVAGE",
 }
 
 /** Type d'aliment distribue */
@@ -715,6 +717,9 @@ export interface Releve {
 
   /** ID du calibrage source (nullable — rempli si auto-cree lors d'un calibrage) */
   calibrageId?: string | null;
+
+  /** ID de l'arrivage source (nullable — rempli si auto-cree lors d'un arrivage) */
+  arrivageId?: string | null;
 
   /** ID du lot d'alevins lie (nullable — rempli si releve de suivi alevinage, R1-S4) */
   lotAlevinsId?: string | null;
@@ -3136,6 +3141,103 @@ export interface CalibrageModificationWithUser extends CalibrageModification {
 /** Calibrage avec groupes, relations et historique complet de modifications */
 export interface CalibrageWithModifications extends CalibrageWithRelations {
   modifications: CalibrageModificationWithUser[];
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Arrivage (AR.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Arrivage — entree externe de poissons dans une vague PRE_GROSSISSEMENT.
+ *
+ * Différent du Transfert (transfert sortant inter-vagues) : ici c'est une entree
+ * depuis l'exterieur (achat fournisseur, alevinage interne, etc.).
+ * Suit le pattern Calibrage (snapshot avant/apres, groupes par bac, modifications auditees).
+ * siteId est requis (R8).
+ */
+export interface Arrivage {
+  id: string;
+  /** Vague dans laquelle arrivent les poissons */
+  vagueId: string;
+  /** Date de l'arrivage */
+  date: Date;
+  /** Origine de l'arrivage — texte libre (nullable) */
+  origine: string | null;
+  /** Notes libres (nullable) */
+  notes: string | null;
+  /** Utilisateur ayant enregistre l'arrivage */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  /** Flag rapide : true si cet arrivage a ete modifie apres creation */
+  modifie: boolean;
+  /** Snapshot de l'etat vague+bacs avant creation de l'arrivage (nullable) */
+  snapshotAvant: unknown | null;
+  /** Snapshot de l'etat vague+bacs avant la derniere modification (nullable) */
+  snapshotAvantModif: unknown | null;
+  /** Historique des modifications (charge en option) */
+  modifications?: ArrivageModification[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * ArrivageGroupe — un groupe de poissons arrivant dans un bac de destination.
+ *
+ * Chaque groupe correspond a un bac destinataire avec un nombre de poissons et un poids moyen.
+ * Cascade DELETE avec Arrivage.
+ */
+export interface ArrivageGroupe {
+  id: string;
+  /** Arrivage auquel appartient ce groupe */
+  arrivageId: string;
+  /** Bac de destination ou ce groupe est place */
+  destinationBacId: string;
+  /** Nombre de poissons dans ce groupe */
+  nombrePoissons: number;
+  /** Poids moyen des poissons en grammes */
+  poidsMoyen: number;
+  createdAt: Date;
+}
+
+/** Arrivage avec ses relations chargees */
+export interface ArrivageWithRelations extends Arrivage {
+  vague: { id: string; code: string };
+  user: { id: string; name: string };
+  groupes: (ArrivageGroupe & {
+    destinationBac: { id: string; nom: string };
+  })[];
+}
+
+/**
+ * ArrivageModification — trace d'une modification d'arrivage avec raison d'audit.
+ *
+ * Stocke les snapshots avant/apres complets (JSON) pour permettre l'annulation.
+ * Cascade DELETE avec Arrivage.
+ * siteId obligatoire (R8).
+ */
+export interface ArrivageModification {
+  id:            string;
+  arrivageId:    string;
+  userId:        string;
+  raison:        string;
+  snapshotAvant: unknown;
+  snapshotApres: unknown;
+  siteId:        string;
+  createdAt:     Date;
+}
+
+/** ArrivageModification avec l'utilisateur denormalise (pour affichage) */
+export interface ArrivageModificationWithUser extends ArrivageModification {
+  user: {
+    id:   string;
+    name: string;
+  };
+}
+
+/** Arrivage avec groupes, relations et historique complet de modifications */
+export interface ArrivageWithModifications extends ArrivageWithRelations {
+  modifications: ArrivageModificationWithUser[];
 }
 
 // ---------------------------------------------------------------------------

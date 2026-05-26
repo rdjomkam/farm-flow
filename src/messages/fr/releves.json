@@ -19,7 +19,9 @@
     "OBSERVATION": "Observation",
     "RENOUVELLEMENT": "Renouvellement eau",
     "TRI": "Tri par taille",
-    "VENTE": "Vente"
+    "VENTE": "Vente",
+    "TRANSFERT": "Transfert",
+    "ARRIVAGE": "Arrivage"
   },
   "list": {
     "title": "Relevés ({count})",

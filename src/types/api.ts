@@ -3318,3 +3318,54 @@ export interface VagueLineage {
     nombreMorts: number;
   }[];
 }
+
+// ---------------------------------------------------------------------------
+// Arrivages (AR.2 — DTOs API)
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour creer un arrivage d'alevins dans une vague PRE_GROSSISSEMENT.
+ *
+ * Pattern proche de CreateCalibrageDTO : un en-tete + N groupes (bacs destination).
+ * La vague doit etre de type PRE_GROSSISSEMENT et statut EN_COURS.
+ */
+export interface CreateArrivageDTO {
+  /** ID de la vague PRE_GROSSISSEMENT receveuse */
+  vagueId: string;
+  /** Date de l'arrivage (ISO 8601 — defaut : maintenant) */
+  date?: string;
+  /** Provenance libre : "Achat Fournisseur X", "Alevinage interne", etc. (optionnel) */
+  origine?: string;
+  /** Notes libres (optionnel) */
+  notes?: string;
+  /** Distribution des alevins par bac de destination (au moins 1 requis) */
+  groupes: ArrivageGroupeInputDTO[];
+}
+
+/** Specification d'un bac de destination lors de la creation d'un arrivage */
+export interface ArrivageGroupeInputDTO {
+  /** ID du bac de destination — doit appartenir a la vague */
+  destinationBacId: string;
+  /** Nombre de poissons affectes a ce bac — doit etre > 0 */
+  nombrePoissons: number;
+  /** Poids moyen des alevins en grammes — doit etre > 0 */
+  poidsMoyen: number;
+}
+
+/**
+ * DTO pour modifier un ArrivageGroupe de facon retroactive avec audit obligatoire.
+ *
+ * La raison est obligatoire. L'API sauvegarde un snapshot avant modification
+ * et cree un enregistrement ArrivageModification.
+ * Au moins un champ metier doit etre fourni (hors raison).
+ */
+export interface UpdateArrivageGroupeDTO {
+  /** Motif de la modification — obligatoire, non vide */
+  raison: string;
+  /** Nouveau nombre de poissons (optionnel) */
+  nombrePoissons?: number;
+  /** Nouveau poids moyen en grammes (optionnel) */
+  poidsMoyen?: number;
+  /** Nouveau bac de destination — changement de bac, rare (optionnel) */
+  destinationBacId?: string;
+}

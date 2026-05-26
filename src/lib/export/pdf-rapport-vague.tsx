@@ -90,6 +90,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.TRI]: "Tri",
   [TypeReleve.VENTE]: "Vente",
   [TypeReleve.TRANSFERT]: "Transfert",
+  [TypeReleve.ARRIVAGE]: "Arrivage",
 };
 
 const statutLabels: Record<StatutVague, string> = {

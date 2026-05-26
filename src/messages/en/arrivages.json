@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "New arrival",
+    "subtitle": "Record the arrival of new fingerlings"
+  },
+  "form": {
+    "date": "Date",
+    "origine": "Origin",
+    "originePlaceholder": "E.g.: Purchase from supplier Y, Internal hatchery...",
+    "notes": "Notes",
+    "destinations": "Destinations",
+    "destinationLabel": "Destination tank",
+    "nombrePoissonsLabel": "Number of fish",
+    "poidsMoyenLabel": "Average weight (g)",
+    "addDestination": "+ Add a destination",
+    "removeDestination": "Remove",
+    "recap": "Summary",
+    "totalPoissons": "Total fish",
+    "poidsMoyenPondere": "Weighted average weight",
+    "biomasseTotale": "Total biomass",
+    "submit": "Record arrival",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "minDestination": "At least one destination is required",
+    "qtyInvalid": "Invalid number of fish",
+    "poidsInvalid": "Invalid average weight",
+    "duplicateBac": "Duplicate destination tank"
+  },
+  "ctaButton": "Add an arrival",
+  "ctaHint": "Record the arrival of new fingerlings in this wave",
+  "success": "Arrival recorded successfully",
+  "error": {
+    "generic": "An error occurred",
+    "validation": "Invalid data"
+  }
+}

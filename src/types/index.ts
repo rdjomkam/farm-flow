@@ -214,6 +214,13 @@ export type {
   CalibrageModification,
   CalibrageModificationWithUser,
   CalibrageWithModifications,
+  // AR.1 — Arrivages
+  Arrivage,
+  ArrivageGroupe,
+  ArrivageWithRelations,
+  ArrivageModification,
+  ArrivageModificationWithUser,
+  ArrivageWithModifications,
   // Sprint 26 — CustomPlaceholder
   CustomPlaceholder,
   // Sprint 30 — Abonnements
@@ -677,4 +684,11 @@ export type {
   TransfertGroupeInputDTO,
   UpdateTransfertGroupeDTO,
   VagueLineage,
+} from "./api";
+
+// Arrivages (AR.2 — DTOs API)
+export type {
+  CreateArrivageDTO,
+  ArrivageGroupeInputDTO,
+  UpdateArrivageGroupeDTO,
 } from "./api";

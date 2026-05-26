@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "Nouvel arrivage",
+    "subtitle": "Enregistrer l'arrivée de nouveaux alevins"
+  },
+  "form": {
+    "date": "Date",
+    "origine": "Origine",
+    "originePlaceholder": "Ex: Achat fournisseur Y, Alevinage interne...",
+    "notes": "Notes",
+    "destinations": "Destinations",
+    "destinationLabel": "Bac destination",
+    "nombrePoissonsLabel": "Nombre de poissons",
+    "poidsMoyenLabel": "Poids moyen (g)",
+    "addDestination": "+ Ajouter une destination",
+    "removeDestination": "Supprimer",
+    "recap": "Récapitulatif",
+    "totalPoissons": "Total poissons",
+    "poidsMoyenPondere": "Poids moyen pondéré",
+    "biomasseTotale": "Biomasse totale",
+    "submit": "Enregistrer l'arrivage",
+    "cancel": "Annuler"
+  },
+  "errors": {
+    "minDestination": "Au moins une destination est requise",
+    "qtyInvalid": "Nombre de poissons invalide",
+    "poidsInvalid": "Poids moyen invalide",
+    "duplicateBac": "Bac destination dupliqué"
+  },
+  "ctaButton": "Ajouter un arrivage",
+  "ctaHint": "Enregistrer l'arrivée de nouveaux alevins dans cette vague",
+  "success": "Arrivage enregistré avec succès",
+  "error": {
+    "generic": "Une erreur est survenue",
+    "validation": "Données invalides"
+  }
+}

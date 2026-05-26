@@ -233,7 +233,15 @@ export function ReleveFormFields({
             <SelectValue placeholder={t("form.fields.typeRelevePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {Object.values(TypeReleve).filter(tp => tp !== TypeReleve.VENTE).map((tp) => (
+            {(() => {
+              // Types créés automatiquement par leurs flows dédiés — non sélectionnables ici
+              const HIDDEN_TYPES_RELEVE = new Set<string>([
+                TypeReleve.VENTE,
+                TypeReleve.TRANSFERT,
+                // "ARRIVAGE", // TODO: décommenter quand TypeReleve.ARRIVAGE sera ajouté à l'enum
+              ]);
+              return Object.values(TypeReleve).filter((tp) => !HIDDEN_TYPES_RELEVE.has(tp));
+            })().map((tp) => (
               <SelectItem key={tp} value={tp}>{t(`types.${tp}`)}</SelectItem>
             ))}
           </SelectContent>

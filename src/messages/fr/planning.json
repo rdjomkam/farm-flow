@@ -80,7 +80,9 @@
     "observation": "Observation",
     "renewal": "Renouvellement",
     "sorting": "Tri",
-    "sale": "Vente"
+    "sale": "Vente",
+    "transfer": "Transfert",
+    "arrival": "Arrivage"
   },
   "phases": {
     "ACCLIMATATION": "Acclimatation",
