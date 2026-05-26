@@ -388,6 +388,10 @@ export async function createTransfert(
         where: { id: vagueDestId },
         select: { nombreInitial: true, poidsMoyenInitial: true },
       });
+      // Si la vague destination était vide, ce transfert est sa première mise en eau
+      // → on synchronise dateDebut pour que J reflète la vraie durée d'élevage.
+      // (Pour Mode A, la vague vient d'être créée avec dateDebut = transfertDate, donc no-op.)
+      const wasDestEmpty = vagueDest.nombreInitial === 0;
       let accTotal = vagueDest.nombreInitial;
       let accAvg = vagueDest.poidsMoyenInitial;
 
@@ -550,6 +554,7 @@ export async function createTransfert(
         data: {
           nombreInitial: accTotal,
           poidsMoyenInitial: accAvg,
+          ...(wasDestEmpty && { dateDebut: transfertDate }),
         },
       });
 

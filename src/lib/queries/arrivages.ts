@@ -238,6 +238,11 @@ export async function createArrivage(
         select: { nombreInitial: true, poidsMoyenInitial: true },
       });
 
+      // Si la vague était vide avant cet arrivage, c'est la première mise en eau
+      // → on synchronise dateDebut avec la date de l'arrivage pour que J reflète
+      // la vraie durée d'élevage.
+      const wasEmpty = vagueActuelle.nombreInitial === 0;
+
       let accTotal = vagueActuelle.nombreInitial;
       let accAvg = vagueActuelle.poidsMoyenInitial;
 
@@ -255,6 +260,7 @@ export async function createArrivage(
         data: {
           nombreInitial: accTotal,
           poidsMoyenInitial: accAvg,
+          ...(wasEmpty && { dateDebut: arrivageDate }),
         },
       });
 
