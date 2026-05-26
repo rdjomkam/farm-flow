@@ -1227,23 +1227,28 @@ export async function getCoutProductionVague(
   ]);
 
   // -------------------------------------------------------------------------
-  // 2bis. Calcul biomasse estimée (pour coutParKg)
+  // 2bis. Calcul biomasse vivante (biomasse réellement présente dans les bacs)
   //
-  // Utilise excludeVentes=true pour ignorer les releves de type VENTE
-  // (qui peuvent etre incoherents avec les ventes reelles).
-  // A la place, on soustrait les poissons reellement vendus (lignesVente.nombrePoissons)
-  // pour obtenir la biomasse restante en ferme.
+  // ALIGNEMENT AVEC indicateurs.ts (carte stats) : utilise computeVivantsByBac
+  // SANS excludeVentes, donc les VENTE relevés sont déjà soustraits des vivants
+  // par bac. Pas de scaling proportionnel — le calcul reflète directement ce
+  // qui est observé dans chaque bac : poidsMoyen × vivants_actuels.
   //
-  // biomasseProduite = biomasseKg (restante) + poidsTotalVendu (reel)
+  // Avant : excludeVentes=true puis scaling proportionnel par LigneVente.nombrePoissons.
+  // Le scaling supposait que vendus et vivants avaient le même poids moyen,
+  // ce qui sous-estimait la biomasse quand les vendus étaient plus gros que
+  // les vivants restants (cas typique en fin de cycle).
+  //
+  // biomasseProduite = biomasseKg (vivante actuelle) + poidsTotalVendu (LigneVente)
+  //                  + biomasseTransferee (TransfertGroupe sortants)
   // -------------------------------------------------------------------------
 
   // ADR-043 Phase 3: mapper les assignations en forme {id, nombreInitial} pour les calculs
   const bacsVagueMapped = bacsVague.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
 
   const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
-  // excludeVentes=true : on ignore les releves VENTE pour eviter les incoherences
-  // Les ventes reelles seront soustraites plus bas via quantitePoissons
-  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { excludeVentes: true });
+  // Aligné avec indicateurs.ts : VENTE relevés soustraits des vivants par bac
+  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial);
 
   // Nombre total de poissons reellement vendus (source de verite : LigneVente)
   const totalPoissonsVendus = ventes.reduce((acc, lv) => acc + lv.nombrePoissons, 0);
@@ -1258,36 +1263,28 @@ export async function getCoutProductionVague(
       }
     }
 
-    // Biomasse AVANT soustraction des ventes (vivants incluent les poissons vendus)
-    let biomasseAvantVentes = 0;
-    let totalVivantsAvantVentes = 0;
+    // Biomasse vivante par bac (vivants déjà après soustraction des VENTE relevés)
+    let totalBiomasse = 0;
     let hasBiomasse = false;
     for (const bac of bacsVagueMapped) {
       const bio = biometriesParBac.get(bac.id);
       const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
-      totalVivantsAvantVentes += vivantsBac;
       if (bio && vivantsBac > 0) {
-        biomasseAvantVentes += (bio.poidsMoyen * vivantsBac) / 1000;
+        totalBiomasse += (bio.poidsMoyen * vivantsBac) / 1000;
         hasBiomasse = true;
       }
     }
 
-    if (hasBiomasse && totalVivantsAvantVentes > 0) {
-      // Soustraire les poissons vendus proportionnellement
-      const vivantsRestants = Math.max(0, totalVivantsAvantVentes - totalPoissonsVendus);
-      const ratioRestant = vivantsRestants / totalVivantsAvantVentes;
-      biomasseKg = Math.round(biomasseAvantVentes * ratioRestant * 100) / 100;
+    if (hasBiomasse) {
+      biomasseKg = Math.round(totalBiomasse * 100) / 100;
     }
   } else {
-    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial, { excludeVentes: true });
+    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial);
     const biometrieReleves = relevesVague
       .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
-    if (biometrieReleves.length > 0) {
+    if (biometrieReleves.length > 0 && nombreVivants > 0) {
       const last = biometrieReleves[biometrieReleves.length - 1];
-      const vivantsRestants = Math.max(0, nombreVivants - totalPoissonsVendus);
-      biomasseKg = vivantsRestants > 0
-        ? Math.round(((last.poidsMoyen as number) * vivantsRestants) / 1000 * 100) / 100
-        : null;
+      biomasseKg = Math.round(((last.poidsMoyen as number) * nombreVivants) / 1000 * 100) / 100;
     }
   }
 
