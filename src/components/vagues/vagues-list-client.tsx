@@ -120,8 +120,10 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     return sum + (Number.isFinite(v) && v > 0 ? v : 0);
   }, 0);
 
-  // Derived: mode "vide" = GROSSISSEMENT + demarrerVide checked
-  const isVide = typeVague === TypeVague.GROSSISSEMENT && demarrerVide;
+  // Derived: mode "vide" = checkbox cochée (disponible pour les deux types)
+  // PRE_GROSSISSEMENT vide : bacs assignés via arrivages plus tard
+  // GROSSISSEMENT vide : bacs assignés via transferts plus tard
+  const isVide = demarrerVide;
   // PRE_GROSSISSEMENT does not require configElevage
   const configRequired = typeVague !== TypeVague.PRE_GROSSISSEMENT && !isVide;
 
@@ -286,23 +288,23 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                   </label>
                 </div>
 
-                {/* Checkbox "démarrer vide" — uniquement pour GROSSISSEMENT */}
-                {typeVague === TypeVague.GROSSISSEMENT && (
-                  <label className={`mt-1 flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                    demarrerVide ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={demarrerVide}
-                      onChange={(e) => setDemarrerVide(e.target.checked)}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <div>
-                      <span className="font-medium">{t("form.demarrerVide")}</span>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{t("form.demarrerVideHint")}</p>
-                    </div>
-                  </label>
-                )}
+                {/* Checkbox "démarrer vide" — disponible pour les deux types
+                    PRE_GROSSISSEMENT : bacs assignés via arrivages plus tard
+                    GROSSISSEMENT : bacs assignés via transferts plus tard */}
+                <label className={`mt-1 flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                  demarrerVide ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={demarrerVide}
+                    onChange={(e) => setDemarrerVide(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <div>
+                    <span className="font-medium">{t("form.demarrerVide")}</span>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{t("form.demarrerVideHint")}</p>
+                  </div>
+                </label>
               </FormSection>
 
               <FormSection title={t("form.sections.identification.title")} description={t("form.sections.identification.description")}>

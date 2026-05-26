@@ -57,8 +57,8 @@
   "voirVaguesPreGrossissement": "Voir les vagues de pré-grossissement",
   "form": {
     "typeLabel": "Type de vague",
-    "demarrerVide": "Démarrer vide (alimenté par transfert)",
-    "demarrerVideHint": "La vague sera créée sans poissons et recevra un transfert depuis une vague de pré-grossissement.",
+    "demarrerVide": "Démarrer vide (assigner les bacs plus tard)",
+    "demarrerVideHint": "La vague sera créée sans bacs ni poissons. Pour une pré-grossissement, ajoutez ensuite des arrivages. Pour une grossissement, recevez un transfert depuis une vague de pré-grossissement.",
     "preGrossissementHint": "Permet de suivre les alevins de 10g à 15g avant grossissement.",
     "create": {
       "title": "Nouvelle vague",

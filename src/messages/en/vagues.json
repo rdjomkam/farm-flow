@@ -57,8 +57,8 @@
   "voirVaguesPreGrossissement": "View pre-growing waves",
   "form": {
     "typeLabel": "Batch type",
-    "demarrerVide": "Start empty (fed by transfer)",
-    "demarrerVideHint": "The batch will be created with no fish and will receive a transfer from a pre-growing batch.",
+    "demarrerVide": "Start empty (assign bacs later)",
+    "demarrerVideHint": "The batch will be created without bacs or fish. For pre-growing, add arrivages later. For growing, receive a transfer from a pre-growing batch.",
     "preGrossissementHint": "Track fry from 10g to 15g before growing.",
     "create": {
       "title": "New batch",

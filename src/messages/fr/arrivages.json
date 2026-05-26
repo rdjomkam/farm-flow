@@ -12,7 +12,7 @@
     "destinationLabel": "Bac destination",
     "nombrePoissonsLabel": "Nombre de poissons",
     "poidsMoyenLabel": "Poids moyen (g)",
-    "addDestination": "+ Ajouter une destination",
+    "addDestination": "Ajouter une destination",
     "removeDestination": "Supprimer",
     "recap": "Récapitulatif",
     "totalPoissons": "Total poissons",
