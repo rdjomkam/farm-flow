@@ -63,7 +63,8 @@
     "vide": {
       "title": "Vague vide — bacs assignés plus tard",
       "preGrossissementHint": "Une fois créée, ajoutez des arrivages pour assigner les bacs et enregistrer les poissons reçus.",
-      "grossissementHint": "Une fois créée, elle pourra recevoir un transfert depuis une vague de pré-grossissement."
+      "grossissementHint": "Une fois créée, elle pourra recevoir un transfert depuis une vague de pré-grossissement.",
+      "dateHint": "La date de mise en eau sera précisée plus tard, lors du premier arrivage ou transfert (modifiable via Modifier la vague)."
     },
     "create": {
       "title": "Nouvelle vague",

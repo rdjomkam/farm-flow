@@ -133,7 +133,8 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     const nombreInitialNum = isVide ? 0 : Number(nombreInitial);
 
     if (!code.trim()) newErrors.code = t("form.errors.code");
-    if (!dateDebut) newErrors.dateDebut = t("form.errors.dateDebut");
+    // dateDebut obligatoire uniquement si vague non-vide (sinon auto-remplie avec today)
+    if (!isVide && !dateDebut) newErrors.dateDebut = t("form.errors.dateDebut");
 
     if (!isVide) {
       if (!nombreInitial || nombreInitialNum <= 0)
@@ -175,10 +176,13 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
           nombrePoissons: Number(distributionMap[bacId]),
         }));
 
+    // Vague vide : auto-remplir avec today (sera mis à jour à la première mise en eau réelle)
+    const dateDebutFinal = isVide ? new Date().toISOString().slice(0, 10) : dateDebut;
+
     try {
       await createVagueMutation.mutateAsync({
         code: code.trim(),
-        dateDebut,
+        dateDebut: dateDebutFinal,
         nombreInitial: nombreInitialNum,
         poidsMoyenInitial: isVide ? 0 : Number(poidsMoyenInitial),
         origineAlevins: origineAlevins.trim() || undefined,
@@ -316,14 +320,19 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                   onChange={(e) => setCode(e.target.value)}
                   error={errors.code}
                 />
-                <Input
-                  id="dateDebut"
-                  label={t("form.fields.dateDebut")}
-                  type="date"
-                  value={dateDebut}
-                  onChange={(e) => setDateDebut(e.target.value)}
-                  error={errors.dateDebut}
-                />
+                {/* Date de mise en eau : cachée si vague vide (pas de mise en eau réelle).
+                    Auto-remplie avec today à la soumission. Modifiable plus tard via le dialog d'édition
+                    quand le premier arrivage/transfert aura lieu. */}
+                {!isVide && (
+                  <Input
+                    id="dateDebut"
+                    label={t("form.fields.dateDebut")}
+                    type="date"
+                    value={dateDebut}
+                    onChange={(e) => setDateDebut(e.target.value)}
+                    error={errors.dateDebut}
+                  />
+                )}
               </FormSection>
 
               {unitesProduction.length > 0 && (
@@ -350,6 +359,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                       ? t("form.vide.preGrossissementHint")
                       : t("form.vide.grossissementHint")}
                   </p>
+                  <p className="mt-2 text-xs text-muted-foreground italic">{t("form.vide.dateHint")}</p>
                 </div>
               )}
 

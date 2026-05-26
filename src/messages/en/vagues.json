@@ -63,7 +63,8 @@
     "vide": {
       "title": "Empty batch — bacs assigned later",
       "preGrossissementHint": "Once created, add arrivages to assign bacs and record incoming fish.",
-      "grossissementHint": "Once created, it can receive a transfer from a pre-growing batch."
+      "grossissementHint": "Once created, it can receive a transfer from a pre-growing batch.",
+      "dateHint": "The water start date will be set later, at the first arrivage or transfer (editable via Edit batch)."
     },
     "create": {
       "title": "New batch",
