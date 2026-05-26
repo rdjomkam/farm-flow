@@ -191,7 +191,7 @@ export function ArrivageFormClient({
   // ---------------------------------------------------------------------------
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-24">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-40 sm:pb-24">
 
       {/* Section 1 — Informations générales */}
       <Card>
@@ -363,7 +363,7 @@ export function ArrivageFormClient({
       )}
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/95 backdrop-blur border-t border-border p-4 flex gap-3 sm:static sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0 sm:mt-2">
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border p-4 flex gap-3 sm:static sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0 sm:mt-2">
         <Button
           variant="outline"
           type="button"

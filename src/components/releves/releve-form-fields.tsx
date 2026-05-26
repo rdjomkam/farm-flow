@@ -238,7 +238,7 @@ export function ReleveFormFields({
               const HIDDEN_TYPES_RELEVE = new Set<string>([
                 TypeReleve.VENTE,
                 TypeReleve.TRANSFERT,
-                // "ARRIVAGE", // TODO: décommenter quand TypeReleve.ARRIVAGE sera ajouté à l'enum
+                TypeReleve.ARRIVAGE,
               ]);
               return Object.values(TypeReleve).filter((tp) => !HIDDEN_TYPES_RELEVE.has(tp));
             })().map((tp) => (

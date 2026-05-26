@@ -174,10 +174,16 @@ export async function POST(request: NextRequest) {
     }
 
     // TRANSFERT relevés are auto-created by the transfert flow — block manual creation
-    // TODO: bloquer aussi "ARRIVAGE" quand TypeReleve.ARRIVAGE sera ajouté à l'enum
     if (body.typeReleve === TypeReleve.TRANSFERT) {
       return apiError(400, "Les releves de type TRANSFERT sont crees automatiquement lors d'un transfert.", {
         errors: [{ field: "typeReleve", message: "Type TRANSFERT non autorise en creation manuelle." }],
+      });
+    }
+
+    // ARRIVAGE relevés are auto-created by the arrivage flow — block manual creation
+    if (body.typeReleve === TypeReleve.ARRIVAGE) {
+      return apiError(400, "Les releves de type ARRIVAGE sont crees automatiquement lors d'un arrivage.", {
+        errors: [{ field: "typeReleve", message: "Type ARRIVAGE non autorise en creation manuelle." }],
       });
     }
 

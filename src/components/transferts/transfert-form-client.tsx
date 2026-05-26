@@ -327,7 +327,7 @@ export function TransfertFormClient({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col gap-4 pb-24">
+    <div className="flex flex-col gap-4 pb-40 sm:pb-24">
       {/* Stepper */}
       <div className="flex items-center gap-1">
         {STEP_LABELS.map((labelKey, i) => {
@@ -1052,7 +1052,7 @@ function StickyBar({
   nextDisabled?: boolean;
 }) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-10 bg-background/95 backdrop-blur border-t border-border p-4 flex gap-3 sm:static sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0 sm:mt-2">
+    <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border p-4 flex gap-3 sm:static sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0 sm:mt-2">
       {onBack && backLabel && (
         <Button variant="outline" type="button" onClick={onBack} className="flex-1 sm:flex-none">
           {backLabel}
