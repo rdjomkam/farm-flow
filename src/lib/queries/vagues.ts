@@ -48,9 +48,13 @@ export async function getVagues(
             bacId: true,
           },
         },
-        // Pour totalVenduKg
+        // Pour totalVenduKg — DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
         lignesVente: {
-          select: { poidsTotalKg: true },
+          where: { vente: { statut: { in: ["LIVREE", "CLOTUREE"] } } },
+          select: {
+            poidsTotalKg: true,
+            vente: { select: { poidsLivreKg: true, poidsTotalKg: true } },
+          },
         },
         configElevage: { select: { poidsObjectif: true } },
       },

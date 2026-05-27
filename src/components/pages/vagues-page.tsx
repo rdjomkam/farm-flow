@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, TypeVague, TypeUniteProduction, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { effectivePoidsLigneVente } from "@/lib/ventes-helpers";
 
 export default async function VaguesPage() {
   const session = await getServerSession();
@@ -53,7 +54,7 @@ export default async function VaguesPage() {
           nombreCompte: number | null;
           bacId: string | null;
         }>;
-        lignesVente?: { poidsTotalKg: number }[];
+        lignesVente?: { poidsTotalKg: number; vente: { poidsLivreKg: number | null; poidsTotalKg: number } }[];
         configElevage?: { poidsObjectif: number } | null;
         poidsObjectifKg?: number | null;
       };
@@ -62,7 +63,8 @@ export default async function VaguesPage() {
       const releves = vague.releves ?? [];
       const lignesVente = vague.lignesVente ?? [];
 
-      const totalVenduKg = lignesVente.reduce((sum, lv) => sum + (lv.poidsTotalKg ?? 0), 0);
+      // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
+      const totalVenduKg = lignesVente.reduce((sum, lv) => sum + effectivePoidsLigneVente(lv, lv.vente), 0);
 
       let poidsObjectifKg: number | null = vague.poidsObjectifKg ?? null;
       if (poidsObjectifKg == null && vague.configElevage?.poidsObjectif && v.nombreInitial > 0) {

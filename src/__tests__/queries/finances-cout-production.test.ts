@@ -25,10 +25,13 @@ const mockReleveConsommationFindMany = vi.fn();
 const mockDepenseFindMany = vi.fn();
 const mockDepenseRecurrenteFindMany = vi.fn();
 const mockVagueFindMany = vi.fn();
-const mockVenteFindMany = vi.fn();
+// DV.0 : getCoutProductionVague utilise ligneVente.findMany (pas vente.findMany)
+const mockLigneVenteFindMany = vi.fn();
 // ADR-043 Phase 3: nouvelles dépendances de getCoutProductionVague
 const mockAssignationBacFindMany = vi.fn();
 const mockReleveFindMany = vi.fn();
+// TransfertGroupe mock (pour biomasse transférée)
+const mockTransfertGroupeFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -46,8 +49,9 @@ vi.mock("@/lib/db", () => ({
     depenseRecurrente: {
       findMany: (...args: unknown[]) => mockDepenseRecurrenteFindMany(...args),
     },
-    vente: {
-      findMany: (...args: unknown[]) => mockVenteFindMany(...args),
+    // DV.0 : ligneVente (pas vente) est la source de vérité pour les ventes dans getCoutProductionVague
+    ligneVente: {
+      findMany: (...args: unknown[]) => mockLigneVenteFindMany(...args),
     },
     // ADR-043 Phase 3: getCoutProductionVague lit les bacs depuis AssignationBac
     assignationBac: {
@@ -55,6 +59,9 @@ vi.mock("@/lib/db", () => ({
     },
     releve: {
       findMany: (...args: unknown[]) => mockReleveFindMany(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   },
 }));
@@ -86,10 +93,13 @@ function mockAllEmpty() {
   mockDepenseFindMany.mockResolvedValue([]);
   mockDepenseRecurrenteFindMany.mockResolvedValue([]);
   mockVagueFindMany.mockResolvedValue([vagueBase]);
-  mockVenteFindMany.mockResolvedValue([]);
+  // DV.0 : ligneVente (pas vente) est la source de vérité pour les ventes
+  mockLigneVenteFindMany.mockResolvedValue([]);
   // ADR-043 Phase 3: bacs via AssignationBac + releves pour biomasse
   mockAssignationBacFindMany.mockResolvedValue([]);
   mockReleveFindMany.mockResolvedValue([]);
+  // Transferts sortants (biomasse transférée) — vide par défaut
+  mockTransfertGroupeFindMany.mockResolvedValue([]);
 }
 
 // ---------------------------------------------------------------------------
@@ -482,13 +492,22 @@ describe("getCoutProductionVague — calcul coût/kg", () => {
     ]);
 
     // Vente : 50 kg à 2500 CFA/kg = 125 000 CFA
-    mockVenteFindMany.mockResolvedValue([
+    // DV.0 : format LigneVente (statut LIVREE → compte dans les stats)
+    mockLigneVenteFindMany.mockResolvedValue([
       {
         createdAt: new Date("2026-01-28"),
+        nombrePoissons: 20,
         poidsTotalKg: 50,
-        prixUnitaireKg: 2500,
-        montantTotal: 125000,
-        client: { nom: "Client A" },
+        vente: {
+          prixUnitaireKg: 2500,
+          createdAt: new Date("2026-01-28"),
+          client: { nom: "Client A" },
+          statut: "LIVREE",
+          poidsLivreKg: null,
+          poidsTotalKg: 50,
+          quantiteLivree: null,
+          quantitePoissons: 20,
+        },
       },
     ]);
 
@@ -551,13 +570,22 @@ describe("getCoutProductionVague — calcul ROI", () => {
     // Revenus : 50 000 CFA
     // marge = 50 000 - 25 000 = 25 000
     // roi = 25 000 / 25 000 * 100 = 100%
-    mockVenteFindMany.mockResolvedValue([
+    // DV.0 : format LigneVente (statut LIVREE → compte dans les stats)
+    mockLigneVenteFindMany.mockResolvedValue([
       {
         createdAt: new Date("2026-01-28"),
+        nombrePoissons: 8,
         poidsTotalKg: 20,
-        prixUnitaireKg: 2500,
-        montantTotal: 50000,
-        client: { nom: "Client B" },
+        vente: {
+          prixUnitaireKg: 2500,
+          createdAt: new Date("2026-01-28"),
+          client: { nom: "Client B" },
+          statut: "LIVREE",
+          poidsLivreKg: null,
+          poidsTotalKg: 20,
+          quantiteLivree: null,
+          quantitePoissons: 8,
+        },
       },
     ]);
 
@@ -570,13 +598,22 @@ describe("getCoutProductionVague — calcul ROI", () => {
 
   it("retourne ROI = null quand coutTotal = 0", async () => {
     // Pas d'aliments, pas de dépenses → coutTotal = 0 → ROI = null
-    mockVenteFindMany.mockResolvedValue([
+    // DV.0 : format LigneVente (statut LIVREE → compte dans les stats)
+    mockLigneVenteFindMany.mockResolvedValue([
       {
         createdAt: new Date("2026-01-28"),
+        nombrePoissons: 3,
         poidsTotalKg: 10,
-        prixUnitaireKg: 3000,
-        montantTotal: 30000,
-        client: { nom: "Client C" },
+        vente: {
+          prixUnitaireKg: 3000,
+          createdAt: new Date("2026-01-28"),
+          client: { nom: "Client C" },
+          statut: "LIVREE",
+          poidsLivreKg: null,
+          poidsTotalKg: 10,
+          quantiteLivree: null,
+          quantitePoissons: 3,
+        },
       },
     ]);
 
@@ -600,13 +637,22 @@ describe("getCoutProductionVague — calcul ROI", () => {
         },
       },
     ]);
-    mockVenteFindMany.mockResolvedValue([
+    // DV.0 : format LigneVente (statut LIVREE → compte dans les stats)
+    mockLigneVenteFindMany.mockResolvedValue([
       {
         createdAt: new Date("2026-01-28"),
+        nombrePoissons: 8,
         poidsTotalKg: 20,
-        prixUnitaireKg: 2000,
-        montantTotal: 40000,
-        client: { nom: "Client D" },
+        vente: {
+          prixUnitaireKg: 2000,
+          createdAt: new Date("2026-01-28"),
+          client: { nom: "Client D" },
+          statut: "LIVREE",
+          poidsLivreKg: null,
+          poidsTotalKg: 20,
+          quantiteLivree: null,
+          quantitePoissons: 8,
+        },
       },
     ]);
 

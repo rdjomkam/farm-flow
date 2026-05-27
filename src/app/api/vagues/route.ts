@@ -12,6 +12,7 @@ import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { effectivePoidsLigneVente } from "@/lib/ventes-helpers";
 
 const VALID_TYPE_VAGUE = new Set(Object.values(TypeVague));
 
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
           nombreCompte: number | null;
           bacId: string | null;
         }>;
-        lignesVente?: { poidsTotalKg: number }[];
+        lignesVente?: { poidsTotalKg: number; vente: { poidsLivreKg: number | null; poidsTotalKg: number } }[];
         configElevage?: { poidsObjectif: number } | null;
         poidsObjectifKg?: number | null;
       };
@@ -72,8 +73,8 @@ export async function GET(request: NextRequest) {
       const releves = vague.releves ?? [];
       const lignesVente = vague.lignesVente ?? [];
 
-      // totalVenduKg
-      const totalVenduKg = lignesVente.reduce((sum, lv) => sum + (lv.poidsTotalKg ?? 0), 0);
+      // totalVenduKg — DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
+      const totalVenduKg = lignesVente.reduce((sum, lv) => sum + effectivePoidsLigneVente(lv, lv.vente), 0);
 
       // poidsObjectifKg : direct sur la vague, sinon dérivé du configElevage
       let poidsObjectifKg: number | null = vague.poidsObjectifKg ?? null;

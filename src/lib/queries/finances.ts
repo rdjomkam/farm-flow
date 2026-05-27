@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 import { getLineage } from "@/lib/queries/transferts";
+import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne } from "@/lib/ventes-helpers";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -153,9 +154,11 @@ export async function getResumeFinancier(
   const [venteAgg, paiementAgg, nombreFactures, toutesDepenses] =
     await Promise.all([
       // Revenus : SUM et COUNT des ventes + SUM poids
+      // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
       prisma.vente.aggregate({
         where: {
           siteId,
+          statut: { in: ["LIVREE", "CLOTUREE"] },
           ...(dateFilterVente && { createdAt: dateFilterVente }),
         },
         _sum: { montantTotal: true, poidsTotalKg: true },
@@ -302,13 +305,25 @@ export async function getRentabiliteParVague(
   const vagueIds = vagues.map((v) => v.id);
 
   // Charger toutes les lignes de vente de ces vagues (source de vérité multi-vague)
+  // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
   const toutesLignesVente = await prisma.ligneVente.findMany({
-    where: { siteId, vagueId: { in: vagueIds } },
+    where: {
+      siteId,
+      vagueId: { in: vagueIds },
+      vente: { statut: { in: ["LIVREE", "CLOTUREE"] } },
+    },
     select: {
       vagueId: true,
       poidsTotalKg: true,
       venteId: true,
-      vente: { select: { prixUnitaireKg: true } },
+      vente: {
+        select: {
+          prixUnitaireKg: true,
+          // DV.0 : champs pour effectivePoidsLigneVente
+          poidsLivreKg: true,
+          poidsTotalKg: true,
+        },
+      },
     },
   });
 
@@ -369,8 +384,10 @@ export async function getRentabiliteParVague(
       nombreVentes: 0,
       venteIds: new Set<string>(),
     };
-    existing.revenus += lv.poidsTotalKg * lv.vente.prixUnitaireKg;
-    existing.poidsTotalKg += lv.poidsTotalKg;
+    // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
+    const poidsEffectif = effectivePoidsLigneVente(lv, lv.vente);
+    existing.revenus += poidsEffectif * lv.vente.prixUnitaireKg;
+    existing.poidsTotalKg += poidsEffectif;
     existing.venteIds.add(lv.venteId);
     existing.nombreVentes = existing.venteIds.size;
     ventesByVague.set(lv.vagueId, existing);
@@ -462,8 +479,9 @@ export async function getEvolutionFinanciere(
   const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
 
   const [ventes, depenses, paiements] = await Promise.all([
+    // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
     prisma.vente.findMany({
-      where: { siteId, createdAt: { gte: dateDebut } },
+      where: { siteId, statut: { in: ["LIVREE", "CLOTUREE"] }, createdAt: { gte: dateDebut } },
       select: { createdAt: true, montantTotal: true },
     }),
     // Depense = source unique pour les couts (toutes, y compris liees a commandes)
@@ -692,7 +710,8 @@ export async function getTopClients(
       id: true,
       nom: true,
       ventes: {
-        where: { siteId },
+        // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
+        where: { siteId, statut: { in: ["LIVREE", "CLOTUREE"] } },
         select: {
           montantTotal: true,
           facture: {
@@ -1172,8 +1191,13 @@ export async function getCoutProductionVague(
     }),
 
     // 2f. Lignes de vente de la vague (source de vérité multi-vague)
+    // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE — seules LIVREE et CLOTUREE comptent
     prisma.ligneVente.findMany({
-      where: { siteId, vagueId },
+      where: {
+        siteId,
+        vagueId,
+        vente: { statut: { in: ["LIVREE", "CLOTUREE"] } },
+      },
       select: {
         createdAt: true,
         nombrePoissons: true,
@@ -1183,6 +1207,12 @@ export async function getCoutProductionVague(
             prixUnitaireKg: true,
             createdAt: true,
             client: { select: { nom: true } },
+            // DV.0 : champs pour les helpers effectivePoidsLigneVente / effectiveNombrePoissonsLigne
+            statut: true,
+            poidsLivreKg: true,
+            poidsTotalKg: true,
+            quantiteLivree: true,
+            quantitePoissons: true,
           },
         },
       },
@@ -1513,16 +1543,21 @@ export async function getCoutProductionVague(
   const ventesResult: CoutProductionVente[] = [];
 
   for (const lv of ventes) {
-    const montantLigne = lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+    // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
+    const poidsLigneEffectif = effectivePoidsLigneVente(lv, lv.vente);
+    const nombreEffectif = effectiveNombrePoissonsLigne(lv, lv.vente);
+    const montantLigne = poidsLigneEffectif * lv.vente.prixUnitaireKg;
     revenus += montantLigne;
-    poidsTotalVendu += lv.poidsTotalKg;
+    poidsTotalVendu += poidsLigneEffectif;
     ventesResult.push({
       date: lv.vente.createdAt,
       client: lv.vente.client.nom,
-      poidsKg: Math.round(lv.poidsTotalKg * 100) / 100,
+      poidsKg: Math.round(poidsLigneEffectif * 100) / 100,
       prixKg: Math.round(lv.vente.prixUnitaireKg * 100) / 100,
       montant: Math.round(montantLigne),
     });
+    // nombreEffectif est calculé mais utilisé implicitement via le poids (prorata)
+    void nombreEffectif;
   }
 
   // -------------------------------------------------------------------------
@@ -1744,9 +1779,21 @@ export async function getResumeFinancierParUnite(
     }),
 
     // 1c. Toutes les lignes de vente du site (pour mapper via vague -> unite)
+    // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE
     prisma.ligneVente.findMany({
-      where: { siteId },
-      select: { vagueId: true, poidsTotalKg: true, vente: { select: { prixUnitaireKg: true } } },
+      where: { siteId, vente: { statut: { in: ["LIVREE", "CLOTUREE"] } } },
+      select: {
+        vagueId: true,
+        poidsTotalKg: true,
+        vente: {
+          select: {
+            prixUnitaireKg: true,
+            // DV.0 : champs pour effectivePoidsLigneVente
+            poidsLivreKg: true,
+            poidsTotalKg: true,
+          },
+        },
+      },
     }),
 
     // 1d. Toutes les depenses du site (source unique pour les couts)
@@ -1793,7 +1840,9 @@ export async function getResumeFinancierParUnite(
   for (const lv of ventes) {
     const uniteId = lv.vagueId ? vagueToUnite.get(lv.vagueId) ?? null : null;
     if (uniteId && uniteIds.has(uniteId)) {
-      const montantLigne = lv.poidsTotalKg * lv.vente.prixUnitaireKg;
+      // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
+      const poidsEffectif = effectivePoidsLigneVente(lv, lv.vente);
+      const montantLigne = poidsEffectif * lv.vente.prixUnitaireKg;
       revenusByUnite.set(uniteId, (revenusByUnite.get(uniteId) ?? 0) + montantLigne);
     }
     // lignes sans unite ou unite inactive sont ignorees pour la ventilation

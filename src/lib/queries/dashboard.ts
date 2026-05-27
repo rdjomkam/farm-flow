@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, StatutActivite } from "@/types";
+import { effectivePoidsLigneVente } from "@/lib/ventes-helpers";
 import type { DashboardData, VagueDashboardSummary, ProjectionVague, CourbeCroissancePoint, IndicateursBenchmarkVague, ConfigElevage } from "@/types";
 import {
   calculerTauxSurvie,
@@ -58,10 +59,13 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
         },
       },
       // FIX : utiliser LigneVente (source de vérité multi-vague) et non Vente
-      // car Vente.vagueId est NULL pour les ventes multi-vagues.
-      // Pas de filtre statut — cohérent avec finances.ts (cout production) et la liste vagues.
+      // DV.0 : exclure les ventes EN_PREPARATION et ANNULEE — seules LIVREE et CLOTUREE comptent
       lignesVente: {
-        select: { poidsTotalKg: true },
+        where: { vente: { statut: { in: ["LIVREE", "CLOTUREE"] } } },
+        select: {
+          poidsTotalKg: true,
+          vente: { select: { poidsLivreKg: true, poidsTotalKg: true } },
+        },
       },
       configElevage: { select: { poidsObjectif: true } },
     },
@@ -139,9 +143,10 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     }
 
+    // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
     const totalVenduKg = (v as Record<string, unknown>).lignesVente
-      ? ((v as Record<string, unknown>).lignesVente as { poidsTotalKg: number }[]).reduce(
-          (sum: number, lv: { poidsTotalKg: number }) => sum + lv.poidsTotalKg,
+      ? ((v as Record<string, unknown>).lignesVente as { poidsTotalKg: number; vente: { poidsLivreKg: number | null; poidsTotalKg: number } }[]).reduce(
+          (sum: number, lv) => sum + effectivePoidsLigneVente(lv, lv.vente),
           0
         )
       : null;
