@@ -146,6 +146,15 @@ export async function createDepense(
     // Generate numero DEP-YYYY-NNN (findFirst+orderBy to avoid race condition)
     const numero = await generateNextNumero(tx, "depense", "DEP", siteId);
 
+    // Verify vente belongs to site if provided
+    if (data.venteId) {
+      const vente = await tx.vente.findFirst({
+        where: { id: data.venteId, siteId },
+        select: { id: true },
+      });
+      if (!vente) throw new Error("Vente introuvable");
+    }
+
     const created = await tx.depense.create({
       data: {
         numero,
@@ -156,6 +165,7 @@ export async function createDepense(
         dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,
         vagueId: data.vagueId ?? null,
         commandeId: data.commandeId ?? null,
+        venteId: data.venteId ?? null,
         notes: data.notes ?? null,
         uniteProductionId: resolvedUniteProductionId,
         userId,

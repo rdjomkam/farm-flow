@@ -374,9 +374,11 @@
       "poissonsTransferes": "Poissons transférés"
     },
     "rentabilite": {
-      "coutTotalProduction": "Coût total production",
-      "revenusVentes": "Revenus ventes",
-      "margeBrute": "Marge brute",
+      "coutTotalProduction": "- Coût total production",
+      "revenusBruts": "Revenus bruts",
+      "depensesVentes": "- Dépenses ventes",
+      "revenusVentes": "= Revenus nets",
+      "margeBrute": "= Marge nette",
       "retourInvestissement": "Retour sur investissement"
     },
     "categories": {

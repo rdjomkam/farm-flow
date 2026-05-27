@@ -1,0 +1,262 @@
+"use client";
+
+/**
+ * AddDepenseVenteDialog — Dialog pour ajouter une dépense associée à une vente.
+ *
+ * Submit → POST /api/ventes/[venteId]/depenses
+ * Invalide la query React Query du détail vente après succès.
+ *
+ * Règles :
+ * - R2 : CategorieDepense depuis @/types
+ * - R5 : DialogTrigger asChild
+ * - R6 : couleurs via className Tailwind (text-destructive, text-success, etc.)
+ * - Mobile first
+ */
+
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { CategorieDepense } from "@/types";
+import { queryKeys } from "@/lib/query-keys";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const CATEGORIES: CategorieDepense[] = [
+  CategorieDepense.TRANSPORT,
+  CategorieDepense.INTRANT,
+  CategorieDepense.EQUIPEMENT,
+  CategorieDepense.ELECTRICITE,
+  CategorieDepense.EAU,
+  CategorieDepense.LOYER,
+  CategorieDepense.SALAIRE,
+  CategorieDepense.VETERINAIRE,
+  CategorieDepense.REPARATION,
+  CategorieDepense.INVESTISSEMENT,
+  CategorieDepense.AUTRE,
+];
+
+const CATEGORIE_LABELS: Record<CategorieDepense, string> = {
+  [CategorieDepense.ALIMENT]: "Alimentation",
+  [CategorieDepense.INTRANT]: "Intrants",
+  [CategorieDepense.EQUIPEMENT]: "Equipements",
+  [CategorieDepense.ELECTRICITE]: "Electricite",
+  [CategorieDepense.EAU]: "Eau",
+  [CategorieDepense.LOYER]: "Loyer",
+  [CategorieDepense.SALAIRE]: "Salaire",
+  [CategorieDepense.TRANSPORT]: "Transport",
+  [CategorieDepense.VETERINAIRE]: "Veterinaire",
+  [CategorieDepense.REPARATION]: "Reparation",
+  [CategorieDepense.INVESTISSEMENT]: "Investissement",
+  [CategorieDepense.AUTRE]: "Autre",
+};
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+interface AddDepenseVenteDialogProps {
+  venteId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Composant
+// ---------------------------------------------------------------------------
+
+export function AddDepenseVenteDialog({ venteId }: AddDepenseVenteDialogProps) {
+  const t = useTranslations("ventes.depenses");
+  const queryClient = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Form state
+  const [description, setDescription] = useState("");
+  const [montantTotal, setMontantTotal] = useState("");
+  const [categorie, setCategorie] = useState<CategorieDepense | "">("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+  function resetForm() {
+    setDescription("");
+    setMontantTotal("");
+    setCategorie("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setError(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!description.trim() || !montantTotal || !categorie || !date) return;
+
+    const montant = parseFloat(montantTotal);
+    if (isNaN(montant) || montant <= 0) {
+      setError("Montant invalide");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/ventes/${venteId}/depenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: description.trim(),
+          montantTotal: montant,
+          categorieDepense: categorie,
+          date,
+          // montantPaye = montantTotal => statut PAYEE par défaut
+          montantPaye: montant,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Erreur lors de l'ajout de la dépense");
+        return;
+      }
+
+      // Invalider les queries liées à cette vente
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      setOpen(false);
+      resetForm();
+      // Reload page data (server component)
+      window.location.reload();
+    } catch {
+      setError("Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isValid =
+    description.trim().length > 0 &&
+    parseFloat(montantTotal) > 0 &&
+    categorie !== "" &&
+    date.length > 0;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) resetForm();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8 gap-1">
+          <Plus className="h-3.5 w-3.5" />
+          {t("add")}
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("form.title")}</DialogTitle>
+          <DialogDescription>
+            {t("empty")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
+          {/* Description */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("form.description")}</label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("form.descriptionPlaceholder")}
+              required
+            />
+          </div>
+
+          {/* Montant */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("form.montantTotal")}</label>
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              value={montantTotal}
+              onChange={(e) => setMontantTotal(e.target.value)}
+              placeholder="Ex: 5000"
+              required
+            />
+          </div>
+
+          {/* Catégorie */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("form.categorie")}</label>
+            <Select
+              value={categorie}
+              onValueChange={(v) => setCategorie(v as CategorieDepense)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir une catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {CATEGORIE_LABELS[cat]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("form.date")}</label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          <DialogFooter className="pt-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                {t("form.cancel")}
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={loading || !isValid}
+              className="min-h-[44px]"
+            >
+              {loading ? "..." : t("form.submit")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1600,6 +1600,8 @@ export interface CreateDepenseDTO {
   notes?: string;
   /** Unite de production associee (optionnel) */
   uniteProductionId?: string;
+  /** Vente associee (optionnel, mutuellement exclusif avec vagueId) */
+  venteId?: string;
 }
 
 /** DTO pour modifier une depense (champs tous optionnels) */

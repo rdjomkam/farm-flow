@@ -224,6 +224,26 @@
     "deleteDescription": "Are you sure you want to delete this payment of {montant} F? This action cannot be undone.",
     "deleteConfirm": "Delete"
   },
+  "depenses": {
+    "title": "Associated expenses",
+    "add": "Add an expense",
+    "empty": "No expenses associated with this sale.",
+    "recap": {
+      "brut": "Gross amount",
+      "depenses": "Expenses",
+      "net": "Net amount"
+    },
+    "form": {
+      "title": "New sale expense",
+      "description": "Description",
+      "descriptionPlaceholder": "E.g. Client transport, Buckets, Ice...",
+      "montantTotal": "Total amount (FCFA)",
+      "categorie": "Category",
+      "date": "Date",
+      "submit": "Add",
+      "cancel": "Cancel"
+    }
+  },
   "errorSection": {
     "saleForm": "the sale form",
     "financialEvolutionChart": "the financial evolution chart",

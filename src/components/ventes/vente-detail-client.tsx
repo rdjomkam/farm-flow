@@ -54,6 +54,8 @@ import {
 import { StatutFacture, StatutVente, Permission } from "@/types";
 import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
 import { useVenteService } from "@/services";
+import { effectiveMontantBrut, totalDepensesVente, montantNetVente } from "@/lib/ventes-helpers";
+import { AddDepenseVenteDialog } from "@/components/ventes/add-depense-vente-dialog";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -127,6 +129,16 @@ interface VenteData {
   } | null;
   lignes?: LigneVenteDisplay[];
   releves?: ReleveVenteDisplay[];
+  depenses?: DepenseVenteDisplay[];
+}
+
+interface DepenseVenteDisplay {
+  id: string;
+  description: string;
+  categorieDepense: string;
+  date: string;
+  montantTotal: number;
+  statut: string;
 }
 
 interface ClientOption {
@@ -146,6 +158,21 @@ interface Props {
   clients?: ClientOption[];
   vagues?: VagueOption[];
 }
+
+const CATEGORIE_DEPENSE_LABELS: Record<string, string> = {
+  ALIMENT: "Alimentation",
+  INTRANT: "Intrants",
+  EQUIPEMENT: "Equipements",
+  ELECTRICITE: "Electricite",
+  EAU: "Eau",
+  LOYER: "Loyer",
+  SALAIRE: "Salaire",
+  TRANSPORT: "Transport",
+  VETERINAIRE: "Veterinaire",
+  REPARATION: "Reparation",
+  INVESTISSEMENT: "Investissement",
+  AUTRE: "Autre",
+};
 
 export function VenteDetailClient({ vente, permissions, clients = [], vagues = [] }: Props) {
   const t = useTranslations("ventes");
@@ -708,6 +735,70 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             : t("ventes.detail.montantFinal")}
         </p>
       </div>
+
+      {/* Dépenses associées à la vente (DV.4) */}
+      {(vente.statut === StatutVente.LIVREE || vente.statut === StatutVente.CLOTUREE || (vente.depenses ?? []).length > 0) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span>{t("depenses.title")}</span>
+              {permissions.includes(Permission.DEPENSES_CREER) && (
+                <AddDepenseVenteDialog venteId={vente.id} />
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            {(vente.depenses ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("depenses.empty")}</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {(vente.depenses ?? []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-md border p-3">
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate">{d.description}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {CATEGORIE_DEPENSE_LABELS[d.categorieDepense] ?? d.categorieDepense}
+                        {" · "}
+                        {new Date(d.date).toLocaleDateString(locale)}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-2">
+                      <div className="font-semibold text-sm text-destructive">
+                        -{formatNumber(d.montantTotal)} F
+                      </div>
+                      <div className="text-xs text-muted-foreground">{d.statut}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Récap brut / dépenses / net */}
+            {(vente.depenses ?? []).length > 0 && (() => {
+              const depenses = vente.depenses ?? [];
+              const brut = effectiveMontantBrut(vente);
+              const totalDep = totalDepensesVente(depenses);
+              const net = montantNetVente(vente, depenses);
+              return (
+                <div className="mt-4 rounded-md bg-muted/30 p-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("depenses.recap.brut")}</span>
+                    <span className="font-medium">{formatNumber(brut)} FCFA</span>
+                  </div>
+                  <div className="flex justify-between text-destructive">
+                    <span>{t("depenses.recap.depenses")}</span>
+                    <span className="font-medium">- {formatNumber(totalDep)} FCFA</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-1.5">
+                    <span className="font-semibold">{t("depenses.recap.net")}</span>
+                    <span className="font-bold text-success">{formatNumber(net)} FCFA</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Delivery info (read-only, shown when LIVREE or CLOTUREE) */}
       {(vente.statut === StatutVente.LIVREE || vente.statut === StatutVente.CLOTUREE) && (

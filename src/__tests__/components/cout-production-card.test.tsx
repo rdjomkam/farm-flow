@@ -60,9 +60,11 @@ vi.mock("next-intl", () => ({
       "bilan.biomasseVendue": "Biomasse vendue",
       "bilan.biomasseVivante": "Biomasse vivante",
       "bilan.poissonsVendus": "Poissons vendus",
-      "rentabilite.coutTotalProduction": "Coût total production",
-      "rentabilite.revenusVentes": "Revenus ventes",
-      "rentabilite.margeBrute": "Marge brute",
+      "rentabilite.coutTotalProduction": "- Coût total production",
+      "rentabilite.revenusBruts": "Revenus bruts",
+      "rentabilite.depensesVentes": "- Dépenses ventes",
+      "rentabilite.revenusVentes": "= Revenus nets",
+      "rentabilite.margeBrute": "= Marge nette",
       "rentabilite.retourInvestissement": "Retour sur investissement",
       "categories.ALIMENT": "Alimentation",
       "categories.INTRANT": "Intrants",
@@ -110,10 +112,14 @@ const dataWithCosts: CoutProductionVague = {
     poidsTotalVendu: 200,
     nombrePoissonsVendus: 400,
     biomasseKg: 150,
+    biomasseTransferee: null,
+    nombrePoissonsTransferes: 0,
     biomasseProduite: 350,
     coutParKg: 2500,
     prixMoyenVenteKg: 3000,
     margeParKg: 500,
+    revenusBruts: 600000,
+    depensesVentes: 0,
     revenus: 600000,
     marge: 100000,
     roi: 20,
@@ -128,6 +134,7 @@ const dataWithCosts: CoutProductionVague = {
   depensesMultiVagues: [],
   depensesRecurrentes: [],
   ventes: [],
+  depensesVentes: [],
   formule: {
     coutAliments: 300000,
     coutDepensesDirectes: 100000,
@@ -148,10 +155,14 @@ const dataEmpty: CoutProductionVague = {
     poidsTotalVendu: 0,
     nombrePoissonsVendus: 0,
     biomasseKg: null,
+    biomasseTransferee: null,
+    nombrePoissonsTransferes: 0,
     biomasseProduite: null,
     coutParKg: null,
     prixMoyenVenteKg: null,
     margeParKg: null,
+    revenusBruts: 0,
+    depensesVentes: 0,
     revenus: 0,
     marge: 0,
     roi: null,
@@ -162,6 +173,7 @@ const dataEmpty: CoutProductionVague = {
   depensesMultiVagues: [],
   depensesRecurrentes: [],
   ventes: [],
+  depensesVentes: [],
   formule: {
     coutAliments: 0,
     coutDepensesDirectes: 0,
@@ -182,10 +194,14 @@ const dataWithNulls: CoutProductionVague = {
     poidsTotalVendu: 0,
     nombrePoissonsVendus: 0,
     biomasseKg: null,
+    biomasseTransferee: null,
+    nombrePoissonsTransferes: 0,
     biomasseProduite: null,
     coutParKg: null,
     prixMoyenVenteKg: null,
     margeParKg: null,
+    revenusBruts: 0,
+    depensesVentes: 0,
     revenus: 0,
     marge: -300000,
     roi: null,
@@ -198,6 +214,7 @@ const dataWithNulls: CoutProductionVague = {
   depensesMultiVagues: [],
   depensesRecurrentes: [],
   ventes: [],
+  depensesVentes: [],
   formule: {
     coutAliments: 300000,
     coutDepensesDirectes: 0,
@@ -349,8 +366,9 @@ describe("CoutProductionCard — Expand / Collapse", () => {
     render(<CoutProductionCard data={dataWithCosts} vagueId="vague-1" />);
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
-    expect(screen.getByText("Revenus ventes")).toBeInTheDocument();
-    expect(screen.getByText("Marge brute")).toBeInTheDocument();
+    // DV.6 : labels mis à jour — revenusBruts affiché, marge nette
+    expect(screen.getByText("Revenus bruts")).toBeInTheDocument();
+    expect(screen.getByText("= Marge nette")).toBeInTheDocument();
   });
 });
 
@@ -428,23 +446,23 @@ describe("CoutProductionCard — Couleurs marge / ROI", () => {
     expect(roiValue.closest("div")).toHaveClass("text-destructive");
   });
 
-  it("la marge brute dans le détail a la classe text-success quand positive", () => {
+  it("la marge nette dans le détail a la classe text-success quand positive", () => {
     render(<CoutProductionCard data={dataWithCosts} vagueId="vague-1" />);
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
-    // marge = 100000 → "Marge brute" label with text-success on the value span
-    const margeLabel = screen.getByText("Marge brute");
+    // marge = 100000 → "= Marge nette" label with text-success on the value span
+    const margeLabel = screen.getByText("= Marge nette");
     const margeRow = margeLabel.closest("div")!;
     const valueSpan = margeRow.querySelector(".text-success");
     expect(valueSpan).toBeTruthy();
   });
 
-  it("la marge brute dans le détail a la classe text-destructive quand négative", () => {
+  it("la marge nette dans le détail a la classe text-destructive quand négative", () => {
     render(<CoutProductionCard data={dataWithNegativeMarge} vagueId="vague-1" />);
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
     // marge = -40000 → text-destructive, pas de "+" prefix
-    const margeElement = screen.getByText(/Marge brute/).closest("div")?.querySelector(".text-destructive");
+    const margeElement = screen.getByText(/Marge nette/).closest("div")?.querySelector(".text-destructive");
     expect(margeElement).toBeTruthy();
   });
 

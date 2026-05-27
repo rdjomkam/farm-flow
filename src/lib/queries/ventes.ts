@@ -85,6 +85,19 @@ const VENTE_DETAIL_INCLUDE = {
     },
     orderBy: { date: "asc" as const },
   },
+  depenses: {
+    select: {
+      id: true,
+      numero: true,
+      date: true,
+      description: true,
+      categorieDepense: true,
+      montantTotal: true,
+      montantPaye: true,
+      statut: true,
+    },
+    orderBy: { date: "desc" as const },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@
  * - LigneVente : prorata automatique quand Vente.poidsLivreKg est saisi.
  */
 
-import type { Vente, LigneVente } from "@/types";
+import type { Vente, LigneVente, Depense } from "@/types";
 import { StatutVente } from "@/types";
 
 /**
@@ -63,6 +63,36 @@ export function effectivePoidsLigneVente(
   }
   const ratio = vente.poidsLivreKg / vente.poidsTotalKg;
   return ligne.poidsTotalKg * ratio;
+}
+
+/**
+ * Somme des depenses liees a une vente.
+ */
+export function totalDepensesVente(
+  depenses: Pick<Depense, "montantTotal">[]
+): number {
+  return depenses.reduce((sum, d) => sum + d.montantTotal, 0);
+}
+
+/**
+ * Retourne le montant NET d'une vente = brut effectif - depenses associees.
+ * Brut effectif = effectiveMontantBrut(vente) (defini ci-dessus).
+ */
+export function montantNetVente(
+  vente: Pick<Vente, "poidsLivreKg" | "poidsTotalKg" | "prixUnitaireKg">,
+  depenses: Pick<Depense, "montantTotal">[]
+): number {
+  return effectiveMontantBrut(vente) - totalDepensesVente(depenses);
+}
+
+/**
+ * Pour une ligne de vente, retourne le montant brut effectif (poids livre x prix).
+ */
+export function effectiveMontantLigneVente(
+  ligne: Pick<LigneVente, "poidsTotalKg">,
+  vente: Pick<Vente, "poidsLivreKg" | "poidsTotalKg" | "prixUnitaireKg">
+): number {
+  return effectivePoidsLigneVente(ligne, vente) * vente.prixUnitaireKg;
 }
 
 /**

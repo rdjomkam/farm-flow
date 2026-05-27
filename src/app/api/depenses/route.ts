@@ -145,6 +145,19 @@ export async function POST(request: NextRequest) {
       return apiError(400, "Erreurs de validation", { errors });
     }
 
+    // XOR : venteId et vagueId mutuellement exclusifs
+    const hasVenteId = body.venteId != null && body.venteId !== "";
+    const hasVagueId = body.vagueId != null && body.vagueId !== "";
+
+    if (hasVenteId && hasVagueId) {
+      return apiError(400, "Une depense ne peut pas etre liee a la fois a une vague et a une vente.", {
+        errors: [
+          { field: "venteId", message: "venteId et vagueId sont mutuellement exclusifs" },
+          { field: "vagueId", message: "venteId et vagueId sont mutuellement exclusifs" },
+        ],
+      });
+    }
+
     const data: CreateDepenseDTO = {
       description: body.description.trim(),
       categorieDepense: body.categorieDepense as CategorieDepense,
@@ -153,6 +166,7 @@ export async function POST(request: NextRequest) {
       dateEcheance: body.dateEcheance || undefined,
       vagueId: body.vagueId || undefined,
       commandeId: body.commandeId || undefined,
+      venteId: body.venteId || undefined,
       notes: body.notes?.trim() || undefined,
       uniteProductionId: body.uniteProductionId || undefined,
     };

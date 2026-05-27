@@ -671,7 +671,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
         {/* ===================== COÛT DE PRODUCTION (COMPLET) ===================== */}
         {data.coutProduction && (() => {
           const cp = data.coutProduction!;
-          const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
+          const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, depensesVentes: depVentes, formule } = cp;
           let cpInsights: ReturnType<typeof generatePdfInsights>;
           try { cpInsights = generatePdfInsights(cp); } catch { cpInsights = { executive: [], production: [], couts: [], alimentation: [], rentabilite: [], ventes: [] }; }
           return (
@@ -685,11 +685,16 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                   <Text style={[styles.kpiValue, { color: colors.danger }]}>{formatMontant(resume.coutTotal)}</Text>
                 </View>
                 <View style={styles.kpiCard}>
-                  <Text style={styles.kpiLabel}>Revenus</Text>
+                  <Text style={styles.kpiLabel}>Revenus nets</Text>
                   <Text style={[styles.kpiValue, { color: colors.success }]}>{formatMontant(resume.revenus)}</Text>
+                  {resume.depensesVentes > 0 && (
+                    <Text style={[styles.kpiUnit, { color: colors.muted }]}>
+                      brut {formatFCFA(resume.revenusBruts)}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.kpiCard}>
-                  <Text style={styles.kpiLabel}>Marge</Text>
+                  <Text style={styles.kpiLabel}>Marge nette</Text>
                   <Text style={[styles.kpiValue, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>{formatMontant(resume.marge)}</Text>
                 </View>
                 <View style={styles.kpiCard}>
@@ -904,21 +909,47 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </>
               )}
 
+              {/* Dépenses associées aux ventes */}
+              {depVentes && depVentes.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>
+                    Dépenses associées aux ventes ({depVentes.length})
+                  </Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, { flex: 2 }]}>Description</Text>
+                    <Text style={[styles.tableHeaderText, { width: 80 }]}>Catégorie</Text>
+                    <Text style={[styles.tableHeaderText, { width: 70 }]}>Date</Text>
+                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: "right" as const }]}>Montant</Text>
+                  </View>
+                  {depVentes.map((d, i) => (
+                    <View key={i} style={styles.tableRow} wrap={false}>
+                      <Text style={[styles.tableCell, { flex: 2 }]}>{d.description}</Text>
+                      <Text style={[styles.tableCell, { width: 80 }]}>{labelCategorie(d.categorie as Parameters<typeof labelCategorie>[0])}</Text>
+                      <Text style={[styles.tableCell, { width: 70 }]}>{formatDate(d.date)}</Text>
+                      <Text style={[styles.tableCell, { width: 80, textAlign: "right" as const, fontFamily: "Helvetica-Bold" }]}>{formatFCFA(d.montant)}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
               {/* Rentabilité */}
               <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Rentabilité</Text>
-              <View style={styles.kpisGrid}>
-                <View style={styles.kpiCard}>
-                  <Text style={styles.kpiLabel}>Coûts totaux</Text>
-                  <Text style={[styles.kpiValue, { color: colors.danger }]}>{formatMontant(resume.coutTotal)}</Text>
-                </View>
-                <View style={styles.kpiCard}>
-                  <Text style={styles.kpiLabel}>Revenus</Text>
-                  <Text style={[styles.kpiValue, { color: colors.success }]}>{formatMontant(resume.revenus)}</Text>
-                </View>
-                <View style={styles.kpiCard}>
-                  <Text style={styles.kpiLabel}>Marge brute</Text>
-                  <Text style={[styles.kpiValue, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>{formatMontant(resume.marge)}</Text>
-                </View>
+              <View style={styles.formuleBox}>
+                <Text style={styles.formuleText}>Revenus bruts : {formatMontant(resume.revenusBruts)}</Text>
+                {resume.depensesVentes > 0 && (
+                  <Text style={[styles.formuleText, { color: colors.danger }]}>
+                    - Dépenses ventes : {formatMontant(resume.depensesVentes)}
+                  </Text>
+                )}
+                <Text style={[styles.formuleText, { fontFamily: "Helvetica-Bold" }]}>
+                  = Revenus nets : {formatMontant(resume.revenus)}
+                </Text>
+                <Text style={[styles.formuleText, { color: colors.danger }]}>
+                  - Coût production : {formatMontant(resume.coutTotal)}
+                </Text>
+                <Text style={[styles.formuleTotal, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>
+                  = Marge nette : {formatMontant(resume.marge)}
+                </Text>
               </View>
               <InsightBlock lines={cpInsights.rentabilite} />
 

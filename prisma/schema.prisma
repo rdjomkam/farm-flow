@@ -1662,6 +1662,7 @@ model Vente {
   facture           Facture?
   releves           Releve[]         @relation("VenteReleves")
   lignes            LigneVente[]     @relation("VenteLignes")
+  depenses          Depense[]        @relation("VenteDepenses")
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -2241,6 +2242,12 @@ model Depense {
   vagueId             String?
   vague               Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
   /**
+   * Lien optionnel vers la vente concernée (transport, packaging, frais de livraison...).
+   * Mutuellement exclusif avec vagueId au niveau application (API DV.3).
+   */
+  venteId             String?
+  vente               Vente?              @relation("VenteDepenses", fields: [venteId], references: [id], onDelete: SetNull)
+  /**
    * Unité de production concernée (REPRODUCTION ou GROSSISSEMENT) — nullable
    */
   uniteProductionId   String?
@@ -2274,6 +2281,7 @@ model Depense {
   @@index([siteId, statut])
   @@index([commandeId])
   @@index([vagueId])
+  @@index([venteId])
   @@index([uniteProductionId])
   @@index([listeBesoinsId])
   @@index([depenseRecurrenteId])

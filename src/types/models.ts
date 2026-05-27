@@ -1038,6 +1038,8 @@ export interface Vente {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Depenses liees a cette vente (transport, packaging, frais livraison...) — optionnel, charge par include */
+  depenses?: Depense[];
 }
 
 /** Vente avec ses relations chargees */
@@ -2313,6 +2315,8 @@ export interface Depense {
   commandeId: string | null;
   /** Vague concernee (nullable) */
   vagueId: string | null;
+  /** Vente concernee (nullable) — transport, packaging, frais de livraison. XOR vagueId au niveau app. */
+  venteId: string | null;
   /** Liste de besoins d'origine (nullable) */
   listeBesoinsId: string | null;
   /** Utilisateur ayant cree la depense */
@@ -2331,6 +2335,7 @@ export interface Depense {
 export interface DepenseWithRelations extends Depense {
   commande?: Commande | null;
   vague?: Vague | null;
+  vente?: Vente | null;
   listeBesoins?: ListeBesoins | null;
   user?: User;
   paiements?: PaiementDepense[];

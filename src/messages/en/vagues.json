@@ -374,9 +374,11 @@
       "poissonsTransferes": "Fish transferred"
     },
     "rentabilite": {
-      "coutTotalProduction": "Total production cost",
-      "revenusVentes": "Sales revenue",
-      "margeBrute": "Gross margin",
+      "coutTotalProduction": "- Total production cost",
+      "revenusBruts": "Gross revenue",
+      "depensesVentes": "- Sale expenses",
+      "revenusVentes": "= Net revenue",
+      "margeBrute": "= Net margin",
       "retourInvestissement": "Return on investment"
     },
     "categories": {

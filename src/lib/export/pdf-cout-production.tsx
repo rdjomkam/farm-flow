@@ -354,7 +354,7 @@ const styles2 = StyleSheet.create({
 
 export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }) {
   const { coutProduction: cp, site, dateGeneration } = data;
-  const { vague, resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, formule } = cp;
+  const { vague, resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes, ventes, depensesVentes: depVentes, formule } = cp;
   const coutsParents = cp.coutsParents;
   const cycleComplet = cp.cycleComplet;
 
@@ -797,8 +797,61 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
         {/* Insight ventes */}
         {ventes.length > 0 && <InsightBlock lines={insights.ventes} />}
 
+        {/* ===================== DÉPENSES ASSOCIÉES AUX VENTES ===================== */}
+        {depVentes && depVentes.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>
+              Dépenses associées aux ventes ({depVentes.length})
+            </Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Description</Text>
+              <Text style={[styles.tableHeaderText, { width: 80 }]}>Catégorie</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, { width: 80, textAlign: "right" }]}>Montant</Text>
+            </View>
+            {depVentes.map((d, i) => (
+              <View key={i} style={styles.tableRow} wrap={false}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>{d.description}</Text>
+                <Text style={[styles.tableCell, { width: 80 }]}>{labelCategorie(d.categorie as Parameters<typeof labelCategorie>[0])}</Text>
+                <Text style={[styles.tableCell, { width: 70 }]}>{formatDate(d.date)}</Text>
+                <Text style={[styles.tableCell, { width: 80, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{formatMontant(d.montant)}</Text>
+              </View>
+            ))}
+            <View style={[styles.tableRow, { backgroundColor: "#fef2f2" }]} wrap={false}>
+              <Text style={[styles.tableCell, { flex: 2, fontFamily: "Helvetica-Bold" }]}>Total dépenses ventes</Text>
+              <Text style={[styles.tableCell, { width: 80 }]} />
+              <Text style={[styles.tableCell, { width: 70 }]} />
+              <Text style={[styles.tableCell, { width: 80, textAlign: "right", fontFamily: "Helvetica-Bold", color: colors.danger }]}>
+                {formatMontant(resume.depensesVentes)}
+              </Text>
+            </View>
+          </>
+        )}
+
         {/* Insight rentabilité */}
         <InsightBlock lines={insights.rentabilite} />
+
+        {/* ===================== RENTABILITÉ DÉTAILLÉE ===================== */}
+        <Text style={styles.sectionTitle}>Rentabilité</Text>
+        <View style={[styles.formuleBox, { marginBottom: 12 }]}>
+          <Text style={styles.formuleText}>
+            Revenus bruts : {formatMontant(resume.revenusBruts)}
+          </Text>
+          {resume.depensesVentes > 0 && (
+            <Text style={[styles.formuleText, { color: colors.danger }]}>
+              - Dépenses ventes : {formatMontant(resume.depensesVentes)}
+            </Text>
+          )}
+          <Text style={[styles.formuleText, { fontFamily: "Helvetica-Bold" }]}>
+            = Revenus nets : {formatMontant(resume.revenus)}
+          </Text>
+          <Text style={[styles.formuleText, { color: colors.danger }]}>
+            - Coût production : {formatMontant(resume.coutTotal)}
+          </Text>
+          <Text style={[styles.formuleTotal, { color: resume.marge >= 0 ? colors.success : colors.danger }]}>
+            = Marge nette : {formatMontant(resume.marge)}
+          </Text>
+        </View>
 
         {/* ===================== FORMULE ===================== */}
         <Text style={styles.sectionTitle}>Formule de calcul</Text>

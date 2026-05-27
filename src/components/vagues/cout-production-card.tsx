@@ -327,18 +327,39 @@ export function CoutProductionCard({ data, vagueId, hasParents = false }: CoutPr
                   description={t("sections.rentabiliteDesc")}
                 >
                   <div className="space-y-1.5">
+                    {/* Revenus bruts */}
                     <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{t("rentabilite.revenusBruts")}</span>
+                      <span className="font-medium tabular-nums">
+                        {formatNumber(resume.revenusBruts)} FCFA
+                      </span>
+                    </div>
+                    {/* Dépenses ventes (si non nulles) */}
+                    {resume.depensesVentes > 0 && (
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span>{t("rentabilite.depensesVentes")}</span>
+                        <span className="font-medium tabular-nums">
+                          - {formatNumber(resume.depensesVentes)} FCFA
+                        </span>
+                      </div>
+                    )}
+                    {/* Revenus nets */}
+                    {resume.depensesVentes > 0 && (
+                      <div className="flex justify-between text-sm border-t border-border pt-1.5">
+                        <span className="text-muted-foreground">{t("rentabilite.revenusVentes")}</span>
+                        <span className="font-medium tabular-nums text-success">
+                          {formatNumber(resume.revenus)} FCFA
+                        </span>
+                      </div>
+                    )}
+                    {/* Coût production */}
+                    <div className={`flex justify-between text-sm ${resume.depensesVentes === 0 ? "" : ""}`}>
                       <span className="text-muted-foreground">{t("rentabilite.coutTotalProduction")}</span>
                       <span className="font-medium tabular-nums text-destructive">
                         -{formatNumber(resume.coutTotal)} FCFA
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("rentabilite.revenusVentes")}</span>
-                      <span className="font-medium tabular-nums text-success">
-                        +{formatNumber(resume.revenus)} FCFA
-                      </span>
-                    </div>
+                    {/* Marge nette */}
                     <div className="border-t border-border pt-1.5 flex justify-between text-sm">
                       <span className="font-medium">{t("rentabilite.margeBrute")}</span>
                       <span

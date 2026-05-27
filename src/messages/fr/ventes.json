@@ -224,6 +224,26 @@
     "deleteDescription": "Etes-vous sur de vouloir supprimer ce paiement de {montant} F ? Cette action est irreversible.",
     "deleteConfirm": "Supprimer"
   },
+  "depenses": {
+    "title": "Depenses associees",
+    "add": "Ajouter une depense",
+    "empty": "Aucune depense associee a cette vente.",
+    "recap": {
+      "brut": "Montant brut",
+      "depenses": "Depenses",
+      "net": "Montant net"
+    },
+    "form": {
+      "title": "Nouvelle depense de vente",
+      "description": "Description",
+      "descriptionPlaceholder": "Ex: Transport client, Sceaux, Glace...",
+      "montantTotal": "Montant total (FCFA)",
+      "categorie": "Categorie",
+      "date": "Date",
+      "submit": "Ajouter",
+      "cancel": "Annuler"
+    }
+  },
   "errorSection": {
     "saleForm": "le formulaire de vente",
     "financialEvolutionChart": "le graphique d'évolution financière",

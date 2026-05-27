@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 import { getLineage } from "@/lib/queries/transferts";
-import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne } from "@/lib/ventes-helpers";
+import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne, effectivePoidsVente, totalDepensesVente } from "@/lib/ventes-helpers";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -830,6 +830,13 @@ export interface CoutProductionVente {
   montant: number;
 }
 
+export interface CoutProductionDepenseVente {
+  description: string;
+  categorie: string;
+  date: Date;
+  montant: number;
+}
+
 export interface CoutProductionVague {
   vague: {
     id: string;
@@ -852,6 +859,11 @@ export interface CoutProductionVague {
     coutParKg: number | null;
     prixMoyenVenteKg: number | null;
     margeParKg: number | null;
+    /** Revenus bruts = somme des montants effectifs (sans déduire les dépenses ventes) */
+    revenusBruts: number;
+    /** Dépenses associées aux ventes (allouées au prorata du poids de la ligne) */
+    depensesVentes: number;
+    /** Revenus nets = revenusBruts - depensesVentes (montant net) */
     revenus: number;
     marge: number;
     roi: number | null;
@@ -868,6 +880,9 @@ export interface CoutProductionVague {
   depensesRecurrentes: CoutProductionDepenseRecurrente[];
 
   ventes: CoutProductionVente[];
+
+  /** Dépenses associées aux ventes de cette vague (allouées au prorata) */
+  depensesVentes: CoutProductionDepenseVente[];
 
   formule: {
     coutAliments: number;
@@ -1213,6 +1228,15 @@ export async function getCoutProductionVague(
             poidsTotalKg: true,
             quantiteLivree: true,
             quantitePoissons: true,
+            // DV.6 : dépenses de la vente pour le calcul du montant net
+            depenses: {
+              select: {
+                description: true,
+                categorieDepense: true,
+                date: true,
+                montantTotal: true,
+              },
+            },
           },
         },
       },
@@ -1538,16 +1562,18 @@ export async function getCoutProductionVague(
   // 7. Ventes
   // -------------------------------------------------------------------------
 
-  let revenus = 0;
+  let revenusBruts = 0;
+  let depensesVentesTotal = 0;
   let poidsTotalVendu = 0;
   const ventesResult: CoutProductionVente[] = [];
+  const depensesVentesResult: CoutProductionDepenseVente[] = [];
 
   for (const lv of ventes) {
     // DV.0 : utiliser le poids livré effectif (prorata si poidsLivreKg renseigné)
     const poidsLigneEffectif = effectivePoidsLigneVente(lv, lv.vente);
     const nombreEffectif = effectiveNombrePoissonsLigne(lv, lv.vente);
     const montantLigne = poidsLigneEffectif * lv.vente.prixUnitaireKg;
-    revenus += montantLigne;
+    revenusBruts += montantLigne;
     poidsTotalVendu += poidsLigneEffectif;
     ventesResult.push({
       date: lv.vente.createdAt,
@@ -1556,9 +1582,34 @@ export async function getCoutProductionVague(
       prixKg: Math.round(lv.vente.prixUnitaireKg * 100) / 100,
       montant: Math.round(montantLigne),
     });
+
+    // DV.6 : allouer les dépenses de la vente au prorata du poids de cette ligne
+    if (lv.vente.depenses && lv.vente.depenses.length > 0) {
+      const poidsVenteTotal = effectivePoidsVente(lv.vente);
+      const ratio = poidsVenteTotal > 0 ? poidsLigneEffectif / poidsVenteTotal : 0;
+      const totalDepenses = totalDepensesVente(lv.vente.depenses);
+      const montantAlloue = totalDepenses * ratio;
+      depensesVentesTotal += montantAlloue;
+
+      for (const dep of lv.vente.depenses) {
+        const montantDepAlloue = dep.montantTotal * ratio;
+        if (montantDepAlloue > 0) {
+          depensesVentesResult.push({
+            description: dep.description,
+            categorie: dep.categorieDepense as string,
+            date: dep.date,
+            montant: Math.round(montantDepAlloue),
+          });
+        }
+      }
+    }
+
     // nombreEffectif est calculé mais utilisé implicitement via le poids (prorata)
     void nombreEffectif;
   }
+
+  // DV.6 : revenus nets = bruts - dépenses ventes allouées
+  const revenus = revenusBruts - depensesVentesTotal;
 
   // -------------------------------------------------------------------------
   // 8. Agregation finale
@@ -1678,6 +1729,8 @@ export async function getCoutProductionVague(
           ? Math.round(prixMoyenVenteKg * 100) / 100
           : null,
       margeParKg: margeParKg !== null ? Math.round(margeParKg * 100) / 100 : null,
+      revenusBruts: Math.round(revenusBruts),
+      depensesVentes: Math.round(depensesVentesTotal),
       revenus: Math.round(revenus),
       marge: Math.round(marge),
       roi: roi !== null ? Math.round(roi * 100) / 100 : null,
@@ -1689,6 +1742,7 @@ export async function getCoutProductionVague(
     depensesMultiVagues: depensesMultiVaguesResult,
     depensesRecurrentes: depensesRecurrentesResult,
     ventes: ventesResult,
+    depensesVentes: depensesVentesResult,
 
     formule: {
       coutAliments: Math.round(coutAliments),
