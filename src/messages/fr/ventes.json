@@ -229,6 +229,8 @@
     "add": "Ajouter une depense",
     "empty": "Aucune depense associee a cette vente.",
     "closedSaleInfo": "Cette vente est cloturee. Seul un utilisateur avec la permission appropriee peut y ajouter une depense.",
+    "editAria": "Modifier la depense",
+    "deleteAria": "Supprimer la depense",
     "recap": {
       "brut": "Montant brut",
       "depenses": "Depenses",
@@ -236,13 +238,28 @@
     },
     "form": {
       "title": "Nouvelle depense de vente",
+      "editTitle": "Modifier la depense de vente",
       "description": "Description",
       "descriptionPlaceholder": "Ex: Transport client, Sceaux, Glace...",
       "montantTotal": "Montant total (FCFA)",
       "categorie": "Categorie",
       "date": "Date",
       "submit": "Ajouter",
-      "cancel": "Annuler"
+      "editSubmit": "Enregistrer",
+      "cancel": "Annuler",
+      "successAdd": "Depense ajoutee.",
+      "successEdit": "Depense modifiee.",
+      "errorAdd": "Erreur lors de l'ajout de la depense.",
+      "errorEdit": "Erreur lors de la modification de la depense."
+    },
+    "delete": {
+      "title": "Supprimer la depense",
+      "confirm": "Voulez-vous vraiment supprimer la depense \"{description}\" ? Cette action est irreversible.",
+      "cancel": "Annuler",
+      "submit": "Supprimer",
+      "loading": "Suppression...",
+      "success": "Depense supprimee.",
+      "error": "Erreur lors de la suppression."
     }
   },
   "errorSection": {

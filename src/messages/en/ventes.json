@@ -229,6 +229,8 @@
     "add": "Add an expense",
     "empty": "No expenses associated with this sale.",
     "closedSaleInfo": "This sale is closed. Only a user with the appropriate permission can add an expense to it.",
+    "editAria": "Edit expense",
+    "deleteAria": "Delete expense",
     "recap": {
       "brut": "Gross amount",
       "depenses": "Expenses",
@@ -236,13 +238,28 @@
     },
     "form": {
       "title": "New sale expense",
+      "editTitle": "Edit sale expense",
       "description": "Description",
       "descriptionPlaceholder": "E.g. Client transport, Buckets, Ice...",
       "montantTotal": "Total amount (FCFA)",
       "categorie": "Category",
       "date": "Date",
       "submit": "Add",
-      "cancel": "Cancel"
+      "editSubmit": "Save",
+      "cancel": "Cancel",
+      "successAdd": "Expense added.",
+      "successEdit": "Expense updated.",
+      "errorAdd": "Error adding expense.",
+      "errorEdit": "Error updating expense."
+    },
+    "delete": {
+      "title": "Delete expense",
+      "confirm": "Are you sure you want to delete the expense \"{description}\"? This action is irreversible.",
+      "cancel": "Cancel",
+      "submit": "Delete",
+      "loading": "Deleting...",
+      "success": "Expense deleted.",
+      "error": "Error deleting expense."
     }
   },
   "errorSection": {

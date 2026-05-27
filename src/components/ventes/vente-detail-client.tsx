@@ -55,7 +55,8 @@ import { StatutFacture, StatutVente, Permission } from "@/types";
 import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
 import { useVenteService } from "@/services";
 import { effectiveMontantBrut, totalDepensesVente, montantNetVente } from "@/lib/ventes-helpers";
-import { AddDepenseVenteDialog } from "@/components/ventes/add-depense-vente-dialog";
+import { DepenseVenteDialog } from "@/components/ventes/depense-vente-dialog";
+import { DeleteDepenseConfirmDialog } from "@/components/ventes/delete-depense-confirm-dialog";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -466,7 +467,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
 
             {/* Sources (read-only note) */}
             {lignes.length > 0 && (
-              <div className="rounded-lg border border-dashed p-3 flex items-start gap-2">
+              <div className="rounded-lg border border-dashed border-border/50 p-3 flex items-start gap-2">
                 <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
                   {t("ventes.detail.sourcesNote")}
@@ -749,7 +750,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                   permissions.includes(Permission.DEPENSES_CREER);
                 return (
                   <>
-                    {canAddDepense && <AddDepenseVenteDialog venteId={vente.id} />}
+                    {canAddDepense && <DepenseVenteDialog venteId={vente.id} />}
                     {vente.statut === StatutVente.CLOTUREE && !canAddDepense && (
                       <p className="text-xs text-muted-foreground italic font-normal">
                         {t("depenses.closedSaleInfo")}
@@ -765,24 +766,58 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
               <p className="text-sm text-muted-foreground">{t("depenses.empty")}</p>
             ) : (
               <div className="flex flex-col gap-2">
-                {(vente.depenses ?? []).map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{d.description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {CATEGORIE_DEPENSE_LABELS[d.categorieDepense] ?? d.categorieDepense}
-                        {" · "}
-                        {new Date(d.date).toLocaleDateString(locale)}
+                {(vente.depenses ?? []).map((d) => {
+                  const canEdit =
+                    (vente.statut !== StatutVente.CLOTUREE ||
+                      permissions.includes(Permission.DEPENSES_VENTE_RETRO)) &&
+                    permissions.includes(Permission.DEPENSES_CREER);
+                  return (
+                    <div
+                      key={d.id}
+                      className="flex items-center justify-between rounded-md border border-border/50 bg-muted/20 p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{d.description}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {CATEGORIE_DEPENSE_LABELS[d.categorieDepense] ?? d.categorieDepense}
+                          {" · "}
+                          {new Date(d.date).toLocaleDateString(locale)}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2 flex items-center gap-2">
+                        <div>
+                          <div className="font-semibold text-sm text-destructive">
+                            -{formatNumber(d.montantTotal)} F
+                          </div>
+                          <div className="text-xs text-muted-foreground">{d.statut}</div>
+                        </div>
+                        {canEdit && (
+                          <>
+                            <DepenseVenteDialog
+                              venteId={vente.id}
+                              existingDepense={d}
+                              trigger={
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  aria-label={t("depenses.editAria")}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              }
+                            />
+                            <DeleteDepenseConfirmDialog
+                              depenseId={d.id}
+                              venteId={vente.id}
+                              description={d.description}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <div className="font-semibold text-sm text-destructive">
-                        -{formatNumber(d.montantTotal)} F
-                      </div>
-                      <div className="text-xs text-muted-foreground">{d.statut}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -802,7 +837,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                     <span>{t("depenses.recap.depenses")}</span>
                     <span className="font-medium">- {formatNumber(totalDep)} FCFA</span>
                   </div>
-                  <div className="flex justify-between border-t pt-1.5">
+                  <div className="flex justify-between border-t border-border/50 pt-1.5">
                     <span className="font-semibold">{t("depenses.recap.net")}</span>
                     <span className="font-bold text-success">{formatNumber(net)} FCFA</span>
                   </div>

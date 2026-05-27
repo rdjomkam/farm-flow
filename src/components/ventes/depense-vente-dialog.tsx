@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * AddDepenseVenteDialog — Dialog pour ajouter une dépense associée à une vente.
+ * DepenseVenteDialog — Dialog pour ajouter OU modifier une dépense associée à une vente.
  *
- * Submit → POST /api/ventes/[venteId]/depenses
- * Invalide la query React Query du détail vente après succès.
+ * Mode création : POST /api/ventes/[venteId]/depenses
+ * Mode édition  : PUT /api/depenses/[existingDepense.id]
+ * Invalide la query React Query du détail vente après succès + reload page.
  *
  * Règles :
  * - R2 : CategorieDepense depuis @/types
@@ -13,7 +14,7 @@
  * - Mobile first
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -36,6 +37,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toast";
 import { CategorieDepense } from "@/types";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -76,27 +78,62 @@ const CATEGORIE_LABELS: Record<CategorieDepense, string> = {
 // Props
 // ---------------------------------------------------------------------------
 
-interface AddDepenseVenteDialogProps {
+interface ExistingDepense {
+  id: string;
+  description: string;
+  montantTotal: number;
+  categorieDepense: string;
+  date: string | Date;
+}
+
+interface DepenseVenteDialogProps {
   venteId: string;
+  /** Mode édition : si fourni, le dialog charge les valeurs et fait un PUT */
+  existingDepense?: ExistingDepense;
+  /** Trigger personnalisable (par défaut = bouton "Ajouter" avec icône Plus) */
+  trigger?: React.ReactNode;
+  /** Callback après succès */
+  onSuccess?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Composant
 // ---------------------------------------------------------------------------
 
-export function AddDepenseVenteDialog({ venteId }: AddDepenseVenteDialogProps) {
+export function DepenseVenteDialog({
+  venteId,
+  existingDepense,
+  trigger,
+  onSuccess,
+}: DepenseVenteDialogProps) {
+  const isEdit = !!existingDepense;
   const t = useTranslations("ventes.depenses");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
+  // Form state — initialisé vide, rempli via effect quand on entre en mode édition
   const [description, setDescription] = useState("");
   const [montantTotal, setMontantTotal] = useState("");
   const [categorie, setCategorie] = useState<CategorieDepense | "">("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+  // Pré-remplir le formulaire en mode édition à l'ouverture
+  useEffect(() => {
+    if (open && isEdit && existingDepense) {
+      setDescription(existingDepense.description);
+      setMontantTotal(String(existingDepense.montantTotal));
+      setCategorie(existingDepense.categorieDepense as CategorieDepense);
+      const d = existingDepense.date instanceof Date
+        ? existingDepense.date
+        : new Date(existingDepense.date);
+      setDate(d.toISOString().slice(0, 10));
+      setError(null);
+    }
+  }, [open, isEdit, existingDepense]);
 
   function resetForm() {
     setDescription("");
@@ -118,30 +155,53 @@ export function AddDepenseVenteDialog({ venteId }: AddDepenseVenteDialogProps) {
 
     setLoading(true);
     setError(null);
+
     try {
-      const res = await fetch(`/api/ventes/${venteId}/depenses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: description.trim(),
-          montantTotal: montant,
-          categorieDepense: categorie,
-          date,
-          // montantPaye = montantTotal => statut PAYEE par défaut
-          montantPaye: montant,
-        }),
-      });
+      let res: Response;
+
+      if (isEdit && existingDepense) {
+        // Mode édition : PUT /api/depenses/[id]
+        res = await fetch(`/api/depenses/${existingDepense.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: description.trim(),
+            montantTotal: montant,
+            categorieDepense: categorie,
+            date,
+          }),
+        });
+      } else {
+        // Mode création : POST /api/ventes/[venteId]/depenses
+        res = await fetch(`/api/ventes/${venteId}/depenses`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: description.trim(),
+            montantTotal: montant,
+            categorieDepense: categorie,
+            date,
+            montantPaye: montant,
+          }),
+        });
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Erreur lors de l'ajout de la dépense");
+        setError(data.error ?? (isEdit ? t("form.errorEdit") : t("form.errorAdd")));
         return;
       }
 
-      // Invalider les queries liées à cette vente
+      toast({
+        title: isEdit ? t("form.successEdit") : t("form.successAdd"),
+        variant: "success",
+      });
+
       queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.detail(venteId) });
       setOpen(false);
-      resetForm();
+      if (!isEdit) resetForm();
+      onSuccess?.();
       // Reload page data (server component)
       window.location.reload();
     } catch {
@@ -157,24 +217,30 @@ export function AddDepenseVenteDialog({ venteId }: AddDepenseVenteDialogProps) {
     categorie !== "" &&
     date.length > 0;
 
+  const defaultTrigger = (
+    <Button size="sm" variant="outline" className="h-8 gap-1">
+      <Plus className="h-3.5 w-3.5" />
+      {t("add")}
+    </Button>
+  );
+
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) resetForm();
+        if (!v && !isEdit) resetForm();
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-8 gap-1">
-          <Plus className="h-3.5 w-3.5" />
-          {t("add")}
-        </Button>
+        {trigger ?? defaultTrigger}
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("form.title")}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t("form.editTitle") : t("form.title")}
+          </DialogTitle>
           <DialogDescription>
             {t("empty")}
           </DialogDescription>
@@ -252,7 +318,7 @@ export function AddDepenseVenteDialog({ venteId }: AddDepenseVenteDialogProps) {
               disabled={loading || !isValid}
               className="min-h-[44px]"
             >
-              {loading ? "..." : t("form.submit")}
+              {loading ? "..." : (isEdit ? t("form.editSubmit") : t("form.submit"))}
             </Button>
           </DialogFooter>
         </form>
