@@ -198,17 +198,36 @@ export async function updateDepense(
   data: UpdateDepenseDTO
 ) {
   return prisma.$transaction(async (tx) => {
-    // Si montantTotal est fourni, verifier qu'il est >= montantPaye existant
-    if (data.montantTotal !== undefined) {
+    // Si montantTotal ou montantPaye est fourni, valider la cohérence
+    let computedStatut: import("@/types").StatutDepense | undefined;
+    if (data.montantTotal !== undefined || data.montantPaye !== undefined) {
       const existing = await tx.depense.findFirst({
         where: { id, siteId },
-        select: { montantPaye: true },
+        select: { montantPaye: true, montantTotal: true, venteId: true },
       });
       if (!existing) throw new Error("Depense introuvable");
-      if (data.montantTotal < existing.montantPaye) {
+
+      // Valeurs effectives après update
+      const effMontantTotal = data.montantTotal ?? existing.montantTotal;
+      const effMontantPaye = data.montantPaye ?? existing.montantPaye;
+
+      // Règle : montantTotal >= montantPaye (effectif après update)
+      if (effMontantTotal < effMontantPaye) {
         throw new Error(
           "Le montant total ne peut pas etre inferieur au montant deja paye."
         );
+      }
+
+      // Recalcul automatique du statut si montantPaye est fourni
+      if (data.montantPaye !== undefined) {
+        const { StatutDepense } = await import("@/types");
+        if (effMontantPaye >= effMontantTotal && effMontantTotal > 0) {
+          computedStatut = StatutDepense.PAYEE;
+        } else if (effMontantPaye > 0) {
+          computedStatut = StatutDepense.PAYEE_PARTIELLEMENT;
+        } else {
+          computedStatut = StatutDepense.NON_PAYEE;
+        }
       }
     }
 
@@ -222,6 +241,10 @@ export async function updateDepense(
         ...(data.montantTotal !== undefined && {
           montantTotal: data.montantTotal,
         }),
+        ...(data.montantPaye !== undefined && {
+          montantPaye: data.montantPaye,
+        }),
+        ...(computedStatut !== undefined && { statut: computedStatut }),
         ...(data.date !== undefined && { date: new Date(data.date) }),
         ...(data.dateEcheance !== undefined && {
           dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,

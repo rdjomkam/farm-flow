@@ -1609,6 +1609,11 @@ export interface UpdateDepenseDTO {
   description?: string;
   categorieDepense?: CategorieDepense;
   montantTotal?: number;
+  /**
+   * Montant payé. Utilisé surtout pour les dépenses de vente où le paiement
+   * est immédiat (montantPaye = montantTotal). Si fourni, statut est recalculé.
+   */
+  montantPaye?: number;
   date?: string;
   dateEcheance?: string | null;
   vagueId?: string | null;

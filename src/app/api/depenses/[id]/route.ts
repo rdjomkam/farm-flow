@@ -112,6 +112,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
       ...(body.montantTotal !== undefined && {
         montantTotal: body.montantTotal,
       }),
+      ...(body.montantPaye !== undefined && typeof body.montantPaye === "number" && {
+        montantPaye: body.montantPaye,
+      }),
       ...(body.date !== undefined && { date: body.date }),
       ...(body.dateEcheance !== undefined && {
         dateEcheance: body.dateEcheance,
