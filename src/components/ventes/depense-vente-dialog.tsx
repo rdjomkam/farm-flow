@@ -161,12 +161,16 @@ export function DepenseVenteDialog({
 
       if (isEdit && existingDepense) {
         // Mode édition : PUT /api/depenses/[id]
+        // On envoie aussi montantPaye = montant pour rester cohérent avec la création
+        // (les dépenses de vente sont considérées payées intégralement) et éviter
+        // l'erreur "montantTotal < montantPaye" si l'utilisateur réduit le montant.
         res = await fetch(`/api/depenses/${existingDepense.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             description: description.trim(),
             montantTotal: montant,
+            montantPaye: montant,
             categorieDepense: categorie,
             date,
           }),
