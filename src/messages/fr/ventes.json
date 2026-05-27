@@ -228,6 +228,7 @@
     "title": "Depenses associees",
     "add": "Ajouter une depense",
     "empty": "Aucune depense associee a cette vente.",
+    "closedSaleInfo": "Cette vente est cloturee. Seul un utilisateur avec la permission appropriee peut y ajouter une depense.",
     "recap": {
       "brut": "Montant brut",
       "depenses": "Depenses",

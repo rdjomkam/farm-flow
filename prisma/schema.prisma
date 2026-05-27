@@ -277,6 +277,8 @@ enum Permission {
   SITES_VOIR
   SITES_GERER
   ANALYTICS_PLATEFORME
+  // Dépenses rétroactives (Sprint EX)
+  DEPENSES_VENTE_RETRO
 }
 
 // ──────────────────────────────────────────

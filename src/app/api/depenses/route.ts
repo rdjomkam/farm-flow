@@ -9,6 +9,7 @@ import {
 } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import type { CreateDepenseDTO, DepenseFilters } from "@/types";
+import { guardDepenseVente, isGuardError } from "@/lib/auth/depense-vente-guard";
 
 const VALID_CATEGORIES = Object.values(CategorieDepense);
 const VALID_STATUTS = Object.values(StatutDepense);
@@ -156,6 +157,12 @@ export async function POST(request: NextRequest) {
           { field: "vagueId", message: "venteId et vagueId sont mutuellement exclusifs" },
         ],
       });
+    }
+
+    // Guard statut vente : ANNULEE bloquee, CLOTUREE requiert DEPENSES_VENTE_RETRO
+    if (hasVenteId) {
+      const guardResult = await guardDepenseVente(body.venteId, auth.activeSiteId, auth.permissions);
+      if (isGuardError(guardResult)) return guardResult;
     }
 
     const data: CreateDepenseDTO = {

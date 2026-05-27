@@ -228,6 +228,7 @@
     "title": "Associated expenses",
     "add": "Add an expense",
     "empty": "No expenses associated with this sale.",
+    "closedSaleInfo": "This sale is closed. Only a user with the appropriate permission can add an expense to it.",
     "recap": {
       "brut": "Gross amount",
       "depenses": "Expenses",

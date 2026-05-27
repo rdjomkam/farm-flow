@@ -131,6 +131,8 @@ export enum Permission {
   SITES_VOIR = "SITES_VOIR",
   SITES_GERER = "SITES_GERER",
   ANALYTICS_PLATEFORME = "ANALYTICS_PLATEFORME",
+  // Depenses retroactives (Sprint EX)
+  DEPENSES_VENTE_RETRO = "DEPENSES_VENTE_RETRO",
 }
 
 /**

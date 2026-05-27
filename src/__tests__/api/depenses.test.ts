@@ -31,6 +31,7 @@ const mockPrismaPaiementDepenseDelete = vi.fn();
 const mockPrismaFraisPaiementDepenseCreateMany = vi.fn();
 const mockPrismaFraisPaiementDepenseAggregate = vi.fn();
 const mockPrismaAjustementDepenseCreate = vi.fn();
+const mockPrismaDepenseFindUniqueOrThrow = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -63,6 +64,7 @@ vi.mock("@/lib/db", () => ({
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({
       depense: {
         findFirst: mockPrismaDepenseFindFirst,
+        findUniqueOrThrow: (...args: unknown[]) => mockPrismaDepenseFindUniqueOrThrow(...args),
         create: mockPrismaDepenseCreate,
         updateMany: mockPrismaDepenseUpdateMany,
         update: mockPrismaDepenseUpdate,
@@ -305,6 +307,13 @@ describe("POST /api/depenses", () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockPrismaDepenseCount.mockResolvedValue(0);
     mockPrismaDepenseCreate.mockResolvedValue({ ...FAKE_DEPENSE, numero: "DEP-2026-001" });
+    mockPrismaDepenseFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_DEPENSE,
+      numero: "DEP-2026-001",
+      user: { id: "user-1", name: "Admin" },
+      commande: null,
+      vague: null,
+    });
   });
 
   it("retourne 201 avec depense creee", async () => {
@@ -391,7 +400,8 @@ describe("DELETE /api/depenses/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    // Par defaut : deleteMany reussit (NON_PAYEE supprimee)
+    // Par defaut : findFirst retourne la depense (sans venteId → guard skipped), deleteMany reussit
+    mockPrismaDepenseFindFirst.mockResolvedValue({ ...FAKE_DEPENSE, venteId: null, paiements: [], user: { id: "user-1", name: "Admin" } });
     mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 1 });
   });
 
@@ -403,16 +413,19 @@ describe("DELETE /api/depenses/[id]", () => {
   });
 
   it("retourne 409 si depense a des paiements", async () => {
-    // deleteMany retourne count=0 (statut non NON_PAYEE), findFirst retourne la depense avec statut non supprimable
+    // deleteMany retourne count=0 (statut non NON_PAYEE), findFirst (second call) retourne la depense avec statut non supprimable
     mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 0 });
-    mockPrismaDepenseFindFirst.mockResolvedValue({ id: "dep-1", statut: StatutDepense.PAYEE_PARTIELLEMENT });
+    // Premier appel (getDepenseById) : depense sans venteId
+    // Deuxieme appel (dans deleteDepense) : depense avec statut PAYEE_PARTIELLEMENT
+    mockPrismaDepenseFindFirst
+      .mockResolvedValueOnce({ ...FAKE_DEPENSE, venteId: null, paiements: [], user: { id: "user-1", name: "Admin" } })
+      .mockResolvedValueOnce({ id: "dep-1", statut: StatutDepense.PAYEE_PARTIELLEMENT });
     const response = await DELETE_DEPENSE(makeRequest("/api/depenses/dep-1", { method: "DELETE" }), { params: Promise.resolve({ id: "dep-1" }) });
     expect(response.status).toBe(409);
   });
 
   it("retourne 404 si depense introuvable", async () => {
-    // deleteMany retourne count=0 (introuvable), findFirst retourne null
-    mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 0 });
+    // getDepenseById retourne null → 404 immediatement
     mockPrismaDepenseFindFirst.mockResolvedValue(null);
     const response = await DELETE_DEPENSE(makeRequest("/api/depenses/dep-xxx", { method: "DELETE" }), { params: Promise.resolve({ id: "dep-xxx" }) });
     expect(response.status).toBe(404);

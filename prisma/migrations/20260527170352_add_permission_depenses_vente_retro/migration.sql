@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "Permission" ADD VALUE 'DEPENSES_VENTE_RETRO';
+

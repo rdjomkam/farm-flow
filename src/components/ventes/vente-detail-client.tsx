@@ -742,9 +742,22 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center justify-between">
               <span>{t("depenses.title")}</span>
-              {permissions.includes(Permission.DEPENSES_CREER) && (
-                <AddDepenseVenteDialog venteId={vente.id} />
-              )}
+              {(() => {
+                const canAddDepense =
+                  (vente.statut !== StatutVente.CLOTUREE ||
+                    permissions.includes(Permission.DEPENSES_VENTE_RETRO)) &&
+                  permissions.includes(Permission.DEPENSES_CREER);
+                return (
+                  <>
+                    {canAddDepense && <AddDepenseVenteDialog venteId={vente.id} />}
+                    {vente.statut === StatutVente.CLOTUREE && !canAddDepense && (
+                      <p className="text-xs text-muted-foreground italic font-normal">
+                        {t("depenses.closedSaleInfo")}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">

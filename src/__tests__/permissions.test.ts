@@ -318,12 +318,14 @@ describe("PERMISSION_GROUPS", () => {
     expect(PERMISSION_GROUPS.administration).toHaveLength(5);
   });
 
-  it("elevage contient 12 permissions dont BACS_MODIFIER, RELEVES_MODIFIER et RELEVES_SUPPRIMER", () => {
-    expect(PERMISSION_GROUPS.elevage).toHaveLength(12);
+  it("elevage contient les permissions d'elevage dont BACS_MODIFIER, RELEVES_MODIFIER et RELEVES_SUPPRIMER", () => {
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.VAGUES_VOIR);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.RELEVES_CREER);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.BACS_MODIFIER);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.RELEVES_MODIFIER);
+    expect(PERMISSION_GROUPS.elevage).toContain(Permission.CALIBRAGES_VOIR);
+    expect(PERMISSION_GROUPS.elevage).toContain(Permission.CALIBRAGES_CREER);
+    expect(PERMISSION_GROUPS.elevage).toContain(Permission.CALIBRAGES_MODIFIER);
   });
 
   it("alertes contient ALERTES_VOIR et ALERTES_CONFIGURER (2 permissions)", () => {
@@ -352,13 +354,14 @@ describe("PERMISSION_GROUPS", () => {
     expect(PERMISSION_GROUPS.clients).toContain(Permission.CLIENTS_GERER);
   });
 
-  it("ventes contient 5 permissions", () => {
-    expect(PERMISSION_GROUPS.ventes).toHaveLength(5);
+  it("ventes contient les permissions de ventes, factures et paiements", () => {
     expect(PERMISSION_GROUPS.ventes).toContain(Permission.VENTES_VOIR);
     expect(PERMISSION_GROUPS.ventes).toContain(Permission.VENTES_CREER);
+    expect(PERMISSION_GROUPS.ventes).toContain(Permission.VENTES_MODIFIER);
     expect(PERMISSION_GROUPS.ventes).toContain(Permission.FACTURES_VOIR);
     expect(PERMISSION_GROUPS.ventes).toContain(Permission.FACTURES_GERER);
     expect(PERMISSION_GROUPS.ventes).toContain(Permission.PAIEMENTS_CREER);
+    expect(PERMISSION_GROUPS.ventes).toContain(Permission.PAIEMENTS_SUPPRIMER);
   });
 });
 

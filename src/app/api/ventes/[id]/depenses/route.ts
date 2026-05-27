@@ -4,6 +4,7 @@ import { CategorieDepense, Permission, StatutDepense } from "@/types";
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "@/lib/queries/numero-utils";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { guardDepenseVente, isGuardError } from "@/lib/auth/depense-vente-guard";
 
 const VALID_CATEGORIES = Object.values(CategorieDepense);
 
@@ -60,12 +61,9 @@ export async function POST(
     const auth = await requirePermission(request, Permission.DEPENSES_CREER);
     const { id } = await params;
 
-    // Verifier que la vente existe et appartient au site
-    const vente = await prisma.vente.findFirst({
-      where: { id, siteId: auth.activeSiteId },
-      select: { id: true },
-    });
-    if (!vente) return apiError(404, "Vente introuvable");
+    // Verifier que la vente existe, appartient au site et est dans un statut autorisant les depenses
+    const guardResult = await guardDepenseVente(id, auth.activeSiteId, auth.permissions);
+    if (isGuardError(guardResult)) return guardResult;
 
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];

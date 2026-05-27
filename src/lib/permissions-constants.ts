@@ -104,9 +104,11 @@ export const PERMISSION_GROUPS = {
   ventes: [
     Permission.VENTES_VOIR,
     Permission.VENTES_CREER,
+    Permission.VENTES_MODIFIER,
     Permission.FACTURES_VOIR,
     Permission.FACTURES_GERER,
     Permission.PAIEMENTS_CREER,
+    Permission.PAIEMENTS_SUPPRIMER,
   ],
   reproduction: [
     // Gate de module
@@ -140,6 +142,7 @@ export const PERMISSION_GROUPS = {
     Permission.DEPENSES_MODIFIER,
     Permission.DEPENSES_SUPPRIMER,
     Permission.DEPENSES_PAYER,
+    Permission.DEPENSES_VENTE_RETRO,
     Permission.BESOINS_SOUMETTRE,
     Permission.BESOINS_APPROUVER,
     Permission.BESOINS_TRAITER,

@@ -106,6 +106,8 @@ export const permissionLabels: Record<string, string> = {
   [Permission.COMMISSION_PREMIUM]: "Commission premium",
   [Permission.PORTEFEUILLE_VOIR]: "Voir le portefeuille",
   [Permission.PORTEFEUILLE_GERER]: "Gerer le portefeuille",
+  // Depenses retroactives (Sprint EX)
+  [Permission.DEPENSES_VENTE_RETRO]: "Ajouter depense a vente cloturee (retroactif)",
 };
 
 // ---------------------------------------------------------------------------

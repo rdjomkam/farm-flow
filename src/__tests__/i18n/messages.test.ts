@@ -249,8 +249,8 @@ describe("messages/index.ts — barrel exports", () => {
     expect(namespaces).toContain("format");
   });
 
-  it("namespaces a exactement 35 entrées", () => {
-    expect(namespaces).toHaveLength(35);
+  it("namespaces a exactement 36 entrées", () => {
+    expect(namespaces).toHaveLength(36);
   });
 
   it("le type Namespace couvre les valeurs attendues (vérification de présence)", () => {

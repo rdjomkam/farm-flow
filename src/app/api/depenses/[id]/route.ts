@@ -8,6 +8,7 @@ import { apiError, handleApiError } from "@/lib/api-utils";
 import { requirePermission } from "@/lib/permissions";
 import { CategorieDepense, Permission } from "@/types";
 import type { UpdateDepenseDTO } from "@/types";
+import { guardDepenseVente, isGuardError } from "@/lib/auth/depense-vente-guard";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -91,6 +92,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return apiError(400, "Erreurs de validation", { errors });
     }
 
+    // Guard statut vente : si la depense est liee a une vente, verifier que la modification est autorisee
+    const depenseExistante = await getDepenseById(id, auth.activeSiteId);
+    if (!depenseExistante) {
+      return apiError(404, "Depense introuvable.");
+    }
+    if (depenseExistante.venteId) {
+      const guardResult = await guardDepenseVente(depenseExistante.venteId, auth.activeSiteId, auth.permissions);
+      if (isGuardError(guardResult)) return guardResult;
+    }
+
     const data: UpdateDepenseDTO = {
       ...(body.description !== undefined && {
         description: body.description.trim(),
@@ -127,6 +138,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const auth = await requirePermission(request, Permission.DEPENSES_SUPPRIMER);
     const { id } = await params;
+
+    // Guard statut vente : si la depense est liee a une vente CLOTUREE ou ANNULEE, verifier les permissions
+    const depenseExistante = await getDepenseById(id, auth.activeSiteId);
+    if (!depenseExistante) {
+      return apiError(404, "Depense introuvable.");
+    }
+    if (depenseExistante.venteId) {
+      const guardResult = await guardDepenseVente(depenseExistante.venteId, auth.activeSiteId, auth.permissions);
+      if (isGuardError(guardResult)) return guardResult;
+    }
 
     const result = await deleteDepense(id, auth.activeSiteId);
     return NextResponse.json(result);
