@@ -111,7 +111,10 @@
     "uniteProductionPlaceholder": "Select a unit",
     "uniteProductionAucune": "-- No unit --",
     "typeGrossissement": "Grow-out",
-    "typeReproduction": "Reproduction"
+    "typeReproduction": "Reproduction",
+    "retroactiveTitle": "Retroactive edit",
+    "retroactiveDescription": "This list is no longer in SUBMITTED status. Only metadata (title, batches, production unit, notes, deadline) can be edited. Lines remain locked to preserve consistency with existing expenses.",
+    "linesLockedHint": "Lines can no longer be edited after submission."
   },
   "vagueEditor": {
     "titre": "Associated batches",

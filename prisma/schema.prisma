@@ -279,6 +279,8 @@ enum Permission {
   ANALYTICS_PLATEFORME
   // Dépenses rétroactives (Sprint EX)
   DEPENSES_VENTE_RETRO
+  // Besoins rétroactifs (Sprint BR)
+  BESOINS_MODIFIER_RETRO
 }
 
 // ──────────────────────────────────────────

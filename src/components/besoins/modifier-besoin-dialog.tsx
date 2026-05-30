@@ -88,6 +88,8 @@ interface LigneForm {
 interface Props {
   liste: ListeBesoinsEditData;
   onSuccess: (updated: ListeBesoinsEditData) => void;
+  /** true si l'edition est retroactive (statut hors SOUMISE, permission BESOINS_MODIFIER_RETRO) */
+  isRetro?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +133,7 @@ function emptyLigne(): LigneForm {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
+export function ModifierBesoinDialog({ liste, onSuccess, isRetro = false }: Props) {
   const depenseService = useDepenseService();
   const stockService = useStockService();
   const t = useTranslations("besoins");
@@ -255,48 +257,58 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
       setValidationError(t("modifierDialog.erreurs.titreRequis"));
       return;
     }
-    if (lignes.length === 0) {
-      setValidationError(t("modifierDialog.erreurs.auMoinsUneLigne"));
-      return;
-    }
-    for (let i = 0; i < lignes.length; i++) {
-      const l = lignes[i];
-      if (!l.designation.trim()) {
-        setValidationError(
-          t("modifierDialog.erreurs.designationRequise", { index: i + 1 })
-        );
+
+    // Validation des lignes seulement si non-retro (hors SOUMISE les lignes sont verrouillee)
+    if (!isRetro) {
+      if (lignes.length === 0) {
+        setValidationError(t("modifierDialog.erreurs.auMoinsUneLigne"));
         return;
       }
-      if (!l.quantite || parseFloat(l.quantite) <= 0) {
-        setValidationError(
-          t("modifierDialog.erreurs.quantitePositive", { index: i + 1 })
-        );
-        return;
-      }
-      if (l.prixEstime === "" || parseFloat(l.prixEstime) < 0) {
-        setValidationError(
-          t("modifierDialog.erreurs.prixPositif", { index: i + 1 })
-        );
-        return;
+      for (let i = 0; i < lignes.length; i++) {
+        const l = lignes[i];
+        if (!l.designation.trim()) {
+          setValidationError(
+            t("modifierDialog.erreurs.designationRequise", { index: i + 1 })
+          );
+          return;
+        }
+        if (!l.quantite || parseFloat(l.quantite) <= 0) {
+          setValidationError(
+            t("modifierDialog.erreurs.quantitePositive", { index: i + 1 })
+          );
+          return;
+        }
+        if (l.prixEstime === "" || parseFloat(l.prixEstime) < 0) {
+          setValidationError(
+            t("modifierDialog.erreurs.prixPositif", { index: i + 1 })
+          );
+          return;
+        }
       }
     }
 
     setValidationError("");
 
-    const result = await depenseService.updateBesoin(liste.id, {
+    const payload: Record<string, unknown> = {
       titre: titre.trim(),
       uniteProductionId: uniteProductionId || null,
       vagues: !isReproduction && vaguesRatios.length > 0 ? vaguesRatios : [],
       notes: notes.trim() || null,
       dateLimite: dateLimite || null,
-      lignes: lignes.map((l) => ({
+    };
+
+    // Lignes : ne pas envoyer en mode retroactif (la query les bloquerait de toute facon)
+    if (!isRetro) {
+      payload.lignes = lignes.map((l) => ({
         designation: l.designation.trim(),
         produitId: l.produitId || undefined,
         quantite: parseFloat(l.quantite),
         unite: l.unite || undefined,
         prixEstime: parseFloat(l.prixEstime) || 0,
-      })),
-    });
+      }));
+    }
+
+    const result = await depenseService.updateBesoin(liste.id, payload as Parameters<typeof depenseService.updateBesoin>[1]);
 
     if (result.ok && result.data) {
       setOpen(false);
@@ -318,6 +330,18 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         </DialogHeader>
 
         <DialogBody className="space-y-4 py-2">
+          {/* Badge retroactif — affiché si statut hors SOUMISE */}
+          {isRetro && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+              <p className="font-medium text-amber-900">
+                {t("modifierDialog.retroactiveTitle")}
+              </p>
+              <p className="text-amber-700 mt-1">
+                {t("modifierDialog.retroactiveDescription")}
+              </p>
+            </div>
+          )}
+
           {/* Titre */}
           <div>
             <label className="text-sm font-medium">
@@ -404,7 +428,13 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
             />
           </div>
 
-          {/* Lignes de besoin */}
+          {/* Lignes de besoin — verrouillees en mode retroactif */}
+          {isRetro ? (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              <p className="font-medium">{t("modifierDialog.lignesTitle")}</p>
+              <p className="mt-1">{t("modifierDialog.linesLockedHint")}</p>
+            </div>
+          ) : (
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">
@@ -569,6 +599,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
               <span className="text-base font-bold">{formatMontant(montantEstime, locale)} FCFA</span>
             </div>
           </div>
+          )}
 
           {/* Validation error */}
           {validationError && (

@@ -107,6 +107,8 @@ interface Props {
   canApprove: boolean;
   canProcess: boolean;
   canEdit?: boolean;
+  /** true si canEdit provient de la permission BESOINS_MODIFIER_RETRO (statut hors SOUMISE) */
+  canEditRetro?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +139,7 @@ export function BesoinsDetailClient({
   canApprove,
   canProcess,
   canEdit = false,
+  canEditRetro = false,
 }: Props) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -431,37 +434,41 @@ export function BesoinsDetailClient({
         </CardContent>
       </Card>
 
-      {/* Bouton Modifier + Supprimer — seulement si statut SOUMISE et canEdit */}
-      {canEdit && statut === StatutBesoins.SOUMISE && (
+      {/* Bouton Modifier + Supprimer */}
+      {canEdit && (
         <div className="mb-4 flex justify-end gap-2">
-          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                <Trash2 className="h-4 w-4 mr-1" />
-                {t("detail.supprimer")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("detail.supprimerTitle")}</DialogTitle>
-              </DialogHeader>
-              <DialogBody>
-              <p className="text-sm text-muted-foreground py-2">
-                {t("detail.supprimerDescription", { numero: liste.numero })}
-              </p>
-              </DialogBody>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="ghost">{t("detail.annuler")}</Button>
-                </DialogClose>
-                <Button variant="danger" onClick={handleDelete}>
+          {/* Supprimer — seulement si SOUMISE */}
+          {statut === StatutBesoins.SOUMISE && (
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-4 w-4 mr-1" />
                   {t("detail.supprimer")}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("detail.supprimerTitle")}</DialogTitle>
+                </DialogHeader>
+                <DialogBody>
+                <p className="text-sm text-muted-foreground py-2">
+                  {t("detail.supprimerDescription", { numero: liste.numero })}
+                </p>
+                </DialogBody>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="ghost">{t("detail.annuler")}</Button>
+                  </DialogClose>
+                  <Button variant="danger" onClick={handleDelete}>
+                    {t("detail.supprimer")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
           <ModifierBesoinDialog
             liste={liste}
+            isRetro={canEditRetro}
             onSuccess={(updated) => {
               setListe(updated as ListeBesoinsDetailData);
             }}

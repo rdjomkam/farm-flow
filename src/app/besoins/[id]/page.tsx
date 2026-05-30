@@ -3,7 +3,7 @@ import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getListeBesoinsById } from "@/lib/queries/besoins";
-import { Permission } from "@/types";
+import { Permission, StatutBesoins } from "@/types";
 import { BesoinsDetailClient } from "@/components/besoins/besoins-detail-client";
 
 interface Props {
@@ -27,10 +27,22 @@ export default async function BesoinsDetailPage({ params }: Props) {
 
   const canApprove = permissions.includes(Permission.BESOINS_APPROUVER);
   const canProcess = permissions.includes(Permission.BESOINS_TRAITER);
-  // canEdit : demandeur OU approbateur, seulement si SOUMISE (la logique SOUMISE est dans le composant)
-  const canEdit =
+  const hasRetroPerm = permissions.includes(Permission.BESOINS_MODIFIER_RETRO);
+  const statut = listeBesoins.statut as StatutBesoins;
+
+  // canEdit :
+  //  - SOUMISE : demandeur OU approbateur avec BESOINS_SOUMETTRE
+  //  - APPROUVEE / TRAITEE / CLOTUREE : requiert BESOINS_MODIFIER_RETRO
+  //  - REJETEE : jamais
+  const canEditSoumise =
+    statut === StatutBesoins.SOUMISE &&
     permissions.includes(Permission.BESOINS_SOUMETTRE) &&
     (listeBesoins.demandeurId === session.userId || canApprove);
+  const canEditRetro =
+    statut !== StatutBesoins.SOUMISE &&
+    statut !== StatutBesoins.REJETEE &&
+    hasRetroPerm;
+  const canEdit = canEditSoumise || canEditRetro;
 
   return (
     <>
@@ -40,6 +52,7 @@ export default async function BesoinsDetailPage({ params }: Props) {
         canApprove={canApprove}
         canProcess={canProcess}
         canEdit={canEdit}
+        canEditRetro={canEditRetro}
       />
     </>
   );

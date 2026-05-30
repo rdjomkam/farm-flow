@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "Permission" ADD VALUE 'BESOINS_MODIFIER_RETRO';
+

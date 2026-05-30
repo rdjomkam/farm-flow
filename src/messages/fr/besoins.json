@@ -111,7 +111,10 @@
     "uniteProductionPlaceholder": "Sélectionner une unité",
     "uniteProductionAucune": "-- Aucune unité --",
     "typeGrossissement": "Grossissement",
-    "typeReproduction": "Reproduction"
+    "typeReproduction": "Reproduction",
+    "retroactiveTitle": "Modification retroactive",
+    "retroactiveDescription": "Cette liste n'est plus en statut SOUMISE. Seules les metadonnees (titre, vagues, unite de production, notes, date limite) sont modifiables. Les lignes restent verrouilleees pour preserver la coherence avec les depenses existantes.",
+    "linesLockedHint": "Les lignes ne peuvent plus etre modifiees apres la soumission."
   },
   "vagueEditor": {
     "titre": "Vagues associees",

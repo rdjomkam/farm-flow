@@ -133,6 +133,8 @@ export enum Permission {
   ANALYTICS_PLATEFORME = "ANALYTICS_PLATEFORME",
   // Depenses retroactives (Sprint EX)
   DEPENSES_VENTE_RETRO = "DEPENSES_VENTE_RETRO",
+  // Besoins retroactifs (Sprint BR)
+  BESOINS_MODIFIER_RETRO = "BESOINS_MODIFIER_RETRO",
 }
 
 /**

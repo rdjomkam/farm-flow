@@ -119,19 +119,25 @@ export async function PUT(
       }
     }
 
-    const listeBesoins = await updateListeBesoins(id, auth.activeSiteId, {
-      titre: body.titre,
-      vagues: body.vagues,
-      notes: body.notes,
-      lignes: body.lignes,
-      ...(dateLimite !== undefined && { dateLimite }),
-    });
+    const listeBesoins = await updateListeBesoins(
+      id,
+      auth.activeSiteId,
+      {
+        titre: body.titre,
+        vagues: body.vagues,
+        notes: body.notes,
+        lignes: body.lignes,
+        ...(dateLimite !== undefined && { dateLimite }),
+      },
+      auth.permissions
+    );
 
     return NextResponse.json(listeBesoins);
   } catch (error) {
     return handleApiError("PUT /api/besoins/[id]", error, "Erreur serveur.", {
       statusMap: [
-        { match: ["invalide", "Impossible", "SOUMISE"], status: 400 },
+        { match: ["BESOINS_MODIFIER_RETRO"], status: 403 },
+        { match: ["invalide", "Impossible", "SOUMISE", "REJETEE", "retroactive", "verrouillees"], status: 400 },
       ],
     });
   }

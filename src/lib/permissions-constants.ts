@@ -146,6 +146,7 @@ export const PERMISSION_GROUPS = {
     Permission.BESOINS_SOUMETTRE,
     Permission.BESOINS_APPROUVER,
     Permission.BESOINS_TRAITER,
+    Permission.BESOINS_MODIFIER_RETRO,
   ],
   general: [
     Permission.DASHBOARD_VOIR,

@@ -6,6 +6,7 @@ import {
   CategorieDepense,
   CategorieProduit,
   TypeMouvement,
+  Permission,
 } from "@/types";
 import type {
   CreateListeBesoinsDTO,
@@ -385,21 +386,48 @@ export async function createListeBesoins(
 }
 
 /**
- * Met a jour une liste de besoins (seulement si statut SOUMISE).
- * Si lignes est fourni, on remplace toutes les lignes existantes.
+ * Met a jour une liste de besoins.
+ *
+ * - Statut SOUMISE : modification libre (titre, vagues, lignes, notes, dateLimite, uniteProductionId).
+ * - Statut APPROUVEE / TRAITEE / CLOTUREE : requiert la permission BESOINS_MODIFIER_RETRO.
+ *   Dans ce cas, les lignes sont verrouillees (coherence avec depenses existantes) ;
+ *   seuls les metadonnees (titre, vagues, unite, notes, date limite) sont modifiables.
+ * - Statut REJETEE : toujours bloque — creer une nouvelle liste.
  */
 export async function updateListeBesoins(
   id: string,
   siteId: string,
-  data: UpdateListeBesoinsDTO
+  data: UpdateListeBesoinsDTO,
+  userPermissions: string[] = []
 ) {
   return prisma.$transaction(async (tx) => {
     const liste = await tx.listeBesoins.findFirst({ where: { id, siteId } });
     if (!liste) throw new Error("Liste de besoins introuvable");
-    if (liste.statut !== StatutBesoins.SOUMISE) {
+
+    const isSoumise = liste.statut === StatutBesoins.SOUMISE;
+    const isRejetee = liste.statut === StatutBesoins.REJETEE;
+    const hasRetroPerm = userPermissions.includes(Permission.BESOINS_MODIFIER_RETRO);
+
+    // REJETEE : toujours bloque (recréer une nouvelle liste)
+    if (isRejetee) {
       throw new Error(
-        "Impossible de modifier une liste qui n'est plus SOUMISE"
+        "Impossible de modifier une liste REJETEE. Creez une nouvelle liste."
       );
+    }
+
+    // Hors SOUMISE : necessite la permission retroactive
+    if (!isSoumise) {
+      if (!hasRetroPerm) {
+        throw new Error(
+          "Impossible de modifier une liste qui n'est plus SOUMISE sans la permission BESOINS_MODIFIER_RETRO."
+        );
+      }
+      // Avec permission : lignes verrouillees pour coherence avec depenses existantes
+      if (data.lignes !== undefined) {
+        throw new Error(
+          "Les lignes ne sont pas modifiables apres la soumission, meme avec la permission retroactive. Seules les metadonnees (titre, vagues, unite, notes, date limite) sont modifiables."
+        );
+      }
     }
 
     // Mise a jour des vagues (remplacement atomique si fourni)
