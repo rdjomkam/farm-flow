@@ -1,0 +1,226 @@
+{
+  "guides": [
+    {
+      "id": "style_caa26335fedf",
+      "name": "Aurora",
+      "tokens": {
+        "colors": {
+          "ring": "#7c3aed",
+          "accent-soil-muted": "#f5e8da",
+          "secondary-foreground": "#3d1f08",
+          "accent-soil": "#7c4f2c",
+          "foreground": "#1e1b4b",
+          "danger": "#ef4444",
+          "primary-hover": "#6d28d9",
+          "surface-1": "#ffffff",
+          "muted-foreground": "#6b7280",
+          "surface-0": "#f5f3ff",
+          "surface-2": "#f0f0ff",
+          "accent-sage-muted": "#e8f0e8",
+          "warning": "#d97706",
+          "muted": "#ede9fe",
+          "border": "#e5e7eb",
+          "accent-indigo": "#4f46e5",
+          "accent-violet": "#8b5cf6",
+          "primary-foreground": "#ffffff",
+          "accent-wheat-muted": "#fef7e0",
+          "overlay": "rgba(30,27,75,0.5)",
+          "accent-sage": "#5a7c5a",
+          "accent-green": "#059669",
+          "accent-wheat": "#d4a843",
+          "accent-terracotta": "#c0583c",
+          "accent-amber": "#d97706",
+          "secondary": "#f5ede0",
+          "accent-terracotta-muted": "#fdeee9",
+          "background": "#f5f3ff",
+          "success": "#059669",
+          "card-foreground": "#1e1b4b",
+          "card": "#ffffff",
+          "primary": "#7c3aed"
+        },
+        "typography": {
+          "body": {
+            "family": "Plus Jakarta Sans",
+            "size": "1rem",
+            "url": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+          },
+          "mono": {
+            "family": "JetBrains Mono",
+            "size": "0.875rem",
+            "url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+          },
+          "heading": {
+            "family": "Plus Jakarta Sans",
+            "size": "2rem",
+            "url": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          }
+        },
+        "spacing": {
+          "sm": "8px",
+          "xs": "4px",
+          "lg": "24px",
+          "xl": "40px",
+          "2xl": "64px",
+          "md": "16px"
+        },
+        "radius": {
+          "sm": "8px",
+          "lg": "16px",
+          "xl": "24px",
+          "md": "12px",
+          "full": "9999px"
+        }
+      },
+      "designInstructions": "## Aurora — Modern Mobile-First Design Language\n\nA vibrant, joyful productivity app aesthetic. The primary violet energy signals innovation and clarity. Mobile-first, touch-optimized, generous whitespace, with an elevated sense of craft at every pixel.\n\n### Color\nPrimary: deep violet `#7c3aed`. Background: `#f5f3ff` — a barely-perceptible violet wash that unifies the page. Cards are pure white on this backdrop, creating layered depth. The gradient hero uses `linear-gradient(135deg, #6d28d9, #4338ca)` — a rich indigo depth. Colored icon boxes (green `#d1fae5`, amber `#fef3c7`, red `#fee2e2`, violet `#ede9fe`) act as visual tags for each stat type.\n\n### Typography\n**Plus Jakarta Sans** exclusively. H1/hero: 800 weight, -0.02em tracking. Section labels: 700. Body: 500/400. The large KPI numbers display at 1.4–1.6rem with 800 weight and tight letter-spacing, creating punchy visual impact at thumb distance.\n\n### Mobile Components\n**Hero gradient card**: full-width, `border-radius: 20px`, gradient background, white text. Contains main stats inline. Decorative soft-circle ornaments in bottom-right corner at rgba(255,255,255,0.06).\n**Stat grid**: 2×2 grid of white cards, 16px radius, `box-shadow: 0 2px 12px rgba(124,58,237,0.07)`. Each card has a 36×36 colored icon box (10px radius) and a large bold number.\n**Crop cards**: horizontal flex rows with emoji icon box (46×46, 13px radius, colored bg), text stack + mini progress bar, status pill. Shadow: `0 1px 4px rgba(0,0,0,0.04)`.\n**Progress bars**: 4px height, gradient fills matching status color, `border-radius: 99px`.\n**Status pills**: `border-radius: 99px`, 0.65rem, weight 700, color-matched to status.\n**Bottom navigation**: white, `border-top: 1px solid #e5e7eb`, 5 tabs. Active tab has a colored rounded-square bg (40×36px, 10px radius, muted-color fill) + colored label. Inactive tabs: 55% opacity.\n\n### Transitions\nAll 200ms `ease-out`. Card hover: `box-shadow` grows — no transform. Button: background shifts one step darker.\n",
+      "created": "2026-05-31T01:59:09.029217+00:00",
+      "modified": "2026-05-31T02:17:13.455641+00:00"
+    },
+    {
+      "id": "style_25feaf86016b",
+      "name": "Obsidian",
+      "tokens": {
+        "colors": {
+          "ring": "#34d399",
+          "secondary-foreground": "#d1fae5",
+          "foreground": "#f0fdf4",
+          "danger": "#f87171",
+          "primary-hover": "#10b981",
+          "surface-1": "#131929",
+          "muted-foreground": "#6b7280",
+          "surface-0": "#0a0f1a",
+          "surface-2": "#1a2332",
+          "accent-emerald-bright": "#86efac",
+          "accent-red-muted": "#450a0a",
+          "warning": "#fbbf24",
+          "accent-green-bright": "#86efac",
+          "muted": "#1a2332",
+          "border": "#1f2937",
+          "accent-cyan": "#22d3ee",
+          "primary-foreground": "#052e16",
+          "overlay": "rgba(0,0,0,0.7)",
+          "accent-amber-muted": "#451a03",
+          "accent-red": "#f87171",
+          "accent-amber": "#fbbf24",
+          "secondary": "#1f2937",
+          "background": "#0a0f1a",
+          "success": "#34d399",
+          "accent-green-bright-muted": "#14532d",
+          "accent-cyan-muted": "#164e63",
+          "card-foreground": "#f0fdf4",
+          "card": "#131929",
+          "primary": "#34d399"
+        },
+        "typography": {
+          "body": {
+            "family": "Outfit",
+            "size": "1rem",
+            "url": "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap"
+          },
+          "mono": {
+            "family": "Outfit",
+            "size": "0.875rem",
+            "url": "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap"
+          },
+          "heading": {
+            "family": "Outfit",
+            "size": "2rem",
+            "url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+          }
+        },
+        "spacing": {
+          "sm": "8px",
+          "xs": "4px",
+          "lg": "24px",
+          "xl": "40px",
+          "2xl": "64px",
+          "md": "16px"
+        },
+        "radius": {
+          "sm": "8px",
+          "lg": "16px",
+          "xl": "20px",
+          "md": "12px",
+          "full": "9999px"
+        }
+      },
+      "designInstructions": "## Obsidian — Dark Modern Mobile Design Language\n\nA sleek professional dark-mode app for agronomists working early mornings and late evenings. The deep space backgrounds make data glow, stats breathe, and alerts feel urgent. Think Raycast meets precision agriculture.\n\n### Color Philosophy\nThree dark surface tiers define depth without borders: `#0a0f1a` (void/page), `#131929` (card/nav), `#1a2332` (elevated/KPI chip). The primary emerald `#34d399` is vivid but not garish — it's the green of growth sensors in the dark. Borders are `#1f2937` — just barely visible, drawing structure without weight. Status colors: amber `#fbbf24`, red `#f87171`, cyan `#22d3ee`.\n\n### Typography\n**Outfit** throughout — a geometric humanist sans that reads beautifully in white on dark, with natural round strokes that feel warm not cold. Headings 700–800, body 400–500. KPI numbers display at 1.2rem, 700 weight, in primary green.\n\n### Mobile Components\n**Header**: `#131929` bg, dark avatar with green gradient `#34d399→#059669`, monogram in `#052e16`.\n**Glass summary card**: `rgba(26,35,50,0.9)` bg, `border: 1px solid rgba(52,211,153,0.15)`, `border-radius: 20px`. Large radial gradient glow in top-right corner at 8% opacity. 3-column stats grid.\n**KPI scroll chips**: horizontal `overflow-x: auto`, flex chips. Each `#1a2332` bg, `#2d3748` border, 12px radius. Values in brand colors.\n**Chart**: Chart.js bar chart at fixed 140px height. Bars with emerald gradient opacity (50%→100% left to right). Dark bg, minimal gridlines `rgba(45,55,72,0.3)`, Outfit font ticks.\n**Crop cards**: `#131929` bg, `#1f2937` border, 16px radius. Glow border on alert cards `rgba(248,113,113,0.2)`. Progress bars 3px, brand-colored fills. Status badges: `rgba(color,0.1)` bg + `rgba(color,0.25)` border + color text.\n**Bottom nav**: `#131929` bg, `#1f2937` top border. Active: `rgba(52,211,153,0.1)` bg + emerald border + emerald label. Inactive: 45% opacity.\n\n### Data Visualization\nBar chart bars use progressive emerald opacity `rgba(52,211,153, 0.5→1.0)` across months — builds anticipation left-to-right. `borderRadius: 6` on bars. Tooltip: `#1a2332` bg, emerald title.\n",
+      "created": "2026-05-31T01:59:40.966710+00:00",
+      "modified": "2026-05-31T02:17:33.565550+00:00"
+    },
+    {
+      "id": "style_68a0f790f9aa",
+      "name": "Meadow",
+      "tokens": {
+        "colors": {
+          "ring": "#16a34a",
+          "accent-gold-light-muted": "#fefce8",
+          "secondary-foreground": "#1a1500",
+          "foreground": "#111827",
+          "danger": "#ef4444",
+          "accent-olive": "#65a30d",
+          "primary-hover": "#15803d",
+          "surface-1": "#f9fafb",
+          "muted-foreground": "#6b7280",
+          "surface-0": "#ffffff",
+          "surface-2": "#f0fdf4",
+          "accent-olive-muted": "#ecfccb",
+          "warning": "#d97706",
+          "accent-bronze": "#92400e",
+          "muted": "#f0fdf4",
+          "accent-bronze-muted": "#fef3c7",
+          "border": "#e5e7eb",
+          "primary-foreground": "#ffffff",
+          "overlay": "rgba(17,24,39,0.45)",
+          "accent-rust": "#c2410c",
+          "secondary": "#fef9ee",
+          "accent-rust-muted": "#fff7ed",
+          "background": "#ffffff",
+          "success": "#16a34a",
+          "card-foreground": "#111827",
+          "card": "#ffffff",
+          "primary": "#16a34a",
+          "accent-gold-light": "#fde68a",
+          "accent-green-light": "#bbf7d0",
+          "accent-green-bright": "#4ade80",
+          "accent-red": "#ef4444",
+          "accent-amber": "#d97706"
+        },
+        "typography": {
+          "body": {
+            "family": "Inter",
+            "size": "1rem",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+          },
+          "mono": {
+            "family": "Inter",
+            "size": "0.875rem",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+          },
+          "heading": {
+            "family": "Inter",
+            "size": "2rem",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          }
+        },
+        "spacing": {
+          "sm": "8px",
+          "xs": "4px",
+          "lg": "24px",
+          "xl": "40px",
+          "2xl": "64px",
+          "md": "16px"
+        },
+        "radius": {
+          "sm": "8px",
+          "lg": "14px",
+          "xl": "20px",
+          "md": "10px",
+          "full": "9999px"
+        }
+      },
+      "designInstructions": "## Meadow — Clean Modern Green Mobile Design Language\n\nA fresh, trustworthy design language grounded in the green-and-white familiarity of modern productivity apps. Feels like a well-designed banking app or health tracker — approachable, clean, instantly legible. The green signals growth without being heavy.\n\n### Color\nPure white `#ffffff` background. Primary: `#16a34a` (green-600) — confident, natural. Accent: `#f0fdf4` for all tinted surfaces. The hero card is a rich emerald gradient `#16a34a → #059669 → #047857`. Card borders: `#e5e7eb` (cool neutral). Alert red: `#ef4444`. Surveillance amber: `#d97706`. All color used at 100% saturation — no muted palettes, clean and direct.\n\n### Typography\n**Inter** at every weight. Headings: 800 at -0.02em. Section titles: 800. Body: 500–600 for readability at small mobile sizes. KPI numbers: 1.25rem at 800 weight. No display serifs — this is a lean, precise aesthetic.\n\n### Signature Design Element\n**Colored left-border on crop cards**: `border-left: 3px solid [status color]`, `border-radius: 0 14px 14px 0`. Green for healthy, amber for surveillance, red for alert. This is the visual encoding system — one glance tells the story of every field.\n\n### Mobile Components\n**Hero banner**: full-width gradient card, 20px radius. Stats displayed in a 3-column frosted row `rgba(255,255,255,0.15)` inside the card.\n**Quick action buttons**: 2-column grid. Primary: solid green fill, white text. Secondary: `#f0fdf4` fill with `#bbf7d0` border and green text.\n**Alert banner**: `#fef2f2` bg, `#fecaca` border, 14px radius. Flex with icon box + text + right chevron.\n**Crop cards**: White bg, left-border status encoding, `box-shadow: 0 1px 4px rgba(0,0,0,0.04)`. Progress bars 4px with gradient fills. Status pills: `border-radius: 99px`, filled with muted color bg, 1px solid border.\n**Bottom nav**: White, `border-top: 1.5px solid #f0fdf4`. Active tab has `#f0fdf4` bg + `#bbf7d0` border. Inactive: 45% opacity.\n\n### UX Focus\nLarge 44px+ touch targets. Clear visual hierarchy at glance distance. Every piece of data at a farm-critical size. Simple mental model: white = clean, green = good, amber = watch, red = act now.\n",
+      "created": "2026-05-31T02:00:14.406415+00:00",
+      "modified": "2026-05-31T02:17:51.594087+00:00"
+    }
+  ]
+}

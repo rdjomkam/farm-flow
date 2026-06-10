@@ -290,9 +290,11 @@ export function computeVivantsByBac(
     }
   }
 
-  // Group removals (mortality + sales) by bacId — all removals, and post-comptage separately
+  // Group removals (mortality + sales + transferts) by bacId — all removals, and post-comptage separately
   const mortsParBac = new Map<string, number>();
   const mortsPostComptageParBac = new Map<string, number>();
+  // Arrivages : ajustement POSITIF (inverse de mortalités). nombreCompte stocke la qty arrivée.
+  const arrivagesPostComptageParBac = new Map<string, number>();
   for (const r of releves) {
     if (r.typeReleve === "MORTALITE" && r.bacId) {
       const morts = r.nombreMorts ?? 0;
@@ -323,6 +325,16 @@ export function computeVivantsByBac(
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + transferes);
       }
     }
+    // ARRIVAGE — ajustement positif (alevins ajoutés). nombreCompte stocke la qty.
+    // Pré-comptage : déjà inclus dans AssignationBac.nombreInitial via topup (cas géré par initialBac).
+    // Post-comptage : doit être AJOUTÉ au baseline du comptage qui ne reflète pas cet arrivage.
+    if (r.typeReleve === "ARRIVAGE" && r.bacId) {
+      const arrives = r.nombreCompte ?? 0;
+      const comptage = comptagesParBac.get(r.bacId);
+      if (comptage && r.date && new Date(r.date) > comptage.date) {
+        arrivagesPostComptageParBac.set(r.bacId, (arrivagesPostComptageParBac.get(r.bacId) ?? 0) + arrives);
+      }
+    }
   }
 
   const result = new Map<string, number>();
@@ -336,9 +348,11 @@ export function computeVivantsByBac(
     const comptage = comptagesParBac.get(bac.id);
     if (comptage) {
       const mortsApres = mortsPostComptageParBac.get(bac.id) ?? 0;
-      result.set(bac.id, Math.max(0, comptage.count - mortsApres));
+      const arrivagesApres = arrivagesPostComptageParBac.get(bac.id) ?? 0;
+      result.set(bac.id, Math.max(0, comptage.count - mortsApres + arrivagesApres));
     } else {
       const mortsBac = mortsParBac.get(bac.id) ?? 0;
+      // Sans comptage, l'arrivage est déjà inclus dans initialBac (topup AssignationBac).
       result.set(bac.id, Math.max(0, initialBac - mortsBac));
     }
   }

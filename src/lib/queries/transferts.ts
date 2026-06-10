@@ -233,12 +233,15 @@ export async function createTransfert(
           nombreInitial: a.nombreInitial ?? null,
         }));
 
-        // Charger relevés MORTALITE + COMPTAGE pour cette vague source
+        // Charger relevés MORTALITE + COMPTAGE + ARRIVAGE pour cette vague source.
+        // ARRIVAGE est nécessaire pour ajuster correctement le compte vivant quand
+        // un COMPTAGE antérieur fait office de baseline et que des alevins ont été
+        // ajoutés ensuite (sinon les arrivages post-comptage sont ignorés).
         const relevesSource = await tx.releve.findMany({
           where: {
             siteId,
             vagueId: vagueSourceId,
-            typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+            typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE, TypeReleve.ARRIVAGE] },
           },
           orderBy: { date: "asc" },
           select: {
