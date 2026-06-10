@@ -116,12 +116,20 @@ export function buildGompertzPanelData(opts: {
   let joursAvantObjectif: number | null = null;
   let dateObjectif: string | null = null;
 
-  if (joursRestants !== null) {
+  if (joursRestants !== null && Number.isFinite(joursRestants)) {
     joursAvantObjectif = Math.ceil(joursRestants);
-    // Compute the projected harvest date from today + days remaining
-    const msPerDay = 86400000;
-    const dateRecolte = new Date(Date.now() + joursAvantObjectif * msPerDay);
-    dateObjectif = dateRecolte.toISOString();
+    // Garde-fou : si la projection dépasse 100 ans, le modèle Gompertz est
+    // dégénéré (k très petit, ratio proche de l'asymptote, etc.) — on renvoie
+    // null pour éviter Invalid Date sur new Date(huge_ms).
+    const MAX_JOURS_PROJECTION = 100 * 365; // 100 ans
+    if (joursAvantObjectif > MAX_JOURS_PROJECTION) {
+      joursAvantObjectif = null;
+    } else {
+      // Compute the projected harvest date from today + days remaining
+      const msPerDay = 86400000;
+      const candidate = new Date(Date.now() + joursAvantObjectif * msPerDay);
+      dateObjectif = isNaN(candidate.getTime()) ? null : candidate.toISOString();
+    }
   }
 
   // Suppress unused variable warning — dateDebut kept for API consistency
