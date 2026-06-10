@@ -59,8 +59,14 @@ export function ModifierVagueDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
-  // Format date pour input type="date" : YYYY-MM-DD
-  const initialDateStr = new Date(dateDebut).toISOString().slice(0, 10);
+  // Format date pour input type="date" : YYYY-MM-DD (défensif : tolère undefined/null/invalide)
+  const initialDateStr = (() => {
+    if (!dateDebut) return new Date().toISOString().slice(0, 10);
+    const d = new Date(dateDebut);
+    return isNaN(d.getTime())
+      ? new Date().toISOString().slice(0, 10)
+      : d.toISOString().slice(0, 10);
+  })();
   const [dateDebutStr, setDateDebutStr] = useState(initialDateStr);
   const [nombre, setNombre] = useState(String(nombreInitial));
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
