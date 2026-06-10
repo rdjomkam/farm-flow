@@ -233,15 +233,23 @@ export async function createTransfert(
           nombreInitial: a.nombreInitial ?? null,
         }));
 
-        // Charger relevés MORTALITE + COMPTAGE + ARRIVAGE pour cette vague source.
-        // ARRIVAGE est nécessaire pour ajuster correctement le compte vivant quand
-        // un COMPTAGE antérieur fait office de baseline et que des alevins ont été
-        // ajoutés ensuite (sinon les arrivages post-comptage sont ignorés).
+        // Charger TOUS les types de relevés qui affectent le compte vivant :
+        // MORTALITE, COMPTAGE, ARRIVAGE, TRANSFERT, VENTE.
+        // Manquer un de ces types fausse le calcul des vivants (ex: ne pas charger
+        // TRANSFERT ignore les transferts déjà effectués et surestime les vivants).
         const relevesSource = await tx.releve.findMany({
           where: {
             siteId,
             vagueId: vagueSourceId,
-            typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE, TypeReleve.ARRIVAGE] },
+            typeReleve: {
+              in: [
+                TypeReleve.MORTALITE,
+                TypeReleve.COMPTAGE,
+                TypeReleve.ARRIVAGE,
+                TypeReleve.TRANSFERT,
+                TypeReleve.VENTE,
+              ],
+            },
           },
           orderBy: { date: "asc" },
           select: {
@@ -883,7 +891,16 @@ export async function updateTransfertGroupe(
         where: {
           siteId,
           vagueId: groupe.vagueSource.id,
-          typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+          // Tous les types qui affectent les vivants (sinon calcul faux — voir computeVivantsByBac)
+          typeReleve: {
+            in: [
+              TypeReleve.MORTALITE,
+              TypeReleve.COMPTAGE,
+              TypeReleve.ARRIVAGE,
+              TypeReleve.TRANSFERT,
+              TypeReleve.VENTE,
+            ],
+          },
         },
         orderBy: { date: "asc" },
         select: {
@@ -891,6 +908,7 @@ export async function updateTransfertGroupe(
           typeReleve: true,
           nombreMorts: true,
           nombreVendus: true,
+          nombreTransferes: true,
           nombreCompte: true,
           date: true,
         },

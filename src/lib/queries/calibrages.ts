@@ -138,7 +138,17 @@ export async function createCalibrage(
       where: {
         siteId,
         vagueId: data.vagueId,
-        typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+        // Tous les types qui affectent les vivants (sinon le calibrage surestime les vivants
+        // après transferts/ventes/arrivages — voir computeVivantsByBac).
+        typeReleve: {
+          in: [
+            TypeReleve.MORTALITE,
+            TypeReleve.COMPTAGE,
+            TypeReleve.ARRIVAGE,
+            TypeReleve.TRANSFERT,
+            TypeReleve.VENTE,
+          ],
+        },
       },
       orderBy: { date: "asc" },
       select: { bacId: true, typeReleve: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, date: true },
