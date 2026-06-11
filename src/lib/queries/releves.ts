@@ -657,9 +657,18 @@ export async function deleteReleve(siteId: string, id: string) {
       throw new Error("Releve introuvable ou n'appartient pas a ce site.");
     }
 
+    // Protection contre la suppression de releves lies a une operation metier parente (CG.3 — f6d7214).
+    // Deux mecanismes de check :
+    //   1. typeReleve ∈ {TRANSFERT, ARRIVAGE, VENTE} + FK parente non-null
+    //      → ces types materialisent un evenement metier direct ; on refuse si le lien est encore actif
+    //        (transfertGroupeId, arrivageId ou venteId non-null).
+    //   2. calibrageId != null (independamment du typeReleve)
+    //      → les releves auto-crees par un calibrage sont de type MORTALITE ou BIOMETRIE ;
+    //        il n'existe pas de typeReleve CALIBRAGE. La presence de calibrageId suffit a les proteger.
+    // Dans les deux cas : la suppression du parent (Transfert/Vente/Arrivage/Calibrage) cascade
+    // via onDelete: SetNull qui decroche le releve — mais comme l'utilisateur ne peut pas supprimer
+    // le parent depuis l'UI sans passer par une operation metier dediee, ce risque est theorique.
     // 1b. Garde-fou : refuser la suppression si le releve est lie a une operation parente
-    // Les releves TRANSFERT, ARRIVAGE, VENTE sont proteges par typeReleve.
-    // Les releves MORTALITE/BIOMETRIE auto-crees par un calibrage sont proteges par calibrageId.
     const PROTECTED_RELEVE_TYPES = [
       TypeReleveEnum.TRANSFERT,
       TypeReleveEnum.ARRIVAGE,
