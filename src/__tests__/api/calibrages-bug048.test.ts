@@ -223,19 +223,22 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
     mockReleveFindMany.mockResolvedValue(relevesAvecMortalites(44));
 
     // Le DTO redistribue 5048 (valeur stale) → conservation doit rejeter
+    // Sources = 5004, saisi = 5048, ecart = +44. Tolerance = max(1, round(5004*0.005)) = 25.
+    // Ecart abs 44 > 25 → rejet (ConservationError CG.1, message mis a jour : "Sources :" au lieu de "Source :").
     await expect(
       createCalibrage(SITE_ID, USER_ID, makeDto(5048))
-    ).rejects.toThrow(/Conservation non respectee.*Source : 5004/);
+    ).rejects.toThrow(/Conservation non respectee.*Sources : 5004/);
   });
 
-  it("rejette un calibrage dont groupes + morts != vivants reels", async () => {
+  it("accepte un calibrage dont l'ecart est dans la tolerance de 0.5% (CG.1)", async () => {
     setupHappyPathMocks();
     setupAssignationBacFindMany();
     mockReleveFindMany.mockResolvedValue(relevesAvecMortalites(10));
-    // vivants = 5048 - 10 = 5038. DTO : 5000 + 30 morts = 5030 ≠ 5038
+    // vivants = 5048 - 10 = 5038. DTO : 5000 + 30 morts = 5030. Ecart = -8.
+    // Tolerance = max(1, round(5038 * 0.005)) = max(1, 25) = 25. |ecart| 8 <= 25 → ACCEPTE.
     await expect(
       createCalibrage(SITE_ID, USER_ID, makeDto(5000, 30))
-    ).rejects.toThrow(/Conservation non respectee/);
+    ).resolves.toBeDefined();
   });
 
   it("sans aucun releve, conservation se base sur nombreInitial (vivants = nombreInitial)", async () => {

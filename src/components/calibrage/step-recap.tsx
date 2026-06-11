@@ -3,7 +3,7 @@
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { FishLoader } from "@/components/ui/fish-loader";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse } from "@/types";
@@ -145,7 +145,7 @@ export function StepRecap({
         )}
       </section>
 
-      {/* Validation conservation */}
+      {/* Validation conservation locale */}
       {isBalanced && (
         <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
           <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
@@ -155,6 +155,16 @@ export function StepRecap({
           </p>
         </div>
       )}
+
+      {/* Avertissement calcul serveur */}
+      <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/5 p-3">
+        <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+        <p className="text-xs text-warning/90">
+          Le calcul affiché est basé sur le comptage actuel des bacs. Le serveur recalcule
+          les vivants réels (mortalités, ventes, transferts inclus). En cas de rejet,
+          vérifiez les relevés récents du bac source.
+        </p>
+      </div>
 
       <div className="flex gap-3">
         <Button

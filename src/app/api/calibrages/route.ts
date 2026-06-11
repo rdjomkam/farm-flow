@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieCalibrage } from "@/types";
 import type { CreateCalibrageDTO } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 const VALID_CATEGORIES = new Set(Object.values(CategorieCalibrage));
 const MAX_GROUPES = 4;
@@ -122,9 +123,24 @@ export async function POST(request: NextRequest) {
     const calibrage = await createCalibrage(auth.activeSiteId, auth.userId, data);
     return NextResponse.json(calibrage, { status: 201 });
   } catch (error) {
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 422,
+          message: error.message,
+          details: {
+            sources: error.sourcesTotal,
+            saisi: error.saisiTotal,
+            ecart: error.ecart,
+            morts: error.nombreMorts,
+          },
+        },
+        { status: 422 }
+      );
+    }
     return handleApiError("POST /api/calibrages", error, "Erreur serveur lors de la creation du calibrage.", {
       statusMap: [
-        { match: ["Conservation non respectee", "n'est possible que", "n'appartiennent pas", "ne contient aucun"], status: 400 },
+        { match: ["n'est possible que", "n'appartiennent pas", "ne contient aucun"], status: 400 },
       ],
     });
   }

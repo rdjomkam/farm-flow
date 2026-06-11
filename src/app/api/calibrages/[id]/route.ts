@@ -3,6 +3,7 @@ import { getCalibrageById, patchCalibrage } from "@/lib/queries/calibrages";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieCalibrage } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -126,10 +127,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 422,
+          message: error.message,
+          details: {
+            sources: error.sourcesTotal,
+            saisi: error.saisiTotal,
+            ecart: error.ecart,
+            morts: error.nombreMorts,
+          },
+        },
+        { status: 422 }
+      );
+    }
     return handleApiError("PATCH /api/calibrages/[id]", error, "Erreur serveur lors de la modification du calibrage.", {
       statusMap: [
         { match: "cloturee", status: 409 },
-        { match: ["Conservation non respectee", "bacs de destination", "Aucun champ"], status: 400 },
+        { match: ["bacs de destination", "Aucun champ"], status: 400 },
       ],
     });
   }

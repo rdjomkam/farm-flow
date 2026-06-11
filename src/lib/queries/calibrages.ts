@@ -3,6 +3,7 @@ import { StatutVague, TypeReleve, CauseMortalite, MethodeComptage, CategorieCali
 import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "@/types";
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { ConservationError } from "@/lib/errors";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
 export async function getCalibrages(
@@ -159,22 +160,37 @@ export async function createCalibrage(
       vague.nombreInitial
     );
 
-    // Fallback: if computeVivantsByBac has no data for a bac, use nombreActuel from its assignation
-    const assignationByBacId = new Map(sourceAssignations.map((a) => [a.bac.id, a]));
-    const totalSourcePoissons = sourceBacs.reduce(
-      (sum, bac) => sum + (vivantsByBac.get(bac.id) ?? assignationByBacId.get(bac.id)?.nombreActuel ?? 0),
-      0
-    );
+    // Suppression du fallback dangereux (BUG CG — 10 juin 2026) :
+    // si computeVivantsByBac n'a pas de donnee pour un bac source, on rejette
+    // immediatement plutot que de tomber sur nombreActuel non-decremente.
+    let totalSourcePoissons = 0;
+    for (const bac of sourceBacs) {
+      const v = vivantsByBac.get(bac.id);
+      if (v == null) {
+        throw new ConservationError(
+          `Impossible de calculer les vivants pour le bac ${bac.nom}. Aucun releve exploitable.`,
+          0, 0, 0, 0
+        );
+      }
+      totalSourcePoissons += v;
+    }
+
     const totalGroupePoissons = data.groupes.reduce(
       (sum, g) => sum + g.nombrePoissons,
       0
     );
 
-    if (totalGroupePoissons + data.nombreMorts !== totalSourcePoissons) {
-      throw new Error(
-        `Conservation non respectee. Source : ${totalSourcePoissons} poissons, ` +
-          `groupes : ${totalGroupePoissons} + morts : ${data.nombreMorts} = ` +
-          `${totalGroupePoissons + data.nombreMorts}`
+    const totalSaisi = totalGroupePoissons + data.nombreMorts;
+    const ecartSigne = totalSaisi - totalSourcePoissons;
+    const ecartAbs = Math.abs(ecartSigne);
+    const tolerance = Math.max(1, Math.round(totalSourcePoissons * 0.005)); // 0.5 % min 1
+    if (ecartAbs > tolerance) {
+      throw new ConservationError(
+        `Conservation non respectee. Sources : ${totalSourcePoissons} poissons vivants. Saisi : ${totalGroupePoissons} (redistribues) + ${data.nombreMorts} (morts) = ${totalSaisi}. Ecart : ${ecartSigne > 0 ? "+" : ""}${ecartSigne}. Tous les poissons doivent etre saisis dans une categorie.`,
+        totalSourcePoissons,
+        totalSaisi,
+        ecartSigne,
+        data.nombreMorts
       );
     }
 
@@ -466,14 +482,21 @@ export async function patchCalibrage(
           }));
 
     // ----------------------------------------------------------------
-    // Etape 4 — Verification de conservation
+    // Etape 4 — Verification de conservation (tolerance 0.5 % min 1)
     // ----------------------------------------------------------------
     if (data.nombreMorts !== undefined || data.groupes !== undefined) {
-      const totalNouveaux =
-        nouveauxGroupes.reduce((sum, g) => sum + g.nombrePoissons, 0) + nouveauxNombreMorts;
-      if (totalNouveaux !== totalSourcePoissons) {
-        throw new Error(
-          `Conservation non respectee. Total source: ${totalSourcePoissons}, nouveau total: ${totalNouveaux}`
+      const totalNouveauxGroupes = nouveauxGroupes.reduce((sum, g) => sum + g.nombrePoissons, 0);
+      const totalNouveaux = totalNouveauxGroupes + nouveauxNombreMorts;
+      const ecartSignePatch = totalNouveaux - totalSourcePoissons;
+      const ecartAbsPatch = Math.abs(ecartSignePatch);
+      const tolerancePatch = Math.max(1, Math.round(totalSourcePoissons * 0.005)); // 0.5 % min 1
+      if (ecartAbsPatch > tolerancePatch) {
+        throw new ConservationError(
+          `Conservation non respectee. Sources : ${totalSourcePoissons} poissons vivants. Saisi : ${totalNouveauxGroupes} (redistribues) + ${nouveauxNombreMorts} (morts) = ${totalNouveaux}. Ecart : ${ecartSignePatch > 0 ? "+" : ""}${ecartSignePatch}. Tous les poissons doivent etre saisis dans une categorie.`,
+          totalSourcePoissons,
+          totalNouveaux,
+          ecartSignePatch,
+          nouveauxNombreMorts
         );
       }
     }

@@ -76,6 +76,9 @@ export function CalibrageFormClient({
   const [groupeErrors, setGroupeErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // NOTE: totalSourcePoissons est calcule depuis bac.nombrePoissons (AssignationBac.nombreActuel).
+  // Le serveur recalcule les vivants reels depuis les releves (mortalite, comptage, ventes).
+  // Si un rejet 422 survient, verifier les vivants reels via les releves du bac source.
   const sourceBacs = bacs.filter((b) => selectedBacIds.includes(b.id));
   const totalSourcePoissons = sourceBacs.reduce(
     (sum, b) => sum + (b.nombrePoissons ?? 0),
