@@ -1,132 +1,123 @@
 ---
-description: Sprint CF — Conservation Followup (clôture des nits + tests E2E + nettoyage post-CG)
+description: Sprint CS — Conservation Stricte (init AssignationBac + TRANSFERT entrant + post-write guard)
 ---
 
-# Objectif — Sprint CF (Conservation Followup)
+# Objectif — Sprint CS (Conservation Stricte)
 
-Clore les follow-ups identifiés par la review finale du Sprint CG (`docs/reviews/review-sprint-CG.md`).
+Empêcher de manière systémique l'incohérence détectée sur Vague-26-03 : les `AssignationBac` destinations d'un transfert avaient `nombrePoissonsInitial = 0` et `poidsMoyenInitial = 0` alors que `nombrePoissons` était correctement incrémenté. Conséquence : `computeVivantsByBac` retournait 0 pour Bac 01 et Bac 04 dans l'UI alors qu'ils contenaient 1744 et 1780 poissons.
 
-Objectif global : passer le périmètre Conservation de « APPROVED_WITH_FOLLOWUPS » à « FULLY_GREEN » et éliminer les risques résiduels avant la prochaine grosse opération métier sur Vague-26-03-Prep ou autres vagues à historique complexe.
+## Contexte (incident détecté 2026-06-11)
+
+- Vague-26-03 affichait **1976 vivants** dans le header au lieu de **5500**
+- Bac 01 (1744 reçus) et Bac 04 (1780 reçus) affichaient 0 vivants
+- Cause : `createTransfert` étape 9 incrémente `nombrePoissons` mais ne populait pas `nombrePoissonsInitial`/`poidsMoyenInitial` au moment de l'assignation destination
+- `computeVivantsByBac` utilise `nombrePoissonsInitial` comme base de calcul → vivants = 0
+
+Le data-fix manuel a été appliqué (`bacId=cmmnd2oab000104jse23g509w` et `cmmtgbf4x000204lfb3tsnrrd`) ; il faut maintenant le fix code et un garde-fou.
 
 ## Stories
 
-### CF.1 — Audit + correctif edge case CG.1 (`AssignationBac` source fermée)
+### CS.1 — Populer `nombreInitial` + `poidsMoyenInitial` à la création d'AssignationBac destination
 
-**Risque** : `createCalibrage` après commit `af91245` throw `ConservationError("Impossible de calculer les vivants pour le bac X")` quand `computeVivantsByBac` ne retourne pas de valeur pour un bac source. Si ce bac a une `AssignationBac.dateFin` antérieure à la date du calibrage (bac libéré puis re-rempli), l'ancien fallback `nombreActuel` masquait le cas. Maintenant ça bloque.
+**Fichiers** : `src/lib/queries/transferts.ts` (étapes 6 et 9 de `createTransfert`, étape 6 de `updateTransfertGroupe`), `src/lib/queries/arrivages.ts` (par symétrie — `createArrivage`).
 
-**Mission** :
+**Règle** :
+- À la **création** d'une nouvelle `AssignationBac` destination via transfert/arrivage → set `nombrePoissonsInitial = nombrePoissons` ET `poidsMoyenInitial = poidsMoyenG`
+- À l'**incrément** d'une AssignationBac existante → **ne pas** toucher à `nombrePoissonsInitial` (l'historique reste intact) mais documenter la décision en commentaire de code
 
-1. Script SQL d'audit prod : pour chaque vague EN_COURS, lister les bacs sources de calibrages historiques où `AssignationBac.dateFin < calibrage.date`. Si > 0, lister.
+**Migration data** : script SQL pour réparer les destinations historiques (init=0 mais nombrePoissons>0).
 
-2. Auditer également les futurs calibrages : pour chaque vague EN_COURS, vérifier que `computeVivantsByBac` retourne une valeur pour CHAQUE bac actif (sinon le prochain calibrage sera rejeté).
-
-3. Patch `src/lib/queries/calibrages.ts` ligne 170-174 : distinguer 2 cas
-   - Bac source SANS AssignationBac active à la date du calibrage → throw `ConservationError` clair (« Le bac X n'est pas affecté à la vague à la date du calibrage »)
-   - Bac source AVEC AssignationBac active mais sans relevés → autoriser fallback explicite sur `nombreInitial` de cette assignation (pas `nombreActuel` qui est stale)
-
-4. Test : `src/__tests__/calibrages-edge-cases.test.ts` — cas bac source fermé, cas bac sans relevé mais assignation active.
-
-**Fichiers** : `src/lib/queries/calibrages.ts`, `src/__tests__/calibrages-edge-cases.test.ts`, `prisma/data-fixes/CF1-audit-stale-assignations.sql`.
+**Tests** : `src/__tests__/transferts-init-fields.test.ts` — créer transfert vers bac neuf → vérifier init=nombrePoissons.
 
 ---
 
-### CF.2 — Vérifier build production
+### CS.2 — `computeVivantsByBac` compte les TRANSFERT entrants
 
-**Contexte** : pendant le Sprint CG, plusieurs dev ont rapporté `npm run build` bloqué en « Collecting build traces » sur `proxy.js.nft.json` (infra). Jamais confirmé OK post-sprint.
+**Fichier** : `src/lib/calculs.ts` — fonction `computeVivantsByBac`.
 
-**Mission** :
+**Règle** : symétrique aux TRANSFERT sortants côté source, ajouter le traitement des TRANSFERT entrants côté destination. La détection passe par les `TransfertGroupe.bacDestId` ou (préférable) par un relevé TRANSFERT incoming sur le bac dest.
 
-1. Lancer `npm run build` propre (`rm -rf .next && npm run build`).
-2. Si succès → rapport OK, fermer la story.
-3. Si échec → diagnostiquer (lock file résiduel, conflit ESM/CJS, taille bundle, etc.) et corriger.
+**Discussion architecture** :
+- Option A — créer un relevé TRANSFERT **entrant** symétrique au sortant (avec `bacId = bacDestId`, `nombreTransferes` positif)
+- Option B — joindre `TransfertGroupe` directement dans le calcul (sans relevé miroir)
 
-**Important** : sans build vert, on ne peut pas pousser de release sur Coolify.
+→ **Préférer Option A** pour cohérence (toutes les variations de stock passent par un relevé). Implique de modifier `createTransfert` pour créer 2 relevés par groupe (source + dest).
 
----
-
-### CF.3 — Supprimer `_patchReleve_deprecated`
-
-**Contexte** : la review CG.3 a relevé ~170 lignes de code mort (`_patchReleve_deprecated` dans `src/lib/queries/releves.ts` lignes ~947-1114).
-
-**Mission** :
-
-1. Confirmer que la fonction n'est référencée NULLE PART (`grep -r "_patchReleve_deprecated" src/`).
-2. Supprimer le bloc.
-3. Vérifier que `npx vitest run` + `npm run build` restent verts.
-
-**Effort minimal** — un dev peut le faire en 15 min.
+**Tests** : `src/__tests__/calculs-transfert-entrant.test.ts` — bac dest vide + transfert 100 entrant → vivants = 100.
 
 ---
 
-### CF.4 — Tests E2E browser flux complet PG → grossissement
+### CS.3 — Post-write guard sur AssignationBac
 
-**Mission** : ajouter un test E2E qui couvre le scénario incident prod du 10 juin 2026 :
+**Fichiers** : `src/lib/queries/transferts.ts`, `src/lib/queries/arrivages.ts`, `src/lib/queries/ventes.ts`, `src/lib/queries/calibrages.ts`.
 
-1. Créer une vague PRE_GROSSISSEMENT vide
-2. Ajouter un arrivage de 1000 alevins → 1 bac
-3. Ajouter quelques relevés MORTALITE
-4. Faire un calibrage 4 catégories (PETIT/MOYEN/GROS/TRES_GROS) → 4 bacs
-5. **Tenter** un calibrage incomplet (oublier une catégorie) → vérifier l'erreur 422 affichée
-6. **Tenter** une suppression de relevé TRANSFERT → vérifier le bouton est désactivé / affiche le lien parent
-7. Créer un transfert vers une vague GROSSISSEMENT (mode B, vague existante) → vérifier que `bacDestId` est requis
-8. Vérifier la cohérence finale : sources + transferts + ventes + biomasse actuelle = nombreInitial
+**Règle** : à la fin de chaque transaction qui modifie une `AssignationBac`, vérifier l'invariant :
+```
+AssignationBac.nombrePoissons === nombrePoissonsInitial
+  + sum(transferts entrants .nombrePoissons)
+  + sum(arrivages entrants .nombrePoissons)
+  - sum(transferts sortants .nombreTransferes)
+  - sum(ventes .nombreVendus)
+  - sum(mortalites .nombreMorts)
+  + ajustements COMPTAGE (override)
+```
 
-**Fichier** : `src/__tests__/e2e/conservation-flow.spec.ts` (Playwright).
+Si écart > tolérance (0 strict, on n'arrondit pas les têtes de poisson) → throw `ConservationError` + rollback automatique de la transaction.
 
----
+**Fichier nouveau** : `src/lib/guards/assignation-invariant.ts` — utilitaire réutilisé par les 4 queries.
 
-### CF.5 — Documenter asymétrie CG.3 (protection delete)
-
-**Contexte** : `deleteReleve` utilise 2 mécanismes pour protéger :
-- Check `typeReleve in {TRANSFERT, ARRIVAGE, VENTE}` + FK non-null
-- Check `calibrageId != null` (sans contrainte sur typeReleve — car relevés auto-créés par calibrage sont MORTALITE/BIOMETRIE)
-
-**Mission** : ajouter un commentaire de 6-10 lignes en tête de `deleteReleve` expliquant cette asymétrie. Aucune logique modifiée.
+**Tests** : `src/__tests__/assignation-invariant-guard.test.ts` — simuler un transfert qui casse l'invariant → throw + rollback DB confirmé.
 
 ---
 
-## Hors-scope (à traiter par l'utilisateur ou plus tard)
+### CS.4 — Audit prod : autres AssignationBac avec init incohérent
 
-- **Vente Vague-26-03** (~424 alevins manquants) — saisie métier, pas une story dev.
-- **Refactor `computeVivantsByBac`** — déjà robuste, ne pas toucher.
-- **Refactor du wizard calibrage** pour endpoint `preview-sources` — gros chantier UX, séparer.
+**Fichier** : `prisma/data-fixes/CS4-audit-stale-init.sql`.
+
+**Mission** : SELECT toutes les `AssignationBac` dateFin IS NULL avec `nombrePoissonsInitial = 0` ET `nombrePoissons > 0`. Lister + proposer UPDATE manuels (un par cas, pas de batch automatique car les valeurs poidsMoyenInitial doivent venir des `TransfertGroupe`/`ArrivageGroupe` sources).
+
+**Décision** : appliquer les UPDATE en transaction visible après revue.
+
+---
+
+### CS.5 — Tests E2E + Review R1-R9
+
+- Étendre `src/__tests__/e2e/conservation-flow.spec.ts` (commit `61b7d91`) avec step supplémentaire : après le transfert, vérifier `AssignationBac.nombrePoissonsInitial` du bac destination est non-null.
+- Review checklist R1-R9 sur les nouveaux fichiers.
+- Rapport `docs/reviews/review-sprint-CS.md`.
+
+---
 
 ## Dépendances
 
 ```
-CF.1 ─┐
-CF.2 ─┤  (toutes indépendantes — parallélisables)
-CF.3 ─┤
-CF.4 ─┤
-CF.5 ─┘
+CS.1 ─┐
+CS.2 ─┼─► CS.3 (utilise les conditions CS.1+CS.2) ─► CS.4 (audit) ─► CS.5 (review)
 ```
 
-## Processus par story
-
-Chaque story suit `docs/PROCESSES.md` :
-
-1. @pre-analyst — valide terrain (sauf CF.5 trivial)
-2. @developer ou @db-specialist — implémente
-3. @tester — vérifie
-4. @code-reviewer — R1-R9 (sauf CF.5)
-5. @status-updater — met à jour `docs/sprints/SPRINT-CF-CONSERVATION-FOLLOWUP.md`
-
-## Définition de fait
-
-- [ ] CF.1 : 0 vague EN_COURS avec calibrage à venir bloqué par edge case
-- [ ] CF.2 : `npm run build` vert, hash bundle stable
-- [ ] CF.3 : `_patchReleve_deprecated` supprimé, tests + build verts
-- [ ] CF.4 : test E2E `conservation-flow.spec.ts` vert
-- [ ] CF.5 : commentaire ajouté
-- [ ] `npx vitest run` global sans nouvelles régressions
-- [ ] Review R1-R9 finale signée (`docs/reviews/review-sprint-CF.md`)
-- [ ] Un commit par story + push
+CS.1 et CS.2 sont parallélisables. CS.3 doit attendre les deux pour valider l'invariant sur des données justes.
 
 ## Agents
 
-- **CF.1** : @db-specialist (audit SQL) + @developer (patch query + test)
-- **CF.2** : @developer
-- **CF.3** : @developer
-- **CF.4** : @tester
-- **CF.5** : @developer (15 min)
-- **Review finale** : @code-reviewer
+- **CS.1** : @developer (query + tests)
+- **CS.2** : @developer (calculs.ts pur + relevé miroir + tests)
+- **CS.3** : @developer + @db-specialist (invariant + rollback)
+- **CS.4** : @db-specialist (audit SQL prod + UPDATE)
+- **CS.5** : @tester + @code-reviewer
+
+## Définition de fait
+
+- [ ] Tous les `AssignationBac` créés par transfert/arrivage ont `nombrePoissonsInitial` + `poidsMoyenInitial` non-nulls
+- [ ] `computeVivantsByBac` compte les TRANSFERT entrants (Option A : relevé miroir)
+- [ ] Post-write guard actif sur 4 queries (transfert, arrivage, vente, calibrage)
+- [ ] Audit prod : 0 AssignationBac avec init incohérent restant
+- [ ] `npx vitest run` + `npm run build` OK
+- [ ] E2E `conservation-flow.spec.ts` étendu et vert
+- [ ] Review R1-R9 signée
+- [ ] Un commit + push par story
+
+## Hors-scope
+
+- Refactor de `computeVivantsByBac` (l'optimiser : déjà robuste après CS.2)
+- Refonte UI de la carte « Vivants » (déjà OK depuis UX.2)
+- Migration `nombrePoissonsInitial NOT NULL` — à différer après CS.4 confirme 0 ligne pathologique
