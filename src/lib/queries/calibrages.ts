@@ -160,19 +160,29 @@ export async function createCalibrage(
       vague.nombreInitial
     );
 
-    // Suppression du fallback dangereux (BUG CG — 10 juin 2026) :
-    // si computeVivantsByBac n'a pas de donnee pour un bac source, on rejette
-    // immediatement plutot que de tomber sur nombreActuel non-decremente.
+    // Build lookup map for source bacs validation (CF.1 — distingue Cas A et Cas B)
+    const assignationByBacId = new Map(
+      allAssignationsVague.map((a) => [a.bacId, a])
+    );
+
     let totalSourcePoissons = 0;
     for (const bac of sourceBacs) {
-      const v = vivantsByBac.get(bac.id);
-      if (v == null) {
+      const assignation = assignationByBacId.get(bac.id);
+      if (!assignation) {
+        // Cas A : le bac source a ete ferme entre l'etape 2 et ici (race condition)
         throw new ConservationError(
-          `Impossible de calculer les vivants pour le bac ${bac.nom}. Aucun releve exploitable.`,
+          `Le bac ${bac.nom} n'est plus affecte a cette vague (assignation fermee). Impossible de calculer les vivants.`,
           0, 0, 0, 0
         );
       }
-      totalSourcePoissons += v;
+      const v = vivantsByBac.get(bac.id);
+      if (v == null) {
+        // Cas B : ne devrait pas arriver (computeVivantsByBac couvre tous les bacs recus),
+        // mais fallback defensif sur nombreInitial de l'assignation
+        totalSourcePoissons += assignation.nombreInitial ?? 0;
+      } else {
+        totalSourcePoissons += v;
+      }
     }
 
     const totalGroupePoissons = data.groupes.reduce(
