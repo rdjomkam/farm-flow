@@ -38,6 +38,12 @@
     "deleting": "Suppression...",
     "deleteSuccess": "Relevé supprimé."
   },
+  "linkedTo": {
+    "transfert": "Lié à un transfert",
+    "arrivage": "Lié à un arrivage",
+    "vente": "Lié à une vente",
+    "calibrage": "Lié à un calibrage"
+  },
   "details": {
     "poids": "Poids : {value}g",
     "taille": "Taille : {value}cm",

@@ -289,7 +289,10 @@ export async function DELETE(
 
     return NextResponse.json({ message: result.message }, { status: 200 });
   } catch (error) {
-    return handleApiError("DELETE /api/releves/[id]", error, "Erreur serveur lors de la suppression du releve.", { code: ErrorKeys.SERVER_DELETE_RELEVE });
+    return handleApiError("DELETE /api/releves/[id]", error, "Erreur serveur lors de la suppression du releve.", {
+      code: ErrorKeys.SERVER_DELETE_RELEVE,
+      statusMap: [{ match: ["lie a un", "lie a une"], status: 409 }],
+    });
   }
 }
 

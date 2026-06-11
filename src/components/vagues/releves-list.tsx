@@ -4,7 +4,7 @@ import { useState, useMemo, memo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Calendar, ChevronRight, FileText, Trash2 } from "lucide-react";
+import { Calendar, ChevronRight, FileText, Link2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,25 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.ARRIVAGE]: "info",
 };
 
-const DeleteReleveButton = memo(function DeleteReleveButton({ releveId }: { releveId: string }) {
+interface DeleteReleveButtonProps {
+  releveId: string;
+  typeReleve: TypeReleve;
+  vagueId?: string;
+  transfertGroupeId?: string | null;
+  arrivageId?: string | null;
+  venteId?: string | null;
+  calibrageId?: string | null;
+}
+
+const DeleteReleveButton = memo(function DeleteReleveButton({
+  releveId,
+  typeReleve,
+  vagueId,
+  transfertGroupeId,
+  arrivageId,
+  venteId,
+  calibrageId,
+}: DeleteReleveButtonProps) {
   const t = useTranslations("releves");
   const router = useRouter();
   const { toast } = useToast();
@@ -51,6 +69,46 @@ const DeleteReleveButton = memo(function DeleteReleveButton({ releveId }: { rele
   const releveService = useReleveService();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Determine parent link if this releve is locked
+  const parentLink = (() => {
+    if (transfertGroupeId && vagueId) return `/vagues/${vagueId}/transfert`;
+    if (arrivageId && vagueId) return `/vagues/${vagueId}/arrivage`;
+    if (venteId) return `/ventes/${venteId}`;
+    if (calibrageId && vagueId) return `/vagues/${vagueId}/calibrages`;
+    return null;
+  })();
+
+  const parentTypeLabel = (() => {
+    if (transfertGroupeId) return t("linkedTo.transfert");
+    if (arrivageId) return t("linkedTo.arrivage");
+    if (venteId) return t("linkedTo.vente");
+    if (calibrageId) return t("linkedTo.calibrage");
+    return null;
+  })();
+
+  const isProtectedType = [
+    TypeReleve.TRANSFERT,
+    TypeReleve.ARRIVAGE,
+    TypeReleve.VENTE,
+  ].includes(typeReleve);
+
+  const isLocked =
+    (isProtectedType && !!(transfertGroupeId || arrivageId || venteId)) ||
+    !!calibrageId;
+
+  if (isLocked && parentTypeLabel) {
+    return (
+      <Link
+        href={parentLink ?? "#"}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        title={parentTypeLabel}
+      >
+        <Link2 className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{parentTypeLabel}</span>
+      </Link>
+    );
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -164,7 +222,15 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
                 </span>
                 <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
                 {permissions.includes(Permission.RELEVES_SUPPRIMER) && (
-                  <DeleteReleveButton releveId={r.id} />
+                  <DeleteReleveButton
+                    releveId={r.id}
+                    typeReleve={r.typeReleve as TypeReleve}
+                    vagueId={vagueId}
+                    transfertGroupeId={r.transfertGroupeId}
+                    arrivageId={r.arrivageId}
+                    venteId={r.venteId}
+                    calibrageId={r.calibrageId}
+                  />
                 )}
               </div>
             </div>

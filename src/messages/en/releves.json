@@ -38,6 +38,12 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Record deleted."
   },
+  "linkedTo": {
+    "transfert": "Linked to a transfer",
+    "arrivage": "Linked to an arrival",
+    "vente": "Linked to a sale",
+    "calibrage": "Linked to a calibration"
+  },
   "details": {
     "poids": "Weight: {value}g",
     "taille": "Length: {value}cm",

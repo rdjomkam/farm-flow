@@ -657,6 +657,40 @@ export async function deleteReleve(siteId: string, id: string) {
       throw new Error("Releve introuvable ou n'appartient pas a ce site.");
     }
 
+    // 1b. Garde-fou : refuser la suppression si le releve est lie a une operation parente
+    // Les releves TRANSFERT, ARRIVAGE, VENTE sont proteges par typeReleve.
+    // Les releves MORTALITE/BIOMETRIE auto-crees par un calibrage sont proteges par calibrageId.
+    const PROTECTED_RELEVE_TYPES = [
+      TypeReleveEnum.TRANSFERT,
+      TypeReleveEnum.ARRIVAGE,
+      TypeReleveEnum.VENTE,
+    ] as const;
+    const isProtectedType = PROTECTED_RELEVE_TYPES.includes(
+      releve.typeReleve as typeof PROTECTED_RELEVE_TYPES[number]
+    );
+    const r = releve as {
+      transfertGroupeId?: string | null;
+      arrivageId?: string | null;
+      venteId?: string | null;
+      calibrageId?: string | null;
+    };
+
+    if (isProtectedType) {
+      if (r.transfertGroupeId) {
+        throw new Error("Ce releve est lie a un transfert. Supprimez d'abord l'operation parente.");
+      }
+      if (r.arrivageId) {
+        throw new Error("Ce releve est lie a un arrivage. Supprimez d'abord l'operation parente.");
+      }
+      if (r.venteId) {
+        throw new Error("Ce releve est lie a une vente. Supprimez d'abord l'operation parente.");
+      }
+    }
+    // Calibrage peut creer des releves MORTALITE ou BIOMETRIE avec calibrageId
+    if (r.calibrageId) {
+      throw new Error("Ce releve est lie a un calibrage. Supprimez d'abord l'operation parente.");
+    }
+
     // 2. Reset linked Activite back to PLANIFIEE (undo auto-completion on creation)
     if (releve.activite) {
       await tx.activite.update({

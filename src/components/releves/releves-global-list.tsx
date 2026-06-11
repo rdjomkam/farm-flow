@@ -74,7 +74,15 @@ const ReleveCard = memo(function ReleveCard({
               permissions={permissions}
             />
             {permissions.includes(Permission.RELEVES_SUPPRIMER) && (
-              <DeleteReleveButtonGlobal releveId={releve.id} />
+              <DeleteReleveButtonGlobal
+                releveId={releve.id}
+                typeReleve={releve.typeReleve as TypeReleve}
+                vagueId={releve.vagueId}
+                transfertGroupeId={releve.transfertGroupeId}
+                arrivageId={releve.arrivageId}
+                venteId={releve.venteId}
+                calibrageId={releve.calibrageId}
+              />
             )}
           </div>
         </div>

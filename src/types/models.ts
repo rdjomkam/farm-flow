@@ -725,6 +725,9 @@ export interface Releve {
   /** ID de l'arrivage source (nullable — rempli si auto-cree lors d'un arrivage) */
   arrivageId?: string | null;
 
+  /** ID du transfert groupe source (nullable — rempli si auto-cree lors d'un transfert) */
+  transfertGroupeId?: string | null;
+
   /** ID du lot d'alevins lie (nullable — rempli si releve de suivi alevinage, R1-S4) */
   lotAlevinsId?: string | null;
 
