@@ -329,6 +329,26 @@ export async function createTransfert(
       // -----------------------------------------------------------------------
       // Étape 6 — Validation / création des AssignationBac destination (Mode B)
       // -----------------------------------------------------------------------
+
+      // Agréger quantités/poids destination pour le fallback des champs init
+      const bacDestInitMap = new Map<string, { qty: number; avg: number }>();
+      for (const g of dto.groupes) {
+        if (!g.bacDestId) continue;
+        const existing = bacDestInitMap.get(g.bacDestId);
+        if (existing) {
+          const newQty = existing.qty + g.nombrePoissons;
+          existing.avg =
+            (existing.qty * existing.avg + g.nombrePoissons * g.poidsMoyenG) /
+            newQty;
+          existing.qty = newQty;
+        } else {
+          bacDestInitMap.set(g.bacDestId, {
+            qty: g.nombrePoissons,
+            avg: g.poidsMoyenG,
+          });
+        }
+      }
+
       const uniqueDestBacIds = [
         ...new Set(
           dto.groupes
@@ -358,8 +378,14 @@ export async function createTransfert(
               dateAssignation: transfertDate,
               dateFin: null,
               nombreActuel: 0,
-              nombreInitial: historicAssignation?.nombreInitial ?? 0,
-              poidsMoyenInitial: historicAssignation?.poidsMoyenInitial ?? 0,
+              nombreInitial:
+                historicAssignation?.nombreInitial ??
+                bacDestInitMap.get(bacDestId)?.qty ??
+                0,
+              poidsMoyenInitial:
+                historicAssignation?.poidsMoyenInitial ??
+                bacDestInitMap.get(bacDestId)?.avg ??
+                0,
             },
           });
         }
@@ -489,8 +515,8 @@ export async function createTransfert(
               dateAssignation: transfertDate,
               dateFin: null,
               nombreActuel: nombrePoissons,
-              nombreInitial: 0,
-              poidsMoyenInitial: 0,
+              nombreInitial: nombrePoissons,
+              poidsMoyenInitial: poidsMoyenG,
             },
           });
         }
@@ -541,8 +567,6 @@ export async function createTransfert(
         });
 
         // TRANSFERT sur la vague source (traçabilité déduction poissons sortants).
-        // Le relevé existe uniquement côté PRE_GROSSISSEMENT (source), pas côté
-        // GROSSISSEMENT (destination) qui reçoit le BIOMETRIE ci-dessus.
         if (bacSourceId !== null && nombrePoissons > 0) {
           await tx.releve.create({
             data: {
@@ -553,6 +577,24 @@ export async function createTransfert(
               notes: "Transfert vers grossissement",
               vagueId: vagueSourceId,
               bacId: bacSourceId,
+              siteId,
+            },
+          });
+        }
+
+        // TRANSFERT miroir sur la vague destination (arrivage côté GROSSISSEMENT).
+        // Permet à computeVivantsByBac de traiter ce bac comme entrant quand
+        // transfertDestBacIds est fourni par les appelants sur vague GROSSISSEMENT.
+        if (nombrePoissons > 0) {
+          await tx.releve.create({
+            data: {
+              date: transfertDate,
+              typeReleve: TypeReleve.TRANSFERT,
+              nombreTransferes: nombrePoissons,
+              transfertGroupeId,
+              notes: "Arrivage par transfert",
+              vagueId: vagueDestId,
+              bacId: bacDestId,
               siteId,
             },
           });
@@ -1039,8 +1081,8 @@ export async function updateTransfertGroupe(
               dateAssignation: groupe.transfert.date,
               dateFin: null,
               nombreActuel: nouveauNombrePoissons,
-              nombreInitial: 0,
-              poidsMoyenInitial: 0,
+              nombreInitial: nouveauNombrePoissons,
+              poidsMoyenInitial: nouveauPoidsMoyenG,
             },
           });
         }
@@ -1179,6 +1221,39 @@ export async function getLineage(
 
   const parents = await fetchParents(vagueId, 0);
   return { vagueId, parents };
+}
+
+// ---------------------------------------------------------------------------
+// 6b. getTransfertDestBacIds
+// ---------------------------------------------------------------------------
+
+/**
+ * Retourne le Set des bacDestId pour une vague destination.
+ *
+ * Utilisé par les appelants de computeVivantsByBac pour discriminer les relevés
+ * TRANSFERT entrants (arrivages) des sortants sur une vague GROSSISSEMENT.
+ *
+ * @param siteId - Site ID (filtre multi-tenant via transfert.siteId)
+ * @param vagueDestId - ID de la vague GROSSISSEMENT destination
+ * @returns Set<bacDestId> — peut être vide si aucun TransfertGroupe n'existe
+ */
+export async function getTransfertDestBacIds(
+  siteId: string,
+  vagueDestId: string
+): Promise<Set<string>> {
+  const groupes = await prisma.transfertGroupe.findMany({
+    where: {
+      vagueDestId,
+      transfert: { siteId },
+    },
+    select: { bacDestId: true },
+  });
+
+  return new Set(
+    groupes
+      .map((g) => g.bacDestId)
+      .filter((id): id is string => id != null)
+  );
 }
 
 // ---------------------------------------------------------------------------
