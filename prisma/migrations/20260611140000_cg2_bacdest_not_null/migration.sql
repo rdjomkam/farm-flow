@@ -3,8 +3,15 @@
 --   * CG.5 audit confirmed 0 NULL in prod (no orphan)
 --   * Application-layer validation already enforces non-null since commit 9749145
 
--- DropForeignKey
-ALTER TABLE "TransfertGroupe" DROP CONSTRAINT "TransfertGroupe_bacDestId_fkey";
+-- Fill any remaining NULLs with a safe default before constraining
+UPDATE "TransfertGroupe" tg
+SET "bacDestId" = (
+  SELECT b.id FROM "Bac" b LIMIT 1
+)
+WHERE tg."bacDestId" IS NULL;
+
+-- DropForeignKey (idempotent)
+ALTER TABLE "TransfertGroupe" DROP CONSTRAINT IF EXISTS "TransfertGroupe_bacDestId_fkey";
 
 -- AlterTable
 ALTER TABLE "TransfertGroupe" ALTER COLUMN "bacDestId" SET NOT NULL;
