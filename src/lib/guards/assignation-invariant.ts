@@ -30,6 +30,7 @@
 
 import { prisma } from "@/lib/db";
 import { ConservationError } from "@/lib/errors";
+import { TypeReleve } from "@/types";
 
 // Type extrait dynamiquement du client Prisma (identique au pattern assignation-bac.ts)
 type PrismaTransactionClient = Parameters<
@@ -84,7 +85,15 @@ export async function verifyAssignationInvariant(
       siteId,
       vagueId,
       bacId: { in: bacIds },
-      typeReleve: { in: ["MORTALITE", "COMPTAGE", "ARRIVAGE", "TRANSFERT", "VENTE"] },
+      typeReleve: {
+        in: [
+          TypeReleve.MORTALITE,
+          TypeReleve.COMPTAGE,
+          TypeReleve.ARRIVAGE,
+          TypeReleve.TRANSFERT,
+          TypeReleve.VENTE,
+        ],
+      },
     },
     select: {
       bacId: true,
@@ -145,7 +154,7 @@ export async function verifyAssignationInvariant(
     let lastComptageDate: Date | null = null;
     let lastComptageValue: number | null = null;
     for (const r of releveBac) {
-      if (r.typeReleve === "COMPTAGE" && r.nombreCompte !== null) {
+      if (r.typeReleve === TypeReleve.COMPTAGE && r.nombreCompte !== null) {
         const d = r.date ? new Date(r.date) : new Date(0);
         if (lastComptageDate === null || d > lastComptageDate) {
           lastComptageDate = d;
@@ -163,15 +172,15 @@ export async function verifyAssignationInvariant(
         const d = r.date ? new Date(r.date) : new Date(0);
         if (d <= lastComptageDate) continue; // antérieur ou égal au comptage : ignoré
 
-        if (r.typeReleve === "MORTALITE") {
+        if (r.typeReleve === TypeReleve.MORTALITE) {
           expected -= r.nombreMorts ?? 0;
-        } else if (r.typeReleve === "VENTE") {
+        } else if (r.typeReleve === TypeReleve.VENTE) {
           expected -= r.nombreVendus ?? 0;
-        } else if (r.typeReleve === "TRANSFERT") {
+        } else if (r.typeReleve === TypeReleve.TRANSFERT) {
           expected += isEntrant
             ? (r.nombreTransferes ?? 0)
             : -(r.nombreTransferes ?? 0);
-        } else if (r.typeReleve === "ARRIVAGE") {
+        } else if (r.typeReleve === TypeReleve.ARRIVAGE) {
           expected += r.nombreCompte ?? 0;
         }
       }
@@ -179,15 +188,15 @@ export async function verifyAssignationInvariant(
       // Pas de comptage : replay complet depuis l'initial
       expected = ab.nombreInitial ?? 0;
       for (const r of releveBac) {
-        if (r.typeReleve === "MORTALITE") {
+        if (r.typeReleve === TypeReleve.MORTALITE) {
           expected -= r.nombreMorts ?? 0;
-        } else if (r.typeReleve === "VENTE") {
+        } else if (r.typeReleve === TypeReleve.VENTE) {
           expected -= r.nombreVendus ?? 0;
-        } else if (r.typeReleve === "TRANSFERT") {
+        } else if (r.typeReleve === TypeReleve.TRANSFERT) {
           expected += isEntrant
             ? (r.nombreTransferes ?? 0)
             : -(r.nombreTransferes ?? 0);
-        } else if (r.typeReleve === "ARRIVAGE") {
+        } else if (r.typeReleve === TypeReleve.ARRIVAGE) {
           expected += r.nombreCompte ?? 0;
         }
       }
