@@ -3878,8 +3878,8 @@ model TransfertGroupe {
 
   vagueDestId String
   vagueDest   Vague   @relation("TransfertsDestination", fields: [vagueDestId], references: [id], onDelete: Restrict)
-  bacDestId   String?
-  bacDest     Bac?    @relation("TransfertsBacDest", fields: [bacDestId], references: [id])
+  bacDestId   String
+  bacDest     Bac     @relation("TransfertsBacDest", fields: [bacDestId], references: [id])
 
   nombrePoissons     Int
   poidsMoyenG        Float
