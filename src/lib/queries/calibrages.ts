@@ -317,7 +317,7 @@ export async function createCalibrage(
               bacId,
               vagueId: data.vagueId,
               siteId,
-              dateAssignation: new Date(),
+              dateAssignation: calibrageDate,
               dateFin: null,
               nombreActuel: total,
               nombreInitial: historicAssignation?.nombreInitial ?? 0,

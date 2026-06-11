@@ -748,7 +748,7 @@ export async function updateTransfertGroupe(
       const groupe = await tx.transfertGroupe.findFirst({
         where: { id: groupeId },
         include: {
-          transfert: { select: { id: true, siteId: true } },
+          transfert: { select: { id: true, siteId: true, date: true } },
           vagueSource: { select: { id: true, code: true, statut: true } },
           vagueDest: {
             select: {
@@ -1036,7 +1036,7 @@ export async function updateTransfertGroupe(
               bacId: nouveauBacDestId,
               vagueId: groupe.vagueDest.id,
               siteId,
-              dateAssignation: new Date(),
+              dateAssignation: groupe.transfert.date,
               dateFin: null,
               nombreActuel: nouveauNombrePoissons,
               nombreInitial: 0,

@@ -452,6 +452,7 @@ export async function updateArrivageGroupe(
               id: true,
               siteId: true,
               vagueId: true,
+              date: true,
               vague: {
                 select: {
                   id: true,
@@ -606,7 +607,7 @@ export async function updateArrivageGroupe(
               bacId: nouveauDestBacId,
               vagueId,
               siteId,
-              dateAssignation: new Date(),
+              dateAssignation: groupe.arrivage.date,
               dateFin: null,
               nombreActuel: nouveauNombrePoissons,
               nombreInitial: nouveauNombrePoissons,
@@ -647,7 +648,7 @@ export async function updateArrivageGroupe(
               bacId: nouveauDestBacId,
               vagueId,
               siteId,
-              dateAssignation: new Date(),
+              dateAssignation: groupe.arrivage.date,
               dateFin: null,
               nombreActuel: nouveauNombrePoissons,
               nombreInitial: nouveauNombrePoissons,
