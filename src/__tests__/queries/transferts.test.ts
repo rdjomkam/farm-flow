@@ -417,7 +417,7 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
     const dto: CreateTransfertDTO = {
       mode: ModeTransfert.CREATE_NEW,
       nouvelleVague: { code: "G-NEW", dateDebut: "2026-05-01" },
-      groupes: [{ vagueSourceId: VAGUE_SRC_ID, nombrePoissons: 1, poidsMoyenG: 75 }],
+      groupes: [{ vagueSourceId: VAGUE_SRC_ID, bacDestId: BAC_DEST_ID, nombrePoissons: 1, poidsMoyenG: 75 }],
       date: "2026-05-01",
     };
 
@@ -654,7 +654,7 @@ describe("createTransfert", () => {
     const dto: CreateTransfertDTO = {
       mode: ModeTransfert.USE_EXISTING,
       vagueDestId: VAGUE_SRC_ID, // même ID que la source
-      groupes: [{ vagueSourceId: VAGUE_SRC_ID, nombrePoissons: 100, poidsMoyenG: 50 }],
+      groupes: [{ vagueSourceId: VAGUE_SRC_ID, bacDestId: "bac-dest-1", nombrePoissons: 100, poidsMoyenG: 50 }],
     };
 
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);

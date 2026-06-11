@@ -205,6 +205,7 @@ const now = new Date("2026-03-08T10:00:00Z");
 
 const VALID_GROUPE = {
   vagueSourceId: "vague-src-1",
+  bacDestId: "bac-dest-1",
   nombrePoissons: 200,
   poidsMoyenG: 150.5,
 };

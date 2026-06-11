@@ -6,7 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { TransfertFormClient } from "@/components/transferts/transfert-form-client";
-import type { BacSourceInfo, BacDestInfo, VagueDestInfo, UniteProductionOption } from "@/components/transferts/transfert-form-client";
+import type { BacSourceInfo, BacDestInfo, VagueDestInfo, UniteProductionOption, BacsParVague } from "@/components/transferts/transfert-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
@@ -107,6 +107,28 @@ export default async function NouveauTransfertPage({
     nom: u.nom,
   }));
 
+  // Bacs déjà assignés aux vagues grossissement (pour mode B)
+  // On charge toutes les AssignationBac actives (dateFin = null) des vagues dest candidates
+  const vagueDestIds = vaguesGrossissementEnCours.map((v) => v.id);
+  const bacsParVague: BacsParVague = {};
+  if (vagueDestIds.length > 0) {
+    const assignationsDestRaw = await prisma.assignationBac.findMany({
+      where: {
+        vagueId: { in: vagueDestIds },
+        siteId: session.activeSiteId,
+        dateFin: null,
+      },
+      select: {
+        vagueId: true,
+        bac: { select: { id: true, nom: true } },
+      },
+    });
+    for (const a of assignationsDestRaw) {
+      if (!bacsParVague[a.vagueId]) bacsParVague[a.vagueId] = [];
+      bacsParVague[a.vagueId].push({ id: a.bac.id, nom: a.bac.nom });
+    }
+  }
+
   return (
     <>
       <Header title={t("page.title")} />
@@ -127,6 +149,7 @@ export default async function NouveauTransfertPage({
           vaguesGrossissementEnCours={vaguesGrossissementEnCours}
           unitesProduction={unitesProduction}
           bacsLibres={bacsLibres}
+          bacsParVague={bacsParVague}
         />
       </div>
     </>

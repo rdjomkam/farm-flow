@@ -105,7 +105,11 @@ export async function createTransfert(
       if (!dto.groupes || dto.groupes.length === 0) {
         throw new Error("Au moins un groupe est requis");
       }
-      for (const g of dto.groupes) {
+      for (let i = 0; i < dto.groupes.length; i++) {
+        const g = dto.groupes[i];
+        if (!g.bacDestId) {
+          throw new Error(`Le bac destination est obligatoire pour le groupe ${i + 1}.`);
+        }
         if (g.nombrePoissons <= 0) {
           throw new Error("nombrePoissons doit être > 0 pour chaque groupe");
         }
@@ -411,7 +415,8 @@ export async function createTransfert(
         const transfertGroupeId = transfert.groupes[groupeIdx]?.id ?? null;
         const vagueSourceId = groupe.vagueSourceId;
         const bacSourceId = groupe.bacSourceId ?? null;
-        const bacDestId = groupe.bacDestId ?? null;
+        // bacDestId garanti non-null par la validation de l'étape 1 (throw si null/undefined)
+        const bacDestId = groupe.bacDestId as string;
         const nombrePoissons = groupe.nombrePoissons;
         const nombreMorts = groupe.nombreMorts ?? 0;
         const poidsMoyenG = groupe.poidsMoyenG;
@@ -463,33 +468,31 @@ export async function createTransfert(
         }
 
         // -------------------------------------------------------------------
-        // Étape 9 — Incrémenter AssignationBac destination
+        // Étape 9 — Incrémenter AssignationBac destination (bacDestId garanti non-null)
         // -------------------------------------------------------------------
-        if (bacDestId !== null) {
-          const assignationDest = await tx.assignationBac.findFirst({
-            where: { bacId: bacDestId, vagueId: vagueDestId, dateFin: null },
-            select: { id: true },
+        const assignationDest = await tx.assignationBac.findFirst({
+          where: { bacId: bacDestId, vagueId: vagueDestId, dateFin: null },
+          select: { id: true },
+        });
+        if (assignationDest) {
+          await tx.assignationBac.update({
+            where: { id: assignationDest.id },
+            data: { nombreActuel: { increment: nombrePoissons } },
           });
-          if (assignationDest) {
-            await tx.assignationBac.update({
-              where: { id: assignationDest.id },
-              data: { nombreActuel: { increment: nombrePoissons } },
-            });
-          } else {
-            // Créer si inexistant (défense en profondeur)
-            await tx.assignationBac.create({
-              data: {
-                bacId: bacDestId,
-                vagueId: vagueDestId,
-                siteId,
-                dateAssignation: transfertDate,
-                dateFin: null,
-                nombreActuel: nombrePoissons,
-                nombreInitial: 0,
-                poidsMoyenInitial: 0,
-              },
-            });
-          }
+        } else {
+          // Créer si inexistant (défense en profondeur)
+          await tx.assignationBac.create({
+            data: {
+              bacId: bacDestId,
+              vagueId: vagueDestId,
+              siteId,
+              dateAssignation: transfertDate,
+              dateFin: null,
+              nombreActuel: nombrePoissons,
+              nombreInitial: 0,
+              poidsMoyenInitial: 0,
+            },
+          });
         }
 
         // -------------------------------------------------------------------
@@ -732,6 +735,9 @@ export async function updateTransfertGroupe(
 ): Promise<TransfertGroupeWithRelations> {
   if (!dto.raison || dto.raison.trim().length === 0) {
     throw new Error("La raison de la modification est obligatoire");
+  }
+  if (dto.bacDestId !== undefined && !dto.bacDestId) {
+    throw new Error("Le bac destination est obligatoire et ne peut pas être null ou vide.");
   }
 
   return prisma.$transaction(

@@ -54,9 +54,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
     }
 
-    if (body.bacDestId !== undefined && body.bacDestId !== null) {
-      if (typeof body.bacDestId !== "string" || body.bacDestId.trim() === "") {
-        errors.push({ field: "bacDestId", message: "bacDestId doit etre une chaine non vide ou null." });
+    if (body.bacDestId !== undefined) {
+      if (!body.bacDestId || typeof body.bacDestId !== "string" || body.bacDestId.trim() === "") {
+        errors.push({ field: "bacDestId", message: "bacDestId est obligatoire et ne peut pas etre null ou vide." });
       }
     }
 

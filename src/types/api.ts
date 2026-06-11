@@ -3204,8 +3204,8 @@ export interface TransfertGroupeInputDTO {
   vagueSourceId: string;
   /** Bac precis dans la vague source (optionnel) */
   bacSourceId?: string | null;
-  /** Bac precis dans la vague destination (optionnel) */
-  bacDestId?: string | null;
+  /** Bac destination obligatoire — CG.2 : ne jamais laisser NULL */
+  bacDestId: string;
   /** Nombre de poissons transferes — doit etre > 0 */
   nombrePoissons: number;
   /** Poids moyen au moment du transfert, en grammes — doit etre > 0 */
@@ -3295,8 +3295,8 @@ export interface UpdateTransfertGroupeDTO {
   nombreMorts?: number;
   /** Nouveau bac source (null pour retirer, optionnel) */
   bacSourceId?: string | null;
-  /** Nouveau bac destination (null pour retirer, optionnel) */
-  bacDestId?: string | null;
+  /** Nouveau bac destination — obligatoire si fourni (CG.2 : ne pas nullifier) */
+  bacDestId?: string;
 }
 
 /**

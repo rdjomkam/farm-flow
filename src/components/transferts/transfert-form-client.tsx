@@ -48,14 +48,20 @@ export interface UniteProductionOption {
   nom: string;
 }
 
+export interface BacsParVague {
+  [vagueId: string]: BacDestInfo[];
+}
+
 interface TransfertFormClientProps {
   vagueSourceId: string;
   vagueSourceCode: string;
   bacsSource: BacSourceInfo[];
   vaguesGrossissementEnCours: VagueDestInfo[];
   unitesProduction: UniteProductionOption[];
-  /** Bacs libres (non assignés) disponibles comme destination en mode A */
+  /** Bacs libres (non assignés) disponibles comme destination en mode A et B */
   bacsLibres: BacDestInfo[];
+  /** Bacs déjà assignés à chaque vague dest (keyed par vagueId), pour le mode B */
+  bacsParVague?: BacsParVague;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +107,7 @@ export function TransfertFormClient({
   vaguesGrossissementEnCours,
   unitesProduction,
   bacsLibres,
+  bacsParVague = {},
 }: TransfertFormClientProps) {
   const t = useTranslations("transferts");
   const router = useRouter();
@@ -181,6 +188,7 @@ export function TransfertFormClient({
     }
     groupes.forEach((g, i) => {
       if (!g.bacSourceId) errs[`g${i}_bacSourceId`] = t("validation.bacSourceRequis");
+      if (!g.bacDestId) errs[`g${i}_bacDestId`] = t("validation.bacDestRequis");
       const nb = Number(g.nombrePoissons);
       if (!g.nombrePoissons || isNaN(nb) || nb <= 0) {
         errs[`g${i}_nombrePoissons`] = t("validation.nombrePoissonsPositif");
@@ -247,7 +255,7 @@ export function TransfertFormClient({
       const groupesDto = groupes.map((g) => ({
         vagueSourceId,
         bacSourceId: g.bacSourceId || null,
-        bacDestId: g.bacDestId || null,
+        bacDestId: g.bacDestId, // garanti non-vide par validateStep3
         nombrePoissons: Number(g.nombrePoissons),
         poidsMoyenG: Number(g.poidsMoyenG),
         nombreMorts: Number(g.nombreMorts) || 0,
@@ -314,11 +322,24 @@ export function TransfertFormClient({
   const totalTransfere = groupes.reduce((sum, g) => sum + (Number(g.nombrePoissons) || 0), 0);
   const totalMorts = groupes.reduce((sum, g) => sum + (Number(g.nombreMorts) || 0), 0);
 
-  // Bac destination list: if mode B, get bacs from vague dest; if mode A, use bacsLibres
-  const bacsDestDisplay: BacDestInfo[] =
-    mode === ModeTransfert.USE_EXISTING && vagueDestId
-      ? [] // We don't have bacs for dest vague in mode B by default — let users leave empty
-      : bacsLibres;
+  // Bac destination list :
+  // - Mode A (nouvelle vague) : bacs libres uniquement
+  // - Mode B (vague existante) : bacs libres + bacs déjà assignés à la vague dest (dédupliqués)
+  const bacsDestDisplay: BacDestInfo[] = (() => {
+    if (mode === ModeTransfert.USE_EXISTING && vagueDestId) {
+      const bacsVagueDest = bacsParVague[vagueDestId] ?? [];
+      const seen = new Set<string>();
+      const merged: BacDestInfo[] = [];
+      for (const b of [...bacsLibres, ...bacsVagueDest]) {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          merged.push(b);
+        }
+      }
+      return merged;
+    }
+    return bacsLibres;
+  })();
 
   const vagueDestInfo = vaguesGrossissementEnCours.find((v) => v.id === vagueDestId);
 
@@ -406,7 +427,7 @@ export function TransfertFormClient({
           groupes={groupes}
           bacsSource={bacsSource}
           bacsDest={bacsDestDisplay}
-          showBacDest={mode === ModeTransfert.CREATE_NEW}
+          showBacDest={true}
           errors={errors}
           totalTransfere={totalTransfere}
           onUpdate={updateGroupe}
@@ -865,25 +886,40 @@ function StepGroupes({
                     error={errors[`g${i}_nombreMorts`]}
                   />
 
-                  {/* Bac destination (mode A uniquement) */}
-                  {showBacDest && bacsDest.length > 0 && (
+                  {/* Bac destination — obligatoire dans tous les modes */}
+                  {showBacDest && (
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium text-foreground">{t("stepGroupes.bacDest")}</label>
-                      <Select
-                        value={g.bacDestId}
-                        onValueChange={(v) => onUpdate(i, "bacDestId", v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("stepGroupes.choisirBacDest")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bacsDest.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.nom}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <label className="text-sm font-medium text-foreground">
+                        {t("stepGroupes.bacDest")}
+                        <span className="text-destructive ml-0.5">*</span>
+                      </label>
+                      {bacsDest.length === 0 ? (
+                        <p className="text-sm text-muted-foreground rounded-lg border border-border bg-muted/30 px-3 py-2">
+                          {t("stepGroupes.aucunBacDest")}
+                        </p>
+                      ) : (
+                        <Select
+                          value={g.bacDestId}
+                          onValueChange={(v) => onUpdate(i, "bacDestId", v)}
+                        >
+                          <SelectTrigger error={errors[`g${i}_bacDestId`]}>
+                            <SelectValue placeholder={t("stepGroupes.choisirBacDest")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bacsDest.map((b) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.nom}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {errors[`g${i}_bacDestId`] && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3 shrink-0" />
+                          {errors[`g${i}_bacDestId`]}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

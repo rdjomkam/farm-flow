@@ -110,6 +110,9 @@ export async function POST(request: NextRequest) {
             errors.push({ field: `groupes[${index}].nombreMorts`, message: "nombreMorts doit etre un entier >= 0." });
           }
         }
+        if (!groupe.bacDestId || typeof groupe.bacDestId !== "string" || (groupe.bacDestId as string).trim() === "") {
+          errors.push({ field: `groupes[${index}].bacDestId`, message: "Bac destination obligatoire." });
+        }
       });
     }
 
@@ -131,7 +134,7 @@ export async function POST(request: NextRequest) {
         groupes: body.groupes.map((g: Record<string, unknown>) => ({
           vagueSourceId: g.vagueSourceId as string,
           bacSourceId: (g.bacSourceId as string | null | undefined) ?? null,
-          bacDestId: (g.bacDestId as string | null | undefined) ?? null,
+          bacDestId: g.bacDestId as string,
           nombrePoissons: g.nombrePoissons as number,
           poidsMoyenG: g.poidsMoyenG as number,
           nombreMorts: typeof g.nombreMorts === "number" ? g.nombreMorts : 0,
@@ -146,7 +149,7 @@ export async function POST(request: NextRequest) {
         groupes: body.groupes.map((g: Record<string, unknown>) => ({
           vagueSourceId: g.vagueSourceId as string,
           bacSourceId: (g.bacSourceId as string | null | undefined) ?? null,
-          bacDestId: (g.bacDestId as string | null | undefined) ?? null,
+          bacDestId: g.bacDestId as string,
           nombrePoissons: g.nombrePoissons as number,
           poidsMoyenG: g.poidsMoyenG as number,
           nombreMorts: typeof g.nombreMorts === "number" ? g.nombreMorts : 0,
