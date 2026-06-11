@@ -36,6 +36,24 @@ export default async function VaguesPage() {
     ]);
     if (!permissions) return <AccessDenied />;
 
+    // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête (batch)
+    const transfertDestBacIdsMapPage = new Map<string, Set<string>>();
+    if (vaguesResult.data.length > 0) {
+      const groupesPage = await prisma.transfertGroupe.findMany({
+        where: {
+          vagueDestId: { in: vaguesResult.data.map((v) => v.id) },
+          transfert: { siteId: session.activeSiteId },
+        },
+        select: { vagueDestId: true, bacDestId: true },
+      });
+      for (const g of groupesPage) {
+        if (!g.bacDestId) continue;
+        const set = transfertDestBacIdsMapPage.get(g.vagueDestId) ?? new Set<string>();
+        set.add(g.bacDestId);
+        transfertDestBacIdsMapPage.set(g.vagueDestId, set);
+      }
+    }
+
     const vagues: VagueSummaryResponse[] = vaguesResult.data.map((v) => {
       const now = v.dateFin ?? new Date();
       const joursEcoules = Math.floor(
@@ -74,12 +92,14 @@ export default async function VaguesPage() {
       let biomasse: number | null = null;
       const bacsMapped = assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
       const hasPerBacReleves = releves.some((r) => r.bacId !== null);
+      const transfertDestBacIdsPage = transfertDestBacIdsMapPage.get(v.id) ?? new Set<string>();
       if (bacsMapped.length > 0 && hasPerBacReleves) {
         // Aligné avec indicateurs.ts et finances.ts (fix B5) : vivants déjà après VENTE
         const vivantsByBac = computeVivantsByBac(
           bacsMapped,
           releves as Parameters<typeof computeVivantsByBac>[1],
-          v.nombreInitial
+          v.nombreInitial,
+          { transfertDestBacIds: transfertDestBacIdsPage }
         );
         const biometriesParBac = new Map<string, number>();
         for (const r of releves) {

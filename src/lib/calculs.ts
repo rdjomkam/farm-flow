@@ -262,13 +262,18 @@ export function calculerROI(
  *
  * Releves DOIVENT etre tries par date ASC.
  *
+ * @param transfertDestBacIds - IMPORTANT pour vagues GROSSISSEMENT : Set des bacId qui sont
+ *   destinations de transferts entrants (issus de TransfertGroupe.bacDestId WHERE vagueDestId = vague.id).
+ *   Sans ce Set, les relevés TRANSFERT miroir seraient comptés comme sortants → vivants négatifs.
+ *   Pour une vague PRE_GROSSISSEMENT (source uniquement), ne pas passer ce Set.
+ *
  * @returns Map<bacId, vivants>
  */
 export function computeVivantsByBac(
   bacs: { id: string; nombreInitial: number | null }[],
   releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null }[],
   nombreInitialVague: number,
-  options?: { excludeVentes?: boolean }
+  options?: { excludeVentes?: boolean; transfertDestBacIds?: Set<string> }
 ): Map<string, number> {
   // Utiliser floor + distribuer le reste au dernier bac pour eviter la perte de poissons
   // Exemple : 1000 / 3 = [334, 333, 333] (total = 1000)
@@ -314,15 +319,26 @@ export function computeVivantsByBac(
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + vendus);
       }
     }
-    // TRANSFERT — toujours soustrait (concerne uniquement les vagues PRE_GROSSISSEMENT)
-    // Crée côté source par createTransfert pour traçabilité de la déduction.
+    // TRANSFERT — discriminé entrant/sortant selon transfertDestBacIds :
+    //   - Si bacId ∈ transfertDestBacIds → relevé miroir ARRIVAGE (ajout post-comptage)
+    //   - Sinon → soustraction (comportement historique, côté source PRE_GROSSISSEMENT)
     if (r.typeReleve === "TRANSFERT" && r.bacId) {
       const transferes = r.nombreTransferes ?? 0;
-      mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + transferes);
-
-      const comptage = comptagesParBac.get(r.bacId);
-      if (comptage && r.date && new Date(r.date) > comptage.date) {
-        mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + transferes);
+      const isEntrant = options?.transfertDestBacIds?.has(r.bacId) ?? false;
+      if (isEntrant) {
+        // Traiter comme un arrivage : ajout si post-comptage
+        const comptage = comptagesParBac.get(r.bacId);
+        if (comptage && r.date && new Date(r.date) > comptage.date) {
+          arrivagesPostComptageParBac.set(r.bacId, (arrivagesPostComptageParBac.get(r.bacId) ?? 0) + transferes);
+        }
+        // Pré-comptage : déjà inclus dans AssignationBac.nombreInitial via incrémentation étape 9
+      } else {
+        // Sortant : soustraction (côté PRE_GROSSISSEMENT source)
+        mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + transferes);
+        const comptage = comptagesParBac.get(r.bacId);
+        if (comptage && r.date && new Date(r.date) > comptage.date) {
+          mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + transferes);
+        }
       }
     }
     // ARRIVAGE — ajustement positif (alevins ajoutés). nombreCompte stocke la qty.
@@ -364,12 +380,14 @@ export function computeVivantsByBac(
  * Calcule le nombre total de poissons vivants pour une vague
  * en agregeant par bac via computeVivantsByBac().
  * Remplace le pattern faux `comptages.at(-1)?.nombreCompte`.
+ *
+ * @param options.transfertDestBacIds - Voir computeVivantsByBac. Obligatoire pour vagues GROSSISSEMENT.
  */
 export function computeNombreVivantsVague(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null }[],
   nombreInitialVague: number,
-  options?: { excludeVentes?: boolean }
+  options?: { excludeVentes?: boolean; transfertDestBacIds?: Set<string> }
 ): number {
   if (bacs.length === 0) {
     // Fallback: no bacs attached, use global logic
@@ -393,7 +411,7 @@ export function computeNombreVivantsVague(
       .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
     return Math.max(0, nombreInitialVague - totalMorts - totalVendus);
   }
-  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague, options);
+  const vivantsByBac = computeVivantsByBac(bacs, releves as Parameters<typeof computeVivantsByBac>[1], nombreInitialVague, options);
   let total = 0;
   for (const v of vivantsByBac.values()) total += v;
   return total;

@@ -10,6 +10,7 @@ import {
   computeVivantsByBac,
   computeNombreVivantsVague,
 } from "@/lib/calculs";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 
 /**
  * Agrege les donnees d'une vague pour calculer ses indicateurs.
@@ -51,6 +52,9 @@ export async function getIndicateursVague(
 
   if (!vague) return null;
 
+  // CS.2 : charger les bacDestIds pour discriminer TRANSFERT entrants (vague GROSSISSEMENT)
+  const transfertDestBacIds = await getTransfertDestBacIds(siteId, vagueId);
+
   // ADR-043 Phase 3: build bacs list from active assignations
   const bacsFromAssignations = vague.assignations.map((a) => ({
     id: a.bac.id,
@@ -87,7 +91,7 @@ export async function getIndicateursVague(
     // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
     const nombreInitialParBac = Math.round(vague.nombreInitial / bacsFromAssignations.length);
 
-    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial);
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertDestBacIds });
 
     // Group mortalites by bacId (still needed for totalMortsAll)
     const mortsParBac = new Map<string, number>();
@@ -163,7 +167,7 @@ export async function getIndicateursVague(
       0
     );
 
-    nombreVivants = computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial);
+    nombreVivants = computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertDestBacIds });
 
     if (biometries.length > 0) {
       const derniereBiometrie = biometries.at(-1);
@@ -176,7 +180,7 @@ export async function getIndicateursVague(
 
   // For survival rate, exclude sales — sold fish are alive, just not in the farm
   const nombreVivantsForSurvie = hasPerBacReleves && bacsFromAssignations.length > 0
-    ? computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { excludeVentes: true })
+    ? computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { excludeVentes: true, transfertDestBacIds })
     : nombreVivants; // No per-bac releves means no VENTE releves either
 
   // Jours ecoules

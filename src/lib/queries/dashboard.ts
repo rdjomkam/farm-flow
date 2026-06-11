@@ -88,6 +88,24 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
     prisma.assignationBac.count({ where: { siteId, dateFin: null } }),
   ]);
 
+  // CS.2 : charger les transfertDestBacIds pour toutes les vagues actives en une requête
+  const transfertDestBacIdsMap = new Map<string, Set<string>>();
+  if (vaguesActives.length > 0) {
+    const groupes = await prisma.transfertGroupe.findMany({
+      where: {
+        vagueDestId: { in: vaguesActives.map((v) => v.id) },
+        transfert: { siteId },
+      },
+      select: { vagueDestId: true, bacDestId: true },
+    });
+    for (const g of groupes) {
+      if (!g.bacDestId) continue;
+      const set = transfertDestBacIdsMap.get(g.vagueDestId) ?? new Set<string>();
+      set.add(g.bacDestId);
+      transfertDestBacIdsMap.set(g.vagueDestId, set);
+    }
+  }
+
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
     // ADR-043 Phase 3: build bacs list from active assignations
     const bacsFromAssignations = v.assignations.map((a) => ({
@@ -96,10 +114,12 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       nombreInitial: a.nombreInitial,
     }));
 
+    const transfertDestBacIds = transfertDestBacIdsMap.get(v.id) ?? new Set<string>();
+
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
     // For survival rate, exclude sales — sold fish are alive, just not in the farm
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true });
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true, transfertDestBacIds });
     const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
@@ -114,7 +134,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
 
     if (hasPerBacReleves && bacsFromAssignations.length > 0) {
       // Per-bac weighted calculation (same logic as indicateurs.ts)
-      const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial);
+      const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
       const biometriesParBac = new Map<string, (typeof biometries)[0]>();
       for (const b of biometries) {
         if (b.bacId) biometriesParBac.set(b.bacId, b);
@@ -208,6 +228,24 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
 
   const now = new Date();
 
+  // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête
+  const transfertDestBacIdsMapProj = new Map<string, Set<string>>();
+  if (vaguesActives.length > 0) {
+    const groupesProj = await prisma.transfertGroupe.findMany({
+      where: {
+        vagueDestId: { in: vaguesActives.map((v) => v.id) },
+        transfert: { siteId },
+      },
+      select: { vagueDestId: true, bacDestId: true },
+    });
+    for (const g of groupesProj) {
+      if (!g.bacDestId) continue;
+      const set = transfertDestBacIdsMapProj.get(g.vagueDestId) ?? new Set<string>();
+      set.add(g.bacDestId);
+      transfertDestBacIdsMapProj.set(g.vagueDestId, set);
+    }
+  }
+
   return vaguesActives.map((v) => {
     // ADR-043 Phase 3: build bacs list from active assignations
     const bacsFromAssignations = v.assignations.map((a) => ({
@@ -216,12 +254,14 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       nombreInitial: a.nombreInitial,
     }));
 
+    const transfertDestBacIds = transfertDestBacIdsMapProj.get(v.id) ?? new Set<string>();
+
     const biometriesRaw = v.releves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
 
     const joursEcoules = Math.floor(
@@ -229,7 +269,7 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
     );
 
     // Agréger les biométries par date (moyenne pondérée par vivantsByBac)
-    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial);
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
     const groupedByDate = new Map<string, typeof biometriesRaw>();
     for (const r of biometriesRaw) {
       const key = new Date(r.date).toISOString().slice(0, 10);
@@ -422,8 +462,26 @@ export async function getDashboardIndicateurs(
   // de l'interface ConfigElevage — seuls les champs numeriques scalaires sont utilises.
   const benchmarks = getBenchmarks(configRaw as unknown as ConfigElevage | null);
 
-  // Charger TOUTES les activites correctives en une seule requete (anti N+1)
+  // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête
   const vagueIds = vagues.map((v) => v.id);
+  const transfertDestBacIdsMapIndic = new Map<string, Set<string>>();
+  if (vagueIds.length > 0) {
+    const groupesIndic = await prisma.transfertGroupe.findMany({
+      where: {
+        vagueDestId: { in: vagueIds },
+        transfert: { siteId },
+      },
+      select: { vagueDestId: true, bacDestId: true },
+    });
+    for (const g of groupesIndic) {
+      if (!g.bacDestId) continue;
+      const set = transfertDestBacIdsMapIndic.get(g.vagueDestId) ?? new Set<string>();
+      set.add(g.bacDestId);
+      transfertDestBacIdsMapIndic.set(g.vagueDestId, set);
+    }
+  }
+
+  // Charger TOUTES les activites correctives en une seule requete (anti N+1)
   const activitesCorrectives = await prisma.activite.findMany({
     where: {
       siteId,
@@ -452,6 +510,8 @@ export async function getDashboardIndicateurs(
       nombreInitial: a.nombreInitial,
     }));
 
+    const transfertDestBacIdsIndic = transfertDestBacIdsMapIndic.get(v.id) ?? new Set<string>();
+
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
     const mortalites = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
@@ -460,8 +520,8 @@ export async function getDashboardIndicateurs(
     const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true });
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds: transfertDestBacIdsIndic });
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true, transfertDestBacIds: transfertDestBacIdsIndic });
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(

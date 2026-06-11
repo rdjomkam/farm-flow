@@ -44,6 +44,24 @@ export async function GET(request: NextRequest) {
       { limit, offset }
     );
 
+    // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête (batch)
+    const transfertDestBacIdsMapRoute = new Map<string, Set<string>>();
+    if (vaguesRaw.length > 0) {
+      const groupesRoute = await prisma.transfertGroupe.findMany({
+        where: {
+          vagueDestId: { in: vaguesRaw.map((v) => v.id) },
+          transfert: { siteId: auth.activeSiteId },
+        },
+        select: { vagueDestId: true, bacDestId: true },
+      });
+      for (const g of groupesRoute) {
+        if (!g.bacDestId) continue;
+        const set = transfertDestBacIdsMapRoute.get(g.vagueDestId) ?? new Set<string>();
+        set.add(g.bacDestId);
+        transfertDestBacIdsMapRoute.set(g.vagueDestId, set);
+      }
+    }
+
     const data = vaguesRaw.map((v) => {
       const now = v.dateFin ?? new Date();
       const joursEcoules = Math.floor(
@@ -86,12 +104,14 @@ export async function GET(request: NextRequest) {
       let biomasse: number | null = null;
       const bacsMapped = assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
       const hasPerBacReleves = releves.some((r) => r.bacId !== null);
+      const transfertDestBacIdsRoute = transfertDestBacIdsMapRoute.get(v.id) ?? new Set<string>();
       if (bacsMapped.length > 0 && hasPerBacReleves) {
         // Aligné avec indicateurs.ts et finances.ts (fix B5) : vivants déjà après VENTE
         const vivantsByBac = computeVivantsByBac(
           bacsMapped,
           releves as Parameters<typeof computeVivantsByBac>[1],
-          v.nombreInitial
+          v.nombreInitial,
+          { transfertDestBacIds: transfertDestBacIdsRoute }
         );
         const biometriesParBac = new Map<string, number>();
         for (const r of releves) {

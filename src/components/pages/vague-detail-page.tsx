@@ -28,7 +28,7 @@ import { BacPerformanceSection } from "@/components/vagues/bac-performance-secti
 import { formatNum } from "@/lib/format";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
 import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission, TypeVague } from "@/types";
-import { getLineage } from "@/lib/queries/transferts";
+import { getLineage, getTransfertDestBacIds } from "@/lib/queries/transferts";
 import type { Bac, BacResponse, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
@@ -165,7 +165,9 @@ export default async function VagueDetailPage({
       },
     },
   });
-  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForPerf, vague.nombreInitial);
+  // CS.2 : charger les bacDestIds pour discriminer TRANSFERT entrants (vague GROSSISSEMENT)
+  const transfertDestBacIds = await getTransfertDestBacIds(session.activeSiteId, id);
+  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForPerf, vague.nombreInitial, { transfertDestBacIds });
 
   // Compute per-bac performance data
   const bacPerfData = computeBacPerformance({

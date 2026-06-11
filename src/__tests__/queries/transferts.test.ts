@@ -1285,3 +1285,138 @@ describe("canDeleteVague", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// 9. CS.2 — createTransfert crée 2 relevés TRANSFERT par groupe (source + dest miroir)
+// ---------------------------------------------------------------------------
+
+describe("CS.2 — createTransfert crée relevé TRANSFERT miroir côté destination", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("TC33 — createTransfert crée un relevé TRANSFERT côté source et un miroir côté dest", async () => {
+    // Happy path Mode A avec bacSourceId renseigné
+    mockVagueFindMany.mockResolvedValue([vaguePreGross]);
+    mockVagueFindFirst.mockResolvedValue(null); // code non pris
+    mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
+      .mockResolvedValueOnce([{ nombreActuel: 800 }]);
+    mockReleveFindMany.mockResolvedValue([]);
+    mockAssignationBacFindFirst
+      .mockResolvedValueOnce({ id: "ad-1" }) // étape 6
+      .mockResolvedValueOnce({ id: "ad-1" }); // étape 9
+    mockTransfertCreate.mockResolvedValue({ id: TRANSFERT_ID });
+    mockTransfertFindUniqueOrThrow.mockResolvedValue(fakeTransfertWithGroupes);
+    mockVagueFindUniqueOrThrow.mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 0, poidsMoyenInitial: 0 });
+    mockVagueUpdate.mockResolvedValue({});
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockAssignationBacUpdate.mockResolvedValue({});
+    mockReleveCreate.mockResolvedValue({});
+
+    await createTransfert(SITE_ID, USER_ID, makeModeADto({ nombrePoissons: 200 }));
+
+    // Relevé TRANSFERT côté SOURCE
+    const transfertSourceCall = mockReleveCreate.mock.calls.find(
+      (call) =>
+        call[0]?.data?.typeReleve === TypeReleve.TRANSFERT &&
+        call[0]?.data?.vagueId === VAGUE_SRC_ID
+    );
+    expect(transfertSourceCall).toBeDefined();
+    expect(transfertSourceCall![0].data).toMatchObject({
+      typeReleve: TypeReleve.TRANSFERT,
+      vagueId: VAGUE_SRC_ID,
+      bacId: BAC_SRC_ID,
+      nombreTransferes: 200,
+      siteId: SITE_ID,
+    });
+
+    // Relevé TRANSFERT miroir côté DESTINATION
+    const transfertDestCall = mockReleveCreate.mock.calls.find(
+      (call) =>
+        call[0]?.data?.typeReleve === TypeReleve.TRANSFERT &&
+        call[0]?.data?.vagueId === VAGUE_DEST_ID
+    );
+    expect(transfertDestCall).toBeDefined();
+    expect(transfertDestCall![0].data).toMatchObject({
+      typeReleve: TypeReleve.TRANSFERT,
+      vagueId: VAGUE_DEST_ID,
+      bacId: BAC_DEST_ID,
+      nombreTransferes: 200,
+      notes: "Arrivage par transfert",
+      siteId: SITE_ID,
+    });
+  });
+
+  it("TC34 — les deux relevés TRANSFERT partagent le même transfertGroupeId", async () => {
+    mockVagueFindMany.mockResolvedValue([vaguePreGross]);
+    mockVagueFindFirst.mockResolvedValue(null);
+    mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
+      .mockResolvedValueOnce([{ nombreActuel: 800 }]);
+    mockReleveFindMany.mockResolvedValue([]);
+    mockAssignationBacFindFirst
+      .mockResolvedValueOnce({ id: "ad-1" })
+      .mockResolvedValueOnce({ id: "ad-1" });
+    mockTransfertCreate.mockResolvedValue({ id: TRANSFERT_ID });
+    mockTransfertFindUniqueOrThrow.mockResolvedValue(fakeTransfertWithGroupes);
+    mockVagueFindUniqueOrThrow.mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 0, poidsMoyenInitial: 0 });
+    mockVagueUpdate.mockResolvedValue({});
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockAssignationBacUpdate.mockResolvedValue({});
+    mockReleveCreate.mockResolvedValue({});
+
+    await createTransfert(SITE_ID, USER_ID, makeModeADto({ nombrePoissons: 200 }));
+
+    const transfertCalls = mockReleveCreate.mock.calls.filter(
+      (call) => call[0]?.data?.typeReleve === TypeReleve.TRANSFERT
+    );
+
+    // Il doit y avoir exactement 2 relevés TRANSFERT (source + miroir dest)
+    expect(transfertCalls.length).toBe(2);
+
+    // Les deux doivent partager le même transfertGroupeId
+    const groupeIdSource = transfertCalls[0][0].data.transfertGroupeId;
+    const groupeIdDest = transfertCalls[1][0].data.transfertGroupeId;
+    expect(groupeIdSource).toBeDefined();
+    expect(groupeIdDest).toBeDefined();
+    expect(groupeIdSource).toBe(groupeIdDest);
+  });
+
+  it("TC35 — le relevé miroir dest a vagueId = vagueDestId et bacId = bacDestId", async () => {
+    mockVagueFindMany.mockResolvedValue([vaguePreGross]);
+    mockVagueFindFirst.mockResolvedValue(vagueGross); // Mode B
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
+      .mockResolvedValueOnce([{ nombreActuel: 800 }]);
+    mockReleveFindMany.mockResolvedValue([]);
+    mockAssignationBacFindFirst
+      .mockResolvedValueOnce({ id: "ad-1" })
+      .mockResolvedValueOnce({ id: "ad-1" });
+    mockTransfertCreate.mockResolvedValue({ id: TRANSFERT_ID });
+    mockTransfertFindUniqueOrThrow.mockResolvedValue(fakeTransfertWithGroupes);
+    mockVagueFindUniqueOrThrow.mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 500, poidsMoyenInitial: 60 });
+    mockVagueUpdate.mockResolvedValue({});
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockAssignationBacUpdate.mockResolvedValue({});
+    mockReleveCreate.mockResolvedValue({});
+
+    await createTransfert(SITE_ID, USER_ID, makeModeBDto({ nombrePoissons: 200 }));
+
+    const mirrorCall = mockReleveCreate.mock.calls.find(
+      (call) =>
+        call[0]?.data?.typeReleve === TypeReleve.TRANSFERT &&
+        call[0]?.data?.vagueId === VAGUE_DEST_ID &&
+        call[0]?.data?.bacId === BAC_DEST_ID
+    );
+
+    expect(mirrorCall).toBeDefined();
+    expect(mirrorCall![0].data).toMatchObject({
+      vagueId: VAGUE_DEST_ID,
+      bacId: BAC_DEST_ID,
+      nombreTransferes: 200,
+    });
+  });
+});

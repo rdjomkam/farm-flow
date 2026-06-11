@@ -27,11 +27,15 @@ import { TypeReleve } from "@/types";
 // ---------------------------------------------------------------------------
 
 const mockVagueFindFirst = vi.fn();
+const mockTransfertGroupeFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     vague: {
       findFirst: (...args: unknown[]) => mockVagueFindFirst(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   },
 }));
@@ -100,6 +104,8 @@ function makeVague(overrides: {
 describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // CS.2: par défaut, aucun transfertGroupe entrant → Set vide → comportement identique à avant
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   // Test 1 — Cas standard : nombreInitial vague > somme nombreInitial bacs
