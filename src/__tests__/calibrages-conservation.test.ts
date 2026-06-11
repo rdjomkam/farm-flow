@@ -38,6 +38,7 @@ const mockCalibrageFindFirst = vi.fn();
 const mockCalibrageUpdate = vi.fn();
 const mockCalibrageGroupeDeleteMany = vi.fn();
 const mockCalibrageModificationCreateMany = vi.fn();
+const mockTransfertGroupeFindMany = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
@@ -69,6 +70,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     },
     calibrageModification: {
       createMany: (...args: unknown[]) => mockCalibrageModificationCreateMany(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   };
   return fn(tx);
@@ -168,8 +172,36 @@ function setupCreateMocks(vivants: number) {
     .mockResolvedValueOnce([{ bacId: BAC_SOURCE_ID, nombreInitial: vivants }]) // 3. allAssignationsVague
     .mockResolvedValueOnce([                                   // 4. snapshotAvant
       { bacId: BAC_SOURCE_ID, nombreActuel: vivants, nombreInitial: vivants, poidsMoyenInitial: 50, bac: { id: BAC_SOURCE_ID, nom: "Bac Source" } },
+    ])
+    // 5. Guard: verifyAssignationInvariant.assignationBac.findMany (source + dest)
+    .mockResolvedValueOnce([
+      { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 0, nombreInitial: vivants },
+      { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: vivants, nombreInitial: 0 },
     ]);
-  mockReleveFindMany.mockResolvedValue(makeComptageReleve(BAC_SOURCE_ID, vivants));
+  mockReleveFindMany
+    .mockResolvedValueOnce(makeComptageReleve(BAC_SOURCE_ID, vivants)) // 3. computeVivantsByBac
+    // 5. Guard: releve.findMany — COMPTAGE override donne vivants sur BAC_SOURCE, 0 sur BAC_DEST
+    .mockResolvedValueOnce([
+      {
+        bacId: BAC_SOURCE_ID,
+        typeReleve: "COMPTAGE",
+        date: new Date("2026-06-01"),
+        nombreMorts: null,
+        nombreCompte: 0,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+      {
+        bacId: BAC_DEST_ID,
+        typeReleve: "COMPTAGE",
+        date: new Date("2026-06-01"),
+        nombreMorts: null,
+        nombreCompte: vivants,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+    ]);
+  mockTransfertGroupeFindMany.mockResolvedValue([]); // Guard: aucun transfert entrant
   mockAssignationBacFindFirst.mockResolvedValue({ id: "a-dest", nombreActuel: 0, nombreInitial: 0, poidsMoyenInitial: 0 });
   mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
   mockAssignationBacUpdate.mockResolvedValue({});
@@ -301,12 +333,12 @@ describe("patchCalibrage — conservation stricte", () => {
       });
 
     // Appels assignationBac.findMany dans patchCalibrage (quand groupes modifies) :
-    // Etape 5 : destAssignationsPatch — verifie que les bacs dest appartiennent a la vague
-    // Etape 5b : allAssignationsVagueModif — snapshot avec bac inclus
-    // Etape 7 pass 2 : via findFirst (pas findMany)
+    // Call 1 : Etape 5 destAssignationsPatch — verifie que les bacs dest appartiennent a la vague
+    // Call 2 : Etape 5b allAssignationsVagueModif — snapshot avec bac inclus
+    // Call 3 : Guard post-écriture — verifyAssignationInvariant
     mockAssignationBacFindMany
-      .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])  // Etape 5 destAssignationsPatch
-      .mockResolvedValue([                              // Etape 5b allAssignationsVagueModif
+      .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])  // Call 1: Etape 5 destAssignationsPatch
+      .mockResolvedValueOnce([                          // Call 2: Etape 5b allAssignationsVagueModif
         {
           bacId: BAC_SOURCE_ID,
           nombreActuel: 0,
@@ -314,6 +346,11 @@ describe("patchCalibrage — conservation stricte", () => {
           poidsMoyenInitial: 50,
           bac: { id: BAC_SOURCE_ID, nom: "Bac Source" },
         },
+      ])
+      // Call 3: Guard assignationBac.findMany — COMPTAGE override aligne nombreActuel
+      .mockResolvedValueOnce([
+        { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 0, nombreInitial: 5973, dateAssignation: null },
+        { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: 5943, nombreInitial: 0, dateAssignation: null },
       ]);
 
     // Etape 6b : findFirst bac dest pour decrement
@@ -334,6 +371,28 @@ describe("patchCalibrage — conservation stricte", () => {
     mockCalibrageModificationCreateMany.mockResolvedValue({ count: 1 });
     // snapshotAvantModif : vagueForSnapshot
     mockVagueFindFirst.mockResolvedValue(makeVague());
+    // Guard releve.findMany — COMPTAGE override aligne nombreActuel
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_SOURCE_ID,
+        typeReleve: "COMPTAGE",
+        date: new Date("2026-06-10"),
+        nombreMorts: null,
+        nombreCompte: 0,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+      {
+        bacId: BAC_DEST_ID,
+        typeReleve: "COMPTAGE",
+        date: new Date("2026-06-10"),
+        nombreMorts: null,
+        nombreCompte: 5943,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValue([]); // Guard: aucun transfert entrant
   }
 
   it("rejette 2449 redistribues + 0 morts lors d'un patch (sources = 5973)", async () => {

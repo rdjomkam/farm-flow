@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
+import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 import {
   StatutVague,
   StatutVente,
@@ -406,6 +407,19 @@ export async function createVente(
       where: { id: venteRaw.id },
       include: VENTE_LIST_INCLUDE,
     });
+
+    // Guard post-écriture — vérifie l'invariant sur les bacs vendus (par vague)
+    // Grouper les bacs par vagueId pour appeler verifyAssignationInvariant une fois par vague
+    const venteVagueBacMap = new Map<string, Set<string>>();
+    for (const { ligne } of lignesEnrichies) {
+      if (!venteVagueBacMap.has(ligne.vagueId)) {
+        venteVagueBacMap.set(ligne.vagueId, new Set());
+      }
+      venteVagueBacMap.get(ligne.vagueId)!.add(ligne.bacId);
+    }
+    for (const [vgId, bacSet] of venteVagueBacMap.entries()) {
+      await verifyAssignationInvariant(tx, siteId, vgId, [...bacSet]);
+    }
 
     return vente;
   });

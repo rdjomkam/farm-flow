@@ -4,6 +4,7 @@ import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { ConservationError } from "@/lib/errors";
+import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
 export async function getCalibrages(
@@ -417,6 +418,12 @@ export async function createCalibrage(
         });
       }
     }
+
+    // Guard post-écriture — vérifie l'invariant sur tous les bacs touchés (sources + dest)
+    const allCalibrageBacIds = [
+      ...new Set([...data.sourceBacIds, ...destBacIds]),
+    ];
+    await verifyAssignationInvariant(tx, siteId, data.vagueId, allCalibrageBacIds);
 
     return calibrage;
   });
@@ -928,6 +935,17 @@ export async function patchCalibrage(
     const newModifications = result.modifications.filter(
       (m) => traces.some((t) => t.champModifie === m.champModifie)
     ) as CalibrageModificationWithUser[];
+
+    // Guard post-écriture — vérifie l'invariant sur tous les bacs touchés
+    if (data.groupes !== undefined) {
+      const allPatchBacIds = [
+        ...new Set([
+          ...ancienCalibrage.sourceBacIds,
+          ...nouveauxGroupes.map((g) => g.destinationBacId),
+        ]),
+      ];
+      await verifyAssignationInvariant(tx, siteId, ancienCalibrage.vague.id, allPatchBacIds);
+    }
 
     return { calibrage: result, modifications: newModifications };
   });

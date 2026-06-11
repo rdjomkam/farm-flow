@@ -33,6 +33,7 @@ import type {
   ArrivageWithRelations,
   ArrivageGroupe,
 } from "@/types";
+import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 
 // ---------------------------------------------------------------------------
 // Include standard pour ArrivageWithRelations
@@ -357,6 +358,9 @@ export async function createArrivage(
           },
         });
       }
+
+      // Guard post-écriture — vérifie l'invariant sur les bacs destination
+      await verifyAssignationInvariant(tx, siteId, dto.vagueId, uniqueDestBacIds);
 
       return arrivage as unknown as ArrivageWithRelations;
     },
@@ -726,6 +730,10 @@ export async function updateArrivageGroupe(
           destinationBac: { select: { id: true, nom: true } },
         },
       });
+
+      // Guard post-écriture — vérifie l'invariant sur les bacs destination affectés
+      const arrivageUpdateBacIds = [...new Set([ancienDestBacId, nouveauDestBacId])];
+      await verifyAssignationInvariant(tx, siteId, vagueId, arrivageUpdateBacIds);
 
       return updated as unknown as ArrivageGroupe;
     },

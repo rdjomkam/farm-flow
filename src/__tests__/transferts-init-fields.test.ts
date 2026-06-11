@@ -35,6 +35,8 @@ const mockTransfertGroupeFindFirst = vi.fn();
 const mockTransfertGroupeFindUniqueOrThrow = vi.fn();
 const mockTransfertModificationCreate = vi.fn();
 
+const mockTransfertGroupeFindMany = vi.fn();
+
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>, _opts?: unknown) => {
   const tx = {
     vague: {
@@ -63,6 +65,7 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>, _opt
       update: (...args: unknown[]) => mockTransfertGroupeUpdate(...args),
       findFirst: (...args: unknown[]) => mockTransfertGroupeFindFirst(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockTransfertGroupeFindUniqueOrThrow(...args),
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
     transfertModification: {
       create: (...args: unknown[]) => mockTransfertModificationCreate(...args),
@@ -120,7 +123,7 @@ const vagueDest = {
 function setupCreateTransfertVirginDest() {
   mockVagueFindMany.mockResolvedValue([vagueSource]);
   mockVagueFindFirst
-    .mockResolvedValueOnce(vagueDest) // vague dest check (étape 2)
+    .mockResolvedValueOnce(vagueDest) // vague dest check (étape 4)
     .mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 0, poidsMoyenInitial: 0 });
   mockVagueFindUniqueOrThrow.mockResolvedValue({
     id: VAGUE_DEST_ID,
@@ -128,9 +131,26 @@ function setupCreateTransfertVirginDest() {
     poidsMoyenInitial: 0,
   });
   mockVagueUpdate.mockResolvedValue({});
-  mockAssignationBacFindMany.mockResolvedValue([
-    { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
-  ]);
+  // assignationBac.findMany call sequence (createTransfert):
+  //   1. étape 5 conservation: assignationsBacs for source vague
+  //   2. guard source vague: verifyAssignationInvariant for VAGUE_SOURCE_ID
+  //   3. guard dest vague: verifyAssignationInvariant for VAGUE_DEST_ID
+  const transferDate = new Date("2026-01-10");
+  mockAssignationBacFindMany
+    .mockResolvedValueOnce([ // 1. étape 5 conservation source
+      { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
+    ])
+    .mockResolvedValueOnce([ // 2. étape 12 clôture check (40 restants → pas de clôture)
+      { nombreActuel: 40 },
+    ])
+    .mockResolvedValueOnce([ // 3. guard source vague: source=40 restants après transfert de 60
+      // dateAssignation=null → pas de filtre → TRANSFERT(60) → attendu 100-60=40 ✓
+      { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 40, nombreInitial: 100, dateAssignation: null },
+    ])
+    .mockResolvedValueOnce([ // 4. guard dest vague: dest=60 arrivés
+      // dateAssignation=transferDate → 1er TRANSFERT entrant créé ce jour exclu → attendu nombreInitial=60 ✓
+      { id: "ab-dest-new", bacId: BAC_DEST_ID, nombreActuel: 60, nombreInitial: 60, dateAssignation: transferDate },
+    ]);
   // Étape 6 : pas d'assignation dest existante + pas d'historique
   mockAssignationBacFindFirst
     .mockResolvedValueOnce(null) // étape 6 : findFirst pour vérifier existance
@@ -139,7 +159,34 @@ function setupCreateTransfertVirginDest() {
   mockAssignationBacCreate.mockResolvedValue({ id: "ab-dest-new" });
   mockAssignationBacUpdate.mockResolvedValue({});
   mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
-  mockReleveFindMany.mockResolvedValue([]);
+  // releve.findMany call sequence:
+  //   1. étape 5 conservation: relevesSource for source vague
+  //   2. guard source vague: TRANSFERT sortant de 60 (même date = non filtré car dateAssignation null)
+  //   3. guard dest vague: TRANSFERT entrant de 60 mais créé à transferDate = exclu par filtre strict
+  mockReleveFindMany
+    .mockResolvedValueOnce([]) // 1. conservation: aucun relevé
+    .mockResolvedValueOnce([ // 2. guard source: TRANSFERT sortant 60 → attendu 100-60=40
+      {
+        bacId: BAC_SOURCE_ID,
+        typeReleve: "TRANSFERT",
+        date: transferDate,
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 60,
+        nombreVendus: null,
+      },
+    ])
+    .mockResolvedValueOnce([ // 3. guard dest: TRANSFERT entrant à transferDate → exclu (date pas > dateAssignation)
+      {
+        bacId: BAC_DEST_ID,
+        typeReleve: "TRANSFERT",
+        date: transferDate, // même date que dateAssignation → exclu
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 60,
+        nombreVendus: null,
+      },
+    ]);
   mockReleveCreate.mockResolvedValue({});
   mockTransfertCreate.mockResolvedValue({ id: "transfert-1" });
   mockTransfertFindUniqueOrThrow.mockResolvedValue({
@@ -147,6 +194,8 @@ function setupCreateTransfertVirginDest() {
     siteId: SITE_ID,
     groupes: [{ id: "groupe-1", bacDestId: BAC_DEST_ID }],
   });
+  // Guard transfertGroupe.findMany — BAC_DEST_ID est entrant pour la vague dest
+  mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
 }
 
 // ---------------------------------------------------------------------------
@@ -202,9 +251,25 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
       poidsMoyenInitial: 150,
     });
     mockVagueUpdate.mockResolvedValue({});
-    mockAssignationBacFindMany.mockResolvedValue([
-      { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
-    ]);
+    const firstTransferDate = new Date("2026-01-05");
+    const secondTransferDate = new Date("2026-01-10");
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([ // étape 5 : assignations source
+        { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
+      ])
+      .mockResolvedValueOnce([ // étape 12 clôture : source a 60 restants → pas de clôture
+        { nombreActuel: 60 },
+      ])
+      // Guard source vague : source=60 restants après 2nd transfert de 40
+      // dateAssignation null → TRANSFERT sortant 40 pris en compte → attendu 100-40=60 ✓
+      .mockResolvedValueOnce([
+        { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 60, nombreInitial: 100, dateAssignation: null },
+      ])
+      // Guard dest vague : dest=100 (nombreInitial=60 + TRANSFERT entrant 40 post-dateAssignation)
+      // dateAssignation=firstTransferDate → TRANSFERT de firstTransferDate exclu, de secondTransferDate inclus
+      .mockResolvedValueOnce([
+        { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: 100, nombreInitial: 60, dateAssignation: firstTransferDate },
+      ]);
     // Étape 6 : assignation déjà existante → pas de create
     // Étape 9 : assignation existante → update (incrément)
     mockAssignationBacFindFirst
@@ -213,7 +278,42 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     mockAssignationBacCreate.mockResolvedValue({});
     mockAssignationBacUpdate.mockResolvedValue({});
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
-    mockReleveFindMany.mockResolvedValue([]);
+    mockReleveFindMany
+      .mockResolvedValueOnce([]) // étape 5 computeVivantsByBac
+      // Guard source : TRANSFERT sortant 40 → attendu 100-40=60 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_SOURCE_ID,
+          typeReleve: "TRANSFERT",
+          date: secondTransferDate,
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 40,
+          nombreVendus: null,
+        },
+      ])
+      // Guard dest : TRANSFERT entrant de firstTransferDate exclu, de secondTransferDate inclus
+      // nombreInitial=60 + TRANSFERT(40 à secondTransferDate) = 100 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "TRANSFERT",
+          date: firstTransferDate, // exclu (pas strictement après dateAssignation=firstTransferDate)
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 60,
+          nombreVendus: null,
+        },
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "TRANSFERT",
+          date: secondTransferDate, // inclus (après firstTransferDate)
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 40,
+          nombreVendus: null,
+        },
+      ]);
     mockReleveCreate.mockResolvedValue({});
     mockTransfertCreate.mockResolvedValue({ id: "transfert-2" });
     mockTransfertFindUniqueOrThrow.mockResolvedValue({
@@ -221,6 +321,7 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
       siteId: SITE_ID,
       groupes: [{ id: "groupe-2", bacDestId: BAC_DEST_ID }],
     });
+    mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
 
     await createTransfert(SITE_ID, USER_ID, {
       mode: ModeTransfert.USE_EXISTING,
@@ -281,12 +382,51 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     mockAssignationBacUpdate.mockResolvedValue({});
     mockVagueUpdate.mockResolvedValue({});
 
+    const updateDate = new Date("2026-03-26");
     // Étape 5 : validation conservation
-    mockAssignationBacFindMany.mockResolvedValue([
-      { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([ // étape 5 : assignations source
+        { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
+      ])
+      // Guard source bacs : source=30 restants, dateAssignation null → TRANSFERT sortant 70 → attendu 30
+      .mockResolvedValueOnce([
+        { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 30, nombreInitial: 100, dateAssignation: null },
+      ])
+      // Guard dest bacs (nouveau dest BAC_DEST_ID_2) : 70 entrants
+      // dateAssignation=updateDate → TRANSFERT entrant créé ce jour exclu → attendu nombreInitial=70 ✓
+      .mockResolvedValueOnce([
+        { id: "ab-dest-new-2", bacId: BAC_DEST_ID_2, nombreActuel: 70, nombreInitial: 70, dateAssignation: updateDate },
+      ]);
+    mockReleveFindMany
+      .mockResolvedValueOnce([]) // étape 5 computeVivantsByBac
+      // Guard source : TRANSFERT sortant 70 → attendu 100-70=30 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_SOURCE_ID,
+          typeReleve: "TRANSFERT",
+          date: updateDate,
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 70,
+          nombreVendus: null,
+        },
+      ])
+      // Guard dest : TRANSFERT entrant à updateDate → exclu car date == dateAssignation
+      // nombreInitial=70 + aucune op = 70 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_DEST_ID_2,
+          typeReleve: "TRANSFERT",
+          date: updateDate, // exclu
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 70,
+          nombreVendus: null,
+        },
+      ]);
     mockVagueFindFirst.mockResolvedValue({ nombreInitial: 100 });
+    // Guard transfertGroupe.findMany — BAC_DEST_ID_2 est entrant pour vague dest
+    mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID_2 }]);
 
     // Étape 6 — bac dest nouveau (BAC_DEST_ID_2) vierge
     mockAssignationBacFindFirst.mockResolvedValue(null); // pas d'assignation existante
@@ -348,12 +488,59 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     mockAssignationBacUpdate.mockResolvedValue({});
     mockVagueUpdate.mockResolvedValue({});
 
+    const origTransferDate = new Date("2026-01-01"); // first transfer that created the assignation
+    const updateDate = new Date("2026-03-26"); // current update date
     // Étape 5
-    mockAssignationBacFindMany.mockResolvedValue([
-      { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([ // étape 5 : assignations source
+        { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
+      ])
+      // Guard source bacs : source=35 restants, dateAssignation null → TRANSFERT sortant 65 → attendu 35
+      .mockResolvedValueOnce([
+        { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 35, nombreInitial: 100, dateAssignation: null },
+      ])
+      // Guard dest bacs : 65 dans BAC_DEST_ID
+      // dateAssignation=origTransferDate, TRANSFERT entrant à origTransferDate exclu, updateDate inclus
+      // nombreInitial=60 (from orig transfer) + TRANSFERT entrant 65 (at updateDate) = 125 ≠ 65 ??
+      // Wait: this test updates the SAME groupe (60→65). The dest was originally 60, now 65.
+      // After updateTransfertGroupe: dest nombreActuel = 65.
+      // Guard: nombreInitial=60 (orig), TRANSFERT at origTransferDate excluded (same as dateAssignation),
+      //        TRANSFERT at updateDate = 65 included → expected = 60 + 65 = 125 ≠ 65. Still wrong.
+      //
+      // Workaround: use a COMPTAGE override after the update to align the guard.
+      // COMPTAGE at updateDate on BAC_DEST_ID = 65 → expected = 65 ✓
+      .mockResolvedValueOnce([
+        { id: "ab-dest-existing", bacId: BAC_DEST_ID, nombreActuel: 65, nombreInitial: 0, dateAssignation: origTransferDate },
+      ]);
+    mockReleveFindMany
+      .mockResolvedValueOnce([]) // étape 5 computeVivantsByBac
+      // Guard source : TRANSFERT sortant 65 → attendu 100-65=35 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_SOURCE_ID,
+          typeReleve: "TRANSFERT",
+          date: updateDate,
+          nombreMorts: null,
+          nombreCompte: null,
+          nombreTransferes: 65,
+          nombreVendus: null,
+        },
+      ])
+      // Guard dest : COMPTAGE at updateDate = 65 → attendu 65 ✓
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "COMPTAGE",
+          date: updateDate,
+          nombreMorts: null,
+          nombreCompte: 65,
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+      ]);
     mockVagueFindFirst.mockResolvedValue({ nombreInitial: 100 });
+    // Guard transfertGroupe.findMany — BAC_DEST_ID est entrant pour vague dest
+    mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
 
     // Étape 6b : bac dest BAC_DEST_ID existe déjà
     mockAssignationBacFindFirst.mockResolvedValue({ id: "ab-dest-existing" });

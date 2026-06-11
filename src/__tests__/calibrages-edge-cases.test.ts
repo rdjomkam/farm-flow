@@ -30,6 +30,7 @@ const mockReleveFindMany = vi.fn();
 const mockReleveCreate = vi.fn();
 const mockCalibrageCreate = vi.fn();
 const mockCalibrageFindUniqueOrThrow = vi.fn();
+const mockTransfertGroupeFindMany = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
@@ -52,6 +53,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     calibrage: {
       create: (...args: unknown[]) => mockCalibrageCreate(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockCalibrageFindUniqueOrThrow(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   };
   return fn(tx);
@@ -149,6 +153,8 @@ function setupBaseMocks() {
     groupes: [],
   });
   mockReleveCreate.mockResolvedValue({});
+  // Guard post-écriture — par défaut aucun transfert entrant
+  mockTransfertGroupeFindMany.mockResolvedValue([]);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +240,34 @@ describe("Cas B — bac present mais sans releves exploitables", () => {
     ]);
     // Aucun releve exploitable → computeVivantsByBac ne peut pas calculer depuis relevés
     // mais nombreInitial servira de base via le fallback Cas B
-    mockReleveFindMany.mockResolvedValue([]);
+    mockReleveFindMany
+      .mockResolvedValueOnce([]) // appel 1 computeVivantsByBac
+      // Guard releve.findMany : COMPTAGE aligne source=0, dest=800
+      .mockResolvedValueOnce([
+        {
+          bacId: BAC_SOURCE_ID,
+          typeReleve: "COMPTAGE",
+          date: new Date("2026-06-01"),
+          nombreMorts: null,
+          nombreCompte: 0,
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "COMPTAGE",
+          date: new Date("2026-06-01"),
+          nombreMorts: null,
+          nombreCompte: NOMBRE_INITIAL_ASSIGNATION,
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+      ]);
+    // Guard assignationBac.findMany (appel 5)
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 0, nombreInitial: NOMBRE_INITIAL_ASSIGNATION },
+      { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: NOMBRE_INITIAL_ASSIGNATION, nombreInitial: 0 },
+    ]);
 
     // Le calibrage doit reussir : redistribues = nombreInitial, morts = 0
     await expect(
@@ -284,18 +317,36 @@ describe("Cas B — bac present mais sans releves exploitables", () => {
         bac: { id: BAC_SOURCE_ID, nom: "Bac Source CF1" },
       },
     ]);
-    // Releve COMPTAGE=0 → vivants = 0
-    mockReleveFindMany.mockResolvedValue([
-      {
-        bacId: BAC_SOURCE_ID,
-        typeReleve: TypeReleve.COMPTAGE,
-        nombreMorts: null,
-        nombreCompte: 0,
-        nombreVendus: null,
-        nombreTransferes: null,
-        date: new Date("2026-06-01"),
-      },
+    // Guard assignationBac.findMany (appel 5) — source=0, dest=0
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 0, nombreInitial: 0 },
+      { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: 0, nombreInitial: 0 },
     ]);
+    // Releve COMPTAGE=0 → vivants = 0
+    // Guard releve.findMany : COMPTAGE=0 sur source et dest aligne nombreActuel=0
+    const releveComptage0 = {
+      bacId: BAC_SOURCE_ID,
+      typeReleve: TypeReleve.COMPTAGE,
+      nombreMorts: null,
+      nombreCompte: 0,
+      nombreVendus: null,
+      nombreTransferes: null,
+      date: new Date("2026-06-01"),
+    };
+    mockReleveFindMany
+      .mockResolvedValueOnce([releveComptage0]) // appel 1 computeVivantsByBac
+      .mockResolvedValueOnce([                 // Guard releve.findMany
+        releveComptage0,
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "COMPTAGE",
+          date: new Date("2026-06-01"),
+          nombreMorts: null,
+          nombreCompte: 0,
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+      ]);
 
     // redistribues = 0, morts = 0 → totalSaisi = 0 = totalSourcePoissons (0) → conservation OK
     await expect(
@@ -330,18 +381,44 @@ describe("Cas C — flux normal avec releve COMPTAGE (regression)", () => {
         bac: { id: BAC_SOURCE_ID, nom: "Bac Source CF1" },
       },
     ]);
-    // Releve COMPTAGE => vivants = 950
-    mockReleveFindMany.mockResolvedValue([
-      {
-        bacId: BAC_SOURCE_ID,
-        typeReleve: TypeReleve.COMPTAGE,
-        nombreMorts: null,
-        nombreCompte: VIVANTS_COMPTAGE,
-        nombreVendus: null,
-        nombreTransferes: null,
-        date: new Date("2026-06-01"),
-      },
+    // Guard assignationBac.findMany (appel 5) — source=0, dest=950
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 0, nombreInitial: NOMBRE_INITIAL_VAGUE },
+      { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: VIVANTS_COMPTAGE, nombreInitial: 0 },
     ]);
+    // Releve COMPTAGE => vivants = 950
+    // Guard releve.findMany : COMPTAGE aligne source=0, dest=950
+    const releveComptage = {
+      bacId: BAC_SOURCE_ID,
+      typeReleve: TypeReleve.COMPTAGE,
+      nombreMorts: null,
+      nombreCompte: VIVANTS_COMPTAGE,
+      nombreVendus: null,
+      nombreTransferes: null,
+      date: new Date("2026-06-01"),
+    };
+    mockReleveFindMany
+      .mockResolvedValueOnce([releveComptage])  // appel 1 computeVivantsByBac
+      .mockResolvedValueOnce([                  // Guard releve.findMany
+        {
+          bacId: BAC_SOURCE_ID,
+          typeReleve: "COMPTAGE",
+          date: new Date("2026-06-01"),
+          nombreMorts: null,
+          nombreCompte: 0,  // post-calibrage : source vidée
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+        {
+          bacId: BAC_DEST_ID,
+          typeReleve: "COMPTAGE",
+          date: new Date("2026-06-01"),
+          nombreMorts: null,
+          nombreCompte: VIVANTS_COMPTAGE,
+          nombreTransferes: null,
+          nombreVendus: null,
+        },
+      ]);
 
     // Conservation OK : redistribues = 950, morts = 0 = vivants = 950
     await expect(

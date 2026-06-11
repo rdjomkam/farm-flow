@@ -31,6 +31,7 @@ import type {
   TransfertGroupeWithRelations,
 } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 
 // ---------------------------------------------------------------------------
 // Helper interne — moyenne pondérée cumulative
@@ -634,6 +635,30 @@ export async function createTransfert(
         }
       }
 
+      // Guard post-écriture — vérifie l'invariant sur les bacs sources et destinations
+      const allTransfertBacIds: string[] = [];
+      for (const g of dto.groupes) {
+        if (g.bacSourceId) allTransfertBacIds.push(g.bacSourceId);
+        if (g.bacDestId) allTransfertBacIds.push(g.bacDestId);
+      }
+      const uniqueTransfertBacIds = [...new Set(allTransfertBacIds)];
+      // Les bacs source appartiennent à des vagues différentes : vérifier chaque vague séparément
+      for (const vagueSourceId of uniqueSourceIds) {
+        const sourceBacsForVague = dto.groupes
+          .filter((g) => g.vagueSourceId === vagueSourceId && g.bacSourceId)
+          .map((g) => g.bacSourceId as string);
+        if (sourceBacsForVague.length > 0) {
+          await verifyAssignationInvariant(tx, siteId, vagueSourceId, [...new Set(sourceBacsForVague)]);
+        }
+      }
+      // Bacs destination appartiennent à vagueDestId
+      const destBacIdsForInvariant = dto.groupes
+        .filter((g) => g.bacDestId)
+        .map((g) => g.bacDestId as string);
+      if (destBacIdsForInvariant.length > 0) {
+        await verifyAssignationInvariant(tx, siteId, vagueDestId, [...new Set(destBacIdsForInvariant)]);
+      }
+
       return transfert as unknown as TransfertWithGroupes;
     },
     { timeout: 30000 }
@@ -1157,6 +1182,37 @@ export async function updateTransfertGroupe(
           },
         },
       });
+
+      // Guard post-écriture — vérifie l'invariant sur les bacs source et destination affectés
+      const updateBacIds: string[] = [];
+      if (nouveauBacSourceId) updateBacIds.push(nouveauBacSourceId);
+      if (ancienBacSourceId && ancienBacSourceId !== nouveauBacSourceId) updateBacIds.push(ancienBacSourceId);
+      if (nouveauBacDestId) updateBacIds.push(nouveauBacDestId);
+      if (ancienBacDestId && ancienBacDestId !== nouveauBacDestId) updateBacIds.push(ancienBacDestId);
+
+      const updateSourceBacs = updateBacIds.filter(
+        (id) => id === nouveauBacSourceId || id === ancienBacSourceId
+      );
+      const updateDestBacs = updateBacIds.filter(
+        (id) => id === nouveauBacDestId || id === ancienBacDestId
+      );
+
+      if (updateSourceBacs.length > 0) {
+        await verifyAssignationInvariant(
+          tx,
+          siteId,
+          groupe.vagueSource.id,
+          [...new Set(updateSourceBacs)],
+        );
+      }
+      if (updateDestBacs.length > 0) {
+        await verifyAssignationInvariant(
+          tx,
+          siteId,
+          groupe.vagueDest.id,
+          [...new Set(updateDestBacs)],
+        );
+      }
 
       return updated as unknown as TransfertGroupeWithRelations;
     },
