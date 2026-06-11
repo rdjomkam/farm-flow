@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { HeartPulse, TrendingUp, Weight, Activity, Scale } from "lucide-react";
+import { HeartPulse, TrendingUp, Weight, Activity, Scale, Fish } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IndicateursVague } from "@/types";
 import { formatNum } from "@/lib/format";
@@ -16,6 +16,13 @@ function IndicateursCardsBase({ indicateurs }: IndicateursCardsProps) {
   const t = useTranslations("vagues");
 
   const items = [
+    {
+      label: t("indicateurs.vivants"),
+      value: indicateurs.nombreVivants != null ? indicateurs.nombreVivants.toLocaleString() : "—",
+      icon: Fish,
+      color: "text-accent-green",
+      bgColor: "bg-accent-green-muted",
+    },
     {
       label: t("indicateurs.tauxSurvie"),
       value: formatNum(indicateurs.tauxSurvie, 1, "%"),
@@ -55,7 +62,7 @@ function IndicateursCardsBase({ indicateurs }: IndicateursCardsProps) {
 
   return (
     <Card className="overflow-hidden">
-      <CardContent className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-5">
+      <CardContent className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-6">
         {items.map((item) => {
           const Icon = item.icon;
           return (

@@ -36,7 +36,8 @@
     "biomasse": "Biomass",
     "poidsMoyen": "Avg. weight",
     "sgr": "SGR",
-    "fcr": "FCR"
+    "fcr": "FCR",
+    "vivants": "Alive"
   },
   "detail": {
     "alevins": "{count} fry ({poids}g)",
@@ -253,7 +254,16 @@
     "actif": "Active",
     "aucunBacActif": "No active tanks for this batch.",
     "poissons": "{count} fish",
-    "poissonsActuels": "{count} current ({initial} at start)"
+    "poissonsActuels": "{count} current ({initial} at start)",
+    "detach": {
+      "ariaLabel": "Detach tank {bac} from this batch",
+      "title": "Detach this tank from the batch",
+      "description": "Tank \"{bac}\" is empty. Do you want to detach it from this batch? The tank will remain available for another batch.",
+      "cancel": "Cancel",
+      "confirm": "Detach",
+      "submitting": "Detaching…",
+      "errorGeneric": "Could not detach the tank."
+    }
   },
   "poidsChartSection": "the weight evolution chart",
   "progress": {

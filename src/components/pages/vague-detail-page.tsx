@@ -461,7 +461,8 @@ export default async function VagueDetailPage({
         {/* Progress bars — production vs objectif + ventes */}
         {(() => {
           const biomasse = (indicateurs ?? defaultIndicateurs).biomasse ?? 0;
-          const totalProduction = biomasse + totalVenduKg;
+          const biomasseTransferee = coutProduction?.resume?.biomasseTransferee ?? 0;
+          const totalProduction = biomasse + totalVenduKg + biomasseTransferee;
           const poidsObj = vague.poidsObjectifKg;
           const showObjectif = poidsObj != null && poidsObj > 0;
           const showVentes = totalVenduKg > 0;
@@ -554,11 +555,13 @@ export default async function VagueDetailPage({
           <section>
             <h2 className="text-base font-semibold mb-3">{t("bacsSection.title")}</h2>
             <VagueBacsSection
+              vagueId={vague.id}
               bacsActifs={(assignationsDb.filter((a) => a.dateFin === null) as AssignationBacForVague[]).map((a) => ({
                 ...a,
                 vivants: vivantsByBac.get(a.bacId) ?? a.nombreActuel ?? null,
               }))}
               bacsRetires={assignationsDb.filter((a) => a.dateFin !== null) as AssignationBacForVague[]}
+              canDetachEmptyBacs={isEnCours && permissions.includes(Permission.VAGUES_MODIFIER)}
             />
             {assignationsDb.length > 1 && (
               <div className="mt-4">

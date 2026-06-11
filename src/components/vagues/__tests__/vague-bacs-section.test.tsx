@@ -27,7 +27,15 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
+vi.mock("@/services", () => ({
+  useVagueService: () => ({ update: vi.fn().mockResolvedValue({ ok: true }) }),
 }));
 
 // next/link renders a plain <a> in tests
@@ -49,8 +57,11 @@ function makeAssignation(overrides: Partial<AssignationBacForVague> = {}): Assig
     siteId: "site-1",
     dateAssignation: new Date("2026-01-01"),
     dateFin: null,
-    nombrePoissons: 3500,
+    nombreActuel: 3500,
     nombreInitial: 3500,
+    poidsMoyenInitial: null,
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-01"),
     bac: { id: "bac-1", nom: "Bac A", volume: 5000 },
     ...overrides,
   };
@@ -66,7 +77,7 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     const bacsActifs = [{ ...assignation, vivants: 3405 as number | null }];
 
     render(
-      <VagueBacsSection
+      <VagueBacsSection vagueId="vague-1"
         bacsActifs={bacsActifs}
         bacsRetires={[]}
       />
@@ -83,7 +94,7 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     const bacsActifs = [{ ...assignation, vivants: 3405 as number | null }];
 
     render(
-      <VagueBacsSection
+      <VagueBacsSection vagueId="vague-1"
         bacsActifs={bacsActifs}
         bacsRetires={[]}
       />
@@ -103,7 +114,7 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     // Should render without throwing
     expect(() =>
       render(
-        <VagueBacsSection
+        <VagueBacsSection vagueId="vague-1"
           bacsActifs={bacsActifs}
           bacsRetires={[]}
         />
@@ -124,7 +135,7 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     });
 
     render(
-      <VagueBacsSection
+      <VagueBacsSection vagueId="vague-1"
         bacsActifs={[]}
         bacsRetires={[retired]}
       />

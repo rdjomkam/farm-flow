@@ -36,7 +36,8 @@
     "biomasse": "Biomasse",
     "poidsMoyen": "Poids moyen",
     "sgr": "TCS",
-    "fcr": "ICA"
+    "fcr": "ICA",
+    "vivants": "Vivants"
   },
   "detail": {
     "alevins": "{count} alevins ({poids}g)",
@@ -253,7 +254,16 @@
     "actif": "Actif",
     "aucunBacActif": "Aucun bac actif pour cette vague.",
     "poissons": "{count} poissons",
-    "poissonsActuels": "{count} actuels ({initial} au départ)"
+    "poissonsActuels": "{count} actuels ({initial} au départ)",
+    "detach": {
+      "ariaLabel": "Retirer le bac {bac} de la vague",
+      "title": "Retirer ce bac de la vague",
+      "description": "Le bac « {bac} » est vide. Voulez-vous le détacher de cette vague ? Le bac restera disponible pour une autre vague.",
+      "cancel": "Annuler",
+      "confirm": "Retirer",
+      "submitting": "Retrait…",
+      "errorGeneric": "Impossible de retirer le bac."
+    }
   },
   "poidsChartSection": "le graphique d'évolution du poids",
   "progress": {
