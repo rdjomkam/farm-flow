@@ -293,6 +293,23 @@ export async function createCalibrage(
       destBacTotals.set(groupe.destinationBacId, current + groupe.nombrePoissons);
     }
 
+    // CX.1 — Build weighted-average poids map per destination bac before Pass 2 loop
+    const destBacWeights = new Map<string, { qty: number; avg: number }>();
+    for (const groupe of data.groupes) {
+      const existing = destBacWeights.get(groupe.destinationBacId);
+      if (existing) {
+        const newQty = existing.qty + groupe.nombrePoissons;
+        existing.avg =
+          (existing.qty * existing.avg + groupe.nombrePoissons * groupe.poidsMoyen) / newQty;
+        existing.qty = newQty;
+      } else {
+        destBacWeights.set(groupe.destinationBacId, {
+          qty: groupe.nombrePoissons,
+          avg: groupe.poidsMoyen,
+        });
+      }
+    }
+
     for (const [bacId, total] of destBacTotals.entries()) {
       // If this bac is also a source bac, it was zeroed in Pass 1 — just set the total.
       // If it's a non-source bac, increment to preserve existing fish.
@@ -311,18 +328,29 @@ export async function createCalibrage(
 
         if (assignationDest) {
           // Cas normal : AssignationBac existe
+          const incomingQty = total;
+          const incomingWeight = destBacWeights.get(bacId)?.avg ?? 0;
+          const newActuel = (assignationDest.nombreActuel ?? 0) + incomingQty;
+
+          const updateData: {
+            nombreActuel: number;
+            nombreInitial?: number;
+            poidsMoyenInitial?: number;
+          } = { nombreActuel: newActuel };
+
+          // CX.1 : si l'assignation était vide (init=0), populer init + poids
+          if ((assignationDest.nombreInitial ?? 0) === 0) {
+            updateData.nombreInitial = newActuel;
+            updateData.poidsMoyenInitial = incomingWeight;
+          }
+
           await tx.assignationBac.update({
             where: { id: assignationDest.id },
-            data: { nombreActuel: (assignationDest.nombreActuel ?? 0) + total },
+            data: updateData,
           });
         } else {
           // AssignationBac manquante — create défensif pour le bac destination
-          // Try to get initial values from most recent historical assignation for this bac
-          const historicAssignation = await tx.assignationBac.findFirst({
-            where: { bacId, vagueId: data.vagueId },
-            orderBy: { createdAt: "desc" },
-            select: { nombreInitial: true, poidsMoyenInitial: true },
-          });
+          // CX.1 : set nombreInitial = total et poidsMoyenInitial = poids pondéré
           await tx.assignationBac.create({
             data: {
               bacId,
@@ -331,8 +359,8 @@ export async function createCalibrage(
               dateAssignation: calibrageDate,
               dateFin: null,
               nombreActuel: total,
-              nombreInitial: historicAssignation?.nombreInitial ?? 0,
-              poidsMoyenInitial: historicAssignation?.poidsMoyenInitial ?? 0,
+              nombreInitial: total,                                    // CX.1 : init = total
+              poidsMoyenInitial: destBacWeights.get(bacId)?.avg ?? 0, // CX.1 : poids moyen pondéré
             },
           });
         }
@@ -600,6 +628,23 @@ export async function patchCalibrage(
         nouveauxDestTotals.set(g.destinationBacId, current + g.nombrePoissons);
       }
 
+      // CX.1 — Build weighted-average poids map per destination bac for patchCalibrage Pass 2
+      const nouveauxDestBacWeights = new Map<string, { qty: number; avg: number }>();
+      for (const g of nouveauxGroupes) {
+        const existing = nouveauxDestBacWeights.get(g.destinationBacId);
+        if (existing) {
+          const newQty = existing.qty + g.nombrePoissons;
+          existing.avg =
+            (existing.qty * existing.avg + g.nombrePoissons * g.poidsMoyen) / newQty;
+          existing.qty = newQty;
+        } else {
+          nouveauxDestBacWeights.set(g.destinationBacId, {
+            qty: g.nombrePoissons,
+            avg: g.poidsMoyen,
+          });
+        }
+      }
+
       for (const [bacId, total] of nouveauxDestTotals.entries()) {
         const isSourceBac = ancienCalibrage.sourceBacIds.includes(bacId);
         if (isSourceBac) {
@@ -612,12 +657,27 @@ export async function patchCalibrage(
           // Lire l'assignation active pour calculer l'incrément correct
           const assignationDest7 = await tx.assignationBac.findFirst({
             where: { bacId, vagueId: ancienCalibrage.vague.id, dateFin: null },
-            select: { id: true, nombreActuel: true },
+            select: { id: true, nombreActuel: true, nombreInitial: true, poidsMoyenInitial: true },
           });
           if (assignationDest7) {
+            const incomingWeight7 = nouveauxDestBacWeights.get(bacId)?.avg ?? 0;
+            const newActuel7 = (assignationDest7.nombreActuel ?? 0) + total;
+
+            const updateData7: {
+              nombreActuel: number;
+              nombreInitial?: number;
+              poidsMoyenInitial?: number;
+            } = { nombreActuel: newActuel7 };
+
+            // CX.1 : si l'assignation était vide (init=0), populer init + poids
+            if ((assignationDest7.nombreInitial ?? 0) === 0) {
+              updateData7.nombreInitial = newActuel7;
+              updateData7.poidsMoyenInitial = incomingWeight7;
+            }
+
             await tx.assignationBac.update({
               where: { id: assignationDest7.id },
-              data: { nombreActuel: (assignationDest7.nombreActuel ?? 0) + total },
+              data: updateData7,
             });
           }
         }
