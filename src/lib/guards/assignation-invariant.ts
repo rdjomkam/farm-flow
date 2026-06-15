@@ -139,14 +139,18 @@ export async function verifyAssignationInvariant(
 
   for (const ab of assignations) {
     const assignationDate = dateAssignationByBac.get(ab.bacId) ?? null;
-    // On ne rejoue que les relevés STRICTEMENT POSTÉRIEURS à dateAssignation.
-    // Les relevés antérieurs ou simultanés sont déjà reflétés dans nombreInitial
-    // (ex : 1er transfert → nombreInitial = batch, releve créé à la même date → exclu).
+    // On rejoue les relevés POSTÉRIEURS OU SIMULTANÉS à dateAssignation.
+    // Les relevés strictement antérieurs sont supposés appartenir à une assignation
+    // précédente déjà clôturée — leur effet est déjà incorporé dans nombreInitial.
+    // CX.2 : >= pour inclure les relevés créés au même instant que l'assignation
+    // (ex. calibrage qui crée AssignationBac + COMPTAGE simultanément).
     const releveBac = releves.filter((r) => {
       if (r.bacId !== ab.bacId) return false;
       if (assignationDate === null) return true;
       const releveDate = r.date ? new Date(r.date) : new Date(0);
-      return releveDate > assignationDate;
+      // CX.2 : >=  pour inclure les relevés créés au même instant que l'assignation
+      // (ex. calibrage qui crée AssignationBac + COMPTAGE simultanément).
+      return releveDate >= assignationDate;
     });
     const isEntrant = entrantBacIds.has(ab.bacId);
 

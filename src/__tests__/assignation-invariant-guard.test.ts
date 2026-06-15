@@ -349,6 +349,81 @@ describe("verifyAssignationInvariant", () => {
   // Cas 10 : aucune assignation active → pas d'erreur (guard passthrough)
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Cas 11 : CX.2 — COMPTAGE créé exactement au même instant que dateAssignation
+  //           → doit être inclus dans le replay (filtre >= et non >)
+  // -------------------------------------------------------------------------
+
+  it("compte les relevés créés au même instant que dateAssignation (CX.2)", async () => {
+    // AssignationBac dateAssignation = 2026-06-15T10:00:00Z
+    // COMPTAGE relevé date = 2026-06-15T10:00:00Z (exactement le même instant)
+    // nombreInitial = 0, nombrePoissons = 100, nombreCompte = 100
+    // → guard doit utiliser le COMPTAGE comme base → expected = 100 = actual → pas d'erreur
+    const assignationDate = new Date("2026-06-15T10:00:00Z");
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      {
+        id: "ab-cx2",
+        bacId: BAC_A,
+        nombreActuel: 100,
+        nombreInitial: 0,
+        dateAssignation: assignationDate,
+      },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_A,
+        typeReleve: "COMPTAGE",
+        date: assignationDate, // même instant — doit être inclus avec >=
+        nombreMorts: null,
+        nombreCompte: 100,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
+    ).resolves.toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Cas 12 : non-régression CX.2 — relevé STRICTEMENT antérieur à dateAssignation
+  //           → doit être exclu (assignation précédente déjà clôturée)
+  // -------------------------------------------------------------------------
+
+  it("exclut les relevés strictement antérieurs à dateAssignation (non-régression CX.2)", async () => {
+    // dateAssignation = 2026-06-15T10:00:00Z
+    // MORTALITE -50 à 2026-06-14T10:00:00Z (antérieur) → exclue
+    // → replay depuis nombreInitial = 100, aucun relevé postérieur → expected = 100 = actual → OK
+    const assignationDate = new Date("2026-06-15T10:00:00Z");
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      {
+        id: "ab-cx2-nr",
+        bacId: BAC_A,
+        nombreActuel: 100,
+        nombreInitial: 100,
+        dateAssignation: assignationDate,
+      },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_A,
+        typeReleve: "MORTALITE",
+        date: new Date("2026-06-14T10:00:00Z"), // strictement antérieur → exclu
+        nombreMorts: 50,
+        nombreCompte: null,
+        nombreTransferes: null,
+        nombreVendus: null,
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
+    ).resolves.toBeUndefined();
+  });
+
   it("ne lance pas d'erreur si aucune assignation active trouvée pour les bacIds", async () => {
     mockAssignationBacFindMany.mockResolvedValueOnce([]);
 
