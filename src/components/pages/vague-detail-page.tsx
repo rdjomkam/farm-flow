@@ -282,10 +282,12 @@ export default async function VagueDetailPage({
       gompertzByJour.set(pt.jour, Math.round(pt.poids * 100) / 100);
     }
 
-    // Persist locked curve if calibration happened (fire and forget in server component)
+    // Persist locked curve if calibration happened.
+    // Must await: Next.js streaming drops fire-and-forget promises in production,
+    // causing the GompertzVague record to lag behind biometries by days.
     if (!cachedIsValid && effectiveGompertz) {
       const newLockedCurve = mergeLockedCurve(existingLocked, previousLastObsDay, freshCurve, lastObsDay);
-      prisma.gompertzVague.upsert({
+      await prisma.gompertzVague.upsert({
         where: { vagueId: id },
         create: {
           vagueId: id,
@@ -314,7 +316,7 @@ export default async function VagueDetailPage({
           lastObservationDay: lastObsDay,
           calculatedAt: new Date(),
         },
-      }).catch(() => { /* non-critical — will recalculate next time */ });
+      });
     }
   }
 
