@@ -93,14 +93,6 @@ export async function getIndicateursVague(
 
     const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertDestBacIds });
 
-    // Group mortalites by bacId (still needed for totalMortsAll)
-    const mortsParBac = new Map<string, number>();
-    for (const r of mortalites) {
-      if (r.bacId) {
-        mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + (r.nombreMorts ?? 0));
-      }
-    }
-
     // Group biometries by bacId, keep last per bac
     const biometriesParBac = new Map<string, (typeof biometries)[0]>();
     for (const b of biometries) {
@@ -114,12 +106,8 @@ export async function getIndicateursVague(
     let totalVivantsForWeight = 0;
     let hasTaille = false;
     let totalVivantsAll = 0;
-    let totalMortsAll = 0;
 
     for (const bac of bacsFromAssignations) {
-      const mortsBac = mortsParBac.get(bac.id) ?? 0;
-      totalMortsAll += mortsBac;
-
       // Nombre initial par bac: valeur per-bac si définie, sinon répartition uniforme
       const initialBac = bac.nombreInitial ?? nombreInitialParBac;
       totalNombreInitialBacs += initialBac;
@@ -151,7 +139,10 @@ export async function getIndicateursVague(
     }
 
     nombreVivants = totalVivantsAll;
-    totalMortalites = totalMortsAll;
+    // Sum ALL mortality relevés on the vague, not just the active bacs.
+    // Closed AssignationBac (bacs reassigned to other vagues) still have mortality
+    // relevés tied to this vague — they must be counted to compute the true survival rate.
+    totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     biomasse = hasBiomasse ? Math.round(totalBiomasse * 100) / 100 : null;
 
     if (totalVivantsForWeight > 0) {
