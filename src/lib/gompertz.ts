@@ -523,6 +523,21 @@ export function calibrerGompertz(
   const { params, r2, rmse } = levenbergMarquardt(data, initial, bounds);
 
   const [wInfinity, k, ti] = params;
+
+  // GP.2 — Refuse de retourner des paramètres non-finite (solver divergent).
+  // Persister un NaN dans GompertzVague corromprait les futures lectures.
+  if (
+    !Number.isFinite(wInfinity) ||
+    !Number.isFinite(k) ||
+    !Number.isFinite(ti)
+  ) {
+    return null;
+  }
+  // Idem pour r2 et rmse (peuvent diverger aussi)
+  if (!Number.isFinite(r2) || !Number.isFinite(rmse)) {
+    return null;
+  }
+
   const confidenceLevel = resolveConfidenceLevel(points.length, r2, minPoints);
 
   return {
