@@ -151,6 +151,20 @@ export async function getIndicateursVague(
         ? Math.round((totalTailleWeighted / totalVivantsForWeight) * 100) / 100
         : null;
     }
+
+    // Fallback : si aucun bac actif n'a de biométrie, utiliser la dernière biométrie
+    // connue sur la vague (peut venir d'un bac dont l'assignation est fermée).
+    // Cas typique : vague qui a transféré la quasi-totalité de ses poissons,
+    // laissant un petit reliquat sur un bac sans biométrie locale.
+    // biometries est triée par date asc (orderBy: { date: "asc" }) → at(-1) = la plus récente.
+    if (totalVivantsForWeight === 0 && biometries.length > 0) {
+      const derniereBiometrie = biometries.at(-1);
+      if (derniereBiometrie?.poidsMoyen != null) {
+        poidsMoyen = derniereBiometrie.poidsMoyen;
+        tailleMoyenne = derniereBiometrie.tailleMoyenne ?? null;
+        biomasse = calculerBiomasse(poidsMoyen, totalVivantsAll);
+      }
+    }
   } else {
     // --- Fallback: no bacId on releves, use global logic ---
     totalMortalites = mortalites.reduce(
