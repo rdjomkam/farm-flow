@@ -215,7 +215,11 @@ export default async function VagueDetailPage({
     };
   } else if (currentBiometrieCount >= gompertzMinPoints) {
     // No valid cache — calibrate inline
-    const vagueStartMs = new Date(vague.dateDebut).getTime();
+    // Normalize to local midnight so same-day biometries count as jour=0
+    // (consistent with dateKey + "T00:00:00" parsing used for releve dates)
+    const vagueStartDayGompertz = new Date(vague.dateDebut);
+    vagueStartDayGompertz.setHours(0, 0, 0, 0);
+    const vagueStartMsGompertz = vagueStartDayGompertz.getTime();
     const points = Array.from(groupedByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, releves]) => {
@@ -228,7 +232,7 @@ export default async function VagueDetailPage({
         }
         const dateMs = new Date(dateKey + "T00:00:00").getTime();
         return {
-          jour: Math.floor((dateMs - vagueStartMs) / (1000 * 60 * 60 * 24)),
+          jour: Math.max(0, Math.floor((dateMs - vagueStartMsGompertz) / (1000 * 60 * 60 * 24))),
           poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
         };
       });
@@ -260,9 +264,15 @@ export default async function VagueDetailPage({
   const hasGompertz = effectiveGompertz !== null;
 
   // Compute lastObservationDay for locked curve logic
+  // Normalize vagueStart to local midnight so same-day biometries are jour >= 0
+  // (consistent with dateKey + "T00:00:00" which parses as local midnight)
+  const vagueStartDayUtc = new Date(vague.dateDebut);
+  vagueStartDayUtc.setHours(0, 0, 0, 0);
+  const vagueStartMsUtc = vagueStartDayUtc.getTime();
+
   const sortedDateKeys = Array.from(groupedByDate.keys()).sort();
   const lastObsDay = sortedDateKeys.length > 0
-    ? Math.floor((new Date(sortedDateKeys[sortedDateKeys.length - 1] + "T00:00:00").getTime() - new Date(vague.dateDebut).getTime()) / 86400000)
+    ? Math.max(0, Math.floor((new Date(sortedDateKeys[sortedDateKeys.length - 1] + "T00:00:00").getTime() - vagueStartMsUtc) / 86400000))
     : 0;
 
   const gompertzByJour = new Map<number, number>();
@@ -321,8 +331,9 @@ export default async function VagueDetailPage({
   }
 
   // Build observation map: jour -> weighted average poidsMoyen
+  // vagueStartMsUtc already normalized to UTC midnight (declared above with lastObsDay)
   const HORIZON_PREDICTION_JOURS = 120;
-  const vagueStartMs = new Date(vague.dateDebut).getTime();
+  const vagueStartMs = vagueStartMsUtc;
 
   const observationByJour = new Map<number, number>();
   for (const [dateKey, releves] of groupedByDate) {
@@ -334,7 +345,7 @@ export default async function VagueDetailPage({
       sumWeights += weight;
     }
     const dateMs = new Date(dateKey + "T00:00:00").getTime();
-    const jour = Math.floor((dateMs - vagueStartMs) / 86400000);
+    const jour = Math.max(0, Math.floor((dateMs - vagueStartMs) / 86400000));
     observationByJour.set(jour, Math.round((sumWeighted / sumWeights) * 100) / 100);
   }
 

@@ -1368,3 +1368,31 @@ export function getSaison(date: Date, pays?: string): "SECHE" | "PLUIES" {
   // Defaut identique au Cameroun
   return [0, 1, 10, 11].includes(month) ? "SECHE" : "PLUIES";
 }
+
+/**
+ * Calcule l'index de jour (J0, J1, ...) d'une date de releve par rapport
+ * a la date de debut d'une vague.
+ *
+ * La date de debut est normalisee a minuit UTC pour que les releves enregistres
+ * le meme jour calendaire que la creation de la vague (meme si avant l'heure
+ * exacte de creation) retournent jour = 0 au lieu de -1.
+ *
+ * @param vagueDebut - Date de debut de la vague (heure quelconque)
+ * @param releve - Date du releve (dateKey "YYYY-MM-DD" ou Date complète)
+ * @returns Index de jour >= 0 (clampe a 0 si negatif)
+ */
+export function jourDepuisDebutVague(vagueDebut: Date | string, releve: Date | string): number {
+  // Normaliser le debut de vague a minuit LOCAL (meme reference que "YYYY-MM-DDT00:00:00")
+  // pour que les releves enregistres le meme jour calendaire retournent jour = 0.
+  const start = new Date(vagueDebut);
+  start.setHours(0, 0, 0, 0);
+  const startMs = start.getTime();
+
+  // Si releve est une chaine "YYYY-MM-DD", parser en minuit local (coherent avec la page)
+  const releveMs =
+    typeof releve === "string" && /^\d{4}-\d{2}-\d{2}$/.test(releve)
+      ? new Date(releve + "T00:00:00").getTime()
+      : new Date(releve).getTime();
+
+  return Math.max(0, Math.floor((releveMs - startMs) / 86400000));
+}
