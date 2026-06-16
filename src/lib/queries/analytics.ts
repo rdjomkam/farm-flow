@@ -605,7 +605,6 @@ async function computeAlimentMetrics(
     // ADR-043 Phase 3: build bacs list from active assignations
     const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
     const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, { excludeVentes: true });
 
     const now = vague.dateFin ?? new Date();
     const jours = Math.max(
@@ -619,7 +618,12 @@ async function computeAlimentMetrics(
     const quantite = fcrVague.totalAlimentKg;
 
     const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, jours);
-    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
+
+    const totalMorts = releves
+      .filter((r) => r.typeReleve === TypeReleve.MORTALITE)
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const tauxSurvie = calculerTauxSurvie(vague.nombreInitial, totalMorts);
     const coutKg = calculerCoutParKgGain(quantite, prixBase, gainBiomasse);
 
     const adg = calculerADG(vague.poidsMoyenInitial, poidsMoyen, jours);
@@ -628,9 +632,6 @@ async function computeAlimentMetrics(
     const gainPoidsG = gainBiomasse !== null ? gainBiomasse * 1000 : null;
     const per = calculerPER(gainPoidsG, quantite, tauxProteines);
 
-    const totalMorts = releves
-      .filter((r) => r.typeReleve === TypeReleve.MORTALITE)
-      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const tauxMortaliteAssocie =
       vague.nombreInitial > 0
         ? calculerTauxMortalite(totalMorts, vague.nombreInitial)
@@ -1400,7 +1401,6 @@ export async function getComparaisonVagues(
     const poidsMoyenDebut = premiereBio?.poidsMoyen ?? vague.poidsMoyenInitial;
 
     const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, { excludeVentes: true });
 
     // BUG 1 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
     // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
@@ -1419,7 +1419,9 @@ export async function getComparaisonVagues(
         : null;
 
     const fcrGlobal = calculerFCR(totalAliment, gainBiomasse);
-    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
+    const totalMortalitesVague = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const tauxSurvie = calculerTauxSurvie(vague.nombreInitial, totalMortalitesVague);
 
     // SGR moyen : utilise poidsMoyenDebut et poidsMoyenFinal sur la duree totale
     const sgrMoyen = calculerSGR(poidsMoyenDebut, poidsMoyenFinal, dureeJours);

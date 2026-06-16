@@ -265,10 +265,13 @@ export function computeBacPerformance(
           ? Math.round(((poidsMoyenActuel * nombreVivants) / 1000) * 100) / 100
           : Math.round(((poidsMoyenInitial * nombreVivants) / 1000) * 100) / 100;
 
-      // Taux de survie
+      // Taux de survie — Sprint SV fix: (initial - morts) / initial, ventes ne sont pas des morts
+      const totalMortsBac = releves
+        .filter((r) => r.bacId === bac.id && r.typeReleve === "MORTALITE")
+        .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
       const tauxSurvie =
         nombreInitialBac > 0
-          ? Math.round((nombreVivants / nombreInitialBac) * 100 * 10) / 10
+          ? Math.round((Math.max(0, nombreInitialBac - totalMortsBac) / nombreInitialBac) * 100 * 10) / 10
           : 0;
 
       // Initial biomasse

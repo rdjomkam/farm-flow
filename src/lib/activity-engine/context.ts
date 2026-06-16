@@ -167,7 +167,8 @@ export function buildEvaluationContext(
   const sgr = calculerSGR(poidsMoyenInitialCalc, poidsMoyen, joursEcoules);
 
   // ---- Taux survie et mortalite ----
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitialCalc);
+  // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+  const tauxSurvie = calculerTauxSurvie(nombreInitialCalc, totalMortalites);
   const tauxMortaliteCumule =
     nombreInitialCalc > 0
       ? (totalMortalites / nombreInitialCalc) * 100

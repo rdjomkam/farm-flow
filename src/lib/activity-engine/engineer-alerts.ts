@@ -191,7 +191,8 @@ function detectSurvieAlerte(
       ? dernierComptage.nombreCompte
       : Math.max(0, nombreInitial - totalMortalites);
 
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitial);
+  // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+  const tauxSurvie = calculerTauxSurvie(nombreInitial, totalMortalites);
 
   if (tauxSurvie === null || tauxSurvie >= seuilSurvie) {
     return null;

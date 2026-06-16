@@ -15,7 +15,6 @@ import {
   calculerTauxSurvie,
   calculerBiomasse,
   calculerFCR,
-  computeNombreVivantsVague,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -101,14 +100,12 @@ function calculerSurvieMoyenneVagues(
       id: a.bac.id,
       nombreInitial: a.nombreInitial,
     }));
-    const nombreVivantsForSurvie = computeNombreVivantsVague(
-      bacsFromAssignations,
-      vague.releves.map(r => ({ ...r, bacId: r.bacId ?? null })),
-      vague.nombreInitial,
-      { excludeVentes: true }
-    );
+    const totalMortsIngenieur = vague.releves
+      .filter((r) => r.typeReleve === "MORTALITE")
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
 
-    const survie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const survie = calculerTauxSurvie(vague.nombreInitial, totalMortsIngenieur);
     if (survie !== null) {
       survies.push(survie);
     }

@@ -129,8 +129,8 @@ export default async function IngenieurClientDetailPage({
       nombreInitial: a.nombreInitial,
     }));
     const nombreVivants = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial, { excludeVentes: true });
-    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const tauxSurvie = calculerTauxSurvie(vague.nombreInitial, totalMortalites);
 
     const joursEcoules = Math.floor(
       (new Date().getTime() - new Date(vague.dateDebut).getTime()) / (1000 * 60 * 60 * 24)

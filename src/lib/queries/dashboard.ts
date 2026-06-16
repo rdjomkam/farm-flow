@@ -117,9 +117,8 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
     const transfertDestBacIds = transfertDestBacIdsMap.get(v.id) ?? new Set<string>();
 
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
+    const mortalitesDash = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
     const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
-    // For survival rate, exclude sales — sold fish are alive, just not in the farm
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true, transfertDestBacIds });
     const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
@@ -127,7 +126,9 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, v.nombreInitial);
+    const totalMortalitesDash = mortalitesDash.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const tauxSurvie = calculerTauxSurvie(v.nombreInitial, totalMortalitesDash);
 
     let poidsMoyen: number | null = null;
     let biomasse: number | null = null;
@@ -521,14 +522,14 @@ export async function getDashboardIndicateurs(
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
     const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds: transfertDestBacIdsIndic });
-    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true, transfertDestBacIds: transfertDestBacIdsIndic });
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(
       (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, v.nombreInitial);
+    // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
+    const tauxSurvie = calculerTauxSurvie(v.nombreInitial, totalMortalites);
     const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     const biomasseInitiale = calculerBiomasse(v.poidsMoyenInitial, v.nombreInitial);
     const gainBiomasse =

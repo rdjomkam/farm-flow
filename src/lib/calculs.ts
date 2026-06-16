@@ -18,20 +18,25 @@ import { formatNumber } from "@/lib/format";
 /**
  * Calcule le taux de survie en pourcentage.
  *
- * Formule : (nombreVivants / nombreInitial) * 100
+ * Formule : ((nombreInitial - totalMortalites) / nombreInitial) * 100
  *
- * @param nombreVivants - Nombre de poissons encore vivants
- * @param nombreInitial - Nombre d'alevins au demarrage
- * @returns Pourcentage de survie, ou null si les donnees sont insuffisantes
+ * Definition metier : tout poisson non-mort est survivant. Les sorties
+ * (ventes, transferts, calibrages sortants) ne sont PAS des morts —
+ * elles ne decrementent pas le numerateur.
+ *
+ * @param nombreInitial   - Nombre d'alevins au demarrage
+ * @param totalMortalites - Total cumule des mortalites
+ * @returns Pourcentage de survie, ou null si donnees insuffisantes
  */
 export function calculerTauxSurvie(
-  nombreVivants: number | null,
-  nombreInitial: number | null
+  nombreInitial: number | null,
+  totalMortalites: number | null
 ): number | null {
-  if (nombreVivants == null || nombreInitial == null || nombreInitial <= 0) {
+  if (nombreInitial == null || nombreInitial <= 0 || totalMortalites == null) {
     return null;
   }
-  return (nombreVivants / nombreInitial) * 100;
+  const nonMorts = Math.max(0, nombreInitial - totalMortalites);
+  return (nonMorts / nombreInitial) * 100;
 }
 
 /**
