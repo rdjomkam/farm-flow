@@ -4,6 +4,7 @@ import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { ConservationError } from "@/lib/errors";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
@@ -66,6 +67,12 @@ export async function createCalibrage(
   userId: string,
   data: CreateCalibrageDTO
 ) {
+  // CS.2 followup — charger les bacs destination AVANT la transaction pour
+  // que computeVivantsByBac distingue les TRANSFERT entrants des sortants.
+  // Pour une vague GROSSISSEMENT (destination de transferts), sans ce Set
+  // les relevés TRANSFERT miroirs sont comptés comme sortants → vivants = 0.
+  const transfertDestBacIds = await getTransfertDestBacIds(siteId, data.vagueId);
+
   return prisma.$transaction(async (tx) => {
     // 1. Verify vague belongs to site and is EN_COURS
     const vague = await tx.vague.findFirst({
@@ -158,7 +165,8 @@ export async function createCalibrage(
     const vivantsByBac = computeVivantsByBac(
       allBacsVague,
       relevesForVivants,
-      vague.nombreInitial
+      vague.nombreInitial,
+      { transfertDestBacIds }
     );
 
     // Build lookup map for source bacs validation (CF.1 — distingue Cas A et Cas B)
