@@ -906,12 +906,13 @@ export function calculerDensiteBac(
     poidsMoyen: number | null;
     date: Date;
   }[],
-  nombreInitialVague: number
+  nombreInitialVague: number,
+  options?: { transfertDestBacIds?: Set<string> }
 ): number | null {
   if (bac.volume == null || bac.volume <= 0) return null;
 
   // 1. Obtenir le nombre de vivants pour CE bac
-  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague, options);
   const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
   if (vivantsBac <= 0) return null;
 
@@ -963,11 +964,12 @@ export function calculerDensiteVague(
     poidsMoyen: number | null;
     date: Date;
   }[],
-  nombreInitialVague: number
+  nombreInitialVague: number,
+  options?: { transfertDestBacIds?: Set<string> }
 ): number | null {
   if (bacs.length === 0) return null;
 
-  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague, options);
 
   let totalBiomasseKg = 0;
   let totalVolumeM3 = 0;

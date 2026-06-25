@@ -14,6 +14,7 @@ import { ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
 import type { CreateReleveDTO, UpdateReleveDTO, ReleveFilters, TypeReleve } from "@/types";
 import type { ReleveWithModifications, ReleveModificationWithUser } from "@/types";
 import { findMatchingActivite } from "@/lib/queries/activites";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 
 /** Liste les releves d'un site avec filtres optionnels et pagination */
 export async function getReleves(
@@ -613,7 +614,8 @@ export async function getPoidsMoyenActuelVague(
 
   if (biometriesParBac.size === 0) return null;
 
-  const vivantsByBac = computeVivantsByBac(bacs, vague.releves, vague.nombreInitial);
+  const transfertDestBacIds = await getTransfertDestBacIds(siteId, vagueId);
+  const vivantsByBac = computeVivantsByBac(bacs, vague.releves, vague.nombreInitial, { transfertDestBacIds });
 
   let totalPoidsWeighted = 0;
   let totalVivantsForWeight = 0;

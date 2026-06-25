@@ -6,6 +6,7 @@ import { calculerDensiteBac } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite, type StatutDensite } from "@/lib/density-thresholds";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 
 export interface BacDensiteResponse {
   bacId: string;
@@ -88,8 +89,11 @@ export async function GET(
       nombreInitial: b.nombreInitial,
     }));
 
-    // Charger la config elevage du site pour les seuils differencies
-    const configElevage = await getConfigElevageDefaut(auth.activeSiteId);
+    // Charger la config elevage du site et les bacs destination de transferts en parallèle
+    const [configElevage, transfertDestBacIds] = await Promise.all([
+      getConfigElevageDefaut(auth.activeSiteId),
+      getTransfertDestBacIds(auth.activeSiteId, id),
+    ]);
     const configPourSeuils = configElevage ?? CONFIG_ELEVAGE_DEFAULTS;
 
     const densites: BacDensiteResponse[] = vagueBacs.map((bac) => {
@@ -97,7 +101,8 @@ export async function GET(
         { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },
         allBacsSimple,
         relevesAdaptes,
-        vagueRaw.nombreInitial
+        vagueRaw.nombreInitial,
+        { transfertDestBacIds }
       );
 
       const statut = getStatutDensite(

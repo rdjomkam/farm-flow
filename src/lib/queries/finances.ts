@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
-import { getLineage } from "@/lib/queries/transferts";
+import { getLineage, getTransfertDestBacIds } from "@/lib/queries/transferts";
 import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne, effectivePoidsVente, totalDepensesVente } from "@/lib/ventes-helpers";
 
 // ---------------------------------------------------------------------------
@@ -1108,6 +1108,7 @@ export async function getCoutProductionVague(
     bacsVague,
     relevesVague,
     transfertsSortants,
+    transfertDestBacIds,
   ] = await Promise.all([
     // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
     // Filtre par dateFin : exclure les releves posterieurs a la cloture
@@ -1278,6 +1279,10 @@ export async function getCoutProductionVague(
         poidsMoyenG: true,
       },
     }),
+
+    // 2j. Bacs destination de transferts entrants — nécessaire pour que computeVivantsByBac
+    // ne soustrait pas les relevés TRANSFERT miroirs comme des sorties (vague GROSSISSEMENT)
+    getTransfertDestBacIds(siteId, vagueId),
   ]);
 
   // -------------------------------------------------------------------------
@@ -1302,7 +1307,8 @@ export async function getCoutProductionVague(
 
   const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
   // Aligné avec indicateurs.ts : VENTE relevés soustraits des vivants par bac
-  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial);
+  // transfertDestBacIds permet d'ignorer les relevés TRANSFERT miroirs entrants (vague GROSSISSEMENT)
+  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertDestBacIds });
 
   // Nombre total de poissons reellement vendus (source de verite : LigneVente)
   const totalPoissonsVendus = ventes.reduce((acc, lv) => acc + lv.nombrePoissons, 0);
@@ -1333,7 +1339,7 @@ export async function getCoutProductionVague(
       biomasseKg = Math.round(totalBiomasse * 100) / 100;
     }
   } else {
-    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertDestBacIds });
     const biometrieReleves = relevesVague
       .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
     if (biometrieReleves.length > 0 && nombreVivants > 0) {

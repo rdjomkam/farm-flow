@@ -99,7 +99,8 @@ export function buildEvaluationContext(
   stock: ProduitStockCtx[],
   configElevage: ConfigElevage | null,
   bac?: BacCtx | null,
-  allBacs?: BacCtx[]
+  allBacs?: BacCtx[],
+  options?: { transfertDestBacIds?: Set<string> }
 ): RuleEvaluationContext {
   // ---- Calcul du temps ecoule (UTC+1 = WAT) ----
   const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
@@ -264,7 +265,8 @@ export function buildEvaluationContext(
       { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },
       bacsForDensity.map((b) => ({ id: b.id, nombreInitial: b.nombreInitial })),
       relevesAdaptes,
-      vague.nombreInitial
+      vague.nombreInitial,
+      options
     );
   }
 

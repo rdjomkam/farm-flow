@@ -16,6 +16,7 @@ import {
   evaluateRules,
   generateActivities,
 } from "./index";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 
 // ---------------------------------------------------------------------------
 // runEngineForSite
@@ -140,6 +141,17 @@ export async function runEngineForSite(
     createdAt: Date;
   }>;
 
+  // ---- Charger les bacs destination de transferts entrants pour chaque vague ----
+  // Nécessaire pour que calculerDensiteBac ne soustrait pas les relevés TRANSFERT miroirs
+  // comme des sorties sur les vagues GROSSISSEMENT.
+  const transfertDestBacIdsMap = new Map<string, Set<string>>();
+  await Promise.all(
+    vaguesActives.map(async (vague) => {
+      const destBacIds = await getTransfertDestBacIds(siteId, vague.id);
+      transfertDestBacIdsMap.set(vague.id, destBacIds);
+    })
+  );
+
   // ---- Construire les contextes (per-bac) ----
   const contextes: RuleEvaluationContext[] = [];
   for (const vague of vaguesActives) {
@@ -154,6 +166,8 @@ export async function runEngineForSite(
     const relevesCast = vague.releves as unknown as Parameters<typeof buildEvaluationContext>[1];
     const stockCast = produits as unknown as Parameters<typeof buildEvaluationContext>[2];
     const configCast = (vague.configElevage ?? null) as unknown as Parameters<typeof buildEvaluationContext>[3];
+    const transfertDestBacIds = transfertDestBacIdsMap.get(vague.id) ?? new Set<string>();
+    const densiteOptions = { transfertDestBacIds };
 
     // ADR-043 Phase 3 : mapper les assignations en bacs pour le moteur d'alertes
     const mappedBacs = vague.assignations.map((a) => ({
@@ -170,17 +184,17 @@ export async function runEngineForSite(
       // Per-bac contexts
       for (const bac of mappedBacs) {
         contextes.push(
-          buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast)
+          buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast, densiteOptions)
         );
       }
       // Also add a vague-level context (bac: null) for STOCK_BAS rules
       contextes.push(
-        buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null)
+        buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null, undefined, densiteOptions)
       );
     } else {
       // No bacs → vague-level context only (fallback)
       contextes.push(
-        buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null)
+        buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null, undefined, densiteOptions)
       );
     }
   }
