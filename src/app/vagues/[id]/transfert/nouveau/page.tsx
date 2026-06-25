@@ -11,6 +11,7 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
 import { getUnitesProduction } from "@/lib/queries/unites-production";
+import { getTransfertDestBacIds } from "@/lib/queries/transferts";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { Permission, StatutVague, TypeVague } from "@/types";
@@ -53,10 +54,12 @@ export default async function NouveauTransfertPage({
       bacId: true,
     },
   });
+  const transfertDestBacIds = await getTransfertDestBacIds(session.activeSiteId, id);
   const vivantsByBac = computeVivantsByBac(
     vague.bacs,
     relevesForVivants,
-    vague.nombreInitial
+    vague.nombreInitial,
+    { transfertDestBacIds }
   );
 
   // Construire la liste des bacs source avec vivants et poids moyen estimé
