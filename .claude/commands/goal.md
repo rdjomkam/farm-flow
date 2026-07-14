@@ -1,129 +1,154 @@
 ---
-description: Sprint SV — SurVie (formule taux de survie correcte : non-morts / initial)
+description: Sprint VA — Vente d'Alevins depuis une vague PRE_GROSSISSEMENT (clôture + monétisation restants)
 ---
 
-# Objectif — Sprint SV (SurVie)
+# Objectif — Sprint VA (Vente d'Alevins)
 
-Corriger la formule du **taux de survie** dans tout le projet. La formule actuelle est biaisée : elle assimile transferts sortants et calibrages à des morts, alors que ces poissons sont vivants (juste plus dans la vague).
+Permettre à un utilisateur de **vendre les poissons restants** d'une vague `PRE_GROSSISSEMENT` (fingerlings/alevins) directement comme alevins — sans devoir les transférer d'abord vers une autre vague. Débloque le cas prod où une vague PG a un reliquat après transferts et le pisciculteur veut le liquider comme alevins.
 
-## Diagnostic
+## Contexte
 
-**Formule actuelle** ([calculs.ts:34](src/lib/calculs.ts#L34)) :
-```
-tauxSurvie = (nombreVivants / nombreInitial) * 100
-```
+- La vague PG en fin de vie a des poissons trop petits pour aller en grossissement mais assez grands pour être vendus comme alevins (nurserie)
+- Actuellement, `createVenteAlevins` ([ventes.ts:444](src/lib/queries/ventes.ts#L444)) n'accepte que des sources d'unités de reproduction
+- La `Vente` standard supporte déjà `LigneVente.vagueId` et `bacId`, mais l'UI ne propose pas de flow « vente d'alevins » clair depuis une vague PG
 
-**Bug** : `nombreVivants` est l'état actuel **dans la vague** (déduit des morts, ventes, transferts sortants, calibrages sortants). Pour une vague PG qui a transféré 5500 → vague GR, le taux de survie tombe à ~13 % alors que les poissons sont bien vivants en aval.
+## Design retenu
 
-**Formule correcte** (définition métier) :
-```
-tauxSurvie = ((nombreInitial - totalMortalites) / nombreInitial) * 100
-```
+Extension de `createVenteAlevins` OU nouveau flow `createVenteAlevinsDepuisVague`. Le second est plus clair sémantiquement.
 
-Tout ce qui n'est pas mort est survivant. Vendus / transférés / calibrés sortants comptent comme vivants par définition.
-
-## Cas réels observés
-
-| Vague | nombreInitial | Morts | Formule actuelle | Formule correcte |
-|-------|--------------|-------|------------------|------------------|
-| Vague-26-03-Prep | 7000 | ~565 | 13 % ❌ | **92 %** ✓ |
-| Vague-26-03 | 5500 | ~35 | 99 % | **99 %** (idem) ✓ |
-| Vague 26-02 | ~ | ~ | sous-estimé | corrigé |
+**Réutilisation maximale** : `Vente` + `LigneVente` + relevés VENTE. Guard CS.3 déjà compatible. Rapport PDF et dashboard suivent automatiquement.
 
 ## Stories
 
-### SV.1 — Changer signature de `calculerTauxSurvie`
+### VA.1 — Marqueur `Vente.origineType`
 
-**Fichier** : `src/lib/calculs.ts` lignes 27-35.
+**Fichier** : `prisma/schema.prisma`
 
-**Avant** :
-```ts
-export function calculerTauxSurvie(
-  nombreVivants: number | null,
-  nombreInitial: number | null
-): number | null
-```
+Ajouter enum + colonne :
+```prisma
+enum OrigineVente {
+  GROSSISSEMENT         // Vente normale depuis vague GR
+  ALEVINS_REPRODUCTION  // Depuis unité de reproduction (existant)
+  ALEVINS_PG            // NOUVEAU : depuis vague PG (reliquat)
+}
 
-**Après** :
-```ts
-export function calculerTauxSurvie(
-  nombreInitial: number | null,
-  totalMortalites: number | null
-): number | null {
-  if (nombreInitial == null || nombreInitial <= 0 || totalMortalites == null) {
-    return null;
-  }
-  const nonMorts = Math.max(0, nombreInitial - totalMortalites);
-  return (nonMorts / nombreInitial) * 100;
+model Vente {
+  origineType OrigineVente @default(GROSSISSEMENT)
+  // ...
 }
 ```
 
-Mettre à jour le commentaire jsdoc.
+Migration Prisma générée + committée.
 
-### SV.2 — Mettre à jour tous les appelants
+### VA.2 — Query `createVenteAlevinsDepuisVague`
 
-`grep -rn "calculerTauxSurvie" src/` puis MAJ chaque caller :
+**Fichier** : `src/lib/queries/ventes.ts` (nouvelle fonction, ~80 lignes)
 
-- `src/lib/queries/indicateurs.ts:199` — utiliser `totalMortalites` au lieu de `nombreVivantsForSurvie`. Supprimer le code mort qui calcule `nombreVivantsForSurvie` avec `excludeVentes: true`.
-- `src/lib/queries/analytics.ts` — idem
-- `src/lib/bac-performance.ts:269` — formule inline `vivants / nombreInitial * 100` à remplacer par `(initial - morts) / initial * 100`
-- `src/lib/alertes/reproduction.ts:205` — formule inline `lot.nombreActuel / lot.nombreInitial`. Pour les lots de reproduction, comportement à valider : si un lot peut avoir des sorties (transferts vers grossissement), même bug ; si lot fermé, la formule actuelle marche. **Recommandation** : aligner pour cohérence.
-- `src/components/...` — chercher si une UI calcule directement le taux.
+```ts
+export async function createVenteAlevinsDepuisVague(
+  siteId: string,
+  userId: string,
+  data: {
+    vagueId: string,           // vague PG source
+    clientId: string,          // peut être "Nurserie interne" (système)
+    dateCommande: Date,
+    lignes: Array<{
+      bacId: string,
+      nombrePoissons: number,
+      poidsMoyenG: number,
+      prixUnitaireKg: number,
+    }>,
+    depenses?: DepenseVenteInput[],  // optionnel
+    autoCloture?: boolean,           // si true et tous bacs vidés → cloturerVague
+    notes?: string,
+  }
+): Promise<VenteWithGroupes>
+```
 
-### SV.3 — Tests
+Logique :
+1. Valider que la vague est `PRE_GROSSISSEMENT` et `EN_COURS`
+2. Valider que chaque bacId ∈ AssignationBac.dateFin=null pour cette vague
+3. Valider que `nombrePoissons ≤ vivantsByBac.get(bacId)` (via `computeVivantsByBac` + `transfertDestBacIds`)
+4. Appeler la logique existante de création Vente + LigneVente (extraire un helper depuis `createVente` si utile)
+5. `origineType = ALEVINS_PG`
+6. Guard CS.3 (`verifyAssignationInvariant`) déjà en place
+7. Si `autoCloture` et sum(vivants après vente) === 0 → appeler `cloturerVague`
 
-**Fichier** : `src/lib/__tests__/taux-survie.test.ts` (créer si absent, étendre sinon).
+### VA.3 — API route
 
-Cas obligatoires :
-1. 1000 initiaux − 50 morts → 95 %
-2. 1000 initiaux − 0 mort − 500 transferts sortants → **100 %** (régression du bug)
-3. 1000 initiaux − 200 morts − 300 ventes → 80 % (régression)
-4. nombreInitial = 0 → null
-5. nombreInitial = null → null
-6. totalMortalites > nombreInitial (cas pathologique) → 0 % (pas négatif)
-7. Régression Vague-26-03-Prep : 7000 init − 565 morts = 91.93 %
+**Fichier** : `src/app/api/vagues/[id]/vente-alevins/route.ts` (nouveau)
 
-Étendre les tests existants `bac-performance.test.ts` et `analytics.test.ts` pour la régression sur le bug.
+POST endpoint qui appelle `createVenteAlevinsDepuisVague`. Permission requise : `VENTES_CREER` + `VAGUES_MODIFIER` (pour l'auto-clôture).
 
-### SV.4 — Audit prod : vérifier que les valeurs affichées sont cohérentes
+### VA.4 — UI : bouton + dialog
 
-Pas de data-fix nécessaire (calcul à la volée, pas de persistance). Juste valider après deploy que :
-- Vague-26-03-Prep affiche ~92 % de survie
-- Vague-26-03 affiche ~99 %
-- Autres vagues : taux raisonnables
+**Fichier** : `src/components/vagues/vente-alevins-dialog.tsx` (nouveau)
 
-### SV.5 — Review R1-R9 + sprint close
+Dans `VagueActionMenu` (déjà existant), ajouter un item « **Vendre restants comme alevins** » visible uniquement si :
+- Vague statut = EN_COURS
+- Vague type = PRE_GROSSISSEMENT
+- Utilisateur a permission VENTES_CREER
 
-- Review des fichiers modifiés
-- Rapport `docs/reviews/review-sprint-SV.md`
-- Sprint close
+Dialog contenu :
+- Sélecteur client (+ option « + Créer client Nurserie interne » si absent)
+- Date commande
+- Table bacs avec vivants pré-remplis, quantité éditable ≤ vivants, poids moyen (fallback = dernière biométrie du bac)
+- Prix unitaire /kg (peut être 0 pour vente interne)
+- Case « Clôturer la vague après validation »
+- Champ dépenses (optionnel — DV pattern)
+- Bouton Confirmer
+
+### VA.5 — Client système « Nurserie interne » (optionnel)
+
+**Fichier** : `prisma/seed.sql` + `src/lib/queries/clients.ts`
+
+Seed un client par site avec `nom = "Nurserie interne"` et flag `isSysteme = true` (nouveau champ). Non supprimable. Sert de destinataire par défaut pour les ventes de reliquats.
+
+Si le pisciculteur préfère ne pas passer par ce client (vente directe au vrai client), il choisit un autre client normalement.
+
+### VA.6 — Tests + Review R1-R9
+
+- `src/lib/queries/__tests__/vente-alevins-vague.test.ts` — 5 cas (vente valide, quantité > vivants → rejet, auto-clôture, guard invariant, permission VENTES_CREER manquante)
+- E2E : étendre `conservation-flow.spec.ts` avec un scénario « vente alevins depuis PG + clôture »
+- Review R1-R9
 
 ## Dépendances
 
 ```
-SV.1 ─► SV.2 (callers) ─► SV.3 (tests) ─► SV.4 (audit) ─► SV.5 (review)
+VA.1 (schema) ─► VA.2 (query) ─► VA.3 (API) ─► VA.4 (UI)
+                                                    │
+                                     VA.5 (seed) ───┤
+                                                    ▼
+                                                  VA.6 (tests)
 ```
 
-Linéaire — chaque story dépend de la précédente.
+VA.5 peut être livré en parallèle de VA.4 mais avant VA.6.
 
 ## Agents
 
-- **SV.1 + SV.2** : @developer (refactor signature + callers)
-- **SV.3** : @tester
-- **SV.4** : (visualisation après deploy, pas de dev)
-- **SV.5** : @code-reviewer
+- **VA.1** : @db-specialist (migration Prisma)
+- **VA.2** : @developer (query + extraction helper commun avec createVente)
+- **VA.3** : @developer (route API)
+- **VA.4** : @developer (dialog + intégration VagueActionMenu)
+- **VA.5** : @db-specialist (seed + query clients système)
+- **VA.6** : @tester + @code-reviewer
 
 ## Définition de fait
 
-- [ ] `calculerTauxSurvie` utilise `(nombreInitial, totalMortalites)`
-- [ ] Tous les callers mis à jour
-- [ ] Tests verts (nouveaux + régression)
+- [ ] Migration Prisma `origineType` appliquée
+- [ ] `createVenteAlevinsDepuisVague` implémentée + testée
+- [ ] Route API `/api/vagues/[id]/vente-alevins` fonctionnelle
+- [ ] Dialog UI accessible depuis le menu vague PG
+- [ ] Client « Nurserie interne » seedé (si retenu)
+- [ ] Tests unitaires 5/5 verts + E2E vert
 - [ ] `npx tsc --noEmit` clean
+- [ ] `npm run build` OK
 - [ ] Review R1-R9 signée
-- [ ] Un commit + push par story (1 ou 2 commits suffisent — sprint focalisé)
+- [ ] Un commit par story
 
 ## Hors-scope
 
-- Refonte UI carte « Taux de survie » — déjà OK
-- Distinction « survie nette » vs « survie élevage » (concept avancé pisciculture) — séparé
-- Tracking par cohorte temporelle — chantier séparé
+- Refonte du modèle `LotAlevins` — indépendant, resterait pour les ventes depuis reproduction
+- Rapport PDF spécifique « vente d'alevins » — Vente est déjà dans les PDF via VENTE_LIST_INCLUDE
+- Notification / alerte sur clôture — séparé
+- Gestion multi-client par bac dans une même vente (multi-lignes déjà supporté par LigneVente)
