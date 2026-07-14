@@ -1629,6 +1629,7 @@ model Client {
   email     String?
   adresse   String?
   isActive  Boolean  @default(true)
+  isSysteme Boolean  @default(false)
   siteId    String
   site      Site     @relation(fields: [siteId], references: [id])
   ventes    Vente[]

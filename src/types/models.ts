@@ -979,6 +979,8 @@ export interface Client {
   email: string | null;
   adresse: string | null;
   isActive: boolean;
+  /** Client systeme auto-cree (ex: "Nurserie interne"), non supprimable */
+  isSysteme: boolean;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;

@@ -69,8 +69,16 @@ export async function updateClient(
 
 /** Desactive un client (soft delete) */
 export async function deleteClient(id: string, siteId: string) {
+  const client = await prisma.client.findFirst({ where: { id, siteId } });
+  if (!client) {
+    throw new Error("Client introuvable");
+  }
+  if (client.isSysteme) {
+    throw new Error("Un client système ne peut pas être supprimé.");
+  }
+
   const result = await prisma.client.updateMany({
-    where: { id, siteId },
+    where: { id, siteId, isSysteme: false },
     data: { isActive: false },
   });
 

@@ -54,6 +54,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deleteClient(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return handleApiError("DELETE /api/clients/[id]", error, "Erreur serveur.");
+    return handleApiError("DELETE /api/clients/[id]", error, "Erreur serveur.", {
+      statusMap: [{ match: "ne peut pas être supprimé", status: 403 }],
+    });
   }
 }

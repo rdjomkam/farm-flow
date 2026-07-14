@@ -84,6 +84,17 @@ export async function createSite(
       },
     });
 
+    // Creer le client systeme "Nurserie interne" (destinataire par defaut
+    // des ventes d'alevins non vendues a un client externe — Sprint VA)
+    await tx.client.create({
+      data: {
+        id: `nurserie-interne-${site.id}`,
+        nom: "Nurserie interne",
+        isSysteme: true,
+        siteId: site.id,
+      },
+    });
+
     return site;
   });
 }

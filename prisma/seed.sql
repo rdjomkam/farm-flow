@@ -603,11 +603,13 @@ VALUES
 -- Clients (3 : restaurateur, poissonniere, grossiste)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Client" (id, nom, telephone, email, adresse, "isActive", "siteId", "createdAt", "updatedAt")
+INSERT INTO "Client" (id, nom, telephone, email, adresse, "isActive", "isSysteme", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('client_01', 'Restaurant Le Mboa', '+237699400400', 'lemboa@email.cm', 'Akwa, Douala', true, 'site_01', NOW(), NOW()),
-  ('client_02', 'Mme Ngono Marie', '+237677500500', NULL, 'Marche Central, Douala', true, 'site_01', NOW(), NOW()),
-  ('client_03', 'Poissons du Littoral SARL', '+237699600600', 'contact@poissons-littoral.cm', 'Bonaberi, Douala', true, 'site_01', NOW(), NOW());
+  ('client_01', 'Restaurant Le Mboa', '+237699400400', 'lemboa@email.cm', 'Akwa, Douala', true, false, 'site_01', NOW(), NOW()),
+  ('client_02', 'Mme Ngono Marie', '+237677500500', NULL, 'Marche Central, Douala', true, false, 'site_01', NOW(), NOW()),
+  ('client_03', 'Poissons du Littoral SARL', '+237699600600', 'contact@poissons-littoral.cm', 'Bonaberi, Douala', true, false, 'site_01', NOW(), NOW()),
+  ('nurserie-interne-site_01', 'Nurserie interne', NULL, NULL, NULL, true, true, 'site_01', NOW(), NOW()),
+  ('nurserie-interne-site_client_01', 'Nurserie interne', NULL, NULL, NULL, true, true, 'site_client_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Ventes (2 : 1 sur vague terminee, 1 sur vague en cours)
