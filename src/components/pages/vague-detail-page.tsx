@@ -55,7 +55,7 @@ export default async function VagueDetailPage({
   const locale = await getLocale();
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction, ventesAggregate, lineageData] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction, ventesAggregate, lineageData, clientsForVente] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -106,6 +106,12 @@ export default async function VagueDetailPage({
     }),
     // Lineage — vagues parentes via TransfertGroupe (pour afficher le toggle "Inclure PG")
     getLineage(session.activeSiteId, id, 5).catch(() => ({ vagueId: id, parents: [] })),
+    // Clients du site pour VenteAlevinsDialog (systeme en premier — VA.4)
+    prisma.client.findMany({
+      where: { siteId: session.activeSiteId, isActive: true },
+      select: { id: true, nom: true, isSysteme: true },
+      orderBy: [{ isSysteme: "desc" }, { nom: "asc" }],
+    }),
   ]);
 
   if (!vague) notFound();
@@ -373,6 +379,21 @@ export default async function VagueDetailPage({
 
   const nombreBacs = vague.bacs.length;
 
+  // VA.4 — poids moyen suggere par bac (derniere biometrie du bac, sinon moyenne vague)
+  const lastPoidsMoyenByBac = new Map<string, number>();
+  for (const r of biometriesData) {
+    if (r.bacId && r.poidsMoyen != null) lastPoidsMoyenByBac.set(r.bacId, r.poidsMoyen);
+  }
+  const poidsMoyenVagueFallback = (indicateurs ?? defaultIndicateurs).poidsMoyen ?? vague.poidsMoyenInitial;
+  const venteAlevinsBacs = vague.bacs
+    .map((b) => ({
+      id: b.id,
+      nom: b.nom,
+      vivants: vivantsByBac.get(b.id) ?? 0,
+      poidsMoyenSuggere: lastPoidsMoyenByBac.get(b.id) ?? poidsMoyenVagueFallback,
+    }))
+    .filter((b) => b.vivants > 0);
+
   return (
     <>
       <Header title={vague.code} />
@@ -425,6 +446,9 @@ export default async function VagueDetailPage({
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}
               hasIncomingTransferts={hasIncomingTransferts}
               currentBacs={vague.bacs as unknown as BacResponse[]}
+              vagueType={vague.type as TypeVague}
+              venteAlevinsBacs={venteAlevinsBacs}
+              venteAlevinsClients={clientsForVente}
               className="ml-auto"
             />
           )}

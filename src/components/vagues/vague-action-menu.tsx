@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container, Trash2, GitBranch } from "lucide-react";
+import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container, Trash2, GitBranch, Fish } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,8 @@ import { ModifierVagueDialog } from "./modifier-vague-dialog";
 import { CloturerDialog } from "./cloturer-dialog";
 import { GererBacsDialog } from "./gerer-bacs-dialog";
 import { SupprimerVagueDialog } from "./supprimer-vague-dialog";
-import { Permission } from "@/types";
+import { VenteAlevinsDialog } from "./vente-alevins-dialog";
+import { Permission, TypeVague } from "@/types";
 import type { BacResponse } from "@/types";
 import { useExportService } from "@/services";
 
@@ -40,6 +41,12 @@ interface VagueActionMenuProps {
   hasIncomingTransferts?: boolean;
   currentBacs?: BacResponse[];
   className?: string;
+  /** Type de la vague (PRE_GROSSISSEMENT / GROSSISSEMENT) — pour afficher "Vendre restants comme alevins" */
+  vagueType?: TypeVague;
+  /** Bacs de la vague avec vivants + poids moyen suggere — pour VenteAlevinsDialog */
+  venteAlevinsBacs?: { id: string; nom: string; vivants: number; poidsMoyenSuggere: number }[];
+  /** Clients du site (systeme en premier) — pour VenteAlevinsDialog */
+  venteAlevinsClients?: { id: string; nom: string; isSysteme: boolean }[];
 }
 
 export function VagueActionMenu({
@@ -61,6 +68,9 @@ export function VagueActionMenu({
   hasIncomingTransferts = false,
   currentBacs = [],
   className,
+  vagueType,
+  venteAlevinsBacs = [],
+  venteAlevinsClients = [],
 }: VagueActionMenuProps) {
   const router = useRouter();
   const exportService = useExportService();
@@ -69,6 +79,7 @@ export function VagueActionMenu({
   const [cloturerOpen, setCloturerOpen] = useState(false);
   const [gererBacsOpen, setGererBacsOpen] = useState(false);
   const [supprimerOpen, setSupprimerOpen] = useState(false);
+  const [venteAlevinsOpen, setVenteAlevinsOpen] = useState(false);
   const [includeParents, setIncludeParents] = useState(false);
 
   const canModifier = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
@@ -76,6 +87,10 @@ export function VagueActionMenu({
   const canCloturer = isEnCours;
   const canGererBacs = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
   const canSupprimer = permissions.includes(Permission.VAGUES_MODIFIER);
+  const canVenteAlevins =
+    isEnCours &&
+    vagueType === TypeVague.PRE_GROSSISSEMENT &&
+    permissions.includes(Permission.VENTES_CREER);
 
   return (
     <>
@@ -97,6 +112,12 @@ export function VagueActionMenu({
             <DropdownMenuItem onSelect={() => router.push(`/vagues/${vagueId}/calibrage/nouveau`)}>
               <Scissors className="h-4 w-4" />
               {t("actionMenu.calibrage")}
+            </DropdownMenuItem>
+          )}
+          {canVenteAlevins && (
+            <DropdownMenuItem onSelect={() => setVenteAlevinsOpen(true)}>
+              <Fish className="h-4 w-4" />
+              {t("venteAlevins.menuItem")}
             </DropdownMenuItem>
           )}
           {canModifier && (
@@ -226,6 +247,18 @@ export function VagueActionMenu({
         open={supprimerOpen}
         onOpenChange={setSupprimerOpen}
       />
+
+      {canVenteAlevins && (
+        <VenteAlevinsDialog
+          vagueId={vagueId}
+          vagueCode={vagueCode}
+          bacs={venteAlevinsBacs}
+          clients={venteAlevinsClients}
+          permissions={permissions}
+          open={venteAlevinsOpen}
+          onOpenChange={setVenteAlevinsOpen}
+        />
+      )}
     </>
   );
 }

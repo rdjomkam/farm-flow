@@ -149,6 +149,37 @@
     "cloturer": "Close",
     "includeParents": "Include pre-growing"
   },
+  "venteAlevins": {
+    "menuItem": "Sell remaining as fry",
+    "dialogTitle": "Sell remaining as fry — {code}",
+    "dialogDescription": "Sell the remaining fish of this batch as fry to a client (internal or external).",
+    "clientLabel": "Client",
+    "clientPlaceholder": "Choose a client",
+    "clientSysteme": "Internal",
+    "dateLabel": "Order date",
+    "tableHeaders": {
+      "bac": "Tank",
+      "vivants": "Alive",
+      "quantite": "Quantity sold",
+      "poidsMoyen": "Average weight (g)",
+      "prixKg": "Price /kg"
+    },
+    "autoClotureLabel": "Close the batch after validation",
+    "depensesTitle": "Sale expenses",
+    "depenseDescriptionPlaceholder": "Label",
+    "totalLabel": "Total",
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel",
+    "success": "Fry sale recorded successfully.",
+    "errors": {
+      "noLigne": "At least one line with a quantity sold is required.",
+      "quantiteExcede": "The quantity sold exceeds the number of live fish in this tank.",
+      "noClient": "Client is required.",
+      "poidsInvalide": "Invalid weight or price.",
+      "generic": "Error while creating the fry sale.",
+      "ecart": "gap {ecart}"
+    }
+  },
   "rapport": {
     "origineMaterielle": "Fish origin",
     "dureeCycle": "Total cycle duration",

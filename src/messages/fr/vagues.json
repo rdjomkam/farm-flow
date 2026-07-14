@@ -149,6 +149,37 @@
     "cloturer": "Clôturer",
     "includeParents": "Inclure pré-grossissement"
   },
+  "venteAlevins": {
+    "menuItem": "Vendre restants comme alevins",
+    "dialogTitle": "Vendre restants comme alevins — {code}",
+    "dialogDescription": "Vendez les poissons restants de cette vague comme alevins à un client (interne ou externe).",
+    "clientLabel": "Client",
+    "clientPlaceholder": "Choisir un client",
+    "clientSysteme": "Interne",
+    "dateLabel": "Date de commande",
+    "tableHeaders": {
+      "bac": "Bac",
+      "vivants": "Vivants",
+      "quantite": "Quantité vendue",
+      "poidsMoyen": "Poids moyen (g)",
+      "prixKg": "Prix /kg"
+    },
+    "autoClotureLabel": "Clôturer la vague après validation",
+    "depensesTitle": "Dépenses vente",
+    "depenseDescriptionPlaceholder": "Libellé",
+    "totalLabel": "Total",
+    "confirmButton": "Confirmer",
+    "cancelButton": "Annuler",
+    "success": "Vente d'alevins enregistrée avec succès.",
+    "errors": {
+      "noLigne": "Au moins une ligne avec une quantité vendue est requise.",
+      "quantiteExcede": "La quantité vendue dépasse le nombre de vivants dans ce bac.",
+      "noClient": "Le client est obligatoire.",
+      "poidsInvalide": "Poids ou prix invalide.",
+      "generic": "Erreur lors de la création de la vente d'alevins.",
+      "ecart": "écart {ecart}"
+    }
+  },
   "rapport": {
     "origineMaterielle": "Origine des poissons",
     "dureeCycle": "Durée totale du cycle",
