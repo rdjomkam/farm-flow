@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiErrorResponse } from "@/types";
 import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
+import { ValidationError } from "@/lib/errors";
 
 /**
  * Options supplementaires pour le helper apiError.
@@ -101,6 +102,9 @@ export function handleApiError(
   }
   if (error instanceof ForbiddenError) {
     return apiError(403, error.message);
+  }
+  if (error instanceof ValidationError) {
+    return apiError(400, error.message);
   }
 
   const message = error instanceof Error ? error.message : "Erreur serveur.";

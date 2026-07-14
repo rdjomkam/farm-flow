@@ -26,3 +26,16 @@ export class ConservationError extends Error {
     this.name = "ConservationError";
   }
 }
+
+/**
+ * Erreur levee lors d'une validation metier echouee (ex: type de vague
+ * invalide, statut incompatible, champ invalide).
+ *
+ * Retourne 400 Bad Request depuis les routes API.
+ */
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}

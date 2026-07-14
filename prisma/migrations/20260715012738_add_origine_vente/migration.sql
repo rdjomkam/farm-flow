@@ -1,0 +1,6 @@
+-- CreateEnum
+CREATE TYPE "OrigineVente" AS ENUM ('GROSSISSEMENT', 'ALEVINS_REPRODUCTION', 'ALEVINS_PG');
+
+-- AlterTable
+ALTER TABLE "Vente" ADD COLUMN     "origineType" "OrigineVente" NOT NULL DEFAULT 'GROSSISSEMENT';
+

@@ -939,6 +939,47 @@ export interface UpdateVenteDTO {
   motif: string;
 }
 
+// ---------------------------------------------------------------------------
+// Sprint VA — Vente d'alevins depuis une vague PRE_GROSSISSEMENT
+// ---------------------------------------------------------------------------
+
+/** Une ligne dans une vente d'alevins depuis une vague PRE_GROSSISSEMENT */
+export interface CreateLigneVenteAlevinsPGDTO {
+  bacId: string;
+  /** Nombre d'alevins a vendre depuis ce bac */
+  nombrePoissons: number;
+  /** Poids moyen par alevin en grammes */
+  poidsMoyenG: number;
+  /** Prix unitaire au kg pour cette ligne (FCFA/kg) */
+  prixUnitaireKg: number;
+}
+
+/** Depense a rattacher a la vente d'alevins (transport, frais divers...) */
+export interface DepenseVenteInput {
+  description: string;
+  categorieDepense: CategorieDepense;
+  montantTotal: number;
+  montantPaye?: number;
+  notes?: string;
+}
+
+/**
+ * DTO pour creer une vente d'alevins depuis une vague PRE_GROSSISSEMENT (Sprint VA).
+ * Reutilise l'infrastructure Vente/LigneVente avec origineType = ALEVINS_PG.
+ */
+export interface CreateVenteAlevinsDepuisVagueDTO {
+  vagueId: string;
+  clientId: string;
+  /** Date de commande / vente (ISO 8601) */
+  dateCommande: string;
+  lignes: CreateLigneVenteAlevinsPGDTO[];
+  /** Depenses a rattacher a la vente (optionnel) */
+  depenses?: DepenseVenteInput[];
+  /** Si true et que la vague ne compte plus aucun poisson vivant apres la vente, cloture automatiquement la vague */
+  autoCloture?: boolean;
+  notes?: string;
+}
+
 /** Reponse liste des ventes */
 export type VenteListResponse = PaginatedResponse<Vente>;
 

@@ -316,6 +316,18 @@ export enum StatutVente {
   CLOTUREE = "CLOTUREE",
 }
 
+/**
+ * Origine des poissons vendus dans une Vente — Sprint VA.
+ * GROSSISSEMENT : vente classique depuis une vague de grossissement.
+ * ALEVINS_REPRODUCTION : vente d'alevins depuis un LotAlevins (unite REPRODUCTION).
+ * ALEVINS_PG : vente des poissons restants d'une vague PRE_GROSSISSEMENT comme alevins.
+ */
+export enum OrigineVente {
+  GROSSISSEMENT = "GROSSISSEMENT",
+  ALEVINS_REPRODUCTION = "ALEVINS_REPRODUCTION",
+  ALEVINS_PG = "ALEVINS_PG",
+}
+
 /** Type d'unite de production */
 export enum TypeUniteProduction {
   REPRODUCTION = "REPRODUCTION",
@@ -1036,6 +1048,8 @@ export interface Vente {
   notes: string | null;
   dateCommande: Date;
   statut: StatutVente;
+  /** Origine des poissons vendus — Sprint VA. Defaut : GROSSISSEMENT */
+  origineType: OrigineVente;
   dateLivraison: Date | null;
   poidsCommandeKg: number | null;
   quantiteCommandee: number | null;

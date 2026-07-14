@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
 import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import { computeVivantsByBac } from "@/lib/calculs";
+import { getTransfertDestBacIds } from "./transferts";
+import { ValidationError } from "@/lib/errors";
 import {
   StatutVague,
   StatutVente,
@@ -9,11 +12,15 @@ import {
   StatutLotAlevins,
   PhaseLot,
   TypeUniteProduction,
+  TypeVague,
+  OrigineVente,
+  StatutDepense,
 } from "@/types";
 import type {
   CreateVenteDTO,
   CreateLigneVenteDTO,
   CreateVenteAlevinsDTO,
+  CreateVenteAlevinsDepuisVagueDTO,
   UpdateVenteDTO,
   ClotureVenteDTO,
   VenteFilters,
@@ -575,6 +582,312 @@ export async function createVenteAlevins(
     });
 
     return vente;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// createVenteAlevinsDepuisVague — Sprint VA
+// Vente des poissons restants d'une vague PRE_GROSSISSEMENT comme alevins.
+// Reutilise l'infrastructure Vente/LigneVente avec origineType = ALEVINS_PG.
+// ---------------------------------------------------------------------------
+
+/** Types de releve pris en compte pour le calcul des vivants par bac (ADR-046 pattern). */
+const RELEVES_VIVANTS_TYPES = [
+  TypeReleve.MORTALITE,
+  TypeReleve.COMPTAGE,
+  TypeReleve.ARRIVAGE,
+  TypeReleve.TRANSFERT,
+  TypeReleve.VENTE,
+] as const;
+
+/**
+ * Cree une vente d'alevins depuis une vague PRE_GROSSISSEMENT (transaction atomique).
+ *
+ * Flux :
+ * 1. Valider la vague (type PRE_GROSSISSEMENT, statut EN_COURS)
+ * 2. Valider le client
+ * 3. Charger les vivants reels par bac (computeVivantsByBac + transfertDestBacIds)
+ * 4. Valider chaque ligne (bac assigne, stock disponible, valeurs > 0)
+ * 5. Creer la Vente (origineType = ALEVINS_PG) + LigneVente + decrementer AssignationBac
+ *    + creer les releves VENTE de tracabilite
+ * 6. Guard verifyAssignationInvariant
+ * 7. Creer les depenses liees (optionnel)
+ * 8. Auto-cloture de la vague si tous les bacs sont vides (optionnel)
+ */
+export async function createVenteAlevinsDepuisVague(
+  siteId: string,
+  userId: string,
+  data: CreateVenteAlevinsDepuisVagueDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Valider la vague
+    const vague = await tx.vague.findFirst({
+      where: { id: data.vagueId, siteId },
+      select: { id: true, code: true, type: true, statut: true, nombreInitial: true },
+    });
+    if (!vague) throw new ValidationError("Vague introuvable");
+    if (vague.type !== TypeVague.PRE_GROSSISSEMENT) {
+      throw new ValidationError(
+        `La vente d'alevins depuis une vague n'est possible que pour une vague PRE_GROSSISSEMENT (vague ${vague.code})`
+      );
+    }
+    if (vague.statut !== StatutVague.EN_COURS) {
+      throw new ValidationError(
+        `La vague ${vague.code} n'est pas en cours (statut actuel : ${vague.statut})`
+      );
+    }
+
+    // 2. Valider le client
+    const client = await tx.client.findFirst({
+      where: { id: data.clientId, siteId, isActive: true },
+    });
+    if (!client) throw new Error("Client introuvable ou inactif");
+
+    if (!data.lignes || data.lignes.length === 0) {
+      throw new ValidationError("Au moins une ligne de vente est requise");
+    }
+
+    // 3. Charger les vivants reels par bac
+    const assignationsBacs = await tx.assignationBac.findMany({
+      where: { vagueId: data.vagueId, siteId, dateFin: null },
+      select: {
+        bacId: true,
+        nombreInitial: true,
+        nombreActuel: true,
+        bac: { select: { nom: true } },
+      },
+    });
+    const assignationParBac = new Map(assignationsBacs.map((a) => [a.bacId, a]));
+
+    const bacsForCalc = assignationsBacs.map((a) => ({
+      id: a.bacId,
+      nombreInitial: a.nombreInitial ?? null,
+    }));
+
+    const relevesVague = await tx.releve.findMany({
+      where: {
+        siteId,
+        vagueId: data.vagueId,
+        typeReleve: { in: [...RELEVES_VIVANTS_TYPES] },
+      },
+      orderBy: { date: "asc" },
+      select: {
+        bacId: true,
+        typeReleve: true,
+        nombreMorts: true,
+        nombreVendus: true,
+        nombreTransferes: true,
+        nombreCompte: true,
+        date: true,
+      },
+    });
+
+    const transfertDestBacIds = await getTransfertDestBacIds(siteId, data.vagueId);
+    const vivantsByBac = computeVivantsByBac(
+      bacsForCalc,
+      relevesVague,
+      vague.nombreInitial,
+      { transfertDestBacIds }
+    );
+
+    // 4. Valider et enrichir chaque ligne
+    const lignesEnrichies: Array<{
+      bacId: string;
+      nombrePoissons: number;
+      poidsMoyenG: number;
+      poidsTotalKg: number;
+      montantLigne: number;
+      bacNom: string;
+    }> = [];
+
+    for (const ligne of data.lignes) {
+      const assignation = assignationParBac.get(ligne.bacId);
+      if (!assignation) {
+        throw new ValidationError(
+          `Le bac ${ligne.bacId} n'a pas d'assignation active sur la vague ${vague.code}`
+        );
+      }
+      if (!Number.isFinite(ligne.nombrePoissons) || ligne.nombrePoissons <= 0) {
+        throw new ValidationError("nombrePoissons doit etre superieur a 0");
+      }
+      if (!Number.isFinite(ligne.poidsMoyenG) || ligne.poidsMoyenG <= 0) {
+        throw new ValidationError("poidsMoyenG doit etre superieur a 0");
+      }
+      if (!Number.isFinite(ligne.prixUnitaireKg) || ligne.prixUnitaireKg < 0) {
+        throw new ValidationError("prixUnitaireKg ne peut pas etre negatif");
+      }
+
+      const disponible = vivantsByBac.get(ligne.bacId) ?? 0;
+      if (ligne.nombrePoissons > disponible) {
+        throw new Error(
+          `Stock insuffisant dans "${assignation.bac.nom}" : disponible ${disponible}, demande ${ligne.nombrePoissons}`
+        );
+      }
+
+      const poidsTotalKg = (ligne.nombrePoissons * ligne.poidsMoyenG) / 1000;
+      const montantLigne = poidsTotalKg * ligne.prixUnitaireKg;
+
+      lignesEnrichies.push({
+        bacId: ligne.bacId,
+        nombrePoissons: ligne.nombrePoissons,
+        poidsMoyenG: ligne.poidsMoyenG,
+        poidsTotalKg,
+        montantLigne,
+        bacNom: assignation.bac.nom,
+      });
+    }
+
+    // Agregats
+    const quantitePoissons = lignesEnrichies.reduce((sum, l) => sum + l.nombrePoissons, 0);
+    const poidsTotalKg = lignesEnrichies.reduce((sum, l) => sum + l.poidsTotalKg, 0);
+    const montantTotal = lignesEnrichies.reduce((sum, l) => sum + l.montantLigne, 0);
+    // prixUnitaireKg — moyenne ponderee (Vente.prixUnitaireKg est un champ unique requis,
+    // alors que chaque ligne peut avoir son propre prix)
+    const prixUnitaireKg = poidsTotalKg > 0 ? montantTotal / poidsTotalKg : 0;
+
+    const venteDate = new Date(data.dateCommande);
+
+    // 5. Generer le numero + creer la vente (vente directe : livree = vendue au meme moment)
+    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
+
+    const venteRaw = await tx.vente.create({
+      data: {
+        numero,
+        clientId: data.clientId,
+        vagueId: data.vagueId,
+        uniteProductionId: null,
+        quantitePoissons,
+        poidsTotalKg,
+        prixUnitaireKg,
+        montantTotal,
+        dateCommande: venteDate,
+        statut: StatutVente.EN_PREPARATION,
+        origineType: OrigineVente.ALEVINS_PG,
+        dateLivraison: venteDate,
+        notes: data.notes ?? null,
+        userId,
+        siteId,
+      },
+    });
+
+    // Creer les LigneVente, decrementer AssignationBac, creer les releves VENTE
+    for (const ligne of lignesEnrichies) {
+      const currentCount = assignationParBac.get(ligne.bacId)!.nombreActuel ?? 0;
+      const newCount = Math.max(0, currentCount - ligne.nombrePoissons);
+
+      await tx.assignationBac.updateMany({
+        where: { bacId: ligne.bacId, vagueId: data.vagueId, dateFin: null },
+        data: { nombreActuel: newCount },
+      });
+
+      await tx.ligneVente.create({
+        data: {
+          venteId: venteRaw.id,
+          vagueId: data.vagueId,
+          bacId: ligne.bacId,
+          poidsTotalKg: ligne.poidsTotalKg,
+          poidsMoyenG: ligne.poidsMoyenG,
+          nombrePoissons: ligne.nombrePoissons,
+          siteId,
+        },
+      });
+
+      await tx.releve.create({
+        data: {
+          date: venteDate,
+          typeReleve: TypeReleve.VENTE,
+          vagueId: data.vagueId,
+          bacId: ligne.bacId,
+          siteId,
+          userId,
+          nombreVendus: ligne.nombrePoissons,
+          venteId: venteRaw.id,
+          notes: `Vente alevins ${numero} — ${ligne.nombrePoissons} alevins (${ligne.bacNom})`,
+        },
+      });
+    }
+
+    // 6. Guard post-ecriture — verifie l'invariant sur les bacs vendus
+    const bacIds = [...new Set(lignesEnrichies.map((l) => l.bacId))];
+    await verifyAssignationInvariant(tx, siteId, data.vagueId, bacIds);
+
+    // 7. Depenses liees a la vente (optionnel)
+    if (data.depenses && data.depenses.length > 0) {
+      for (const dep of data.depenses) {
+        const depNumero = await generateNextNumero(tx, "depense", "DEP", siteId);
+        const montantPaye = dep.montantPaye ?? 0;
+        let statutDepense: StatutDepense;
+        if (montantPaye >= dep.montantTotal && dep.montantTotal > 0) {
+          statutDepense = StatutDepense.PAYEE;
+        } else if (montantPaye > 0) {
+          statutDepense = StatutDepense.PAYEE_PARTIELLEMENT;
+        } else {
+          statutDepense = StatutDepense.NON_PAYEE;
+        }
+
+        await tx.depense.create({
+          data: {
+            numero: depNumero,
+            description: dep.description,
+            categorieDepense: dep.categorieDepense,
+            montantTotal: dep.montantTotal,
+            montantPaye,
+            statut: statutDepense,
+            date: venteDate,
+            venteId: venteRaw.id,
+            vagueId: null,
+            notes: dep.notes ?? null,
+            userId,
+            siteId,
+          },
+        });
+      }
+    }
+
+    // 8. Auto-cloture de la vague si tous les bacs sont vides apres la vente
+    if (data.autoCloture === true) {
+      const relevesApres = await tx.releve.findMany({
+        where: {
+          siteId,
+          vagueId: data.vagueId,
+          typeReleve: { in: [...RELEVES_VIVANTS_TYPES] },
+        },
+        orderBy: { date: "asc" },
+        select: {
+          bacId: true,
+          typeReleve: true,
+          nombreMorts: true,
+          nombreVendus: true,
+          nombreTransferes: true,
+          nombreCompte: true,
+          date: true,
+        },
+      });
+      const vivantsApres = computeVivantsByBac(
+        bacsForCalc,
+        relevesApres,
+        vague.nombreInitial,
+        { transfertDestBacIds }
+      );
+      const totalVivantsApres = [...vivantsApres.values()].reduce((sum, v) => sum + v, 0);
+
+      if (totalVivantsApres === 0) {
+        await tx.assignationBac.updateMany({
+          where: { vagueId: data.vagueId, siteId, dateFin: null },
+          data: { dateFin: venteDate },
+        });
+        await tx.vague.update({
+          where: { id: data.vagueId },
+          data: { statut: StatutVague.TERMINEE, dateFin: venteDate },
+        });
+      }
+    }
+
+    // 9. Retourner la vente avec ses relations
+    return tx.vente.findUniqueOrThrow({
+      where: { id: venteRaw.id },
+      include: VENTE_LIST_INCLUDE,
+    });
   });
 }
 

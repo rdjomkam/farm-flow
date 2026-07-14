@@ -143,6 +143,18 @@ enum StatutVente {
   CLOTUREE
 }
 
+/**
+ * Origine des poissons vendus dans une Vente — Sprint VA.
+ * GROSSISSEMENT : vente classique depuis une vague de grossissement.
+ * ALEVINS_REPRODUCTION : vente d'alevins depuis un LotAlevins (unite REPRODUCTION).
+ * ALEVINS_PG : vente des poissons restants d'une vague PRE_GROSSISSEMENT comme alevins.
+ */
+enum OrigineVente {
+  GROSSISSEMENT
+  ALEVINS_REPRODUCTION
+  ALEVINS_PG
+}
+
 enum TypeUniteProduction {
   REPRODUCTION
   GROSSISSEMENT
@@ -1654,6 +1666,12 @@ model Vente {
   montantTotal      Float
   dateCommande      DateTime         @default(now())
   statut            StatutVente      @default(EN_PREPARATION)
+  /**
+   * Origine des poissons vendus — Sprint VA. Determine si la vente provient
+   * d'une vague de grossissement, d'un lot d'alevins (reproduction) ou d'une
+   * vague PRE_GROSSISSEMENT vendue comme alevins.
+   */
+  origineType       OrigineVente     @default(GROSSISSEMENT)
   dateLivraison     DateTime?
   poidsCommandeKg   Float?
   quantiteCommandee Int?
