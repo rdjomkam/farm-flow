@@ -620,39 +620,19 @@ export async function createVenteAlevinsDepuisVague(
   userId: string,
   data: CreateVenteAlevinsDepuisVagueDTO
 ) {
-  return prisma.$transaction(async (tx) => {
-    // 1. Valider la vague
-    // Timeout étendu (30s) car cette transaction fait beaucoup :
-    // validation + computeVivantsByBac + N ligneVente + N releves VENTE +
-    // N updates AssignationBac + guard invariant + éventuelle clôture.
-    const vague = await tx.vague.findFirst({
+  // === PHASE 1 — Lecture + validation HORS transaction (parallélisé) ===
+  // Objectif : minimiser le temps passé dans la $transaction (défaut 5s).
+  // Le guard verifyAssignationInvariant en fin de transaction rattrape toute
+  // race condition (ex. vente concurrente sur les mêmes bacs).
+  const [vague, client, assignationsBacs, relevesVague, transfertDestBacIds] = await Promise.all([
+    prisma.vague.findFirst({
       where: { id: data.vagueId, siteId },
       select: { id: true, code: true, type: true, statut: true, nombreInitial: true },
-    });
-    if (!vague) throw new ValidationError("Vague introuvable");
-    if (vague.type !== TypeVague.PRE_GROSSISSEMENT) {
-      throw new ValidationError(
-        `La vente d'alevins depuis une vague n'est possible que pour une vague PRE_GROSSISSEMENT (vague ${vague.code})`
-      );
-    }
-    if (vague.statut !== StatutVague.EN_COURS) {
-      throw new ValidationError(
-        `La vague ${vague.code} n'est pas en cours (statut actuel : ${vague.statut})`
-      );
-    }
-
-    // 2. Valider le client
-    const client = await tx.client.findFirst({
+    }),
+    prisma.client.findFirst({
       where: { id: data.clientId, siteId, isActive: true },
-    });
-    if (!client) throw new Error("Client introuvable ou inactif");
-
-    if (!data.lignes || data.lignes.length === 0) {
-      throw new ValidationError("Au moins une ligne de vente est requise");
-    }
-
-    // 3. Charger les vivants reels par bac
-    const assignationsBacs = await tx.assignationBac.findMany({
+    }),
+    prisma.assignationBac.findMany({
       where: { vagueId: data.vagueId, siteId, dateFin: null },
       select: {
         bacId: true,
@@ -660,15 +640,8 @@ export async function createVenteAlevinsDepuisVague(
         nombreActuel: true,
         bac: { select: { nom: true } },
       },
-    });
-    const assignationParBac = new Map(assignationsBacs.map((a) => [a.bacId, a]));
-
-    const bacsForCalc = assignationsBacs.map((a) => ({
-      id: a.bacId,
-      nombreInitial: a.nombreInitial ?? null,
-    }));
-
-    const relevesVague = await tx.releve.findMany({
+    }),
+    prisma.releve.findMany({
       where: {
         siteId,
         vagueId: data.vagueId,
@@ -684,74 +657,93 @@ export async function createVenteAlevinsDepuisVague(
         nombreCompte: true,
         date: true,
       },
-    });
+    }),
+    getTransfertDestBacIds(siteId, data.vagueId),
+  ]);
 
-    const transfertDestBacIds = await getTransfertDestBacIds(siteId, data.vagueId);
-    const vivantsByBac = computeVivantsByBac(
-      bacsForCalc,
-      relevesVague,
-      vague.nombreInitial,
-      { transfertDestBacIds }
+  if (!vague) throw new ValidationError("Vague introuvable");
+  if (vague.type !== TypeVague.PRE_GROSSISSEMENT) {
+    throw new ValidationError(
+      `La vente d'alevins depuis une vague n'est possible que pour une vague PRE_GROSSISSEMENT (vague ${vague.code})`
     );
+  }
+  if (vague.statut !== StatutVague.EN_COURS) {
+    throw new ValidationError(
+      `La vague ${vague.code} n'est pas en cours (statut actuel : ${vague.statut})`
+    );
+  }
+  if (!client) throw new Error("Client introuvable ou inactif");
+  if (!data.lignes || data.lignes.length === 0) {
+    throw new ValidationError("Au moins une ligne de vente est requise");
+  }
 
-    // 4. Valider et enrichir chaque ligne
-    const lignesEnrichies: Array<{
-      bacId: string;
-      nombrePoissons: number;
-      poidsMoyenG: number;
-      poidsTotalKg: number;
-      montantLigne: number;
-      bacNom: string;
-    }> = [];
+  const assignationParBac = new Map(assignationsBacs.map((a) => [a.bacId, a]));
+  const bacsForCalc = assignationsBacs.map((a) => ({
+    id: a.bacId,
+    nombreInitial: a.nombreInitial ?? null,
+  }));
+  const vivantsByBac = computeVivantsByBac(
+    bacsForCalc,
+    relevesVague,
+    vague.nombreInitial,
+    { transfertDestBacIds }
+  );
 
-    for (const ligne of data.lignes) {
-      const assignation = assignationParBac.get(ligne.bacId);
-      if (!assignation) {
-        throw new ValidationError(
-          `Le bac ${ligne.bacId} n'a pas d'assignation active sur la vague ${vague.code}`
-        );
-      }
-      if (!Number.isFinite(ligne.nombrePoissons) || ligne.nombrePoissons <= 0) {
-        throw new ValidationError("nombrePoissons doit etre superieur a 0");
-      }
-      if (!Number.isFinite(ligne.poidsMoyenG) || ligne.poidsMoyenG <= 0) {
-        throw new ValidationError("poidsMoyenG doit etre superieur a 0");
-      }
-      if (!Number.isFinite(ligne.prixUnitaireKg) || ligne.prixUnitaireKg < 0) {
-        throw new ValidationError("prixUnitaireKg ne peut pas etre negatif");
-      }
+  // Valider et enrichir chaque ligne (en mémoire, aucune I/O)
+  const lignesEnrichies: Array<{
+    bacId: string;
+    nombrePoissons: number;
+    poidsMoyenG: number;
+    poidsTotalKg: number;
+    montantLigne: number;
+    bacNom: string;
+  }> = [];
 
-      const disponible = vivantsByBac.get(ligne.bacId) ?? 0;
-      if (ligne.nombrePoissons > disponible) {
-        throw new Error(
-          `Stock insuffisant dans "${assignation.bac.nom}" : disponible ${disponible}, demande ${ligne.nombrePoissons}`
-        );
-      }
-
-      const poidsTotalKg = (ligne.nombrePoissons * ligne.poidsMoyenG) / 1000;
-      const montantLigne = poidsTotalKg * ligne.prixUnitaireKg;
-
-      lignesEnrichies.push({
-        bacId: ligne.bacId,
-        nombrePoissons: ligne.nombrePoissons,
-        poidsMoyenG: ligne.poidsMoyenG,
-        poidsTotalKg,
-        montantLigne,
-        bacNom: assignation.bac.nom,
-      });
+  for (const ligne of data.lignes) {
+    const assignation = assignationParBac.get(ligne.bacId);
+    if (!assignation) {
+      throw new ValidationError(
+        `Le bac ${ligne.bacId} n'a pas d'assignation active sur la vague ${vague.code}`
+      );
+    }
+    if (!Number.isFinite(ligne.nombrePoissons) || ligne.nombrePoissons <= 0) {
+      throw new ValidationError("nombrePoissons doit etre superieur a 0");
+    }
+    if (!Number.isFinite(ligne.poidsMoyenG) || ligne.poidsMoyenG <= 0) {
+      throw new ValidationError("poidsMoyenG doit etre superieur a 0");
+    }
+    if (!Number.isFinite(ligne.prixUnitaireKg) || ligne.prixUnitaireKg < 0) {
+      throw new ValidationError("prixUnitaireKg ne peut pas etre negatif");
     }
 
-    // Agregats
-    const quantitePoissons = lignesEnrichies.reduce((sum, l) => sum + l.nombrePoissons, 0);
-    const poidsTotalKg = lignesEnrichies.reduce((sum, l) => sum + l.poidsTotalKg, 0);
-    const montantTotal = lignesEnrichies.reduce((sum, l) => sum + l.montantLigne, 0);
-    // prixUnitaireKg — moyenne ponderee (Vente.prixUnitaireKg est un champ unique requis,
-    // alors que chaque ligne peut avoir son propre prix)
-    const prixUnitaireKg = poidsTotalKg > 0 ? montantTotal / poidsTotalKg : 0;
+    const disponible = vivantsByBac.get(ligne.bacId) ?? 0;
+    if (ligne.nombrePoissons > disponible) {
+      throw new Error(
+        `Stock insuffisant dans "${assignation.bac.nom}" : disponible ${disponible}, demande ${ligne.nombrePoissons}`
+      );
+    }
 
-    const venteDate = new Date(data.dateCommande);
+    const poidsTotalKg = (ligne.nombrePoissons * ligne.poidsMoyenG) / 1000;
+    const montantLigne = poidsTotalKg * ligne.prixUnitaireKg;
 
-    // 5. Generer le numero + creer la vente (vente directe : livree = vendue au meme moment)
+    lignesEnrichies.push({
+      bacId: ligne.bacId,
+      nombrePoissons: ligne.nombrePoissons,
+      poidsMoyenG: ligne.poidsMoyenG,
+      poidsTotalKg,
+      montantLigne,
+      bacNom: assignation.bac.nom,
+    });
+  }
+
+  const quantitePoissons = lignesEnrichies.reduce((sum, l) => sum + l.nombrePoissons, 0);
+  const poidsTotalKg = lignesEnrichies.reduce((sum, l) => sum + l.poidsTotalKg, 0);
+  const montantTotal = lignesEnrichies.reduce((sum, l) => sum + l.montantLigne, 0);
+  const prixUnitaireKg = poidsTotalKg > 0 ? montantTotal / poidsTotalKg : 0;
+  const venteDate = new Date(data.dateCommande);
+
+  // === PHASE 2 — Écritures dans la transaction ===
+  return prisma.$transaction(async (tx) => {
     const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
 
     const venteRaw = await tx.vente.create({
@@ -774,40 +766,42 @@ export async function createVenteAlevinsDepuisVague(
       },
     });
 
-    // Creer les LigneVente, decrementer AssignationBac, creer les releves VENTE
+    // Batch createMany : 1 round-trip pour toutes les LigneVente
+    await tx.ligneVente.createMany({
+      data: lignesEnrichies.map((ligne) => ({
+        venteId: venteRaw.id,
+        vagueId: data.vagueId,
+        bacId: ligne.bacId,
+        poidsTotalKg: ligne.poidsTotalKg,
+        poidsMoyenG: ligne.poidsMoyenG,
+        nombrePoissons: ligne.nombrePoissons,
+        siteId,
+      })),
+    });
+
+    // Batch createMany : 1 round-trip pour tous les relevés VENTE
+    await tx.releve.createMany({
+      data: lignesEnrichies.map((ligne) => ({
+        date: venteDate,
+        typeReleve: TypeReleve.VENTE,
+        vagueId: data.vagueId,
+        bacId: ligne.bacId,
+        siteId,
+        userId,
+        nombreVendus: ligne.nombrePoissons,
+        venteId: venteRaw.id,
+        notes: `Vente alevins ${numero} — ${ligne.nombrePoissons} alevins (${ligne.bacNom})`,
+      })),
+    });
+
+    // Décrémenter AssignationBac (loop séquentiel — pas d'équivalent batch en Prisma
+    // pour des valeurs distinctes par ligne). N updates courts.
     for (const ligne of lignesEnrichies) {
       const currentCount = assignationParBac.get(ligne.bacId)!.nombreActuel ?? 0;
       const newCount = Math.max(0, currentCount - ligne.nombrePoissons);
-
       await tx.assignationBac.updateMany({
         where: { bacId: ligne.bacId, vagueId: data.vagueId, dateFin: null },
         data: { nombreActuel: newCount },
-      });
-
-      await tx.ligneVente.create({
-        data: {
-          venteId: venteRaw.id,
-          vagueId: data.vagueId,
-          bacId: ligne.bacId,
-          poidsTotalKg: ligne.poidsTotalKg,
-          poidsMoyenG: ligne.poidsMoyenG,
-          nombrePoissons: ligne.nombrePoissons,
-          siteId,
-        },
-      });
-
-      await tx.releve.create({
-        data: {
-          date: venteDate,
-          typeReleve: TypeReleve.VENTE,
-          vagueId: data.vagueId,
-          bacId: ligne.bacId,
-          siteId,
-          userId,
-          nombreVendus: ligne.nombrePoissons,
-          venteId: venteRaw.id,
-          notes: `Vente alevins ${numero} — ${ligne.nombrePoissons} alevins (${ligne.bacNom})`,
-        },
       });
     }
 
@@ -849,31 +843,17 @@ export async function createVenteAlevinsDepuisVague(
     }
 
     // 8. Auto-cloture de la vague si tous les bacs sont vides apres la vente
+    // Calcul en mémoire (pas de re-query) : vivantsApres = vivantsAvant - vendus par bac
     if (data.autoCloture === true) {
-      const relevesApres = await tx.releve.findMany({
-        where: {
-          siteId,
-          vagueId: data.vagueId,
-          typeReleve: { in: [...RELEVES_VIVANTS_TYPES] },
-        },
-        orderBy: { date: "asc" },
-        select: {
-          bacId: true,
-          typeReleve: true,
-          nombreMorts: true,
-          nombreVendus: true,
-          nombreTransferes: true,
-          nombreCompte: true,
-          date: true,
-        },
-      });
-      const vivantsApres = computeVivantsByBac(
-        bacsForCalc,
-        relevesApres,
-        vague.nombreInitial,
-        { transfertDestBacIds }
-      );
-      const totalVivantsApres = [...vivantsApres.values()].reduce((sum, v) => sum + v, 0);
+      const vendusParBac = new Map<string, number>();
+      for (const ligne of lignesEnrichies) {
+        vendusParBac.set(ligne.bacId, (vendusParBac.get(ligne.bacId) ?? 0) + ligne.nombrePoissons);
+      }
+      let totalVivantsApres = 0;
+      for (const [bacId, vivantsAvant] of vivantsByBac) {
+        const vendus = vendusParBac.get(bacId) ?? 0;
+        totalVivantsApres += Math.max(0, vivantsAvant - vendus);
+      }
 
       if (totalVivantsApres === 0) {
         await tx.assignationBac.updateMany({
@@ -892,11 +872,6 @@ export async function createVenteAlevinsDepuisVague(
       where: { id: venteRaw.id },
       include: VENTE_LIST_INCLUDE,
     });
-  }, {
-    // 30s : couvre le pire cas (grande vague, beaucoup de lignes, guard invariant lourd)
-    // Défaut Prisma = 5s, insuffisant en prod.
-    timeout: 30000,
-    maxWait: 10000,
   });
 }
 

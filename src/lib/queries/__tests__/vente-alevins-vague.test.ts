@@ -23,6 +23,8 @@ const mockClientFindFirst = vi.fn();
 const mockAssignationBacFindMany = vi.fn();
 const mockAssignationBacUpdateMany = vi.fn();
 const mockLigneVenteCreate = vi.fn();
+const mockLigneVenteCreateMany = vi.fn();
+const mockReleveCreateMany = vi.fn();
 const mockReleveFindMany = vi.fn();
 const mockReleveCreate = vi.fn();
 const mockVenteFindFirst = vi.fn();
@@ -48,10 +50,12 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     },
     ligneVente: {
       create: (...args: unknown[]) => mockLigneVenteCreate(...args),
+      createMany: (...args: unknown[]) => mockLigneVenteCreateMany(...args),
     },
     releve: {
       findMany: (...args: unknown[]) => mockReleveFindMany(...args),
       create: (...args: unknown[]) => mockReleveCreate(...args),
+      createMany: (...args: unknown[]) => mockReleveCreateMany(...args),
     },
     vente: {
       findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
@@ -75,6 +79,20 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     $transaction: (...args: unknown[]) =>
       mockTransaction(...(args as Parameters<typeof mockTransaction>)),
+    // Optim : la Phase 1 (lecture + validation) fait ses queries HORS tx via prisma global.
+    // On mocke donc les mêmes méthodes ici, pointant vers les mêmes vi.fn().
+    vague: {
+      findFirst: (...args: unknown[]) => mockVagueFindFirst(...args),
+    },
+    client: {
+      findFirst: (...args: unknown[]) => mockClientFindFirst(...args),
+    },
+    assignationBac: {
+      findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
+    },
+    releve: {
+      findMany: (...args: unknown[]) => mockReleveFindMany(...args),
+    },
     transfertGroupe: {
       findMany: (...args: unknown[]) => mockTransfertGroupeFindManyGlobal(...args),
     },
@@ -137,7 +155,9 @@ beforeEach(() => {
   vi.resetAllMocks();
   mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
   mockLigneVenteCreate.mockResolvedValue({});
+  mockLigneVenteCreateMany.mockResolvedValue({ count: 0 });
   mockReleveCreate.mockResolvedValue({});
+  mockReleveCreateMany.mockResolvedValue({ count: 0 });
   mockVenteFindFirst.mockResolvedValue(null);
   mockVenteCreate.mockResolvedValue({ id: "vente-alevins-1" });
   mockVenteFindUniqueOrThrow.mockResolvedValue({
@@ -193,8 +213,11 @@ describe("createVenteAlevinsDepuisVague — vente valide", () => {
     expect(createArgs.data.vagueId).toBe(VAGUE_ID);
     expect(createArgs.data.quantitePoissons).toBe(150);
 
-    expect(mockLigneVenteCreate).toHaveBeenCalledTimes(3);
-    expect(mockReleveCreate).toHaveBeenCalledTimes(3);
+    // Post-optim : 1 seul createMany pour LigneVente + 1 pour Releve VENTE
+    expect(mockLigneVenteCreateMany).toHaveBeenCalledTimes(1);
+    expect(mockLigneVenteCreateMany.mock.calls[0][0].data).toHaveLength(3);
+    expect(mockReleveCreateMany).toHaveBeenCalledTimes(1);
+    expect(mockReleveCreateMany.mock.calls[0][0].data).toHaveLength(3);
     expect(mockAssignationBacUpdateMany).toHaveBeenCalledTimes(3);
     for (const call of mockAssignationBacUpdateMany.mock.calls) {
       expect(call[0].data.nombreActuel).toBe(50);
