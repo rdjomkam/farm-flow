@@ -13,9 +13,24 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { filters } = body;
+    const { name, filters } = body;
 
-    if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
+    const hasName = name !== undefined;
+    const hasFilters = filters !== undefined;
+
+    if (!hasName && !hasFilters) {
+      return apiError(400, "Aucune donnee a mettre a jour.");
+    }
+
+    let trimmedName: string | undefined;
+    if (hasName) {
+      if (typeof name !== "string" || name.trim().length === 0 || name.trim().length > 50) {
+        return apiError(400, "Le nom est requis (max 50 caracteres).");
+      }
+      trimmedName = name.trim();
+    }
+
+    if (hasFilters && (typeof filters !== "object" || filters === null || Array.isArray(filters))) {
       return apiError(400, "Filtres invalides.");
     }
 
@@ -25,9 +40,28 @@ export async function PUT(
       return apiError(403, "Non autorise.");
     }
 
+    if (trimmedName !== undefined && trimmedName !== filter.name) {
+      const existing = await prisma.savedFilter.findUnique({
+        where: {
+          userId_siteId_page_name: {
+            userId: session.userId,
+            siteId: session.activeSiteId,
+            page: filter.page,
+            name: trimmedName,
+          },
+        },
+      });
+      if (existing) {
+        return apiError(409, "Un filtre avec ce nom existe deja.");
+      }
+    }
+
     const updated = await prisma.savedFilter.update({
       where: { id },
-      data: { filters },
+      data: {
+        ...(trimmedName !== undefined && { name: trimmedName }),
+        ...(hasFilters && { filters }),
+      },
     });
 
     return NextResponse.json(updated);

@@ -36,6 +36,8 @@ export function SavedFiltersSection({
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState("");
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -55,8 +57,23 @@ export function SavedFiltersSection({
 
   async function handleUpdate() {
     if (!activeId) return;
-    await updateMutation.mutateAsync({ id: activeId, page, filters: currentFilters });
-    setActiveId(null);
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setRenameError(t("nameRequired"));
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        id: activeId,
+        page,
+        filters: currentFilters,
+        name: trimmed,
+      });
+      setRenameError("");
+      setActiveId(null);
+    } catch {
+      setRenameError(t("duplicate"));
+    }
   }
 
   function handleDelete(id: string) {
@@ -64,11 +81,14 @@ export function SavedFiltersSection({
     deleteMutation.mutate({ id, page });
   }
 
-  function handleChipClick(id: string, filters: unknown) {
+  function handleChipClick(id: string, filters: unknown, currentName: string) {
     if (activeId === id) {
       setActiveId(null);
+      setRenameError("");
     } else {
       setActiveId(id);
+      setRenameValue(currentName);
+      setRenameError("");
       onLoadFilter(filters);
     }
   }
@@ -102,7 +122,7 @@ export function SavedFiltersSection({
             <button
               key={sf.id}
               type="button"
-              onClick={() => handleChipClick(sf.id, sf.filters)}
+              onClick={() => handleChipClick(sf.id, sf.filters, sf.name)}
               className={`group shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium transition-colors ${
                 isActive
                   ? "border-primary bg-primary text-primary-foreground"
@@ -129,19 +149,38 @@ export function SavedFiltersSection({
       </div>
 
       {activeId && (
-        <button
-          type="button"
-          onClick={handleUpdate}
-          disabled={updateMutation.isPending}
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Check className="h-3 w-3" />
-          )}
-          {t("update")}
-        </button>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => {
+                setRenameValue(e.target.value);
+                setRenameError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleUpdate();
+              }}
+              placeholder={t("renamePlaceholder")}
+              maxLength={50}
+              className="flex-1 min-w-0 h-8 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <button
+              type="button"
+              onClick={handleUpdate}
+              disabled={updateMutation.isPending}
+              className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {updateMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Check className="h-3 w-3" />
+              )}
+              {t("update")}
+            </button>
+          </div>
+          {renameError && <p className="text-xs text-destructive">{renameError}</p>}
+        </div>
       )}
 
       {showInput && (

@@ -175,6 +175,7 @@
     "title": "Filtres enregistres",
     "save": "Enregistrer",
     "namePlaceholder": "Nom du filtre",
+    "renamePlaceholder": "Renommer le filtre",
     "nameRequired": "Le nom est requis",
     "duplicate": "Ce nom existe deja",
     "saved": "Filtre enregistre",

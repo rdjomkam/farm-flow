@@ -37,8 +37,18 @@ export function useUpdateSavedFilter() {
   const service = useSavedFilterService();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, page, filters }: { id: string; page: SavedFilterPage; filters: Record<string, unknown> }) => {
-      const result = await service.updateSavedFilter(id, filters);
+    mutationFn: async ({
+      id,
+      page,
+      filters,
+      name,
+    }: {
+      id: string;
+      page: SavedFilterPage;
+      filters?: Record<string, unknown>;
+      name?: string;
+    }) => {
+      const result = await service.updateSavedFilter(id, filters, name);
       if (!result.ok) throw new Error(result.error ?? "Failed to update");
       return { id, page };
     },

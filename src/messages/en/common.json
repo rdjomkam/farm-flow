@@ -175,6 +175,7 @@
     "title": "Saved filters",
     "save": "Save",
     "namePlaceholder": "Filter name",
+    "renamePlaceholder": "Rename filter",
     "nameRequired": "Name is required",
     "duplicate": "This name already exists",
     "saved": "Filter saved",

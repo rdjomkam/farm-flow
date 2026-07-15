@@ -231,10 +231,13 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             />
           </SheetContent>
         </Sheet>
-        <SavedFiltersChips
-          page="releves"
-          onLoadFilter={(f) => { updateMultipleParams(f as Partial<ReleveSearchParams>); }}
-        />
+        <div className="min-w-0 flex-1">
+          <SavedFiltersChips
+            page="releves"
+            bleed={false}
+            onLoadFilter={(f) => { updateMultipleParams(f as Partial<ReleveSearchParams>); }}
+          />
+        </div>
       </div>
 
       {/* Desktop (>= md) : barre inline */}

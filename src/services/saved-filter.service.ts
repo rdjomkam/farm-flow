@@ -24,11 +24,14 @@ export function useSavedFilterService() {
   );
 
   const updateSavedFilter = useCallback(
-    (id: string, filters: Record<string, unknown>) =>
+    (id: string, filters?: Record<string, unknown>, name?: string) =>
       call<SavedFilter>(`/api/saved-filters/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filters }),
+        body: JSON.stringify({
+          ...(filters !== undefined && { filters }),
+          ...(name !== undefined && { name }),
+        }),
       }),
     [call]
   );
