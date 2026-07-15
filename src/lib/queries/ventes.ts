@@ -23,6 +23,7 @@ import type {
   CreateVenteAlevinsDepuisVagueDTO,
   UpdateVenteDTO,
   ClotureVenteDTO,
+  ClotureVenteLigneDTO,
   VenteFilters,
 } from "@/types";
 
@@ -1269,13 +1270,24 @@ export async function deleteVente(
 /**
  * Cloture une vente apres livraison physique (transaction atomique).
  *
- * 1. Valide statut EN_PREPARATION et 0 < poidsLivreKg <= poidsTotalKg
- * 2. Calcule le poidsMoyenG global (moyenne ponderee des lignes)
- * 3. Calcule la quantiteLivree et le nombre de morts
- * 4. Si pertes > 0 : distribue les morts proportionnellement par LigneVente,
- *    cree des releves MORTALITE/AVARIE et decremente le stock par bac
- * 5. Recalcule montantTotal sur le poids livre
+ * Sprint AV (Option E) — la conversion automatique kg->morts a ete
+ * SUPPRIMEE. Le nombre de poissons morts en transport doit etre saisi
+ * explicitement par ligne (`dto.lignes[].nombreMortsTransport`). La perte
+ * de poids (deshydratation, purge) est purement comptable et ne cree
+ * JAMAIS de mortalite fictive.
+ *
+ * 1. Valide statut EN_PREPARATION
+ * 2. Pour chaque ligne : poidsLivreKg (defaut = poidsTotalKg, aucune perte)
+ *    et nombreMortsTransport (defaut 0, saisi manuellement)
+ * 3. Si nombreMortsTransport > 0 pour une ligne :
+ *    - decremente LigneVente.nombrePoissons
+ *    - decremente le releve VENTE.nombreVendus lie + trace ReleveModification
+ *    - cree un releve MORTALITE cause=AVARIE (venteId, nombreMorts)
+ * 4. Le stock bac (AssignationBac.nombreActuel) N'EST PAS modifie : les
+ *    poissons ont deja quitte le bac physiquement a la vente
+ * 5. Recalcule montantTotal sur le poids livre agrege
  * 6. Met a jour la facture et cree un SiteAuditLog
+ * 7. Verifie l'invariant AssignationBac sur les bacs impactes par une avarie
  */
 export async function cloturerVente(
   venteId: string,
@@ -1298,91 +1310,154 @@ export async function cloturerVente(
     if (vente.statut !== StatutVente.EN_PREPARATION) {
       throw new Error("Cette vente est deja cloturee");
     }
-    if (dto.poidsLivreKg <= 0) {
-      throw new Error("Le poids livre doit etre superieur a 0");
-    }
-    if (dto.poidsLivreKg > vente.poidsTotalKg) {
-      throw new Error(
-        `Le poids livre (${dto.poidsLivreKg} kg) ne peut pas depasser le poids commande (${vente.poidsTotalKg} kg)`
-      );
+    if (vente.lignes.length === 0) {
+      throw new Error("Impossible de livrer une vente sans ligne");
     }
 
-    // Calculer le poidsMoyenG global (moyenne ponderee sur toutes les lignes)
-    // poidsMoyenG = sum(poidsTotalKg_i * 1000) / sum(nombrePoissons_i)
-    const totalPoidsG = vente.lignes.reduce(
-      (sum, l) => sum + l.poidsTotalKg * 1000,
-      0
-    );
-    const totalPoissons = vente.lignes.reduce(
-      (sum, l) => sum + l.nombrePoissons,
-      0
-    );
-    const poidsMoyenG = totalPoissons > 0 ? totalPoidsG / totalPoissons : 0;
-
-    if (poidsMoyenG <= 0) {
-      throw new Error(
-        "Impossible de calculer le poids moyen : aucune ligne de vente trouvee"
-      );
-    }
-
-    const quantiteLivree = Math.min(
-      vente.quantitePoissons,
-      Math.max(1, Math.round((dto.poidsLivreKg * 1000) / poidsMoyenG))
-    );
-    const nombreMorts = vente.quantitePoissons - quantiteLivree;
-    const newMontantTotal = dto.poidsLivreKg * vente.prixUnitaireKg;
     const dateLivraison = dto.dateLivraison
       ? new Date(dto.dateLivraison)
       : new Date();
 
-    // Si pertes > 0 : la quantite commandee (deja deduite a la commande) est superieure
-    // a la quantite livree. Les poissons manquants sont des pertes reelles (morts en transport,
-    // perte de poids, etc.). Le stock bac NE CHANGE PAS car ces poissons ont deja ete deduits
-    // a la commande — ils ne reviennent pas. On met a jour le releve VENTE pour ne refleter
-    // que les poissons vendus, et on cree un releve AVARIE qui sera compte par
-    // computeVivantsByBac pour la mortalite.
-    //
-    // Bilan : VENTE releve (livres) + AVARIE releve (morts) = total commande (deja deduit)
-    if (nombreMorts > 0 && vente.lignes.length > 0) {
-      const totalLossKg = vente.poidsTotalKg - dto.poidsLivreKg;
-      let mortsRestants = nombreMorts;
+    // -------------------------------------------------------------------
+    // Construire la liste effective des lignes a traiter (retrocompat)
+    // -------------------------------------------------------------------
+    let effectiveLignes: ClotureVenteLigneDTO[];
 
-      for (let i = 0; i < vente.lignes.length; i++) {
-        const ligne = vente.lignes[i];
-        const isLast = i === vente.lignes.length - 1;
+    if (dto.lignes && dto.lignes.length > 0) {
+      effectiveLignes = dto.lignes;
 
-        // Pertes kg proportionnelles a cette ligne
-        const lineLossKg = isLast
-          ? 0 // on utilisera mortsRestants directement
-          : (ligne.poidsTotalKg / vente.poidsTotalKg) * totalLossKg;
+      // Verifier que toutes les lignes referencees appartiennent bien a la vente
+      for (const l of effectiveLignes) {
+        if (!vente.lignes.some((vl) => vl.id === l.ligneVenteId)) {
+          throw new ValidationError(
+            `Ligne de vente introuvable dans cette vente: ${l.ligneVenteId}`
+          );
+        }
+      }
 
-        // Nombre de morts pour cette ligne (avec gestion du reste sur la derniere)
-        const nombreMortsLigne = isLast
-          ? mortsRestants
-          : Math.round((lineLossKg * 1000) / ligne.poidsMoyenG);
+      // Coherence avec l'agregat legacy s'il est fourni
+      if (dto.poidsLivreKg !== undefined) {
+        const sommeLignes = vente.lignes.reduce((sum, vl) => {
+          const ligneDto = effectiveLignes.find((l) => l.ligneVenteId === vl.id);
+          const poids = ligneDto?.poidsLivreKg ?? vl.poidsTotalKg;
+          return sum + poids;
+        }, 0);
+        if (Math.abs(sommeLignes - dto.poidsLivreKg) > 0.01) {
+          throw new ValidationError(
+            `poidsLivreKg agrege (${dto.poidsLivreKg} kg) ne correspond pas a la somme des lignes (${sommeLignes.toFixed(2)} kg)`
+          );
+        }
+      }
+    } else {
+      // Retrocompat : ancien DTO sans `lignes` -> 0 morts sur toutes les lignes.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `cloturerVente(${venteId}) : DTO sans "lignes[]" (legacy) — conversion automatique kg->morts desactivee, 0 morts transport suppose.`
+      );
 
-        if (nombreMortsLigne <= 0) continue;
-
-        // PAS de restitution au bac : les poissons sont morts/perdus, ils ne reviennent pas.
-        // Le stock bac a deja ete decremente a la commande — on ne touche pas aux compteurs.
-
-        // Mettre a jour le releve VENTE pour refleter uniquement la quantite livree/vendue
-        const venteReleves = await tx.releve.findMany({
-          where: { venteId, bacId: ligne.bacId, typeReleve: TypeReleve.VENTE },
-          select: { id: true, nombreVendus: true },
+      if (dto.poidsLivreKg !== undefined) {
+        if (dto.poidsLivreKg <= 0) {
+          throw new ValidationError("Le poids livre doit etre superieur a 0");
+        }
+        if (dto.poidsLivreKg > vente.poidsTotalKg) {
+          throw new ValidationError(
+            `Le poids livre (${dto.poidsLivreKg} kg) ne peut pas depasser le poids commande (${vente.poidsTotalKg} kg)`
+          );
+        }
+        // Distribution proportionnelle du poids livre agrege, sans aucun mort
+        const totalLossKg = vente.poidsTotalKg - dto.poidsLivreKg;
+        effectiveLignes = vente.lignes.map((vl, i) => {
+          const isLast = i === vente.lignes.length - 1;
+          const lossKg = isLast
+            ? totalLossKg -
+              vente.lignes
+                .slice(0, -1)
+                .reduce((sum, l) => sum + (l.poidsTotalKg / vente.poidsTotalKg) * totalLossKg, 0)
+            : (vl.poidsTotalKg / vente.poidsTotalKg) * totalLossKg;
+          return {
+            ligneVenteId: vl.id,
+            poidsLivreKg: Math.max(0, vl.poidsTotalKg - lossKg),
+            nombreMortsTransport: 0,
+          };
         });
-        for (const vr of venteReleves) {
-          const oldVendus = vr.nombreVendus ?? 0;
-          const newVendus = Math.max(0, oldVendus - nombreMortsLigne);
-          await tx.releve.update({
-            where: { id: vr.id },
-            data: { nombreVendus: newVendus },
+      } else {
+        // Aucune info fournie : defaut = aucune perte, aucun mort
+        effectiveLignes = vente.lignes.map((vl) => ({
+          ligneVenteId: vl.id,
+          poidsLivreKg: vl.poidsTotalKg,
+          nombreMortsTransport: 0,
+        }));
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // Traiter chaque ligne : poids livre (comptable) + morts transport (saisi)
+    // -------------------------------------------------------------------
+    let totalPoidsLivre = 0;
+    let totalQuantiteLivree = 0;
+    let totalNombreMorts = 0;
+    const bacsParVague = new Map<string, Set<string>>();
+
+    for (const ligne of vente.lignes) {
+      const ligneDto = effectiveLignes.find((l) => l.ligneVenteId === ligne.id);
+      const poidsLivreLigne = ligneDto?.poidsLivreKg ?? ligne.poidsTotalKg;
+      const nombreMortsTransport = ligneDto?.nombreMortsTransport ?? 0;
+
+      if (poidsLivreLigne < 0) {
+        throw new ValidationError(
+          `poidsLivreKg de la ligne ${ligne.id} ne peut pas etre negatif`
+        );
+      }
+      if (nombreMortsTransport < 0) {
+        throw new ValidationError(
+          `nombreMortsTransport de la ligne ${ligne.id} ne peut pas etre negatif`
+        );
+      }
+      if (nombreMortsTransport > ligne.nombrePoissons) {
+        throw new ValidationError(
+          `nombreMortsTransport (${nombreMortsTransport}) ne peut pas depasser le nombre de poissons de la ligne (${ligne.nombrePoissons})`
+        );
+      }
+
+      let nouveauNombrePoissons = ligne.nombrePoissons;
+
+      if (nombreMortsTransport > 0) {
+        nouveauNombrePoissons = ligne.nombrePoissons - nombreMortsTransport;
+
+        // Decrementer la ligne de vente (poissons morts = ne comptent plus comme livres)
+        await tx.ligneVente.update({
+          where: { id: ligne.id },
+          data: { nombrePoissons: nouveauNombrePoissons, poidsLivreKg: poidsLivreLigne },
+        });
+
+        // Mettre a jour le releve VENTE lie a cette ligne + tracer la modification
+        if (ligne.bacId) {
+          const venteReleve = await tx.releve.findFirst({
+            where: { venteId, bacId: ligne.bacId, typeReleve: TypeReleve.VENTE },
+            select: { id: true, nombreVendus: true },
           });
+          if (venteReleve) {
+            const oldVendus = venteReleve.nombreVendus ?? 0;
+            const newVendus = Math.max(0, oldVendus - nombreMortsTransport);
+            await tx.releve.update({
+              where: { id: venteReleve.id },
+              data: { nombreVendus: newVendus, modifie: true },
+            });
+            await tx.releveModification.create({
+              data: {
+                releveId: venteReleve.id,
+                userId,
+                raison: "Avarie transport livraison",
+                champModifie: "nombreVendus",
+                ancienneValeur: String(oldVendus),
+                nouvelleValeur: String(newVendus),
+                siteId,
+              },
+            });
+          }
         }
 
-        // Releve MORTALITE/AVARIE : perte reelle qui impacte le stock.
-        // computeVivantsByBac soustrait nombreMorts des MORTALITE releves.
-        // Combiné avec le VENTE releve mis a jour : VENTE(livres) + AVARIE(morts) = commande totale.
+        // Releve MORTALITE cause=AVARIE : seule source de verite pour les morts transport
         await tx.releve.create({
           data: {
             date: dateLivraison,
@@ -1391,16 +1466,35 @@ export async function cloturerVente(
             bacId: ligne.bacId,
             siteId,
             userId,
-            nombreMorts: nombreMortsLigne,
+            nombreMorts: nombreMortsTransport,
             causeMortalite: CauseMortalite.AVARIE,
             venteId,
-            notes: `Perte transport vente ${vente.numero} — ${nombreMortsLigne} poissons`,
+            notes:
+              ligneDto?.motifAvarie ??
+              `Morts transport livraison vente ${vente.numero} — ${nombreMortsTransport} poissons`,
           },
         });
 
-        mortsRestants -= nombreMortsLigne;
+        if (ligne.vagueId && ligne.bacId) {
+          const set = bacsParVague.get(ligne.vagueId) ?? new Set<string>();
+          set.add(ligne.bacId);
+          bacsParVague.set(ligne.vagueId, set);
+        }
+      } else {
+        await tx.ligneVente.update({
+          where: { id: ligne.id },
+          data: { poidsLivreKg: poidsLivreLigne },
+        });
       }
+
+      totalPoidsLivre += poidsLivreLigne;
+      totalQuantiteLivree += nouveauNombrePoissons;
+      totalNombreMorts += nombreMortsTransport;
     }
+
+    const newMontantTotal = totalPoidsLivre * vente.prixUnitaireKg;
+    const nombreMorts = totalNombreMorts;
+    const quantiteLivree = totalQuantiteLivree;
 
     // Mettre a jour la vente — Prisma 7: update then fetch separately
     await tx.vente.update({
@@ -1409,14 +1503,19 @@ export async function cloturerVente(
         statut: StatutVente.LIVREE,
         poidsCommandeKg: vente.poidsTotalKg,
         quantiteCommandee: vente.quantitePoissons,
-        poidsLivreKg: dto.poidsLivreKg,
+        poidsLivreKg: totalPoidsLivre,
         quantiteLivree,
-        poidsTotalKg: dto.poidsLivreKg,
+        poidsTotalKg: totalPoidsLivre,
         quantitePoissons: quantiteLivree,
         dateLivraison,
         montantTotal: newMontantTotal,
       },
     });
+
+    // Guard : verifier l'invariant AssignationBac sur les bacs impactes par une avarie
+    for (const [vagueId, bacIds] of bacsParVague) {
+      await verifyAssignationInvariant(tx, siteId, vagueId, [...bacIds]);
+    }
 
     const updated = await tx.vente.findUniqueOrThrow({
       where: { id: venteId },
@@ -1441,6 +1540,7 @@ export async function cloturerVente(
             poidsTotalKg: true,
             poidsMoyenG: true,
             nombrePoissons: true,
+            poidsLivreKg: true,
             vague: { select: { id: true, code: true } },
             bac: { select: { id: true, nom: true } },
           },
@@ -1470,11 +1570,11 @@ export async function cloturerVente(
           clientNom: vente.client.nom,
           vagueIds: vagueCodes,
           poidsCommande: vente.poidsTotalKg,
-          poidsLivre: dto.poidsLivreKg,
-          pertePoids: vente.poidsTotalKg - dto.poidsLivreKg,
+          poidsLivre: totalPoidsLivre,
+          pertePoids: vente.poidsTotalKg - totalPoidsLivre,
           quantiteCommandee: vente.quantitePoissons,
           quantiteLivree,
-          nombreMorts,
+          nombreMortsTransport: nombreMorts,
           ancienMontant: vente.montantTotal,
           nouveauMontant: newMontantTotal,
           dateLivraison: dateLivraison.toISOString(),

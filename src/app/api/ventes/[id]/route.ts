@@ -105,7 +105,30 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     const dto = body as ClotureVenteDTO;
-    if (!dto.poidsLivreKg || dto.poidsLivreKg <= 0) {
+
+    // Sprint AV — Option E : plus d'obligation sur poidsLivreKg agrege.
+    // Au moins un moyen de determiner le poids livre doit etre fourni :
+    // soit `lignes[]`, soit l'ancien `poidsLivreKg` agrege (retrocompat).
+    if (!dto.lignes && dto.poidsLivreKg === undefined) {
+      // Aucune info de livraison fournie : comportement par defaut =
+      // aucune perte, aucun mort (cloturerVente gere ce cas), on laisse passer.
+    } else if (dto.lignes) {
+      for (let i = 0; i < dto.lignes.length; i++) {
+        const l = dto.lignes[i];
+        if (!l.ligneVenteId || typeof l.ligneVenteId !== "string") {
+          return apiError(400, `lignes[${i}].ligneVenteId est obligatoire.`);
+        }
+        if (l.poidsLivreKg !== undefined && l.poidsLivreKg < 0) {
+          return apiError(400, `lignes[${i}].poidsLivreKg ne peut pas etre negatif.`);
+        }
+        if (
+          l.nombreMortsTransport !== undefined &&
+          (typeof l.nombreMortsTransport !== "number" || l.nombreMortsTransport < 0)
+        ) {
+          return apiError(400, `lignes[${i}].nombreMortsTransport ne peut pas etre negatif.`);
+        }
+      }
+    } else if (dto.poidsLivreKg !== undefined && dto.poidsLivreKg <= 0) {
       return apiError(400, "Le poids livre doit etre superieur a 0.");
     }
 

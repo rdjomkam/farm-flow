@@ -347,6 +347,7 @@ export type {
   DepenseVenteInput,
   CreateVenteAlevinsDepuisVagueDTO,
   ClotureVenteDTO,
+  ClotureVenteLigneDTO,
   VenteListResponse,
   VenteFilters,
   CreateFactureDTO,

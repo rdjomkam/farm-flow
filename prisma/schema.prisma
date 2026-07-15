@@ -1709,6 +1709,11 @@ model LigneVente {
   poidsTotalKg   Float
   poidsMoyenG    Float
   nombrePoissons Int
+  /**
+   * Poids reellement livre pour cette ligne (Sprint AV). Nullable avant
+   * livraison. Purement comptable — ne sert jamais a calculer des morts.
+   */
+  poidsLivreKg   Float?
   siteId         String
   site           Site        @relation("SiteLignesVente", fields: [siteId], references: [id])
   createdAt      DateTime    @default(now())

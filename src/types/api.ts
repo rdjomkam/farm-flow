@@ -983,11 +983,37 @@ export interface CreateVenteAlevinsDepuisVagueDTO {
 /** Reponse liste des ventes */
 export type VenteListResponse = PaginatedResponse<Vente>;
 
-/** DTO pour cloturer la livraison d'une vente */
+/** Detail de livraison par ligne de vente (Sprint AV) */
+export interface ClotureVenteLigneDTO {
+  ligneVenteId: string;
+  /** Poids reellement livre pour cette ligne (kg). Defaut = LigneVente.poidsTotalKg (aucune perte). */
+  poidsLivreKg?: number;
+  /** Nombre de poissons morts en transport, saisi manuellement. Defaut 0. */
+  nombreMortsTransport?: number;
+  /** Motif libre de l'avarie (ex: "chaleur excessive"). */
+  motifAvarie?: string;
+}
+
+/**
+ * DTO pour cloturer la livraison d'une vente (Sprint AV — Option E).
+ *
+ * La conversion automatique kg->morts a ete supprimee : le nombre de
+ * poissons morts en transport doit etre saisi explicitement par ligne
+ * via `lignes[].nombreMortsTransport`. La perte de poids (deshydratation,
+ * purge) est purement comptable et ne cree jamais de MORTALITE.
+ */
 export interface ClotureVenteDTO {
-  poidsLivreKg: number;
   /** Date de livraison (ISO 8601). Defaut: maintenant. */
   dateLivraison?: string;
+  /** Detail de livraison par ligne. Recommande — permet la saisie explicite des morts transport. */
+  lignes?: ClotureVenteLigneDTO[];
+  /**
+   * Poids livre agrege (kg), retrocompatibilite avec l'ancien DTO (avant Sprint AV).
+   * Si `lignes` est fourni, doit correspondre a la somme de `lignes[].poidsLivreKg`
+   * (tolerance 0.01 kg). Si `lignes` est absent, distribue au prorata sur toutes
+   * les lignes de la vente avec 0 mort transport (log warning — integration a migrer).
+   */
+  poidsLivreKg?: number;
 }
 
 /** Filtres pour lister les ventes */
