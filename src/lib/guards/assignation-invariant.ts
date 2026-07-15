@@ -13,9 +13,12 @@
  *    TRANSFERT sortant (-nombreTransferes), TRANSFERT entrant (+nombreTransferes)
  *  - Opérations ajoutées : ARRIVAGE (+nombreCompte)
  *
- * La discrimination TRANSFERT entrant/sortant s'appuie sur TransfertGroupe.bacDestId :
- * si le bac figure comme destination d'un TransfertGroupe pour cette vague,
- * les TRANSFERT sont traités comme des arrivages.
+ * La discrimination TRANSFERT entrant/sortant se fait PAR RELEVÉ (pas par bac) :
+ * pour chaque relevé TRANSFERT, on résout son TransfertGroupe (via
+ * transfertGroupeId) et on compare r.bacId à bacSourceId/bacDestId. Un bac
+ * peut être source d'un TransfertGroupe et destination d'un autre dans la
+ * même vague ; discriminer par bac produirait un signe faux pour l'un des
+ * deux relevés (BUG-049).
  *
  * Tolérance : 0 strict — aucune perte de tête autorisée.
  *
@@ -103,25 +106,36 @@ export async function verifyAssignationInvariant(
       nombreCompte: true,
       nombreTransferes: true,
       nombreVendus: true,
+      transfertGroupeId: true,
     },
     orderBy: { date: "asc" },
   });
 
   // -------------------------------------------------------------------------
-  // 3. Identifier les bacs entrants (TRANSFERT miroir côté destination)
-  //    via TransfertGroupe.bacDestId pour cette vague
+  // 3. Identifier, PAR RELEVÉ, si un TRANSFERT est entrant ou sortant.
+  //    On ne peut pas discriminer par bac : un bac peut être source d'un
+  //    TransfertGroupe et destination d'un autre dans la même vague (BUG-049).
+  //    On charge donc les TransfertGroupe référencés par les relevés et on
+  //    compare bacId du relevé à bacSourceId/bacDestId du groupe.
   // -------------------------------------------------------------------------
-  const transfertGroupes = await tx.transfertGroupe.findMany({
-    where: {
-      vagueDestId: vagueId,
-      bacDestId: { in: bacIds },
-    },
-    select: { bacDestId: true },
-  });
-  const entrantBacIds = new Set(
-    transfertGroupes
-      .map((tg) => tg.bacDestId)
-      .filter((id): id is string => id !== null),
+  const transfertGroupeIds = Array.from(
+    new Set(
+      releves
+        .map((r) => r.transfertGroupeId)
+        .filter((id): id is string => id !== null && id !== undefined),
+    ),
+  );
+  const transfertGroupes = transfertGroupeIds.length
+    ? await tx.transfertGroupe.findMany({
+        where: { id: { in: transfertGroupeIds } },
+        select: { id: true, bacSourceId: true, bacDestId: true },
+      })
+    : [];
+  const tgById = new Map(
+    transfertGroupes.map((tg) => [
+      tg.id,
+      { bacSourceId: tg.bacSourceId, bacDestId: tg.bacDestId },
+    ]),
   );
 
   // -------------------------------------------------------------------------
@@ -152,7 +166,19 @@ export async function verifyAssignationInvariant(
       // (ex. calibrage qui crée AssignationBac + COMPTAGE simultanément).
       return releveDate >= assignationDate;
     });
-    const isEntrant = entrantBacIds.has(ab.bacId);
+    // Discrimination TRANSFERT entrant/sortant PAR RELEVÉ (pas par bac) :
+    // un bac peut être source d'un TransfertGroupe et destination d'un autre
+    // dans la même vague, donc deux relevés TRANSFERT du même bac peuvent
+    // avoir des signes opposés (BUG-049).
+    const transfertSigne = (r: (typeof releveBac)[number]): number => {
+      const tg = r.transfertGroupeId ? tgById.get(r.transfertGroupeId) : null;
+      if (tg?.bacDestId === r.bacId) return 1; // entrant
+      if (tg?.bacSourceId === r.bacId) return -1; // sortant
+      // Fallback orphelin (transfertGroupeId null / SetNull ou groupe introuvable) :
+      // on traite comme sortant pour préserver la sémantique historique et
+      // éviter les faux positifs (comportement pré-fix conservé par défaut).
+      return -1;
+    };
 
     // Trouver le dernier COMPTAGE (override de base de calcul)
     let lastComptageDate: Date | null = null;
@@ -181,9 +207,7 @@ export async function verifyAssignationInvariant(
         } else if (r.typeReleve === TypeReleve.VENTE) {
           expected -= r.nombreVendus ?? 0;
         } else if (r.typeReleve === TypeReleve.TRANSFERT) {
-          expected += isEntrant
-            ? (r.nombreTransferes ?? 0)
-            : -(r.nombreTransferes ?? 0);
+          expected += transfertSigne(r) * (r.nombreTransferes ?? 0);
         } else if (r.typeReleve === TypeReleve.ARRIVAGE) {
           expected += r.nombreCompte ?? 0;
         }
@@ -197,9 +221,7 @@ export async function verifyAssignationInvariant(
         } else if (r.typeReleve === TypeReleve.VENTE) {
           expected -= r.nombreVendus ?? 0;
         } else if (r.typeReleve === TypeReleve.TRANSFERT) {
-          expected += isEntrant
-            ? (r.nombreTransferes ?? 0)
-            : -(r.nombreTransferes ?? 0);
+          expected += transfertSigne(r) * (r.nombreTransferes ?? 0);
         } else if (r.typeReleve === TypeReleve.ARRIVAGE) {
           expected += r.nombreCompte ?? 0;
         }

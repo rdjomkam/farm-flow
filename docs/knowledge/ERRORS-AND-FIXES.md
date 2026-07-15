@@ -1471,6 +1471,41 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-101 — Guard `verifyAssignationInvariant` : `isEntrant` calculé par bac au lieu de par relevé (bacs source+dest dans la même vague)
+**Sprint :** GD (BUG-049) | **Date :** 2026-07-15
+**Sévérité :** Critique
+**Fichier(s) :** `src/lib/guards/assignation-invariant.ts`, `src/lib/calculs.ts` (`computeVivantsByBac`, dette liée)
+
+**Symptôme :**
+En production, `Vague-26-03-Prep` / Bac 11 : toute vente antidatée déclenchait une erreur du guard `verifyAssignationInvariant` du type `Invariant cassé... AssignationBac.nombreActuel=X mais le calcul des opérations donne Y (écart Z)`. L'opération était bloquée alors que les données étaient en réalité cohérentes.
+
+**Cause racine :**
+Le guard calculait `entrantBacIds = Set<bacDestId>` **une seule fois pour tout le replay**, puis appliquait ce flag binaire à TOUS les relevés `TRANSFERT` d'un bac donné. Un bac qui est **source** d'un `TransfertGroupe` ET **destination** d'un autre (fréquent en intra-vague : Bac 08 → Bac 12 → Bac 11) voyait donc tous ses relevés `TRANSFERT` signés identiquement (`+1` ou `-1` pour tous), au lieu d'un signe différent selon le relevé concerné. Le replay produisait un solde faux, et le guard levait une `ConservationError` erronée.
+
+`isEntrant` était une propriété du **bac**, alors que la question "ce relevé de transfert est-il un flux entrant ou sortant" ne peut être répondue qu'au niveau du **relevé** (via son `transfertGroupeId` + comparaison à `bacSourceId`/`bacDestId` du `TransfertGroupe` référencé).
+
+**Fix :**
+- Charger les `TransfertGroupe` par les `id` réellement référencés dans les relevés du replay (au lieu de filtrer par `vagueDestId`, ce qui ratait certains groupes).
+- Construire `Map<transfertGroupeId, { bacSourceId, bacDestId }>` (`tgById`).
+- Ajouter une fonction `transfertSigne(releve)` qui, pour chaque relevé `TRANSFERT`, compare le `bacId` du relevé à `bacSourceId`/`bacDestId` du groupe référencé et retourne `+1` (entrant), `-1` (sortant), ou signale un orphelin si le groupe est introuvable.
+- Fallback : `transfertGroupeId == null` → traité comme sortant (comportement historique conservé pour compatibilité).
+- Data-fix rétroactif ponctuel : `scripts/data-fixes/gd3-vague-26-03-prep-transferts.sql` (3 relevés `COMPTAGE` déguisés en transferts remplacés par 2 vrais `TransfertGroupe`, chaîne Bac 08 → Bac 12 → Bac 11). Rapport : `docs/analysis/GD3-data-fix-report.md`.
+
+**Tests de non-régression :**
+`src/__tests__/assignation-invariant-guard.test.ts` — 16/16 verts. Cas ajouté crucial : un bac source d'un `TG-A` ET destination d'un `TG-B` dans la même vague doit être discriminé relevé par relevé (`1000 - 150 + 400 = 1250`), pas globalement par bac.
+
+**Leçon / Règle :**
+Toute logique "ce mouvement est-il entrant ou sortant pour ce bac" doit être décidée **par relevé/mouvement**, jamais par bac de façon globale.
+- **Anti-pattern** : `Set<bacId>` (ou tout flag booléen) construit une seule fois pour classifier tous les mouvements d'un bac.
+- **Pattern correct** : `Map<transfertGroupeId, { bacSourceId, bacDestId }>` + comparaison au `bacId` de **chaque relevé individuellement**.
+Ce pattern s'applique à toute fonction qui reconstitue un solde par replay de mouvements (guards d'invariant, calculs de vivants, agrégations de stock avec entrées/sorties).
+
+**⚠️ Dette technique connue (non corrigée dans ce sprint, hors scope) :** `src/lib/calculs.ts` lignes ~330-345, fonction `computeVivantsByBac`, contient le **même anti-pattern** via `transfertDestBacIds` (Set construit une fois par bac). Cette fonction est utilisée dans **16 fichiers** (dashboards, indicateurs, pages finances). Elle peut silencieusement afficher des "vivants" incorrects pour tout bac qui est à la fois source et destination de transferts dans la même vague. À traiter dans un sprint dédié — grep `transfertDestBacIds` et `computeVivantsByBac` pour lister les call sites avant intervention.
+
+**Références :** [BUG-049](../bugs/BUG-049.md) | [docs/reviews/review-story-GD.1.md](../reviews/review-story-GD.1.md) | [docs/analysis/GD3-data-fix-report.md](../analysis/GD3-data-fix-report.md)
+
+---
+
 ### ERR-078 — Rapport de test produit avant le commit final : résultats "NON CONFORME" sur du code pourtant correct
 **Sprint :** 54 | **Date :** 2026-04-07
 **Sévérité :** Basse

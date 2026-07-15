@@ -98,7 +98,7 @@ describe("verifyAssignationInvariant", () => {
     mockAssignationBacFindMany.mockResolvedValueOnce([
       { id: "ab-1", bacId: BAC_A, nombreActuel: 800, nombreInitial: 1000 },
     ]);
-    // Relevés : 1 TRANSFERT sortant de 200
+    // Relevés : 1 TRANSFERT sortant de 200 (BAC_A = source du groupe tg-1)
     mockReleveFindMany.mockResolvedValueOnce([
       {
         bacId: BAC_A,
@@ -108,10 +108,12 @@ describe("verifyAssignationInvariant", () => {
         nombreCompte: null,
         nombreTransferes: 200,
         nombreVendus: null,
+        transfertGroupeId: "tg-1",
       },
     ]);
-    // Pas de TransfertGroupe entrant pour ce bac
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-1", bacSourceId: BAC_A, bacDestId: BAC_B },
+    ]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -137,9 +139,12 @@ describe("verifyAssignationInvariant", () => {
         nombreCompte: null,
         nombreTransferes: 200,
         nombreVendus: null,
+        transfertGroupeId: "tg-1",
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-1", bacSourceId: BAC_A, bacDestId: BAC_B },
+    ]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -164,11 +169,12 @@ describe("verifyAssignationInvariant", () => {
         nombreCompte: null,
         nombreTransferes: 500,
         nombreVendus: null,
+        transfertGroupeId: "tg-2",
       },
     ]);
-    // BAC_B est un bac de destination (entrant)
+    // BAC_B est destination du groupe tg-2 (entrant)
     mockTransfertGroupeFindMany.mockResolvedValueOnce([
-      { bacDestId: BAC_B },
+      { id: "tg-2", bacSourceId: BAC_A, bacDestId: BAC_B },
     ]);
 
     await expect(
@@ -221,7 +227,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: null,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -257,7 +262,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: null,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -284,7 +288,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: null,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -311,7 +314,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: 300,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -336,9 +338,12 @@ describe("verifyAssignationInvariant", () => {
         nombreCompte: null,
         nombreTransferes: 500,
         nombreVendus: null,
+        transfertGroupeId: "tg-3",
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([{ bacDestId: BAC_B }]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-3", bacSourceId: BAC_A, bacDestId: BAC_B },
+    ]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_B]),
@@ -380,7 +385,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: null,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -417,7 +421,6 @@ describe("verifyAssignationInvariant", () => {
         nombreVendus: null,
       },
     ]);
-    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
 
     await expect(
       verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
@@ -432,5 +435,127 @@ describe("verifyAssignationInvariant", () => {
     ).resolves.toBeUndefined();
 
     expect(mockReleveFindMany).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // BUG-049 — Discrimination TRANSFERT entrant/sortant PAR RELEVÉ
+  // -------------------------------------------------------------------------
+
+  it("BUG-049 : traite un TRANSFERT comme SORTANT quand le bac est bacSourceId du TG (intra-vague)", async () => {
+    // BAC_A source du TG intra-vague : 1000 initial - 300 transféré = 700 attendu
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-1", bacId: BAC_A, nombreActuel: 700, nombreInitial: 1000 },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_A,
+        typeReleve: "TRANSFERT",
+        date: new Date("2026-01-02"),
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 300,
+        nombreVendus: null,
+        transfertGroupeId: "tg-intra",
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-intra", bacSourceId: BAC_A, bacDestId: BAC_B },
+    ]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
+    ).resolves.toBeUndefined();
+  });
+
+  it("BUG-049 : traite un TRANSFERT comme ENTRANT quand le bac est bacDestId du TG (intra-vague)", async () => {
+    // BAC_B destination du TG intra-vague : 0 initial + 300 transféré = 300 attendu
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-2", bacId: BAC_B, nombreActuel: 300, nombreInitial: 0 },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_B,
+        typeReleve: "TRANSFERT",
+        date: new Date("2026-01-02"),
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 300,
+        nombreVendus: null,
+        transfertGroupeId: "tg-intra",
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-intra", bacSourceId: BAC_A, bacDestId: BAC_B },
+    ]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_B]),
+    ).resolves.toBeUndefined();
+  });
+
+  it("BUG-049 : régression — un bac source de TG-A ET destination de TG-B dans la même vague a une discrimination correcte par relevé", async () => {
+    // BAC_A : source de TG-A (-150) et destination de TG-B (+400) → 1000 - 150 + 400 = 1250 attendu
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-1", bacId: BAC_A, nombreActuel: 1250, nombreInitial: 1000 },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      // TRANSFERT sortant : BAC_A est bacSourceId de tg-a
+      {
+        bacId: BAC_A,
+        typeReleve: "TRANSFERT",
+        date: new Date("2026-01-02"),
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 150,
+        nombreVendus: null,
+        transfertGroupeId: "tg-a",
+      },
+      // TRANSFERT entrant : BAC_A est bacDestId de tg-b
+      {
+        bacId: BAC_A,
+        typeReleve: "TRANSFERT",
+        date: new Date("2026-01-03"),
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 400,
+        nombreVendus: null,
+        transfertGroupeId: "tg-b",
+      },
+    ]);
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([
+      { id: "tg-a", bacSourceId: BAC_A, bacDestId: BAC_B },
+      { id: "tg-b", bacSourceId: BAC_B, bacDestId: BAC_A },
+    ]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
+    ).resolves.toBeUndefined();
+  });
+
+  it("BUG-049 : fallback — un relevé TRANSFERT avec transfertGroupeId=null est traité comme sortant", async () => {
+    // Orphelin (SetNull) : 1000 initial - 200 (fallback sortant) = 800 attendu
+    mockAssignationBacFindMany.mockResolvedValueOnce([
+      { id: "ab-1", bacId: BAC_A, nombreActuel: 800, nombreInitial: 1000 },
+    ]);
+    mockReleveFindMany.mockResolvedValueOnce([
+      {
+        bacId: BAC_A,
+        typeReleve: "TRANSFERT",
+        date: new Date("2026-01-02"),
+        nombreMorts: null,
+        nombreCompte: null,
+        nombreTransferes: 200,
+        nombreVendus: null,
+        transfertGroupeId: null,
+      },
+    ]);
+    // Pas de transfertGroupeId → tx.transfertGroupe.findMany n'est pas appelé
+    mockTransfertGroupeFindMany.mockResolvedValueOnce([]);
+
+    await expect(
+      verifyAssignationInvariant(buildTx(), SITE_ID, VAGUE_ID, [BAC_A]),
+    ).resolves.toBeUndefined();
+
+    expect(mockTransfertGroupeFindMany).not.toHaveBeenCalled();
   });
 });
