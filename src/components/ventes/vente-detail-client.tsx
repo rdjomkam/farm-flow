@@ -662,7 +662,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                   </div>
 
                   {pertePoids > 0 && (
-                    <p className="text-xs text-orange-600 flex items-center gap-1.5">
+                    <p className="text-xs text-warning flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                       {t("livraisonAvarie.pertePoidsLabel", { kg: pertePoids.toFixed(1) })}
                     </p>
@@ -681,7 +681,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className={clotureTotalMortsTransport > 0 ? "text-orange-600" : "text-muted-foreground"}>
+                <span className={clotureTotalMortsTransport > 0 ? "text-warning" : "text-muted-foreground"}>
                   {t("livraisonAvarie.totalMortsLabel", { nb: clotureTotalMortsTransport })}
                 </span>
               </div>
@@ -966,7 +966,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                 <span>{vente.poidsTotalKg} kg</span>
               </div>
               {vente.poidsCommandeKg != null && vente.poidsCommandeKg > vente.poidsTotalKg && (
-                <div className="flex justify-between text-orange-600">
+                <div className="flex justify-between text-warning">
                   <span>{t("ventes.detail.pertePoids")}</span>
                   <span>{(vente.poidsCommandeKg - vente.poidsTotalKg).toFixed(1)} kg</span>
                 </div>
@@ -1021,7 +1021,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                       <span>{r.nombreVendus} {t("ventes.detail.poissonsVendus")}</span>
                     )}
                     {isAvarie && r.nombreMorts != null && (
-                      <span className="text-orange-600">-{r.nombreMorts} {t("ventes.detail.poissonsPerdus")}</span>
+                      <span className="text-warning">-{r.nombreMorts} {t("ventes.detail.poissonsPerdus")}</span>
                     )}
                   </div>
                 </div>

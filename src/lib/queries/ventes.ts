@@ -1188,7 +1188,7 @@ export async function deleteVente(
       if (!r.bacId) continue;
       const key = `${r.bacId}__${r.vagueId}`;
       // VENTE releves contribute nombreVendus, MORTALITE/AVARIE contribute nombreMorts
-      const count = r.typeReleve === "VENTE"
+      const count = r.typeReleve === TypeReleve.VENTE
         ? (r.nombreVendus ?? 0)
         : (r.nombreMorts ?? 0);
       const existing = restoreMap.get(key);
