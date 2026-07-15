@@ -401,6 +401,7 @@
       "repartitionCategorieDesc": "Share of each item in total cost",
       "detailAlimentation": "Feed details",
       "detailAlimentationDesc": "Quantities and costs by feed type consumed",
+      "detailAlimentationSacs": "≈ {sacs} bags ({contenance} kg/bag)",
       "depensesDirectes": "Direct expenses",
       "depensesDirectesDesc": "Expenses specific to this batch",
       "depensesPartagees": "Shared expenses (multi-batch)",

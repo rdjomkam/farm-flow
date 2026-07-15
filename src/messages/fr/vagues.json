@@ -401,6 +401,7 @@
       "repartitionCategorieDesc": "Part de chaque poste dans le coût total",
       "detailAlimentation": "Détail alimentation",
       "detailAlimentationDesc": "Quantités et coûts par type d'aliment consommé",
+      "detailAlimentationSacs": "≈ {sacs} sacs ({contenance} kg/sac)",
       "depensesDirectes": "Dépenses directes",
       "depensesDirectesDesc": "Dépenses spécifiques à cette vague",
       "depensesPartagees": "Dépenses partagées (multi-vagues)",

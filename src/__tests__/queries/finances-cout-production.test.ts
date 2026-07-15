@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getCoutProductionVague } from "@/lib/queries/finances";
-import { CategorieDepense } from "@/types";
+import { CategorieDepense, UniteStock } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks Prisma
@@ -187,7 +187,7 @@ describe("getCoutProductionVague — aliments avec contenance (sac de 25 kg)", (
         produit: {
           nom: "Farine de poisson",
           prixUnitaire: 15000,
-          uniteAchat: "SAC",
+          uniteAchat: UniteStock.SACS,
           contenance: 25,
         },
       },
@@ -201,6 +201,68 @@ describe("getCoutProductionVague — aliments avec contenance (sac de 25 kg)", (
     expect(result.detailAliments[0].prixUnitaire).toBeCloseTo(600, 2);
     expect(result.detailAliments[0].quantite).toBeCloseTo(10, 3);
     expect(result.detailAliments[0].total).toBe(6000);
+    // SC.1 : nombreSacs = quantite / contenance = 10 / 25 = 0.4
+    expect(result.detailAliments[0].contenanceSac).toBe(25);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(0.4, 1);
+  });
+
+  it("calcule nombreSacs = quantite / contenance (186 kg / 15 kg/sac = 12.4 sacs)", async () => {
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 186,
+        produit: {
+          nom: "Granulé 6mm",
+          prixUnitaire: 18000,
+          uniteAchat: UniteStock.SACS,
+          contenance: 15,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments).toHaveLength(1);
+    expect(result.detailAliments[0].contenanceSac).toBe(15);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(12.4, 1);
+  });
+
+  it("retourne nombreSacs = null quand contenance est null (même en SACS)", async () => {
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 50,
+        produit: {
+          nom: "Granulé sans contenance",
+          prixUnitaire: 800,
+          uniteAchat: UniteStock.SACS,
+          contenance: null,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments[0].nombreSacs).toBeNull();
+    expect(result.detailAliments[0].contenanceSac).toBeNull();
+  });
+
+  it("retourne nombreSacs = null quand uniteAchat !== SACS (même avec contenance)", async () => {
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 20,
+        produit: {
+          nom: "Aliment en litres",
+          prixUnitaire: 500,
+          uniteAchat: UniteStock.LITRE,
+          contenance: 10,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments[0].nombreSacs).toBeNull();
+    // contenanceSac reflete toujours la contenance du produit, independamment de l'unite
+    expect(result.detailAliments[0].contenanceSac).toBe(10);
   });
 
   it("utilise le prixUnitaire directement si pas d'uniteAchat (produit en vrac)", async () => {

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
+import { CategorieDepense, StatutDepense, StatutVague, UniteStock } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 import { getLineage, getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne, effectivePoidsVente, totalDepensesVente } from "@/lib/ventes-helpers";
@@ -781,6 +781,8 @@ export interface CoutProductionDetailAliment {
   quantite: number;
   prixUnitaire: number;
   total: number;
+  contenanceSac: number | null;
+  nombreSacs: number | null;
 }
 
 export interface CoutProductionDepenseDirecte {
@@ -1356,7 +1358,13 @@ export async function getCoutProductionVague(
   // Aggreger par produit pour detailAliments
   const alimentsMap = new Map<
     string,
-    { quantite: number; prixUnitaire: number; total: number }
+    {
+      quantite: number;
+      prixUnitaire: number;
+      total: number;
+      uniteAchat: string | null;
+      contenance: number | null;
+    }
   >();
 
   let coutAliments = 0;
@@ -1369,6 +1377,8 @@ export async function getCoutProductionVague(
       quantite: 0,
       prixUnitaire: prixBase,
       total: 0,
+      uniteAchat: rc.produit.uniteAchat,
+      contenance: rc.produit.contenance,
     };
     existing.quantite += rc.quantite;
     existing.total += ligneTotal;
@@ -1377,12 +1387,21 @@ export async function getCoutProductionVague(
 
   const detailAliments: CoutProductionDetailAliment[] = Array.from(
     alimentsMap.entries()
-  ).map(([nom, data]) => ({
-    produit: nom,
-    quantite: Math.round(data.quantite * 1000) / 1000,
-    prixUnitaire: Math.round(data.prixUnitaire * 100) / 100,
-    total: Math.round(data.total),
-  }));
+  ).map(([nom, data]) => {
+    const contenanceSac = data.contenance ?? null;
+    const nombreSacs =
+      data.uniteAchat === UniteStock.SACS && contenanceSac && contenanceSac > 0
+        ? data.quantite / contenanceSac
+        : null;
+    return {
+      produit: nom,
+      quantite: Math.round(data.quantite * 1000) / 1000,
+      prixUnitaire: Math.round(data.prixUnitaire * 100) / 100,
+      total: Math.round(data.total),
+      contenanceSac,
+      nombreSacs: nombreSacs !== null ? Math.round(nombreSacs * 10) / 10 : null,
+    };
+  });
 
   // -------------------------------------------------------------------------
   // 4. Calcul depenses directes (hors aliments, hors commandes)

@@ -239,6 +239,14 @@ export function CoutProductionCard({ data, vagueId, hasParents = false, pertePoi
                           <p className="text-sm font-medium leading-tight">{aliment.produit}</p>
                           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                             <span>Qté : {formatNumber(aliment.quantite)} kg</span>
+                            {aliment.nombreSacs !== null && (
+                              <span>
+                                {t("sections.detailAlimentationSacs", {
+                                  sacs: aliment.nombreSacs.toFixed(1),
+                                  contenance: aliment.contenanceSac ?? 0,
+                                })}
+                              </span>
+                            )}
                             <span>Prix unitaire : {formatNumber(Math.round(aliment.prixUnitaire))} FCFA/kg</span>
                           </div>
                           <p className="text-sm font-semibold tabular-nums text-right">

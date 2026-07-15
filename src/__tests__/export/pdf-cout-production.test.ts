@@ -103,6 +103,8 @@ function buildFullCoutProduction(
         quantite: 200,
         prixUnitaire: 600,
         total: 120000,
+        contenanceSac: 15,
+        nombreSacs: 13.3,
       },
     ],
     depensesDirectes: [

@@ -619,7 +619,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colAlProduit]}>{a.produit}</Text>
-                <Text style={[styles.tableCell, styles.colAlQte]}>{a.quantite}</Text>
+                <Text style={[styles.tableCell, styles.colAlQte]}>
+                  {a.quantite} kg{a.nombreSacs !== null ? ` (≈ ${a.nombreSacs.toFixed(1)} sacs)` : ""}
+                </Text>
                 <Text style={[styles.tableCell, styles.colAlPrix]}>
                   {formatMontant(a.prixUnitaire)}
                 </Text>

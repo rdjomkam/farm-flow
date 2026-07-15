@@ -48,6 +48,7 @@ vi.mock("next-intl", () => ({
       "sections.repartitionCategorieDesc": "Part de chaque poste dans le coût total",
       "sections.detailAlimentation": "Détail alimentation",
       "sections.detailAlimentationDesc": "Quantités et coûts par type d'aliment consommé",
+      "sections.detailAlimentationSacs": "≈ {sacs} sacs ({contenance} kg/sac)",
       "sections.depensesDirectes": "Dépenses directes",
       "sections.depensesDirectesDesc": "Dépenses spécifiques à cette vague",
       "sections.depensesPartagees": "Dépenses partagées (multi-vagues)",
@@ -403,6 +404,55 @@ describe("CoutProductionCard — Labels des catégories", () => {
     const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
     fireEvent.click(expandBtn);
     expect(screen.getByText("60.0 %")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite SC.2 — Détail alimentation : nombre de sacs
+// ---------------------------------------------------------------------------
+
+describe("CoutProductionCard — Détail alimentation (nombre de sacs)", () => {
+  const dataWithSacs: CoutProductionVague = {
+    ...dataWithCosts,
+    detailAliments: [
+      {
+        produit: "Granulé 6mm",
+        quantite: 186,
+        prixUnitaire: 1200,
+        total: 223200,
+        contenanceSac: 15,
+        nombreSacs: 12.4,
+      },
+    ],
+  };
+
+  const dataWithoutSacs: CoutProductionVague = {
+    ...dataWithCosts,
+    detailAliments: [
+      {
+        produit: "Granulé en vrac",
+        quantite: 50,
+        prixUnitaire: 700,
+        total: 35000,
+        contenanceSac: null,
+        nombreSacs: null,
+      },
+    ],
+  };
+
+  it("affiche le nombre de sacs quand nombreSacs n'est pas null", () => {
+    render(<CoutProductionCard data={dataWithSacs} vagueId="vague-1" />);
+    const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
+    fireEvent.click(expandBtn);
+    expect(screen.getByText(/sacs/)).toBeInTheDocument();
+  });
+
+  it("n'affiche pas de mention de sacs quand nombreSacs est null", () => {
+    render(<CoutProductionCard data={dataWithoutSacs} vagueId="vague-1" />);
+    const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
+    fireEvent.click(expandBtn);
+    expect(screen.getByText("Granulé en vrac")).toBeInTheDocument();
+    expect(screen.queryByText(/sacs/)).not.toBeInTheDocument();
   });
 });
 
