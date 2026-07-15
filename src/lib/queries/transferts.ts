@@ -265,13 +265,20 @@ export async function createTransfert(
             nombreTransferes: true,
             nombreCompte: true,
             date: true,
+            transfertGroupeId: true,
           },
         });
+
+        // La vague source peut elle-même être destination d'un transfert antérieur
+        // (chaîne de transferts) : charger ses TransfertGroupe pour discriminer
+        // correctement les relevés TRANSFERT entrant/sortant PAR RELEVÉ (GV.1-GV.2).
+        const transfertGroupesByIdSource = await getTransfertGroupesByVague(siteId, vagueSourceId, tx);
 
         const vivantsParBac = computeVivantsByBac(
           bacsForCalc,
           relevesSource,
-          vague.nombreInitial
+          vague.nombreInitial,
+          { transfertGroupesById: transfertGroupesByIdSource }
         );
 
         // Groupes liés à cette vague source
@@ -585,7 +592,7 @@ export async function createTransfert(
 
         // TRANSFERT miroir sur la vague destination (arrivage côté GROSSISSEMENT).
         // Permet à computeVivantsByBac de traiter ce bac comme entrant quand
-        // transfertDestBacIds est fourni par les appelants sur vague GROSSISSEMENT.
+        // transfertGroupesById est fourni par les appelants sur vague GROSSISSEMENT.
         if (nombrePoissons > 0) {
           await tx.releve.create({
             data: {
@@ -984,6 +991,7 @@ export async function updateTransfertGroupe(
           nombreTransferes: true,
           nombreCompte: true,
           date: true,
+          transfertGroupeId: true,
         },
       });
 
@@ -991,10 +999,16 @@ export async function updateTransfertGroupe(
         where: { id: groupe.vagueSource.id },
         select: { nombreInitial: true },
       });
+      const transfertGroupesByIdSource = await getTransfertGroupesByVague(
+        siteId,
+        groupe.vagueSource.id,
+        tx
+      );
       const vivantsParBac = computeVivantsByBac(
         bacsForCalc,
         relevesForCalc,
-        vagueSourceFull?.nombreInitial ?? 0
+        vagueSourceFull?.nombreInitial ?? 0,
+        { transfertGroupesById: transfertGroupesByIdSource }
       );
 
       if (nouveauBacSourceId !== null) {
@@ -1280,36 +1294,79 @@ export async function getLineage(
 }
 
 // ---------------------------------------------------------------------------
-// 6b. getTransfertDestBacIds
+// 6b. getTransfertGroupesByVague
 // ---------------------------------------------------------------------------
 
 /**
- * Retourne le Set des bacDestId pour une vague destination.
+ * Retourne une Map<transfertGroupeId, {bacSourceId, bacDestId}> pour tous les
+ * TransfertGroupe rattachés à une vague, en tant que source OU destination.
  *
- * Utilisé par les appelants de computeVivantsByBac pour discriminer les relevés
- * TRANSFERT entrants (arrivages) des sortants sur une vague GROSSISSEMENT.
+ * Utilisé par les appelants de computeVivantsByBac (GV.1-GV.2) pour discriminer,
+ * PAR RELEVÉ (via son transfertGroupeId), si un relevé TRANSFERT est entrant
+ * (bacId === bacDestId) ou sortant (bacId === bacSourceId). Un bac peut être
+ * source d'un TransfertGroupe et destination d'un autre dans la même vague :
+ * discriminer par bac (ancien getTransfertDestBacIds) produisait un signe faux
+ * pour l'un des deux relevés (BUG-049 / ERR-101, pattern jumeau du guard
+ * verifyAssignationInvariant — GD.1).
  *
  * @param siteId - Site ID (filtre multi-tenant via transfert.siteId)
- * @param vagueDestId - ID de la vague GROSSISSEMENT destination
- * @returns Set<bacDestId> — peut être vide si aucun TransfertGroupe n'existe
+ * @param vagueId - ID de la vague (source ou destination)
+ * @param client - Client Prisma optionnel (passer `tx` pour lire dans une transaction en cours — R4)
+ * @returns Map<transfertGroupeId, {bacSourceId, bacDestId}> — peut être vide
  */
-export async function getTransfertDestBacIds(
+export async function getTransfertGroupesByVague(
   siteId: string,
-  vagueDestId: string
-): Promise<Set<string>> {
-  const groupes = await prisma.transfertGroupe.findMany({
+  vagueId: string,
+  client: Pick<typeof prisma, "transfertGroupe"> = prisma
+): Promise<Map<string, { bacSourceId: string | null; bacDestId: string | null }>> {
+  const groupes = await client.transfertGroupe.findMany({
     where: {
-      vagueDestId,
       transfert: { siteId },
+      OR: [{ vagueSourceId: vagueId }, { vagueDestId: vagueId }],
     },
-    select: { bacDestId: true },
+    select: { id: true, bacSourceId: true, bacDestId: true },
   });
 
-  return new Set(
-    groupes
-      .map((g) => g.bacDestId)
-      .filter((id): id is string => id != null)
+  return new Map(
+    groupes.map((g) => [g.id, { bacSourceId: g.bacSourceId, bacDestId: g.bacDestId }])
   );
+}
+
+/**
+ * Variante batchée de getTransfertGroupesByVague pour plusieurs vagues en une requête
+ * (évite le N+1 dans les agrégations dashboard/indicateurs sur beaucoup de vagues actives).
+ *
+ * @param siteId - Site ID (filtre multi-tenant via transfert.siteId)
+ * @param vagueIds - IDs des vagues (source ou destination)
+ * @returns Map<vagueId, Map<transfertGroupeId, {bacSourceId, bacDestId}>>
+ */
+export async function getTransfertGroupesByVagues(
+  siteId: string,
+  vagueIds: string[]
+): Promise<Map<string, Map<string, { bacSourceId: string | null; bacDestId: string | null }>>> {
+  const result = new Map<string, Map<string, { bacSourceId: string | null; bacDestId: string | null }>>();
+  if (vagueIds.length === 0) return result;
+
+  const groupes = await prisma.transfertGroupe.findMany({
+    where: {
+      transfert: { siteId },
+      OR: [{ vagueSourceId: { in: vagueIds } }, { vagueDestId: { in: vagueIds } }],
+    },
+    select: { id: true, vagueSourceId: true, vagueDestId: true, bacSourceId: true, bacDestId: true },
+  });
+
+  const vagueIdSet = new Set(vagueIds);
+  for (const g of groupes) {
+    const entry = { bacSourceId: g.bacSourceId, bacDestId: g.bacDestId };
+    for (const vId of [g.vagueSourceId, g.vagueDestId]) {
+      if (!vagueIdSet.has(vId)) continue;
+      const map = result.get(vId) ?? new Map<string, { bacSourceId: string | null; bacDestId: string | null }>();
+      map.set(g.id, entry);
+      result.set(vId, map);
+    }
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

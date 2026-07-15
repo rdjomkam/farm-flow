@@ -30,6 +30,7 @@ import { Permission, StatutAlerte, StatutActivation, StatutVague, TypeReleve } f
 import { prisma } from "@/lib/db";
 import { formatNum } from "@/lib/format";
 import { computeNombreVivantsVague, calculerTauxSurvie } from "@/lib/calculs";
+import { getTransfertGroupesByVagues } from "@/lib/queries/transferts";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -74,6 +75,7 @@ export default async function IngenieurClientDetailPage({
           nombreCompte: true,
           bacId: true,
           notes: true,
+          transfertGroupeId: true,
         },
       },
       // ADR-043 Phase 3: lire nombreInitial depuis AssignationBac
@@ -114,6 +116,12 @@ export default async function IngenieurClientDetailPage({
     vaguesDetail.map((v) => getIndicateursVague(clientSiteId, v.id))
   );
 
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour toutes les vagues en une requête (batch)
+  const transfertGroupesByVagueMapMonitoring = await getTransfertGroupesByVagues(
+    clientSiteId,
+    vaguesDetail.map((v) => v.id)
+  );
+
   // Calculer les indicateurs par vague pour affichage serveur
   const vaguesAvecStats = vaguesDetail.map((vague, i) => {
     const biometries = vague.releves.filter(
@@ -128,7 +136,9 @@ export default async function IngenieurClientDetailPage({
       nom: a.bac.nom,
       nombreInitial: a.nombreInitial,
     }));
-    const nombreVivants = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial, {
+      transfertGroupesById: transfertGroupesByVagueMapMonitoring.get(vague.id),
+    });
     // Sprint SV fix: tauxSurvie = (initial - morts) / initial — ventes ne sont pas des morts
     const tauxSurvie = calculerTauxSurvie(vague.nombreInitial, totalMortalites);
 

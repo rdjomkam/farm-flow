@@ -78,6 +78,10 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     $transaction: (...args: unknown[]) =>
       mockTransaction(...(args as Parameters<typeof mockTransaction>)),
+    // GV.1-GV.2 — TransfertGroupe de la vague (appelé hors transaction, via prisma global)
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   },
 }));
 

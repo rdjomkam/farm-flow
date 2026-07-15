@@ -8,7 +8,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibrageFormClient } from "@/components/calibrage/calibrage-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { Permission, StatutVague, TypeSystemeBac } from "@/types";
@@ -42,19 +42,19 @@ export default async function NouveauCalibragePage({
 
   // BUG-048 : utiliser computeVivantsByBac comme source de verite unique
   // (Bac.nombrePoissons n'est pas decremente par les mortalites)
-  const [relevesForVivants, transfertDestBacIds] = await Promise.all([
+  const [relevesForVivants, transfertGroupesById] = await Promise.all([
     prisma.releve.findMany({
       where: { vagueId: id, siteId: session.activeSiteId },
       orderBy: { date: "asc" },
-      select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, bacId: true },
+      select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, bacId: true, transfertGroupeId: true },
     }),
-    getTransfertDestBacIds(session.activeSiteId, id),
+    getTransfertGroupesByVague(session.activeSiteId, id),
   ]);
   const vivantsByBac = computeVivantsByBac(
     vague.bacs,
     relevesForVivants,
     vague.nombreInitial,
-    { transfertDestBacIds }
+    { transfertGroupesById }
   );
 
   const bacs: BacResponse[] = vague.bacs.map((b) => ({

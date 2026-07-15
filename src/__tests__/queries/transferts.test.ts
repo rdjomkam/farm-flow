@@ -87,6 +87,7 @@ const mockTransaction = vi.fn(
       },
       transfertGroupe: {
         findFirst: (...args: unknown[]) => mockTransfertGroupeFindFirst(...args),
+        findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
         update: (...args: unknown[]) => mockTransfertGroupeUpdate(...args),
         findUniqueOrThrow: (...args: unknown[]) =>
           mockTransfertGroupeFindUniqueOrThrow(...args),
@@ -300,6 +301,9 @@ function setupHappyPathMocks(overrides?: {
   // releves MORTALITE/COMPTAGE pour computeVivantsByBac (aucun par défaut → vivants = nombreInitial)
   mockReleveFindMany.mockResolvedValue([]);
 
+  // GV.1-GV.2 — TransfertGroupe de la vague source (aucun par défaut, pas de chaîne de transferts)
+  mockTransfertGroupeFindMany.mockResolvedValue([]);
+
   // Étape 6 — existence assignation dest + Étape 9 — increment
   mockAssignationBacFindFirst
     .mockResolvedValueOnce({ id: assignationDest.id }) // étape 6
@@ -338,6 +342,9 @@ function setupHappyPathMocks(overrides?: {
 describe("computeWeightedAverage — via createTransfert Mode A", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1)
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   it("calcule la moyenne pondérée correctement pour deux groupes", async () => {
@@ -351,6 +358,7 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ nombreActuel: 800 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
     mockAssignationBacFindFirst
       .mockResolvedValueOnce({ id: "ad-1" })
       .mockResolvedValueOnce({ id: "ad-1" });
@@ -405,6 +413,7 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
       .mockResolvedValueOnce([{ id: "assign-src-001", nombreActuel: 1000 }]) // étape 8 (distribution sans bac)
       .mockResolvedValueOnce([{ nombreActuel: 999 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
     // Pas de bacDestId → pas d'appels findFirst pour dest
     mockAssignationBacFindFirst.mockResolvedValue(null);
     mockTransfertCreate.mockResolvedValue({ id: TRANSFERT_ID });
@@ -440,6 +449,7 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
       .mockResolvedValueOnce([{ ...assignationSrc, nombreInitial: 1000, nombreActuel: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ nombreActuel: 800 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
     // findFirst pour dest : 2 groupes → 2 appels étape 6 + 2 appels étape 9
     mockAssignationBacFindFirst
       .mockResolvedValueOnce({ id: "ad-1" }) // étape 6 bac-d1
@@ -483,6 +493,11 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
 describe("createTransfert", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // GV.1-GV.2 — TransfertGroupe de la vague source par défaut (pas de chaîne de transferts)
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1) au-delà
+    // des mockResolvedValueOnce explicitement queués par chaque test pour étapes 5/8/12.
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   // -------------------------------------------------------------------------
@@ -956,6 +971,9 @@ describe("listTransfertsForVague", () => {
 describe("updateTransfertGroupe", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1)
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   const fakeGroupe = {
@@ -1015,6 +1033,7 @@ describe("updateTransfertGroupe", () => {
     ]);
     mockReleveFindMany.mockResolvedValue([]);
     mockVagueFindFirst.mockResolvedValue({ nombreInitial: 1000 });
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
 
     // Étape 6a : décrémenter source (R4)
     // (réutilise mockAssignationBacUpdateMany — second appel)
@@ -1093,6 +1112,7 @@ describe("updateTransfertGroupe", () => {
     ]);
     mockReleveFindMany.mockResolvedValue([]);
     mockVagueFindFirst.mockResolvedValue({ nombreInitial: 1000 });
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
 
     // Nouvelles valeurs : 5000 poissons (violation)
     const dto: UpdateTransfertGroupeDTO = { raison: "Test", nombrePoissons: 5000 };
@@ -1293,6 +1313,10 @@ describe("canDeleteVague", () => {
 describe("CS.2 — createTransfert crée relevé TRANSFERT miroir côté destination", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // GV.1-GV.2 — TransfertGroupe de la vague source par défaut (pas de chaîne de transferts)
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1)
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   it("TC33 — createTransfert crée un relevé TRANSFERT côté source et un miroir côté dest", async () => {

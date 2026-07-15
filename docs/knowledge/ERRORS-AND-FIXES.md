@@ -1506,6 +1506,39 @@ Ce pattern s'applique à toute fonction qui reconstitue un solde par replay de m
 
 ---
 
+### ERR-102 — `computeVivantsByBac` discrimination TRANSFERT par relevé (bug jumeau ERR-101)
+**Sprint :** GV | **Date :** 2026-07-15
+**Sévérité :** Critique
+**Fichier(s) :** `src/lib/calculs.ts` (`computeVivantsByBac`), `src/lib/queries/transferts.ts` (`getTransfertGroupesByVague`, `getTransfertGroupesByVagues`), ~22 callers (dashboards, indicateurs, finances, analytics, pages, API)
+
+**Symptôme :**
+Follow-up du sprint GD/ERR-101 : la dette technique documentée dans ERR-101 s'est confirmée. Nombre de "vivants" affiché faux, **silencieusement** (pas d'erreur levée), pour tout bac qui est à la fois source d'un `TransfertGroupe` et destination d'un autre dans la même vague. Impact indirect en cascade sur biomasse, FCR, coûts/kg, ADG/PER, SGR, et alertes de ration.
+
+**Cause racine :**
+Même anti-pattern qu'ERR-101, dans une fonction sœur. `computeVivantsByBac` recevait `options.transfertDestBacIds: Set<string>`, construit une seule fois par `getTransfertDestBacIds` pour discriminer entrant/sortant **au niveau du bac** (flag binaire), au lieu de discriminer **au niveau du relevé** via son `transfertGroupeId`.
+
+**Fix :**
+- Nouvelle fonction `getTransfertGroupesByVague(siteId, vagueId): Promise<Map<tgId, {bacSourceId, bacDestId}>>` et sa variante batchée `getTransfertGroupesByVagues` (`src/lib/queries/transferts.ts:1317-1370`).
+- `computeVivantsByBac` (`src/lib/calculs.ts:280-387`) prend désormais `options.transfertGroupesById: Map<...>`, et les relevés passés en entrée doivent inclure `transfertGroupeId: string | null` — champ rendu **obligatoire** dans le type pour forcer, via le compilateur TypeScript, la migration de tous les call sites.
+- Comparaison par relevé : `tg?.bacDestId === r.bacId` → entrant ; `tg?.bacSourceId === r.bacId` → sortant ; fallback (orphelin/`transfertGroupeId` null) → sortant (compat historique).
+- 22 callers migrés, dont `analytics.ts` qui avait été manqué lors d'un premier passage — attrapé en review, corrigé en batch avec `getTransfertGroupesByVagues`.
+
+**Tests de non-régression :**
+`src/__tests__/calculs-transfert-entrant.test.ts`, describe `"GV.3 — discrimination PAR RELEVÉ"`. Suite complète : 119 échecs (baseline pré-fix) → 66 échecs (net -53, dont 5 pré-existants du sprint GD.1 corrigés en bonus par ce fix).
+
+**Leçon / Règle :**
+Identique à ERR-101 — **toute logique "entrant vs sortant" doit être décidée par relevé/mouvement, jamais par entité globale (bac, produit, etc.)**.
+- Anti-pattern : `Set<bacId>` construit une seule fois pour classifier tous les mouvements d'un ensemble de bacs.
+- Pattern correct : `Map<transfertGroupeId, {bacSourceId, bacDestId}>` + comparaison au `bacId` de chaque relevé individuellement.
+- Astuce process : quand on corrige ce pattern, rendre le champ discriminant (ex: `transfertGroupeId`) **obligatoire** (non-optionnel) dans le type TypeScript de la fonction corrigée — cela force le compilateur à faire remonter tous les call sites non migrés, plutôt que de compter sur une revue manuelle qui peut en manquer (cf. `analytics.ts` manqué au 1er passage).
+- Avant toute modification de `computeVivantsByBac` ou logique de transfert similaire : grep `transfertGroupeId`, `transfertGroupesById`, `TransfertGroupe` pour lister tous les call sites concernés.
+
+**Lien :** Voir ERR-101 (même pattern, sur le guard `verifyAssignationInvariant`). Ces deux entrées sont solidaires — ERR-101 documentait cette dette comme non traitée ; ERR-102 la clôt.
+
+**Références :** Sprint GV, [docs/sprints/SPRINT-GV-VIVANTS-DISCRIMINATION.md](../sprints/SPRINT-GV-VIVANTS-DISCRIMINATION.md)
+
+---
+
 ### ERR-078 — Rapport de test produit avant le commit final : résultats "NON CONFORME" sur du code pourtant correct
 **Sprint :** 54 | **Date :** 2026-04-07
 **Sévérité :** Basse

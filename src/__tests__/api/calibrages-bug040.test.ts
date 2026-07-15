@@ -36,6 +36,8 @@ const mockAssignationBacUpdateMany = vi.fn();
 const mockAssignationBacCreate = vi.fn();
 const mockReleveCreate = vi.fn();
 const mockReleveFindMany = vi.fn();
+// GV.1-GV.2 — TransfertGroupe de la vague (appelé hors transaction, via prisma global)
+const mockTransfertGroupeFindMany = vi.fn().mockResolvedValue([]);
 
 /** Simule prisma.$transaction en exécutant le callback avec un tx mock complet */
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
@@ -65,6 +67,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       create: (...args: unknown[]) => mockReleveCreate(...args),
       findMany: (...args: unknown[]) => mockReleveFindMany(...args),
     },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   };
   return fn(tx);
 });
@@ -72,6 +77,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
 vi.mock("@/lib/db", () => ({
   prisma: {
     $transaction: (...args: unknown[]) => mockTransaction(...args as Parameters<typeof mockTransaction>),
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   },
 }));
 
@@ -199,6 +207,9 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     vi.clearAllMocks();
     // BUG-048 : par defaut, pas de releves → vivants = nombreInitial des bacs
     mockReleveFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1) au-delà
+    // des mockResolvedValueOnce explicitement queués par chaque test.
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   it("accepte un bac source sans Bac.vagueId mais avec AssignationBac active pour la vague", async () => {
@@ -267,7 +278,8 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     ).resolves.toBeDefined();
 
     // Vérifier que la recherche des bacs destinations passe par assignationBac.findMany
-    expect(mockAssignationBacFindMany).toHaveBeenCalledTimes(4);
+    // (4 appels métier + 1 appel du guard verifyAssignationInvariant — GD.1)
+    expect(mockAssignationBacFindMany).toHaveBeenCalledTimes(5);
     const destCall = mockAssignationBacFindMany.mock.calls[1][0];
     expect(destCall.where.bacId).toEqual({ in: [bacDestSanAssignation.id] });
     expect(destCall.where.vagueId).toBe(VAGUE_ID);
@@ -294,6 +306,9 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     vi.clearAllMocks();
     // BUG-048 : par defaut, pas de releves → vivants = nombreInitial des bacs
     mockReleveFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1) au-delà
+    // des mockResolvedValueOnce explicitement queués par chaque test.
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   it("crée une AssignationBac pour un bac destination sans assignation préalable", async () => {
@@ -463,6 +478,9 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
     vi.clearAllMocks();
     // Remplacer la transaction par celle dédiée au patch
     mockTransaction.mockImplementation(mockTransactionPatch);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1) au-delà
+    // des mockResolvedValueOnce explicitement queués par chaque test.
+    mockAssignationBacFindManyPatch.mockResolvedValue([]);
   });
 
   afterEach(() => {

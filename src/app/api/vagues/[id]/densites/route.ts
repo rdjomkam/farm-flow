@@ -6,7 +6,7 @@ import { calculerDensiteBac } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite, type StatutDensite } from "@/lib/density-thresholds";
 import { apiError, handleApiError } from "@/lib/api-utils";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 
 export interface BacDensiteResponse {
   bacId: string;
@@ -53,6 +53,7 @@ export async function GET(
             nombreMorts: true,
             nombreCompte: true,
             bacId: true,
+            transfertGroupeId: true,
           },
         },
       },
@@ -82,6 +83,7 @@ export async function GET(
       nombreCompte: r.nombreCompte ?? null,
       poidsMoyen: r.poidsMoyen ?? null,
       date: r.date,
+      transfertGroupeId: r.transfertGroupeId ?? null,
     }));
 
     const allBacsSimple = vagueBacs.map((b) => ({
@@ -89,10 +91,10 @@ export async function GET(
       nombreInitial: b.nombreInitial,
     }));
 
-    // Charger la config elevage du site et les bacs destination de transferts en parallèle
-    const [configElevage, transfertDestBacIds] = await Promise.all([
+    // Charger la config elevage du site et les TransfertGroupe de la vague en parallèle
+    const [configElevage, transfertGroupesById] = await Promise.all([
       getConfigElevageDefaut(auth.activeSiteId),
-      getTransfertDestBacIds(auth.activeSiteId, id),
+      getTransfertGroupesByVague(auth.activeSiteId, id),
     ]);
     const configPourSeuils = configElevage ?? CONFIG_ELEVAGE_DEFAULTS;
 
@@ -102,7 +104,7 @@ export async function GET(
         allBacsSimple,
         relevesAdaptes,
         vagueRaw.nombreInitial,
-        { transfertDestBacIds }
+        { transfertGroupesById }
       );
 
       const statut = getStatutDensite(

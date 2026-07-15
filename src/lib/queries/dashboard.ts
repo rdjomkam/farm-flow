@@ -17,6 +17,7 @@ import {
   computeNombreVivantsVague,
   computeVivantsByBac,
 } from "@/lib/calculs";
+import { getTransfertGroupesByVagues } from "@/lib/queries/transferts";
 import { getConfigElevageDefaut } from "@/lib/queries/config-elevage";
 import { CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import {
@@ -56,6 +57,7 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
           nombreCompte: true,
           quantiteAliment: true,
           bacId: true,
+          transfertGroupeId: true,
         },
       },
       // FIX : utiliser LigneVente (source de vérité multi-vague) et non Vente
@@ -88,23 +90,11 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
     prisma.assignationBac.count({ where: { siteId, dateFin: null } }),
   ]);
 
-  // CS.2 : charger les transfertDestBacIds pour toutes les vagues actives en une requête
-  const transfertDestBacIdsMap = new Map<string, Set<string>>();
-  if (vaguesActives.length > 0) {
-    const groupes = await prisma.transfertGroupe.findMany({
-      where: {
-        vagueDestId: { in: vaguesActives.map((v) => v.id) },
-        transfert: { siteId },
-      },
-      select: { vagueDestId: true, bacDestId: true },
-    });
-    for (const g of groupes) {
-      if (!g.bacDestId) continue;
-      const set = transfertDestBacIdsMap.get(g.vagueDestId) ?? new Set<string>();
-      set.add(g.bacDestId);
-      transfertDestBacIdsMap.set(g.vagueDestId, set);
-    }
-  }
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour toutes les vagues actives en une requête
+  const transfertGroupesByVagueMap = await getTransfertGroupesByVagues(
+    siteId,
+    vaguesActives.map((v) => v.id)
+  );
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
     // ADR-043 Phase 3: build bacs list from active assignations
@@ -114,11 +104,11 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       nombreInitial: a.nombreInitial,
     }));
 
-    const transfertDestBacIds = transfertDestBacIdsMap.get(v.id) ?? new Set<string>();
+    const transfertGroupesById = transfertGroupesByVagueMap.get(v.id);
 
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
     const mortalitesDash = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertGroupesById });
     const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
@@ -135,7 +125,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
 
     if (hasPerBacReleves && bacsFromAssignations.length > 0) {
       // Per-bac weighted calculation (same logic as indicateurs.ts)
-      const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
+      const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertGroupesById });
       const biometriesParBac = new Map<string, (typeof biometries)[0]>();
       for (const b of biometries) {
         if (b.bacId) biometriesParBac.set(b.bacId, b);
@@ -229,23 +219,11 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
 
   const now = new Date();
 
-  // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête
-  const transfertDestBacIdsMapProj = new Map<string, Set<string>>();
-  if (vaguesActives.length > 0) {
-    const groupesProj = await prisma.transfertGroupe.findMany({
-      where: {
-        vagueDestId: { in: vaguesActives.map((v) => v.id) },
-        transfert: { siteId },
-      },
-      select: { vagueDestId: true, bacDestId: true },
-    });
-    for (const g of groupesProj) {
-      if (!g.bacDestId) continue;
-      const set = transfertDestBacIdsMapProj.get(g.vagueDestId) ?? new Set<string>();
-      set.add(g.bacDestId);
-      transfertDestBacIdsMapProj.set(g.vagueDestId, set);
-    }
-  }
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour toutes les vagues en une requête
+  const transfertGroupesByVagueMapProj = await getTransfertGroupesByVagues(
+    siteId,
+    vaguesActives.map((v) => v.id)
+  );
 
   return vaguesActives.map((v) => {
     // ADR-043 Phase 3: build bacs list from active assignations
@@ -255,14 +233,14 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       nombreInitial: a.nombreInitial,
     }));
 
-    const transfertDestBacIds = transfertDestBacIdsMapProj.get(v.id) ?? new Set<string>();
+    const transfertGroupesById = transfertGroupesByVagueMapProj.get(v.id);
 
     const biometriesRaw = v.releves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertGroupesById });
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
 
     const joursEcoules = Math.floor(
@@ -270,7 +248,7 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
     );
 
     // Agréger les biométries par date (moyenne pondérée par vivantsByBac)
-    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds });
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial, { transfertGroupesById });
     const groupedByDate = new Map<string, typeof biometriesRaw>();
     for (const r of biometriesRaw) {
       const key = new Date(r.date).toISOString().slice(0, 10);
@@ -463,24 +441,9 @@ export async function getDashboardIndicateurs(
   // de l'interface ConfigElevage — seuls les champs numeriques scalaires sont utilises.
   const benchmarks = getBenchmarks(configRaw as unknown as ConfigElevage | null);
 
-  // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour toutes les vagues en une requête
   const vagueIds = vagues.map((v) => v.id);
-  const transfertDestBacIdsMapIndic = new Map<string, Set<string>>();
-  if (vagueIds.length > 0) {
-    const groupesIndic = await prisma.transfertGroupe.findMany({
-      where: {
-        vagueDestId: { in: vagueIds },
-        transfert: { siteId },
-      },
-      select: { vagueDestId: true, bacDestId: true },
-    });
-    for (const g of groupesIndic) {
-      if (!g.bacDestId) continue;
-      const set = transfertDestBacIdsMapIndic.get(g.vagueDestId) ?? new Set<string>();
-      set.add(g.bacDestId);
-      transfertDestBacIdsMapIndic.set(g.vagueDestId, set);
-    }
-  }
+  const transfertGroupesByVagueMapIndic = await getTransfertGroupesByVagues(siteId, vagueIds);
 
   // Charger TOUTES les activites correctives en une seule requete (anti N+1)
   const activitesCorrectives = await prisma.activite.findMany({
@@ -511,7 +474,7 @@ export async function getDashboardIndicateurs(
       nombreInitial: a.nombreInitial,
     }));
 
-    const transfertDestBacIdsIndic = transfertDestBacIdsMapIndic.get(v.id) ?? new Set<string>();
+    const transfertGroupesByIdIndic = transfertGroupesByVagueMapIndic.get(v.id);
 
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
     const mortalites = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
@@ -521,7 +484,7 @@ export async function getDashboardIndicateurs(
     const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
-    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertDestBacIds: transfertDestBacIdsIndic });
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { transfertGroupesById: transfertGroupesByIdIndic });
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(

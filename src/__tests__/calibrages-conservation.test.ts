@@ -82,6 +82,10 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     $transaction: (...args: unknown[]) =>
       mockTransaction(...(args as Parameters<typeof mockTransaction>)),
+    // GV.1-GV.2 — TransfertGroupe de la vague (appelé hors transaction, via prisma global)
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   },
 }));
 
@@ -165,6 +169,8 @@ function makeCreateDTO(redistribues: number, morts: number) {
  */
 function setupCreateMocks(vivants: number) {
   vi.resetAllMocks();
+  // GV.1-GV.2 — TransfertGroupe de la vague par défaut (pas de chaîne de transferts)
+  mockTransfertGroupeFindMany.mockResolvedValue([]);
   mockVagueFindFirst.mockResolvedValue(makeVague());
   mockAssignationBacFindMany
     .mockResolvedValueOnce(makeSourceAssignation(vivants))    // 1. sourceAssignations
@@ -259,6 +265,8 @@ describe("createCalibrage — conservation stricte", () => {
   it("rejette si bac source absent de allBacsVague (fallback supprime)", async () => {
     // allAssignationsVague ne contient PAS BAC_SOURCE_ID → vivantsByBac.get(BAC_SOURCE_ID) = undefined
     vi.resetAllMocks();
+    // GV.1-GV.2 — TransfertGroupe de la vague par défaut (pas de chaîne de transferts)
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
     mockVagueFindFirst.mockResolvedValue(makeVague());
     mockAssignationBacFindMany
       .mockResolvedValueOnce(makeSourceAssignation(5973))   // 1. sourceAssignations

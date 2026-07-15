@@ -16,7 +16,7 @@ import {
   evaluateRules,
   generateActivities,
 } from "./index";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVagues } from "@/lib/queries/transferts";
 
 // ---------------------------------------------------------------------------
 // runEngineForSite
@@ -64,6 +64,7 @@ export async function runEngineForSite(
             bacId: true,
             pourcentageRenouvellement: true,
             volumeRenouvele: true,
+            transfertGroupeId: true,
           },
         },
         configElevage: true,
@@ -141,15 +142,12 @@ export async function runEngineForSite(
     createdAt: Date;
   }>;
 
-  // ---- Charger les bacs destination de transferts entrants pour chaque vague ----
-  // Nécessaire pour que calculerDensiteBac ne soustrait pas les relevés TRANSFERT miroirs
-  // comme des sorties sur les vagues GROSSISSEMENT.
-  const transfertDestBacIdsMap = new Map<string, Set<string>>();
-  await Promise.all(
-    vaguesActives.map(async (vague) => {
-      const destBacIds = await getTransfertDestBacIds(siteId, vague.id);
-      transfertDestBacIdsMap.set(vague.id, destBacIds);
-    })
+  // ---- Charger les TransfertGroupe pour chaque vague active (GV.1-GV.2) ----
+  // Nécessaire pour que calculerDensiteBac discrimine, PAR RELEVÉ, les TRANSFERT
+  // entrants des sortants sur les vagues GROSSISSEMENT.
+  const transfertGroupesByVagueMap = await getTransfertGroupesByVagues(
+    siteId,
+    vaguesActives.map((v) => v.id)
   );
 
   // ---- Construire les contextes (per-bac) ----
@@ -166,8 +164,8 @@ export async function runEngineForSite(
     const relevesCast = vague.releves as unknown as Parameters<typeof buildEvaluationContext>[1];
     const stockCast = produits as unknown as Parameters<typeof buildEvaluationContext>[2];
     const configCast = (vague.configElevage ?? null) as unknown as Parameters<typeof buildEvaluationContext>[3];
-    const transfertDestBacIds = transfertDestBacIdsMap.get(vague.id) ?? new Set<string>();
-    const densiteOptions = { transfertDestBacIds };
+    const transfertGroupesById = transfertGroupesByVagueMap.get(vague.id);
+    const densiteOptions = { transfertGroupesById };
 
     // ADR-043 Phase 3 : mapper les assignations en bacs pour le moteur d'alertes
     const mappedBacs = vague.assignations.map((a) => ({

@@ -4,7 +4,7 @@ import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { ConservationError } from "@/lib/errors";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
@@ -71,7 +71,7 @@ export async function createCalibrage(
   // que computeVivantsByBac distingue les TRANSFERT entrants des sortants.
   // Pour une vague GROSSISSEMENT (destination de transferts), sans ce Set
   // les relevés TRANSFERT miroirs sont comptés comme sortants → vivants = 0.
-  const transfertDestBacIds = await getTransfertDestBacIds(siteId, data.vagueId);
+  const transfertGroupesById = await getTransfertGroupesByVague(siteId, data.vagueId);
 
   return prisma.$transaction(async (tx) => {
     // 1. Verify vague belongs to site and is EN_COURS
@@ -160,13 +160,13 @@ export async function createCalibrage(
         },
       },
       orderBy: { date: "asc" },
-      select: { bacId: true, typeReleve: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, date: true },
+      select: { bacId: true, typeReleve: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, nombreCompte: true, date: true, transfertGroupeId: true },
     });
     const vivantsByBac = computeVivantsByBac(
       allBacsVague,
       relevesForVivants,
       vague.nombreInitial,
-      { transfertDestBacIds }
+      { transfertGroupesById }
     );
 
     // Build lookup map for source bacs validation (CF.1 — distingue Cas A et Cas B)

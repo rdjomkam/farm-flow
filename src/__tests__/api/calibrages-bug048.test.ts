@@ -29,6 +29,8 @@ const mockAssignationBacUpdateMany = vi.fn();
 const mockAssignationBacCreate = vi.fn();
 const mockReleveCreate = vi.fn();
 const mockReleveFindMany = vi.fn();
+// GV.1-GV.2 — TransfertGroupe de la vague (appelé hors transaction, via prisma global)
+const mockTransfertGroupeFindMany = vi.fn().mockResolvedValue([]);
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
@@ -55,6 +57,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       create: (...args: unknown[]) => mockReleveCreate(...args),
       findMany: (...args: unknown[]) => mockReleveFindMany(...args),
     },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   };
   return fn(tx);
 });
@@ -62,6 +67,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
 vi.mock("@/lib/db", () => ({
   prisma: {
     $transaction: (...args: unknown[]) => mockTransaction(...args as Parameters<typeof mockTransaction>),
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
+    },
   },
 }));
 
@@ -202,6 +210,11 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
   beforeEach(() => {
     // resetAllMocks() vide aussi les queues mockResolvedValueOnce (clearAllMocks ne le fait pas)
     vi.resetAllMocks();
+    // GV.1-GV.2 — TransfertGroupe de la vague par défaut (pas de chaîne de transferts)
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
+    // Default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1) au-delà
+    // des 4 mockResolvedValueOnce queués par setupAssignationBacFindMany().
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   it("accepte un calibrage qui redistribue exactement les vivants reels (apres mortalites)", async () => {

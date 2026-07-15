@@ -14,7 +14,7 @@ import {
 } from "@/lib/gompertz";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 
 const DEFAULT_TARGET_WEIGHT_G = 800;
 
@@ -71,6 +71,7 @@ export async function GET(
         nombreTransferes: true,
         nombreCompte: true,
         bacId: true,
+        transfertGroupeId: true,
       },
       orderBy: { date: "asc" },
     });
@@ -81,8 +82,8 @@ export async function GET(
       id: a.bac.id,
       nombreInitial: a.nombreInitial,
     }));
-    const transfertDestBacIds = await getTransfertDestBacIds(auth.activeSiteId, vagueId);
-    const vivantsByBac = computeVivantsByBac(vagueBacs, allReleves, vague.nombreInitial, { transfertDestBacIds });
+    const transfertGroupesById = await getTransfertGroupesByVague(auth.activeSiteId, vagueId);
+    const vivantsByBac = computeVivantsByBac(vagueBacs, allReleves, vague.nombreInitial, { transfertGroupesById });
 
     // 4. Aggregate biometries by date (weighted average per unique date)
     const biometriesRaw = allReleves.filter(

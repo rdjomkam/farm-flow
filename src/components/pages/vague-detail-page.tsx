@@ -28,7 +28,7 @@ import { BacPerformanceSection } from "@/components/vagues/bac-performance-secti
 import { formatNum } from "@/lib/format";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
 import { StatutVague, StatutVente, TypeReleve, CategorieProduit, Permission, TypeVague } from "@/types";
-import { getLineage, getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getLineage, getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import type { Bac, BacResponse, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
@@ -166,6 +166,7 @@ export default async function VagueDetailPage({
       nombreVendus: true,
       nombreTransferes: true,
       quantiteAliment: true,
+      transfertGroupeId: true,
       consommations: {
         select: {
           quantite: true,
@@ -174,9 +175,10 @@ export default async function VagueDetailPage({
       },
     },
   });
-  // CS.2 : charger les bacDestIds pour discriminer TRANSFERT entrants (vague GROSSISSEMENT)
-  const transfertDestBacIds = await getTransfertDestBacIds(session.activeSiteId, id);
-  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForPerf, vague.nombreInitial, { transfertDestBacIds });
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour discriminer, PAR RELEVÉ,
+  // les TRANSFERT entrants (vague GROSSISSEMENT) des sortants.
+  const transfertGroupesById = await getTransfertGroupesByVague(session.activeSiteId, id);
+  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForPerf, vague.nombreInitial, { transfertGroupesById });
 
   // Compute per-bac performance data
   const bacPerfData = computeBacPerformance({
@@ -186,6 +188,7 @@ export default async function VagueDetailPage({
     nombreInitialVague: vague.nombreInitial,
     dateDebutVague: new Date(vague.dateDebut),
     poidsMoyenInitial: vague.poidsMoyenInitial,
+    transfertGroupesById,
   });
   const biometries = biometriesData.filter(
     (r) => r.poidsMoyen !== null

@@ -54,11 +54,16 @@ const mockPrismaBacUpdate = vi.fn();
 const mockPrismaTransaction = vi.fn();
 // ADR-043 Phase 3: mock pour AssignationBac.findMany (vérifie les bacs déjà assignés)
 const mockAssignationBacFindMany = vi.fn();
+// GV.1-GV.2 — TransfertGroupe des vagues (getTransfertGroupesByVagues appelé dans GET /api/vagues)
+const mockTransfertGroupeFindMany = vi.fn().mockResolvedValue([]);
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     vague: {
       count: (...args: unknown[]) => mockPrismaVagueCount(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
     $transaction: (fn: (tx: unknown) => Promise<unknown>) => mockPrismaTransaction(fn),
   },

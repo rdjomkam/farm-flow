@@ -160,9 +160,11 @@ function addGuardMocksForFirstTransfer(transferDate: Date) {
     .mockResolvedValueOnce([
       { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 50, nombreInitial: 100, dateAssignation: null },
     ])
-    // guard dest: nombreInitial=50, dateAssignation=transferDate → TRANSFERT même jour exclu
+    // guard dest: dateAssignation=transferDate → CX.2 (>=) : le TRANSFERT entrant créé ce même
+    // jour est INCLUS. nombreInitial doit donc être 0 (baseline avant ce premier transfert vers
+    // un bac vierge) pour éviter le double comptage → attendu 0+50=50 ✓
     .mockResolvedValueOnce([
-      { id: "ab-dest-1", bacId: BAC_DEST_ID, nombreActuel: 50, nombreInitial: 50, dateAssignation: transferDate },
+      { id: "ab-dest-1", bacId: BAC_DEST_ID, nombreActuel: 50, nombreInitial: 0, dateAssignation: transferDate },
     ]);
   mockReleveFindMany
     // guard source: TRANSFERT sortant 50
@@ -175,6 +177,7 @@ function addGuardMocksForFirstTransfer(transferDate: Date) {
         nombreCompte: null,
         nombreTransferes: 50,
         nombreVendus: null,
+        transfertGroupeId: "groupe-1",
       },
     ])
     // guard dest: TRANSFERT entrant à transferDate → exclu
@@ -187,9 +190,14 @@ function addGuardMocksForFirstTransfer(transferDate: Date) {
         nombreCompte: null,
         nombreTransferes: 50,
         nombreVendus: null,
+        transfertGroupeId: "groupe-1",
       },
     ]);
-  mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
+  // GV.1-GV.2 — TransfertGroupe résolu PAR RELEVÉ (via transfertGroupeId) : bacSourceId/bacDestId
+  // permettent au guard de discriminer entrant/sortant, pas de discrimination par bac.
+  mockTransfertGroupeFindMany.mockResolvedValue([
+    { id: "groupe-1", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,8 +278,11 @@ describe("CG.2 — bacDestId obligatoire sur TransfertGroupe", () => {
       .mockResolvedValueOnce([ // guard source
         { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 50, nombreInitial: 100, dateAssignation: null },
       ])
-      .mockResolvedValueOnce([ // guard dest : nombreActuel=100, nombreInitial=50 (from 1st transfer)
-        { id: "ab-dest-existing", bacId: BAC_DEST_ID, nombreActuel: 100, nombreInitial: 50, dateAssignation: firstTransferDate },
+      .mockResolvedValueOnce([ // guard dest : nombreActuel=100 (50 du 1er transfert + 50 du 2e)
+        // dateAssignation=firstTransferDate → CX.2 (>=) : les 2 TRANSFERT entrants sont inclus.
+        // nombreInitial doit donc être 0 (baseline avant le tout premier transfert vers ce bac
+        // vierge) pour éviter le double comptage → attendu 0+50+50=100 ✓
+        { id: "ab-dest-existing", bacId: BAC_DEST_ID, nombreActuel: 100, nombreInitial: 0, dateAssignation: firstTransferDate },
       ]);
     mockReleveFindMany
       .mockResolvedValueOnce([ // guard source: TRANSFERT sortant 50 → attendu 50
@@ -283,28 +294,36 @@ describe("CG.2 — bacDestId obligatoire sur TransfertGroupe", () => {
           nombreCompte: null,
           nombreTransferes: 50,
           nombreVendus: null,
+          transfertGroupeId: "groupe-2",
         },
       ])
-      .mockResolvedValueOnce([ // guard dest: 1er TRANSFERT exclu, 2ème inclus → nombreInitial(50)+50=100
+      .mockResolvedValueOnce([ // guard dest: CX.2 (>=) : les 2 TRANSFERT entrants sont inclus → nombreInitial(0)+50+50=100
         {
           bacId: BAC_DEST_ID,
           typeReleve: "TRANSFERT",
-          date: firstTransferDate, // exclu
+          date: firstTransferDate, // inclus (>= dateAssignation=firstTransferDate)
           nombreMorts: null,
           nombreCompte: null,
           nombreTransferes: 50,
           nombreVendus: null,
+          transfertGroupeId: "groupe-1",
         },
         {
           bacId: BAC_DEST_ID,
           typeReleve: "TRANSFERT",
-          date: secondTransferDate, // inclus (> firstTransferDate)
+          date: secondTransferDate, // inclus (>= firstTransferDate)
           nombreMorts: null,
           nombreCompte: null,
           nombreTransferes: 50,
           nombreVendus: null,
+          transfertGroupeId: "groupe-2",
         },
       ]);
+    // GV.1-GV.2 — TransfertGroupe résolus PAR RELEVÉ : groupe-1 (1er transfert) et groupe-2 (2ème)
+    mockTransfertGroupeFindMany.mockResolvedValue([
+      { id: "groupe-1", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+      { id: "groupe-2", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+    ]);
     // Simuler qu'une AssignationBac existe déjà (étape 6 ne crée pas, et étape 9 incrémente)
     mockAssignationBacFindFirst
       .mockResolvedValueOnce({ id: "ab-dest-existing" }) // étape 6 : assignation déjà là

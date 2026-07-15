@@ -10,7 +10,7 @@ import {
   evaluateRules,
   generateActivities,
 } from "@/lib/activity-engine";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import { retryAsync } from "@/lib/async-retry";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import { apiError, handleApiError } from "@/lib/api-utils";
@@ -439,6 +439,7 @@ async function triggerSeuilRulesAsync(
           bacId: true,
           pourcentageRenouvellement: true,
           volumeRenouvele: true,
+          transfertGroupeId: true,
         },
       },
       configElevage: true,
@@ -456,7 +457,7 @@ async function triggerSeuilRulesAsync(
     TypeDeclencheur.FCR_ELEVE,
   ];
 
-  const [produits, regles, transfertDestBacIds] = await Promise.all([
+  const [produits, regles, transfertGroupesById] = await Promise.all([
     prisma.produit.findMany({
       where: { siteId, isActive: true },
       select: {
@@ -476,7 +477,7 @@ async function triggerSeuilRulesAsync(
         OR: [{ siteId }, { siteId: null }],
       },
     }),
-    getTransfertDestBacIds(siteId, vagueId),
+    getTransfertGroupesByVague(siteId, vagueId),
   ]);
 
   if (regles.length === 0) return;
@@ -512,7 +513,7 @@ async function triggerSeuilRulesAsync(
   const stockCast = produits as Parameters<typeof buildEvaluationContext>[2];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const configCast = (vague.configElevage ?? null) as any;
-  const densiteOptions = { transfertDestBacIds };
+  const densiteOptions = { transfertGroupesById };
 
   // ADR-043 Phase 3: construire les bacs depuis les assignations actives
   const vagueBacs = vague.assignations.map((a) => ({

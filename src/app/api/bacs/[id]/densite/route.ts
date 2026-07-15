@@ -6,7 +6,7 @@ import { calculerDensiteBac, computeTauxRenouvellement } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite } from "@/lib/density-thresholds";
 import { apiError, handleApiError } from "@/lib/api-utils";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 
 export async function GET(
   request: NextRequest,
@@ -45,6 +45,7 @@ export async function GET(
                     pourcentageRenouvellement: true,
                     volumeRenouvele: true,
                     nombreRenouvellements: true,
+                    transfertGroupeId: true,
                   },
                 },
               },
@@ -86,12 +87,13 @@ export async function GET(
       nombreCompte: r.nombreCompte ?? null,
       poidsMoyen: r.poidsMoyen ?? null,
       date: r.date,
+      transfertGroupeId: r.transfertGroupeId ?? null,
     }));
 
-    // Charger la config elevage et les bacs destination de transferts en parallèle
-    const [configElevage, transfertDestBacIds] = await Promise.all([
+    // Charger la config elevage et les TransfertGroupe de la vague en parallèle
+    const [configElevage, transfertGroupesById] = await Promise.all([
       getConfigElevageDefaut(auth.activeSiteId),
-      getTransfertDestBacIds(auth.activeSiteId, vague.id),
+      getTransfertGroupesByVague(auth.activeSiteId, vague.id),
     ]);
 
     // Lire nombreInitial depuis l'assignation active (ADR-043 Phase 3)
@@ -100,7 +102,7 @@ export async function GET(
       allBacs,
       releves,
       vague.nombreInitial,
-      { transfertDestBacIds }
+      { transfertGroupesById }
     );
     const configPourSeuils = configElevage ?? CONFIG_ELEVAGE_DEFAULTS;
 

@@ -148,8 +148,10 @@ function setupCreateTransfertVirginDest() {
       { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 40, nombreInitial: 100, dateAssignation: null },
     ])
     .mockResolvedValueOnce([ // 4. guard dest vague: dest=60 arrivés
-      // dateAssignation=transferDate → 1er TRANSFERT entrant créé ce jour exclu → attendu nombreInitial=60 ✓
-      { id: "ab-dest-new", bacId: BAC_DEST_ID, nombreActuel: 60, nombreInitial: 60, dateAssignation: transferDate },
+      // dateAssignation=transferDate → CX.2 (>=) : le TRANSFERT entrant créé ce même jour est INCLUS.
+      // nombreInitial doit donc être 0 (baseline avant le tout premier transfert vers ce bac vierge),
+      // le relevé TRANSFERT entrant (60) apporte seul le total → attendu 0+60=60 ✓
+      { id: "ab-dest-new", bacId: BAC_DEST_ID, nombreActuel: 60, nombreInitial: 0, dateAssignation: transferDate },
     ]);
   // Étape 6 : pas d'assignation dest existante + pas d'historique
   mockAssignationBacFindFirst
@@ -174,17 +176,19 @@ function setupCreateTransfertVirginDest() {
         nombreCompte: null,
         nombreTransferes: 60,
         nombreVendus: null,
+        transfertGroupeId: "tg-1",
       },
     ])
-    .mockResolvedValueOnce([ // 3. guard dest: TRANSFERT entrant à transferDate → exclu (date pas > dateAssignation)
+    .mockResolvedValueOnce([ // 3. guard dest: TRANSFERT entrant à transferDate → CX.2 (>=) : inclus
       {
         bacId: BAC_DEST_ID,
         typeReleve: "TRANSFERT",
-        date: transferDate, // même date que dateAssignation → exclu
+        date: transferDate, // même date que dateAssignation → inclus (>=)
         nombreMorts: null,
         nombreCompte: null,
         nombreTransferes: 60,
         nombreVendus: null,
+        transfertGroupeId: "tg-1",
       },
     ]);
   mockReleveCreate.mockResolvedValue({});
@@ -194,8 +198,11 @@ function setupCreateTransfertVirginDest() {
     siteId: SITE_ID,
     groupes: [{ id: "groupe-1", bacDestId: BAC_DEST_ID }],
   });
-  // Guard transfertGroupe.findMany — BAC_DEST_ID est entrant pour la vague dest
-  mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
+  // Guard transfertGroupe.findMany — GV.1-GV.2 : shape { id, bacSourceId, bacDestId }
+  // résolu PAR RELEVÉ via transfertGroupeId (BUG-049).
+  mockTransfertGroupeFindMany.mockResolvedValue([
+    { id: "tg-1", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -265,10 +272,12 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
       .mockResolvedValueOnce([
         { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 60, nombreInitial: 100, dateAssignation: null },
       ])
-      // Guard dest vague : dest=100 (nombreInitial=60 + TRANSFERT entrant 40 post-dateAssignation)
-      // dateAssignation=firstTransferDate → TRANSFERT de firstTransferDate exclu, de secondTransferDate inclus
+      // Guard dest vague : dest=100 (60 du 1er transfert + 40 du 2e)
+      // dateAssignation=firstTransferDate → CX.2 (>=) : les 2 TRANSFERT entrants (firstTransferDate ET
+      // secondTransferDate) sont inclus. nombreInitial doit donc être 0 (baseline avant le tout premier
+      // transfert vers ce bac vierge) pour éviter le double comptage → attendu 0+60+40=100 ✓
       .mockResolvedValueOnce([
-        { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: 100, nombreInitial: 60, dateAssignation: firstTransferDate },
+        { id: "ab-dest", bacId: BAC_DEST_ID, nombreActuel: 100, nombreInitial: 0, dateAssignation: firstTransferDate },
       ]);
     // Étape 6 : assignation déjà existante → pas de create
     // Étape 9 : assignation existante → update (incrément)
@@ -290,19 +299,22 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
           nombreCompte: null,
           nombreTransferes: 40,
           nombreVendus: null,
+          transfertGroupeId: "tg-2",
         },
       ])
-      // Guard dest : TRANSFERT entrant de firstTransferDate exclu, de secondTransferDate inclus
-      // nombreInitial=60 + TRANSFERT(40 à secondTransferDate) = 100 ✓
+      // Guard dest : CX.2 (>=) : les 2 TRANSFERT entrants (firstTransferDate ET secondTransferDate)
+      // sont inclus. nombreInitial=0 (baseline) + TRANSFERT(60 à firstTransferDate) + TRANSFERT(40 à
+      // secondTransferDate) = 100 ✓
       .mockResolvedValueOnce([
         {
           bacId: BAC_DEST_ID,
           typeReleve: "TRANSFERT",
-          date: firstTransferDate, // exclu (pas strictement après dateAssignation=firstTransferDate)
+          date: firstTransferDate, // inclus (>= dateAssignation=firstTransferDate)
           nombreMorts: null,
           nombreCompte: null,
           nombreTransferes: 60,
           nombreVendus: null,
+          transfertGroupeId: "tg-1",
         },
         {
           bacId: BAC_DEST_ID,
@@ -312,6 +324,7 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
           nombreCompte: null,
           nombreTransferes: 40,
           nombreVendus: null,
+          transfertGroupeId: "tg-2",
         },
       ]);
     mockReleveCreate.mockResolvedValue({});
@@ -321,7 +334,10 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
       siteId: SITE_ID,
       groupes: [{ id: "groupe-2", bacDestId: BAC_DEST_ID }],
     });
-    mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID }]);
+    mockTransfertGroupeFindMany.mockResolvedValue([
+      { id: "tg-1", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+      { id: "tg-2", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID },
+    ]);
 
     await createTransfert(SITE_ID, USER_ID, {
       mode: ModeTransfert.USE_EXISTING,
@@ -393,9 +409,10 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
         { id: "ab-src", bacId: BAC_SOURCE_ID, nombreActuel: 30, nombreInitial: 100, dateAssignation: null },
       ])
       // Guard dest bacs (nouveau dest BAC_DEST_ID_2) : 70 entrants
-      // dateAssignation=updateDate → TRANSFERT entrant créé ce jour exclu → attendu nombreInitial=70 ✓
+      // dateAssignation=updateDate → CX.2 (>=) : le TRANSFERT entrant créé ce même jour est INCLUS.
+      // nombreInitial doit donc être 0 (baseline avant ce transfert vers bac vierge) → attendu 0+70=70 ✓
       .mockResolvedValueOnce([
-        { id: "ab-dest-new-2", bacId: BAC_DEST_ID_2, nombreActuel: 70, nombreInitial: 70, dateAssignation: updateDate },
+        { id: "ab-dest-new-2", bacId: BAC_DEST_ID_2, nombreActuel: 70, nombreInitial: 0, dateAssignation: updateDate },
       ]);
     mockReleveFindMany
       .mockResolvedValueOnce([]) // étape 5 computeVivantsByBac
@@ -409,24 +426,28 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
           nombreCompte: null,
           nombreTransferes: 70,
           nombreVendus: null,
+          transfertGroupeId: "tg-1",
         },
       ])
-      // Guard dest : TRANSFERT entrant à updateDate → exclu car date == dateAssignation
-      // nombreInitial=70 + aucune op = 70 ✓
+      // Guard dest : TRANSFERT entrant à updateDate → inclus (CX.2, >=)
+      // nombreInitial=0 + TRANSFERT(70) = 70 ✓
       .mockResolvedValueOnce([
         {
           bacId: BAC_DEST_ID_2,
           typeReleve: "TRANSFERT",
-          date: updateDate, // exclu
+          date: updateDate, // inclus (>= dateAssignation)
           nombreMorts: null,
           nombreCompte: null,
           nombreTransferes: 70,
           nombreVendus: null,
+          transfertGroupeId: "tg-1",
         },
       ]);
     mockVagueFindFirst.mockResolvedValue({ nombreInitial: 100 });
-    // Guard transfertGroupe.findMany — BAC_DEST_ID_2 est entrant pour vague dest
-    mockTransfertGroupeFindMany.mockResolvedValue([{ bacDestId: BAC_DEST_ID_2 }]);
+    // Guard transfertGroupe.findMany — GV.1-GV.2 : shape { id, bacSourceId, bacDestId }
+    mockTransfertGroupeFindMany.mockResolvedValue([
+      { id: "tg-1", bacSourceId: BAC_SOURCE_ID, bacDestId: BAC_DEST_ID_2 },
+    ]);
 
     // Étape 6 — bac dest nouveau (BAC_DEST_ID_2) vierge
     mockAssignationBacFindFirst.mockResolvedValue(null); // pas d'assignation existante

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { CategorieDepense, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
-import { getLineage, getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getLineage, getTransfertGroupesByVague } from "@/lib/queries/transferts";
 import { effectivePoidsLigneVente, effectiveNombrePoissonsLigne, effectivePoidsVente, totalDepensesVente } from "@/lib/ventes-helpers";
 
 // ---------------------------------------------------------------------------
@@ -1108,7 +1108,7 @@ export async function getCoutProductionVague(
     bacsVague,
     relevesVague,
     transfertsSortants,
-    transfertDestBacIds,
+    transfertGroupesById,
   ] = await Promise.all([
     // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
     // Filtre par dateFin : exclure les releves posterieurs a la cloture
@@ -1263,6 +1263,7 @@ export async function getCoutProductionVague(
         nombreCompte: true,
         date: true,
         poidsMoyen: true,
+        transfertGroupeId: true,
       },
       orderBy: { date: "asc" },
     }),
@@ -1280,9 +1281,9 @@ export async function getCoutProductionVague(
       },
     }),
 
-    // 2j. Bacs destination de transferts entrants — nécessaire pour que computeVivantsByBac
-    // ne soustrait pas les relevés TRANSFERT miroirs comme des sorties (vague GROSSISSEMENT)
-    getTransfertDestBacIds(siteId, vagueId),
+    // 2j. TransfertGroupe de la vague — nécessaire pour que computeVivantsByBac
+    // discrimine, PAR RELEVÉ, les TRANSFERT entrants des sortants (GV.1-GV.2)
+    getTransfertGroupesByVague(siteId, vagueId),
   ]);
 
   // -------------------------------------------------------------------------
@@ -1307,8 +1308,8 @@ export async function getCoutProductionVague(
 
   const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
   // Aligné avec indicateurs.ts : VENTE relevés soustraits des vivants par bac
-  // transfertDestBacIds permet d'ignorer les relevés TRANSFERT miroirs entrants (vague GROSSISSEMENT)
-  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertDestBacIds });
+  // transfertGroupesById permet de discriminer les relevés TRANSFERT entrants des sortants (vague GROSSISSEMENT)
+  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertGroupesById });
 
   // Nombre total de poissons reellement vendus (source de verite : LigneVente)
   const totalPoissonsVendus = ventes.reduce((acc, lv) => acc + lv.nombrePoissons, 0);
@@ -1339,7 +1340,7 @@ export async function getCoutProductionVague(
       biomasseKg = Math.round(totalBiomasse * 100) / 100;
     }
   } else {
-    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertDestBacIds });
+    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial, { transfertGroupesById });
     const biometrieReleves = relevesVague
       .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
     if (biometrieReleves.length > 0 && nombreVivants > 0) {

@@ -10,7 +10,7 @@ import {
   computeVivantsByBac,
   computeNombreVivantsVague,
 } from "@/lib/calculs";
-import { getTransfertDestBacIds } from "@/lib/queries/transferts";
+import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
 
 /**
  * Agrege les donnees d'une vague pour calculer ses indicateurs.
@@ -46,6 +46,7 @@ export async function getIndicateursVague(
           quantiteAliment: true,
           nombreCompte: true,
           causeMortalite: true,
+          transfertGroupeId: true,
         },
       },
     },
@@ -69,8 +70,9 @@ export async function getIndicateursVague(
         ) / 100
       : null;
 
-  // CS.2 : charger les bacDestIds pour discriminer TRANSFERT entrants (vague GROSSISSEMENT)
-  const transfertDestBacIds = await getTransfertDestBacIds(siteId, vagueId);
+  // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour discriminer, PAR RELEVÉ,
+  // les TRANSFERT entrants (vague GROSSISSEMENT) des sortants.
+  const transfertGroupesById = await getTransfertGroupesByVague(siteId, vagueId);
 
   // ADR-043 Phase 3: build bacs list from active assignations
   const bacsFromAssignations = vague.assignations.map((a) => ({
@@ -119,7 +121,7 @@ export async function getIndicateursVague(
     // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
     const nombreInitialParBac = Math.round(vague.nombreInitial / bacsFromAssignations.length);
 
-    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertDestBacIds });
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertGroupesById });
 
     // Group biometries by bacId, keep last per bac
     const biometriesParBac = new Map<string, (typeof biometries)[0]>();
@@ -200,7 +202,7 @@ export async function getIndicateursVague(
       0
     );
 
-    nombreVivants = computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertDestBacIds });
+    nombreVivants = computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { transfertGroupesById });
 
     if (biometries.length > 0) {
       const derniereBiometrie = biometries.at(-1);

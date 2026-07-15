@@ -57,6 +57,8 @@ vi.mock("@/lib/queries/transferts", () => ({
   updateTransfertGroupe: (...args: unknown[]) => mockUpdateTransfertGroupe(...args),
   getLineage: (...args: unknown[]) => mockGetLineage(...args),
   canDeleteVague: vi.fn().mockResolvedValue(true),
+  // GV.1-GV.2 — utilisé par GET /api/vagues pour discriminer les TRANSFERT entrants/sortants
+  getTransfertGroupesByVagues: vi.fn().mockResolvedValue(new Map()),
 }));
 
 // ---------------------------------------------------------------------------

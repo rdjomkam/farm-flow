@@ -267,18 +267,21 @@ export function calculerROI(
  *
  * Releves DOIVENT etre tries par date ASC.
  *
- * @param transfertDestBacIds - IMPORTANT pour vagues GROSSISSEMENT : Set des bacId qui sont
- *   destinations de transferts entrants (issus de TransfertGroupe.bacDestId WHERE vagueDestId = vague.id).
- *   Sans ce Set, les relevés TRANSFERT miroir seraient comptés comme sortants → vivants négatifs.
- *   Pour une vague PRE_GROSSISSEMENT (source uniquement), ne pas passer ce Set.
+ * @param options.transfertGroupesById - IMPORTANT pour vagues GROSSISSEMENT : Map<transfertGroupeId,
+ *   {bacSourceId, bacDestId}> permettant de discriminer, PAR RELEVÉ (pas par bac), si un relevé
+ *   TRANSFERT est entrant (bacId === bacDestId) ou sortant (bacId === bacSourceId). Un bac peut être
+ *   source d'un TransfertGroupe et destination d'un autre dans la même vague : discriminer par bac
+ *   produirait un signe faux pour l'un des deux relevés (BUG-049 / ERR-101, cf. GV.1-GV.2).
+ *   Sans cette Map, tous les relevés TRANSFERT sont traités comme sortants (comportement historique).
+ *   Pour une vague PRE_GROSSISSEMENT (source uniquement), la Map peut être omise ou vide.
  *
  * @returns Map<bacId, vivants>
  */
 export function computeVivantsByBac(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null; transfertGroupeId: string | null }[],
   nombreInitialVague: number,
-  options?: { excludeVentes?: boolean; transfertDestBacIds?: Set<string> }
+  options?: { excludeVentes?: boolean; transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }> }
 ): Map<string, number> {
   // Utiliser floor + distribuer le reste au dernier bac pour eviter la perte de poissons
   // Exemple : 1000 / 3 = [334, 333, 333] (total = 1000)
@@ -324,12 +327,14 @@ export function computeVivantsByBac(
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + vendus);
       }
     }
-    // TRANSFERT — discriminé entrant/sortant selon transfertDestBacIds :
-    //   - Si bacId ∈ transfertDestBacIds → relevé miroir ARRIVAGE (ajout post-comptage)
-    //   - Sinon → soustraction (comportement historique, côté source PRE_GROSSISSEMENT)
+    // TRANSFERT — discriminé entrant/sortant PAR RELEVÉ via son TransfertGroupe :
+    //   - Si bacId === bacDestId du groupe → relevé miroir ARRIVAGE (ajout post-comptage)
+    //   - Sinon (bacId === bacSourceId ou groupe introuvable) → soustraction (comportement
+    //     historique, côté source PRE_GROSSISSEMENT / fallback orphelin)
     if (r.typeReleve === "TRANSFERT" && r.bacId) {
       const transferes = r.nombreTransferes ?? 0;
-      const isEntrant = options?.transfertDestBacIds?.has(r.bacId) ?? false;
+      const tg = r.transfertGroupeId ? options?.transfertGroupesById?.get(r.transfertGroupeId) : null;
+      const isEntrant = tg?.bacDestId === r.bacId;
       if (isEntrant) {
         // Traiter comme un arrivage : ajout si post-comptage
         const comptage = comptagesParBac.get(r.bacId);
@@ -386,13 +391,13 @@ export function computeVivantsByBac(
  * en agregeant par bac via computeVivantsByBac().
  * Remplace le pattern faux `comptages.at(-1)?.nombreCompte`.
  *
- * @param options.transfertDestBacIds - Voir computeVivantsByBac. Obligatoire pour vagues GROSSISSEMENT.
+ * @param options.transfertGroupesById - Voir computeVivantsByBac. Obligatoire pour vagues GROSSISSEMENT.
  */
 export function computeNombreVivantsVague(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; nombreTransferes?: number | null; date?: string | Date | null; transfertGroupeId: string | null }[],
   nombreInitialVague: number,
-  options?: { excludeVentes?: boolean; transfertDestBacIds?: Set<string> }
+  options?: { excludeVentes?: boolean; transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }> }
 ): number {
   if (bacs.length === 0) {
     // Fallback: no bacs attached, use global logic
@@ -905,9 +910,10 @@ export function calculerDensiteBac(
     nombreCompte: number | null;
     poidsMoyen: number | null;
     date: Date;
+    transfertGroupeId: string | null;
   }[],
   nombreInitialVague: number,
-  options?: { transfertDestBacIds?: Set<string> }
+  options?: { transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }> }
 ): number | null {
   if (bac.volume == null || bac.volume <= 0) return null;
 
@@ -963,9 +969,10 @@ export function calculerDensiteVague(
     nombreCompte: number | null;
     poidsMoyen: number | null;
     date: Date;
+    transfertGroupeId: string | null;
   }[],
   nombreInitialVague: number,
-  options?: { transfertDestBacIds?: Set<string> }
+  options?: { transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }> }
 ): number | null {
   if (bacs.length === 0) return null;
 

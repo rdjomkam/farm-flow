@@ -13,11 +13,15 @@ import { getPoidsMoyenActuelVague } from "@/lib/queries/releves";
 import { TypeReleve } from "@/types";
 
 const mockVagueFindFirst = vi.fn();
+const mockTransfertGroupeFindMany = vi.fn().mockResolvedValue([]);
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     vague: {
       findFirst: (...args: unknown[]) => mockVagueFindFirst(...args),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   },
 }));

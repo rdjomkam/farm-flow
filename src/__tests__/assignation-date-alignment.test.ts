@@ -46,6 +46,8 @@ const mockCalibrageTx = {
   },
   calibrageGroupe: { deleteMany: vi.fn() },
   calibrageModification: { createMany: vi.fn() },
+  // GV.1-GV.2 — TransfertGroupe pour le guard verifyAssignationInvariant
+  transfertGroupe: { findMany: vi.fn().mockResolvedValue([]) },
 };
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,8 @@ const mockTransfertTx = {
     update: vi.fn(),
     findFirst: vi.fn(),
     findUniqueOrThrow: vi.fn(),
+    // GV.1-GV.2 — utilisé par getTransfertGroupesByVague (conservation source) et le guard
+    findMany: vi.fn().mockResolvedValue([]),
   },
   transfertModification: { create: vi.fn() },
 };
@@ -121,6 +125,9 @@ vi.mock("@/lib/db", () => ({
       // We use a single dispatch — each test sets up its own mock via the shared context.
       return fn(_mockActiveTx);
     }),
+    // GV.1-GV.2 — getTransfertGroupesByVague(siteId, vagueId) est appelé hors transaction
+    // (via prisma global) par createCalibrage avant l'ouverture de la transaction.
+    transfertGroupe: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -170,6 +177,10 @@ describe("CG.4 — Cas 1 : createCalibrage antidaté → dateAssignation === cal
     mockCalibrageTx.vague.findFirst.mockResolvedValue({
       id: VAGUE_ID, code: "V-CG4", statut: StatutVague.EN_COURS, nombreInitial: 100, poidsMoyenInitial: 50,
     });
+
+    // GV.1-GV.2 — default pour les appels supplémentaires (guard verifyAssignationInvariant — GD.1)
+    // au-delà des 4 mockResolvedValueOnce explicitement queués ci-dessous.
+    mockCalibrageTx.assignationBac.findMany.mockResolvedValue([]);
 
     // 1. sourceAssignations
     // 2. destAssignations (must contain BAC_DEST_ID to pass the vague-membership check)
@@ -262,8 +273,11 @@ describe("CG.4 — Cas 2 : createTransfert antidaté → dateAssignation === tra
     // AssignationBac étape 6 (préventif pour bac dest) : findFirst→null + historicFindFirst→null
     // AssignationBac étape 8 source : findMany
     // AssignationBac étape 9 dest : findFirst
+    // GV.1-GV.2 — nombreInitial === nombreActuel et aucun relevé (mock releve.findMany persistant
+    // vide) pour que le guard verifyAssignationInvariant (appelé pour la source ET la destination
+    // avec ce même mock persistant, args ignorés) retrouve toujours expected === actual.
     mockTransfertTx.assignationBac.findMany.mockResolvedValue([
-      { id: "a-src", bacId: BAC_SOURCE_ID, nombreActuel: 100 },
+      { id: "a-src", bacId: BAC_SOURCE_ID, nombreActuel: 100, nombreInitial: 100, dateAssignation: null },
     ]);
     mockTransfertTx.assignationBac.findFirst
       .mockResolvedValueOnce(null)    // étape 6 : pas d'assignation existante pour bac dest

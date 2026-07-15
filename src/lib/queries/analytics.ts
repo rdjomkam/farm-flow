@@ -46,6 +46,7 @@ import {
   BENCHMARK_DFR_PAR_PHASE,
 } from "@/lib/benchmarks";
 import { getFCRByFeed } from "@/lib/queries/fcr-by-feed";
+import { getTransfertGroupesByVagues } from "@/lib/queries/transferts";
 
 // ---------------------------------------------------------------------------
 // Helpers internes
@@ -560,6 +561,7 @@ async function computeAlimentMetrics(
           nombreVendus: true,
           nombreTransferes: true,
           nombreCompte: true,
+          transfertGroupeId: true,
         },
       })
     : [];
@@ -590,6 +592,9 @@ async function computeAlimentMetrics(
 
   const vagueMap = new Map(vagues.map((v) => [v.id, v]));
 
+  // GV.1 fix : batch-fetch TransfertGroupe pour discriminer entrant/sortant sur les relevés TRANSFERT
+  const transfertGroupesByVague = await getTransfertGroupesByVagues(siteId, vagueIds);
+
   for (const fcrVague of fcrResult?.parVague ?? []) {
     const vague = vagueMap.get(fcrVague.vagueId);
     if (!vague) continue;
@@ -604,7 +609,10 @@ async function computeAlimentMetrics(
 
     // ADR-043 Phase 3: build bacs list from active assignations
     const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
-    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
+    const transfertGroupesById = transfertGroupesByVague.get(vague.id) ?? new Map();
+    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, {
+      transfertGroupesById,
+    });
 
     const now = vague.dateFin ?? new Date();
     const jours = Math.max(
@@ -1344,6 +1352,7 @@ export async function getComparaisonVagues(
         nombreMorts: true,
         quantiteAliment: true,
         nombreCompte: true,
+        transfertGroupeId: true,
         consommations: {
           select: {
             quantite: true,
@@ -1377,6 +1386,9 @@ export async function getComparaisonVagues(
     }
   }
 
+  // GV.1 fix : batch-fetch TransfertGroupe pour discriminer entrant/sortant sur les relevés TRANSFERT
+  const transfertGroupesByVague = await getTransfertGroupesByVagues(siteId, ids);
+
   // Calculer les indicateurs pour chaque vague
   const result: IndicateursVagueComparaison[] = vagues.map((vague) => {
     // ADR-043 Phase 3: build bacs list from active assignations
@@ -1400,7 +1412,10 @@ export async function getComparaisonVagues(
     const poidsMoyenFinal = derniereBio?.poidsMoyen ?? null;
     const poidsMoyenDebut = premiereBio?.poidsMoyen ?? vague.poidsMoyenInitial;
 
-    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
+    const transfertGroupesById = transfertGroupesByVague.get(vague.id) ?? new Map();
+    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, {
+      transfertGroupesById,
+    });
 
     // BUG 1 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
     // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
@@ -1528,6 +1543,12 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
 
   const alertes: AlerteRation[] = [];
 
+  // GV.1 fix : batch-fetch TransfertGroupe pour discriminer entrant/sortant sur les relevés TRANSFERT
+  const transfertGroupesByVague = await getTransfertGroupesByVagues(
+    siteId,
+    vagues.map((v) => v.id)
+  );
+
   for (const vague of vagues) {
     // Guard E9 : skip si pas de ConfigElevage
     if (!vague.configElevage) continue;
@@ -1564,12 +1585,12 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
         }),
         prisma.releve.findMany({
           where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.MORTALITE },
-          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true },
+          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true, transfertGroupeId: true },
         }),
         prisma.releve.findMany({
           where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.COMPTAGE },
           orderBy: { date: "asc" },
-          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true },
+          select: { bacId: true, nombreMorts: true, nombreVendus: true, nombreTransferes: true, typeReleve: true, nombreCompte: true, transfertGroupeId: true },
         }),
       ]);
 
@@ -1583,10 +1604,12 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
       ...mortaliteReleves,
       ...comptageReleves,
     ];
+    const transfertGroupesById = transfertGroupesByVague.get(vague.id) ?? new Map();
     const nombreVivants = computeNombreVivantsVague(
       bacsVague,
       relevesPourVivants,
-      vague.nombreInitial
+      vague.nombreInitial,
+      { transfertGroupesById }
     );
 
     // 4. Obtenir le poids moyen depuis la derniere biometrie
@@ -1867,6 +1890,9 @@ export async function getFCRHebdomadaire(
   });
   const vagueMap = new Map(vagues.map((v) => [v.id, v]));
 
+  // GV.1 fix : batch-fetch TransfertGroupe pour discriminer entrant/sortant sur les relevés TRANSFERT
+  const transfertGroupesByVague = await getTransfertGroupesByVagues(siteId, vagueIds);
+
   // 5. Biometries - Guard E8 : exclure poidsMoyen null
   const biometriesRaw = await prisma.releve.findMany({
     where: {
@@ -1902,6 +1928,7 @@ export async function getFCRHebdomadaire(
       nombreVendus: true,
       nombreTransferes: true,
       nombreCompte: true,
+      transfertGroupeId: true,
     },
   });
   const vivantsByVague = new Map<string, typeof relevesVivants>();
@@ -1954,10 +1981,12 @@ export async function getFCRHebdomadaire(
     // ADR-043 Phase 3: build bacs list from active assignations
     const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
     const vivantsReleves = vivantsByVague.get(vid) ?? [];
+    const transfertGroupesById = transfertGroupesByVague.get(vid) ?? new Map();
     const nombreVivants = computeNombreVivantsVague(
       bacsVague,
       vivantsReleves,
-      vague.nombreInitial
+      vague.nombreInitial,
+      { transfertGroupesById }
     );
 
     // SGR estime pour extrapolation post-dernier-releve biometrique

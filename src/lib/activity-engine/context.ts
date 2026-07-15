@@ -50,6 +50,7 @@ type ReleveCtx = Pick<
   | "pourcentageRenouvellement"
   | "volumeRenouvele"
   | "nombreRenouvellements"
+  | "transfertGroupeId"
 >;
 
 /** Bac minimal pour l'iteration per-bac */
@@ -100,7 +101,7 @@ export function buildEvaluationContext(
   configElevage: ConfigElevage | null,
   bac?: BacCtx | null,
   allBacs?: BacCtx[],
-  options?: { transfertDestBacIds?: Set<string> }
+  options?: { transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }> }
 ): RuleEvaluationContext {
   // ---- Calcul du temps ecoule (UTC+1 = WAT) ----
   const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
@@ -260,6 +261,7 @@ export function buildEvaluationContext(
       nombreCompte: r.nombreCompte ?? null,
       poidsMoyen: r.poidsMoyen ?? null,
       date: r.date,
+      transfertGroupeId: r.transfertGroupeId ?? null,
     }));
     densiteKgM3 = calculerDensiteBac(
       { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },

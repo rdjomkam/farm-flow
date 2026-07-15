@@ -46,6 +46,7 @@ export async function getVagues(
             nombreTransferes: true,
             nombreCompte: true,
             bacId: true,
+            transfertGroupeId: true,
           },
         },
         // Pour totalVenduKg — DV.0 : exclure les ventes EN_PREPARATION et ANNULEE

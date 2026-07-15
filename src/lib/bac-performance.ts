@@ -86,8 +86,10 @@ export interface ReleveInput {
   nombreMorts: number | null;
   nombreCompte: number | null;
   nombreVendus: number | null;
+  nombreTransferes?: number | null;
   quantiteAliment: number | null;
   consommations: ConsommationInput[];
+  transfertGroupeId?: string | null;
 }
 
 export interface VenteInput {
@@ -105,6 +107,12 @@ export interface BacPerformanceInput {
   poidsMoyenInitial: number;
   /** Override "now" for period snapshots (defaults to Date.now()). Useful for testing. */
   now?: Date;
+  /**
+   * Map<transfertGroupeId, {bacSourceId, bacDestId}> — voir computeVivantsByBac (GV.1-GV.2).
+   * Nécessaire pour discriminer, PAR RELEVÉ, les TRANSFERT entrants des sortants sur une
+   * vague GROSSISSEMENT. Sans cette Map, tous les relevés TRANSFERT sont traités comme sortants.
+   */
+  transfertGroupesById?: Map<string, { bacSourceId: string | null; bacDestId: string | null }>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -168,14 +176,19 @@ function computeSoldBiomassePerBac(
 export function computeBacPerformance(
   input: BacPerformanceInput
 ): BacPerformanceData[] {
-  const { bacs, releves, nombreInitialVague, dateDebutVague, poidsMoyenInitial } = input;
+  const { bacs, releves, nombreInitialVague, dateDebutVague, poidsMoyenInitial, transfertGroupesById } = input;
 
   if (bacs.length === 0) return [];
 
   const vagueStartMs = dateDebutVague.getTime();
 
   // Compute vivants per bac using existing logic
-  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  const vivantsByBac = computeVivantsByBac(
+    bacs,
+    releves.map((r) => ({ ...r, transfertGroupeId: r.transfertGroupeId ?? null })),
+    nombreInitialVague,
+    { transfertGroupesById }
+  );
 
   // Pre-compute initial fish count per bac (mirrors computeVivantsByBac logic)
   const nombreInitialParBac = Math.floor(nombreInitialVague / bacs.length);

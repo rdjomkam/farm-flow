@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutVague, TypePlan, TypeReleve, TypeVague, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { getTransfertGroupesByVagues } from "@/lib/queries/transferts";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
@@ -44,23 +45,11 @@ export async function GET(request: NextRequest) {
       { limit, offset }
     );
 
-    // CS.2 : charger les transfertDestBacIds pour toutes les vagues en une requête (batch)
-    const transfertDestBacIdsMapRoute = new Map<string, Set<string>>();
-    if (vaguesRaw.length > 0) {
-      const groupesRoute = await prisma.transfertGroupe.findMany({
-        where: {
-          vagueDestId: { in: vaguesRaw.map((v) => v.id) },
-          transfert: { siteId: auth.activeSiteId },
-        },
-        select: { vagueDestId: true, bacDestId: true },
-      });
-      for (const g of groupesRoute) {
-        if (!g.bacDestId) continue;
-        const set = transfertDestBacIdsMapRoute.get(g.vagueDestId) ?? new Set<string>();
-        set.add(g.bacDestId);
-        transfertDestBacIdsMapRoute.set(g.vagueDestId, set);
-      }
-    }
+    // CS.2 / GV.1-GV.2 : charger les TransfertGroupe pour toutes les vagues en une requête (batch)
+    const transfertGroupesByVagueMapRoute = await getTransfertGroupesByVagues(
+      auth.activeSiteId,
+      vaguesRaw.map((v) => v.id)
+    );
 
     const data = vaguesRaw.map((v) => {
       const now = v.dateFin ?? new Date();
@@ -81,6 +70,7 @@ export async function GET(request: NextRequest) {
           nombreTransferes: number | null;
           nombreCompte: number | null;
           bacId: string | null;
+          transfertGroupeId: string | null;
         }>;
         lignesVente?: { poidsTotalKg: number; vente: { poidsLivreKg: number | null; poidsTotalKg: number } }[];
         configElevage?: { poidsObjectif: number } | null;
@@ -104,14 +94,14 @@ export async function GET(request: NextRequest) {
       let biomasse: number | null = null;
       const bacsMapped = assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
       const hasPerBacReleves = releves.some((r) => r.bacId !== null);
-      const transfertDestBacIdsRoute = transfertDestBacIdsMapRoute.get(v.id) ?? new Set<string>();
+      const transfertGroupesByIdRoute = transfertGroupesByVagueMapRoute.get(v.id);
       if (bacsMapped.length > 0 && hasPerBacReleves) {
         // Aligné avec indicateurs.ts et finances.ts (fix B5) : vivants déjà après VENTE
         const vivantsByBac = computeVivantsByBac(
           bacsMapped,
           releves as Parameters<typeof computeVivantsByBac>[1],
           v.nombreInitial,
-          { transfertDestBacIds: transfertDestBacIdsRoute }
+          { transfertGroupesById: transfertGroupesByIdRoute }
         );
         const biometriesParBac = new Map<string, number>();
         for (const r of releves) {

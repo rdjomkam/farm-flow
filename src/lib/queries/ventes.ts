@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
 import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { getTransfertDestBacIds } from "./transferts";
+import { getTransfertGroupesByVague } from "./transferts";
 import { ValidationError } from "@/lib/errors";
 import {
   StatutVague,
@@ -607,7 +607,7 @@ const RELEVES_VIVANTS_TYPES = [
  * Flux :
  * 1. Valider la vague (type PRE_GROSSISSEMENT, statut EN_COURS)
  * 2. Valider le client
- * 3. Charger les vivants reels par bac (computeVivantsByBac + transfertDestBacIds)
+ * 3. Charger les vivants reels par bac (computeVivantsByBac + transfertGroupesById)
  * 4. Valider chaque ligne (bac assigne, stock disponible, valeurs > 0)
  * 5. Creer la Vente (origineType = ALEVINS_PG) + LigneVente + decrementer AssignationBac
  *    + creer les releves VENTE de tracabilite
@@ -624,7 +624,7 @@ export async function createVenteAlevinsDepuisVague(
   // Objectif : minimiser le temps passé dans la $transaction (défaut 5s).
   // Le guard verifyAssignationInvariant en fin de transaction rattrape toute
   // race condition (ex. vente concurrente sur les mêmes bacs).
-  const [vague, client, assignationsBacs, relevesVague, transfertDestBacIds] = await Promise.all([
+  const [vague, client, assignationsBacs, relevesVague, transfertGroupesById] = await Promise.all([
     prisma.vague.findFirst({
       where: { id: data.vagueId, siteId },
       select: { id: true, code: true, type: true, statut: true, nombreInitial: true },
@@ -656,9 +656,10 @@ export async function createVenteAlevinsDepuisVague(
         nombreTransferes: true,
         nombreCompte: true,
         date: true,
+        transfertGroupeId: true,
       },
     }),
-    getTransfertDestBacIds(siteId, data.vagueId),
+    getTransfertGroupesByVague(siteId, data.vagueId),
   ]);
 
   if (!vague) throw new ValidationError("Vague introuvable");
@@ -686,7 +687,7 @@ export async function createVenteAlevinsDepuisVague(
     bacsForCalc,
     relevesVague,
     vague.nombreInitial,
-    { transfertDestBacIds }
+    { transfertGroupesById }
   );
 
   // Valider et enrichir chaque ligne (en mémoire, aucune I/O)
