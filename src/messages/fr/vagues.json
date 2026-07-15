@@ -346,7 +346,9 @@
     "periodeEnCours": "En cours",
     "periodeAujourdhui": "aujourd'hui",
     "periodeEmptyTitle": "Aucune biometrie",
-    "periodeEmptyDescription": "Il faut au moins 1 biometrie pour afficher les periodes."
+    "periodeEmptyDescription": "Il faut au moins 1 biometrie pour afficher les periodes.",
+    "expandLabel": "Afficher la performance par bac",
+    "collapseLabel": "Masquer la performance par bac"
   },
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",

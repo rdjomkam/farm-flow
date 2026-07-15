@@ -346,7 +346,9 @@
     "periodeEnCours": "Ongoing",
     "periodeAujourdhui": "today",
     "periodeEmptyTitle": "No biometry",
-    "periodeEmptyDescription": "At least 1 biometry is needed to display periods."
+    "periodeEmptyDescription": "At least 1 biometry is needed to display periods.",
+    "expandLabel": "Show tank performance",
+    "collapseLabel": "Hide tank performance"
   },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",

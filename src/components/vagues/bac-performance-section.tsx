@@ -513,115 +513,144 @@ function BacPeriodsCard({
 
 export function BacPerformanceSection({ data, vagueId: _vagueId }: BacPerformanceSectionProps) {
   const t = useTranslations("vagues");
+  const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"croissance" | "couts" | "periodes">("croissance");
 
   // Check if any bac has period snapshots
   const hasPeriods = data.some((d) => d.periodSnapshots.length > 0);
 
+  const headerButton = (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      aria-expanded={expanded}
+      aria-label={expanded ? t("bacPerf.collapseLabel") : t("bacPerf.expandLabel")}
+      className="flex w-full items-center gap-3 text-left"
+    >
+      <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
+      <h2 className="text-base font-semibold">{t("bacPerf.title")}</h2>
+      {!expanded && (
+        <span className="text-xs text-muted-foreground">
+          ({data.length})
+        </span>
+      )}
+      <span className="ml-auto shrink-0">
+        {expanded ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
+      </span>
+    </button>
+  );
+
   if (data.length === 0) {
     return (
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-base font-semibold">{t("bacPerf.title")}</h2>
-        </div>
-        <Card>
-          <CardContent className="py-8 text-center">
-            <TrendingUp className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="font-medium text-sm">{t("bacPerf.emptyTitle")}</p>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-              {t("bacPerf.emptyDescription")}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="mb-3">{headerButton}</div>
+        {expanded && (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="font-medium text-sm">{t("bacPerf.emptyTitle")}</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                {t("bacPerf.emptyDescription")}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </section>
     );
   }
 
   return (
     <section>
-      {/* Section header with tabs */}
-      <div className="flex items-center gap-3 mb-3">
-        <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
-        <h2 className="text-base font-semibold">{t("bacPerf.title")}</h2>
-        <div className="ml-auto flex items-center bg-muted rounded-md p-0.5 text-sm">
-          <button
-            type="button"
-            onClick={() => setActiveTab("croissance")}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              activeTab === "croissance"
-                ? "bg-background shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              {t("bacPerf.tabCroissance")}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("couts")}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              activeTab === "couts"
-                ? "bg-background shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span className="flex items-center gap-1">
-              <Scale className="h-3 w-3" />
-              {t("bacPerf.tabCouts")}
-            </span>
-          </button>
-          {hasPeriods && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("periodes")}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                activeTab === "periodes"
-                  ? "bg-background shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {t("bacPerf.tabPeriodes")}
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
+      <div className="mb-3">{headerButton}</div>
 
-      {/* Cards grid */}
-      {activeTab === "periodes" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {data
-            .filter((item) => item.periodSnapshots.length > 0)
-            .map((item) => (
-              <BacPeriodsCard key={item.bacId} item={item} t={t} />
-            ))}
-          {!hasPeriods && (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="font-medium text-sm">{t("bacPerf.periodeEmptyTitle")}</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                  {t("bacPerf.periodeEmptyDescription")}
-                </p>
-              </CardContent>
-            </Card>
+      {expanded && (
+        <>
+          {/* Section header with tabs */}
+          <div className="flex items-center justify-end gap-3 mb-3">
+            <div className="flex items-center bg-muted rounded-md p-0.5 text-sm">
+              <button
+                type="button"
+                onClick={() => setActiveTab("croissance")}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  activeTab === "croissance"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  {t("bacPerf.tabCroissance")}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("couts")}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  activeTab === "couts"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <Scale className="h-3 w-3" />
+                  {t("bacPerf.tabCouts")}
+                </span>
+              </button>
+              {hasPeriods && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("periodes")}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    activeTab === "periodes"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {t("bacPerf.tabPeriodes")}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Cards grid */}
+          {activeTab === "periodes" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {data
+                .filter((item) => item.periodSnapshots.length > 0)
+                .map((item) => (
+                  <BacPeriodsCard key={item.bacId} item={item} t={t} />
+                ))}
+              {!hasPeriods && (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="font-medium text-sm">{t("bacPerf.periodeEmptyTitle")}</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                      {t("bacPerf.periodeEmptyDescription")}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {activeTab === "croissance"
+                ? data.map((item) => (
+                    <GrowthCard key={item.bacId} item={item} total={data.length} t={t} />
+                  ))
+                : data.map((item) => (
+                    <CostCard key={item.bacId} item={item} total={data.length} t={t} />
+                  ))}
+            </div>
           )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {activeTab === "croissance"
-            ? data.map((item) => (
-                <GrowthCard key={item.bacId} item={item} total={data.length} t={t} />
-              ))
-            : data.map((item) => (
-                <CostCard key={item.bacId} item={item} total={data.length} t={t} />
-              ))}
-        </div>
+        </>
       )}
     </section>
   );
