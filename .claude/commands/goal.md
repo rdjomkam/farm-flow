@@ -1,154 +1,183 @@
 ---
-description: Sprint VA — Vente d'Alevins depuis une vague PRE_GROSSISSEMENT (clôture + monétisation restants)
+description: Sprint AV — Gestion des avaries (mortalité transport + perte poids transport, séparées)
 ---
 
-# Objectif — Sprint VA (Vente d'Alevins)
+# Objectif — Sprint AV (Avaries)
 
-Permettre à un utilisateur de **vendre les poissons restants** d'une vague `PRE_GROSSISSEMENT` (fingerlings/alevins) directement comme alevins — sans devoir les transférer d'abord vers une autre vague. Débloque le cas prod où une vague PG a un reliquat après transferts et le pisciculteur veut le liquider comme alevins.
+Permettre de tracer précisément **deux types distincts d'avaries** à la livraison d'une vente :
+
+1. **Mortalité transport** : X poissons morts entre chargement et livraison → impact sur taux de survie
+2. **Perte de poids transport** : Y kg perdus par déshydratation/stress → impact uniquement CA/biomasse
+
+**Principe fondateur** : ne JAMAIS convertir une perte de poids en morts fictifs (biais sur survie). Séparer les 2 dimensions permet des analyses correctes et des actions ciblées (mortalité = problème biologique/logistique, perte poids = optimisation transport).
 
 ## Contexte
 
-- La vague PG en fin de vie a des poissons trop petits pour aller en grossissement mais assez grands pour être vendus comme alevins (nurserie)
-- Actuellement, `createVenteAlevins` ([ventes.ts:444](src/lib/queries/ventes.ts#L444)) n'accepte que des sources d'unités de reproduction
-- La `Vente` standard supporte déjà `LigneVente.vagueId` et `bacId`, mais l'UI ne propose pas de flow « vente d'alevins » clair depuis une vague PG
+- Actuellement `CauseMortalite.AVARIE` existe → morts transport partiellement traçables via un relevé MORTALITE manuel
+- Le champ `Vente.poidsLivreKg` capte déjà la différence commandé/livré (DV.0)
+- Mais aucun mécanisme UI structuré à la livraison, pas de séparation claire, pas de rapport dédié
 
 ## Design retenu
 
-Extension de `createVenteAlevins` OU nouveau flow `createVenteAlevinsDepuisVague`. Le second est plus clair sémantiquement.
+**Extension de `LigneVente`** avec 2 champs optionnels :
+```prisma
+model LigneVente {
+  // ... champs existants
+  nombreMortsTransport    Int?     @default(0)   // vraies morts
+  poidsPerduTransportKg   Float?   @default(0)   // kg de déshydratation
+  motifAvarie             String?               // texte libre optionnel
+}
+```
 
-**Réutilisation maximale** : `Vente` + `LigneVente` + relevés VENTE. Guard CS.3 déjà compatible. Rapport PDF et dashboard suivent automatiquement.
+Choix « par ligne » pour granularité bac-par-bac (une livraison peut avoir des conditions différentes selon la source).
+
+**Flux à la livraison** :
+1. UI « Marquer comme livrée » propose un formulaire par ligne :
+   - Poids commandé (readonly)
+   - **Poids livré (kg)** — pesée réelle à l'arrivée
+   - **Nombre de morts transport** (défaut 0)
+   - **Motif** (optionnel : chaleur, temps trajet excessif, oxygène, etc.)
+2. Backend calcule :
+   - `poidsPerduTransportKg = poidsTotalKg (commandé) − poidsLivreKg`
+   - Si `nombreMortsTransport > 0` → créer un relevé `MORTALITE cause=AVARIE` sur le bac source
+   - Décrémenter `AssignationBac.nombreActuel` supplémentairement de `nombreMortsTransport`
+3. Guard CS.3 valide (mortalités avarie s'ajoutent aux morts déjà comptés)
 
 ## Stories
 
-### VA.1 — Marqueur `Vente.origineType`
+### AV.1 — Schema
 
 **Fichier** : `prisma/schema.prisma`
 
-Ajouter enum + colonne :
+Ajouter les 3 champs sur `LigneVente` :
 ```prisma
-enum OrigineVente {
-  GROSSISSEMENT         // Vente normale depuis vague GR
-  ALEVINS_REPRODUCTION  // Depuis unité de reproduction (existant)
-  ALEVINS_PG            // NOUVEAU : depuis vague PG (reliquat)
-}
-
-model Vente {
-  origineType OrigineVente @default(GROSSISSEMENT)
-  // ...
-}
+nombreMortsTransport   Int?    @default(0)
+poidsPerduTransportKg  Float?  @default(0)
+motifAvarie            String?
 ```
 
-Migration Prisma générée + committée.
+Migration Prisma générée + committée. Idempotente pour Coolify.
 
-### VA.2 — Query `createVenteAlevinsDepuisVague`
+### AV.2 — Query : logique de livraison enrichie
 
-**Fichier** : `src/lib/queries/ventes.ts` (nouvelle fonction, ~80 lignes)
+**Fichier** : `src/lib/queries/ventes.ts`
 
+Modifier `livrerVente` (ou équivalent qui passe le statut à LIVREE) pour accepter par ligne :
 ```ts
-export async function createVenteAlevinsDepuisVague(
-  siteId: string,
-  userId: string,
-  data: {
-    vagueId: string,           // vague PG source
-    clientId: string,          // peut être "Nurserie interne" (système)
-    dateCommande: Date,
-    lignes: Array<{
-      bacId: string,
-      nombrePoissons: number,
-      poidsMoyenG: number,
-      prixUnitaireKg: number,
-    }>,
-    depenses?: DepenseVenteInput[],  // optionnel
-    autoCloture?: boolean,           // si true et tous bacs vidés → cloturerVague
-    notes?: string,
-  }
-): Promise<VenteWithGroupes>
+lignes: Array<{
+  ligneVenteId: string;
+  poidsLivreKg: number;
+  nombreMortsTransport?: number;
+  motifAvarie?: string;
+}>
 ```
 
-Logique :
-1. Valider que la vague est `PRE_GROSSISSEMENT` et `EN_COURS`
-2. Valider que chaque bacId ∈ AssignationBac.dateFin=null pour cette vague
-3. Valider que `nombrePoissons ≤ vivantsByBac.get(bacId)` (via `computeVivantsByBac` + `transfertDestBacIds`)
-4. Appeler la logique existante de création Vente + LigneVente (extraire un helper depuis `createVente` si utile)
-5. `origineType = ALEVINS_PG`
-6. Guard CS.3 (`verifyAssignationInvariant`) déjà en place
-7. Si `autoCloture` et sum(vivants après vente) === 0 → appeler `cloturerVague`
+Logique dans la transaction :
+1. Pour chaque ligne : update `LigneVente` avec `poidsLivreKg` + `poidsPerduTransportKg` calculé (commandé − livré) + `nombreMortsTransport` + `motifAvarie`
+2. Si `nombreMortsTransport > 0` : créer un relevé `MORTALITE` avec `causeMortalite = AVARIE`, `bacId = ligne.bacId`, `vagueId = ligne.vagueId`, `nombreMorts = nombreMortsTransport`, `notes` incluant le motif
+3. Décrémenter `AssignationBac.nombreActuel` de `nombreMortsTransport` supplémentaires
+4. Update `Vente.poidsLivreKg` (agrégat) + statut LIVREE
+5. Guard `verifyAssignationInvariant`
 
-### VA.3 — API route
+**Note** : les relevés MORTALITE créés impactent naturellement le taux de survie via la formule `(nombreInitial − totalMortalites) / nombreInitial` (Sprint SV).
 
-**Fichier** : `src/app/api/vagues/[id]/vente-alevins/route.ts` (nouveau)
+### AV.3 — API route
 
-POST endpoint qui appelle `createVenteAlevinsDepuisVague`. Permission requise : `VENTES_CREER` + `VAGUES_MODIFIER` (pour l'auto-clôture).
+**Fichier** : `src/app/api/ventes/[id]/livraison/route.ts` (nouveau ou étendre existant)
 
-### VA.4 — UI : bouton + dialog
+POST avec body typé. Permission `VENTES_LIVRER`.
 
-**Fichier** : `src/components/vagues/vente-alevins-dialog.tsx` (nouveau)
+### AV.4 — UI dialog livraison avec avaries
 
-Dans `VagueActionMenu` (déjà existant), ajouter un item « **Vendre restants comme alevins** » visible uniquement si :
-- Vague statut = EN_COURS
-- Vague type = PRE_GROSSISSEMENT
-- Utilisateur a permission VENTES_CREER
+**Fichier** : `src/components/ventes/livraison-vente-dialog.tsx` (nouveau ou étendre existant)
 
-Dialog contenu :
-- Sélecteur client (+ option « + Créer client Nurserie interne » si absent)
-- Date commande
-- Table bacs avec vivants pré-remplis, quantité éditable ≤ vivants, poids moyen (fallback = dernière biométrie du bac)
-- Prix unitaire /kg (peut être 0 pour vente interne)
-- Case « Clôturer la vague après validation »
-- Champ dépenses (optionnel — DV pattern)
-- Bouton Confirmer
+Formulaire :
+- Table par ligne de vente :
+  - Bac (readonly)
+  - Poids commandé (readonly)
+  - Input « Poids livré (kg) » (pré-rempli avec poids commandé)
+  - Input « Morts transport » (défaut 0, borne = quantité commandée)
+  - Input « Motif » (libre, optionnel)
+- Total livré / commandé affiché en bas
+- Total morts transport agrégé
+- Case « Publier immédiatement (statut LIVREE) »
 
-### VA.5 — Client système « Nurserie interne » (optionnel)
+Design mobile-first, réutilise le pattern DV et VA existants.
 
-**Fichier** : `prisma/seed.sql` + `src/lib/queries/clients.ts`
+### AV.5 — Rapports & stats
 
-Seed un client par site avec `nom = "Nurserie interne"` et flag `isSysteme = true` (nouveau champ). Non supprimable. Sert de destinataire par défaut pour les ventes de reliquats.
+**Fichiers** : PDF rapport général vague + dashboard finances
 
-Si le pisciculteur préfère ne pas passer par ce client (vente directe au vrai client), il choisit un autre client normalement.
+Sur les rapports Vague et les cartes du dashboard :
+- Ligne « Mortalité transport » distincte de « Mortalité élevage »
+- Ligne « Perte poids transport (kg) »
+- Impact biomasse : `biomasse produite = biomasse vive + biomasse vendue livrée + biomasse transférée` (le CA suit `poidsLivreKg`, la perte est déjà déduite)
 
-### VA.6 — Tests + Review R1-R9
+Le taux de survie **inclut automatiquement les morts avarie** grâce à la formule SV (∑ mortalités toutes causes / initial).
 
-- `src/lib/queries/__tests__/vente-alevins-vague.test.ts` — 5 cas (vente valide, quantité > vivants → rejet, auto-clôture, guard invariant, permission VENTES_CREER manquante)
-- E2E : étendre `conservation-flow.spec.ts` avec un scénario « vente alevins depuis PG + clôture »
-- Review R1-R9
+### AV.6 — Alerte perte transport excessive (optionnel — reportable)
+
+Si `poidsPerduTransportKg / poidsTotalKg > 5%` sur une livraison → alerte visible dans l'historique vente ou dashboard. Investigation logistique déclenchée.
+
+Peut être reporté à un sprint AV.2 ultérieur si trop de charge.
+
+### AV.7 — Tests + review R1-R9
+
+- `src/__tests__/livraison-avarie.test.ts` — 5 cas :
+  1. Livraison sans avarie → pas de MORTALITE créée
+  2. Livraison avec 5 morts transport → MORTALITE cause=AVARIE + AssignationBac décrémenté
+  3. Livraison poids livré < commandé → `poidsPerduTransportKg` calculé, pas de MORTALITE
+  4. Morts transport > quantité commandée → ValidationError
+  5. Guard invariant respecté
+
+- Extension E2E `conservation-flow.spec.ts` ou nouveau spec.
+
+- Review R1-R9.
 
 ## Dépendances
 
 ```
-VA.1 (schema) ─► VA.2 (query) ─► VA.3 (API) ─► VA.4 (UI)
-                                                    │
-                                     VA.5 (seed) ───┤
-                                                    ▼
-                                                  VA.6 (tests)
+AV.1 (schema) ─► AV.2 (query) ─► AV.3 (API) ─► AV.4 (UI)
+                                     │             │
+                                     ▼             ▼
+                                   AV.5 (rapports/stats)
+                                     │
+                                     ▼
+                                   AV.7 (tests + review)
 ```
 
-VA.5 peut être livré en parallèle de VA.4 mais avant VA.6.
+AV.6 (alerte) est optionnel, peut sortir du scope initial.
 
 ## Agents
 
-- **VA.1** : @db-specialist (migration Prisma)
-- **VA.2** : @developer (query + extraction helper commun avec createVente)
-- **VA.3** : @developer (route API)
-- **VA.4** : @developer (dialog + intégration VagueActionMenu)
-- **VA.5** : @db-specialist (seed + query clients système)
-- **VA.6** : @tester + @code-reviewer
+- **AV.1** : @db-specialist (schema + migration Prisma)
+- **AV.2 + AV.3** : @developer (query + API)
+- **AV.4** : @developer (dialog UI)
+- **AV.5** : @developer (rapports + dashboard)
+- **AV.7** : @tester + @code-reviewer
 
 ## Définition de fait
 
-- [ ] Migration Prisma `origineType` appliquée
-- [ ] `createVenteAlevinsDepuisVague` implémentée + testée
-- [ ] Route API `/api/vagues/[id]/vente-alevins` fonctionnelle
-- [ ] Dialog UI accessible depuis le menu vague PG
-- [ ] Client « Nurserie interne » seedé (si retenu)
-- [ ] Tests unitaires 5/5 verts + E2E vert
-- [ ] `npx tsc --noEmit` clean
-- [ ] `npm run build` OK
+- [ ] Migration Prisma `LigneVente.nombreMortsTransport + poidsPerduTransportKg + motifAvarie` appliquée
+- [ ] `livrerVente` accepte les avaries par ligne
+- [ ] Relevé MORTALITE créé si `nombreMortsTransport > 0` (cause=AVARIE)
+- [ ] Guard CS.3 valide correctement
+- [ ] Dialog livraison propose 3 champs par ligne
+- [ ] Rapports PDF + dashboard distinguent avarie transport / élevage
+- [ ] Tests unit 5/5 verts
+- [ ] `npx tsc --noEmit` clean + `npm run build` OK
 - [ ] Review R1-R9 signée
-- [ ] Un commit par story
+- [ ] Un commit par story + push
+
+## Principes métier (à graver)
+
+- **Perte poids ≠ morts** : NE JAMAIS convertir kg en poissons fictifs
+- **Deux dimensions séparées** : survie (nombre) vs biomasse (kg)
+- **CA = poids livré** (DV.0 déjà en place)
+- **Traçabilité** : le motif libre permet de corréler avec transporteur/conditions
 
 ## Hors-scope
 
-- Refonte du modèle `LotAlevins` — indépendant, resterait pour les ventes depuis reproduction
-- Rapport PDF spécifique « vente d'alevins » — Vente est déjà dans les PDF via VENTE_LIST_INCLUDE
-- Notification / alerte sur clôture — séparé
-- Gestion multi-client par bac dans une même vente (multi-lignes déjà supporté par LigneVente)
+- Refonte du modèle Vente (déjà robuste post-DV/EX)
+- Application prod « corriger les livraisons passées » — les livraisons existantes gardent leur `poidsLivreKg` actuel, `nombreMortsTransport` reste à 0 par défaut (backfill nul)
+- Multi-transporteur / suivi logistique complet — chantier séparé
