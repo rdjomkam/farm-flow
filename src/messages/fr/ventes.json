@@ -262,6 +262,26 @@
       "error": "Erreur lors de la suppression."
     }
   },
+  "livraisonAvarie": {
+    "dialogTitle": "Confirmer la livraison — {numero}",
+    "dialogDescription": "Saisissez les poids reellement livres et le nombre de morts pendant le transport.",
+    "poidsLivreLabel": "Poids livre (kg)",
+    "mortsTransportLabel": "Poissons morts en transport",
+    "motifLabel": "Motif d'avarie (optionnel)",
+    "motifPlaceholder": "Ex : chaleur, temps trajet, oxygene",
+    "pertePoidsLabel": "Perte poids : {kg} kg",
+    "totalLivreLabel": "Total livre : {kgLivre} / {kgCommande} kg",
+    "totalMortsLabel": "Morts transport : {nb}",
+    "totalPoissonsLivreLabel": "Poissons livres : {nb}",
+    "confirmButton": "Confirmer livraison",
+    "cancelButton": "Annuler",
+    "success": "Livraison enregistree.",
+    "errors": {
+      "mortsExcede": "Nombre de morts superieur a la quantite commandee.",
+      "poidsInvalide": "Poids invalide.",
+      "generic": "Erreur lors de la livraison."
+    }
+  },
   "errorSection": {
     "saleForm": "le formulaire de vente",
     "financialEvolutionChart": "le graphique d'évolution financière",

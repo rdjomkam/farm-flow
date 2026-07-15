@@ -262,6 +262,26 @@
       "error": "Error deleting expense."
     }
   },
+  "livraisonAvarie": {
+    "dialogTitle": "Confirm delivery — {numero}",
+    "dialogDescription": "Enter the actual delivered weights and the number of fish lost during transport.",
+    "poidsLivreLabel": "Delivered weight (kg)",
+    "mortsTransportLabel": "Fish dead in transport",
+    "motifLabel": "Loss reason (optional)",
+    "motifPlaceholder": "E.g. heat, travel time, oxygen",
+    "pertePoidsLabel": "Weight loss: {kg} kg",
+    "totalLivreLabel": "Total delivered: {kgLivre} / {kgCommande} kg",
+    "totalMortsLabel": "Transport losses: {nb}",
+    "totalPoissonsLivreLabel": "Fish delivered: {nb}",
+    "confirmButton": "Confirm delivery",
+    "cancelButton": "Cancel",
+    "success": "Delivery recorded.",
+    "errors": {
+      "mortsExcede": "Number of losses exceeds the ordered quantity.",
+      "poidsInvalide": "Invalid weight.",
+      "generic": "Error during delivery."
+    }
+  },
   "errorSection": {
     "saleForm": "the sale form",
     "financialEvolutionChart": "the financial evolution chart",

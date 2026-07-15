@@ -196,13 +196,37 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Closure dialog state
+  // Closure dialog state (AV.4 — livraison enrichie par ligne)
   const [clotureOpen, setClotureOpen] = useState(false);
   const [clotureLoading, setClotureLoading] = useState(false);
-  const [cloturePoidsLivre, setCloturePoidsLivre] = useState("");
   const [clotureDateLivraison, setClotureDateLivraison] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  interface ClotureLigneState {
+    poidsLivreKg: string;
+    nombreMortsTransport: string;
+    motifAvarie: string;
+  }
+  const [clotureLignes, setClotureLignes] = useState<Record<string, ClotureLigneState>>({});
+
+  function buildDefaultClotureLignes(): Record<string, ClotureLigneState> {
+    const map: Record<string, ClotureLigneState> = {};
+    for (const ligne of vente.lignes ?? []) {
+      map[ligne.id] = {
+        poidsLivreKg: String(ligne.poidsTotalKg),
+        nombreMortsTransport: "0",
+        motifAvarie: "",
+      };
+    }
+    return map;
+  }
+
+  function updateClotureLigne(ligneId: string, patch: Partial<ClotureLigneState>) {
+    setClotureLignes((prev) => ({
+      ...prev,
+      [ligneId]: { ...prev[ligneId], ...patch },
+    }));
+  }
 
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
@@ -256,8 +280,17 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     setClotureLoading(true);
     try {
       const dto: ClotureVenteDTO = {
-        poidsLivreKg: parseFloat(cloturePoidsLivre),
         ...(clotureDateLivraison && { dateLivraison: clotureDateLivraison }),
+        lignes: (vente.lignes ?? []).map((ligne) => {
+          const state = clotureLignes[ligne.id];
+          const motif = state?.motifAvarie?.trim();
+          return {
+            ligneVenteId: ligne.id,
+            poidsLivreKg: parseFloat(state?.poidsLivreKg ?? String(ligne.poidsTotalKg)),
+            nombreMortsTransport: parseInt(state?.nombreMortsTransport ?? "0", 10) || 0,
+            ...(motif ? { motifAvarie: motif } : {}),
+          };
+        }),
       };
       const result = await venteService.cloturerVente(vente.id, dto);
       if (result.ok) {
@@ -293,17 +326,33 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     }
   }
 
-  const cloturePoidsNum = parseFloat(cloturePoidsLivre) || 0;
-  const cloturePertePoids = vente.poidsTotalKg - cloturePoidsNum;
-  const cloturePoidsMoyenG = vente.quantitePoissons > 0
-    ? (vente.poidsTotalKg * 1000) / vente.quantitePoissons
-    : 0;
-  const clotureQuantiteLivree = cloturePoidsMoyenG > 0 && cloturePoidsNum > 0
-    ? Math.min(vente.quantitePoissons, Math.max(1, Math.round((cloturePoidsNum * 1000) / cloturePoidsMoyenG)))
-    : 0;
-  const cloturePertePoissons = vente.quantitePoissons - clotureQuantiteLivree;
-  const clotureNouveauMontant = cloturePoidsNum * vente.prixUnitaireKg;
-  const clotureValid = cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg;
+  // Cloture par ligne (AV.4) — totaux derives de clotureLignes
+  const clotureLignesList = vente.lignes ?? [];
+  let clotureTotalLivreKg = 0;
+  let clotureTotalMortsTransport = 0;
+  let clotureTotalPoissonsLivres = 0;
+  let clotureValid = clotureLignesList.length > 0;
+  for (const ligne of clotureLignesList) {
+    const state = clotureLignes[ligne.id];
+    const poidsLivreNum = state ? parseFloat(state.poidsLivreKg) : NaN;
+    const mortsNum = state ? parseInt(state.nombreMortsTransport || "0", 10) : NaN;
+    if (
+      state === undefined ||
+      isNaN(poidsLivreNum) ||
+      poidsLivreNum <= 0 ||
+      poidsLivreNum > ligne.poidsTotalKg ||
+      isNaN(mortsNum) ||
+      mortsNum < 0 ||
+      mortsNum > ligne.nombrePoissons
+    ) {
+      clotureValid = false;
+    }
+    const safePoidsLivre = isNaN(poidsLivreNum) ? 0 : poidsLivreNum;
+    const safeMorts = isNaN(mortsNum) ? 0 : mortsNum;
+    clotureTotalLivreKg += safePoidsLivre;
+    clotureTotalMortsTransport += safeMorts;
+    clotureTotalPoissonsLivres += Math.max(0, ligne.nombrePoissons - safeMorts);
+  }
 
   const canEdit = permissions.includes(Permission.VENTES_MODIFIER) && vente.statut !== StatutVente.CLOTUREE;
   const motifValid = editMotif.trim().length > 0;
@@ -361,7 +410,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
               {vente.statut === StatutVente.EN_PREPARATION && (
                 <DropdownMenuItem
                   onSelect={() => {
-                    setCloturePoidsLivre("");
+                    setClotureLignes(buildDefaultClotureLignes());
                     setClotureDateLivraison(new Date().toISOString().slice(0, 10));
                     setClotureOpen(true);
                   }}
@@ -537,34 +586,25 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </DialogContent>
       </Dialog>
 
-      {/* Cloture dialog (controlled, no trigger) */}
+      {/* Cloture dialog (controlled, no trigger) — AV.4 : livraison + avaries par ligne */}
       <Dialog open={clotureOpen} onOpenChange={(open) => {
         setClotureOpen(open);
         if (open) {
-          setCloturePoidsLivre("");
+          setClotureLignes(buildDefaultClotureLignes());
           setClotureDateLivraison(new Date().toISOString().slice(0, 10));
         }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("ventes.detail.cloturerTitle")}</DialogTitle>
+            <DialogTitle>
+              {t("livraisonAvarie.dialogTitle", { numero: vente.numero })}
+            </DialogTitle>
             <DialogDescription>
-              {t("ventes.detail.cloturerDescription")}
+              {t("livraisonAvarie.dialogDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
-            <Input
-              label={t("ventes.detail.poidsLivreKg")}
-              type="number"
-              step="0.1"
-              min="0.1"
-              max={vente.poidsTotalKg}
-              placeholder={t("ventes.detail.poidsLivrePlaceholder")}
-              value={cloturePoidsLivre}
-              onChange={(e) => setCloturePoidsLivre(e.target.value)}
-            />
-
             <Input
               label={t("ventes.detail.dateLivraison")}
               type="date"
@@ -572,45 +612,97 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
               onChange={(e) => setClotureDateLivraison(e.target.value)}
             />
 
-            {cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg && (
-              <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("ventes.detail.nouveauMontant")}</span>
-                  <span className="font-bold">{formatNumber(clotureNouveauMontant)} FCFA</span>
+            {clotureLignesList.map((ligne) => {
+              const state = clotureLignes[ligne.id] ?? {
+                poidsLivreKg: String(ligne.poidsTotalKg),
+                nombreMortsTransport: "0",
+                motifAvarie: "",
+              };
+              const poidsLivreNum = parseFloat(state.poidsLivreKg) || 0;
+              const pertePoids = ligne.poidsTotalKg - poidsLivreNum;
+
+              return (
+                <div key={ligne.id} className="rounded-lg border border-border/50 p-3 flex flex-col gap-3">
+                  <p className="font-medium text-sm">
+                    {ligne.bac?.nom ?? t("ventes.detail.perBac")}
+                    {" — "}
+                    <span className="text-muted-foreground font-normal">
+                      {ligne.nombrePoissons} poissons / {ligne.poidsTotalKg} kg
+                    </span>
+                  </p>
+
+                  <Input
+                    label={t("livraisonAvarie.poidsLivreLabel")}
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max={ligne.poidsTotalKg}
+                    value={state.poidsLivreKg}
+                    onChange={(e) => updateClotureLigne(ligne.id, { poidsLivreKg: e.target.value })}
+                  />
+
+                  <Input
+                    label={t("livraisonAvarie.mortsTransportLabel")}
+                    type="number"
+                    step="1"
+                    min="0"
+                    max={ligne.nombrePoissons}
+                    value={state.nombreMortsTransport}
+                    onChange={(e) => updateClotureLigne(ligne.id, { nombreMortsTransport: e.target.value })}
+                  />
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">{t("livraisonAvarie.motifLabel")}</label>
+                    <Textarea
+                      value={state.motifAvarie}
+                      onChange={(e) => updateClotureLigne(ligne.id, { motifAvarie: e.target.value })}
+                      placeholder={t("livraisonAvarie.motifPlaceholder")}
+                      rows={2}
+                    />
+                  </div>
+
+                  {pertePoids > 0 && (
+                    <p className="text-xs text-orange-600 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      {t("livraisonAvarie.pertePoidsLabel", { kg: pertePoids.toFixed(1) })}
+                    </p>
+                  )}
                 </div>
-                {cloturePertePoids > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-orange-600">
-                      <span>{t("ventes.detail.pertePoids")}</span>
-                      <span>{cloturePertePoids.toFixed(1)} kg</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-orange-600">
-                      <span>{t("ventes.detail.pertePoissons")}</span>
-                      <span>~{cloturePertePoissons}</span>
-                    </div>
-                    <div className="flex items-start gap-2 rounded-md bg-orange-50 dark:bg-orange-950/20 p-2 text-xs text-orange-700 dark:text-orange-400">
-                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <span>{t("ventes.detail.avarieWarning")}</span>
-                    </div>
-                  </>
-                )}
-                {cloturePertePoids === 0 && (
-                  <p className="text-xs text-emerald-600">{t("ventes.detail.livraisonComplete")}</p>
-                )}
+              );
+            })}
+
+            <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-1.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t("livraisonAvarie.totalLivreLabel", {
+                    kgLivre: clotureTotalLivreKg.toFixed(1),
+                    kgCommande: vente.poidsTotalKg.toFixed(1),
+                  })}
+                </span>
               </div>
-            )}
+              <div className="flex justify-between">
+                <span className={clotureTotalMortsTransport > 0 ? "text-orange-600" : "text-muted-foreground"}>
+                  {t("livraisonAvarie.totalMortsLabel", { nb: clotureTotalMortsTransport })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t("livraisonAvarie.totalPoissonsLivreLabel", { nb: clotureTotalPoissonsLivres })}
+                </span>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">{t("paiements.cancel")}</Button>
+              <Button variant="outline">{t("livraisonAvarie.cancelButton")}</Button>
             </DialogClose>
             <Button
               onClick={handleCloture}
               disabled={clotureLoading || !clotureValid}
               className="min-h-[44px]"
             >
-              {clotureLoading ? "..." : t("ventes.detail.confirmerCloture")}
+              {clotureLoading ? "..." : t("livraisonAvarie.confirmButton")}
             </Button>
           </DialogFooter>
         </DialogContent>
