@@ -622,6 +622,9 @@ export async function createVenteAlevinsDepuisVague(
 ) {
   return prisma.$transaction(async (tx) => {
     // 1. Valider la vague
+    // Timeout étendu (30s) car cette transaction fait beaucoup :
+    // validation + computeVivantsByBac + N ligneVente + N releves VENTE +
+    // N updates AssignationBac + guard invariant + éventuelle clôture.
     const vague = await tx.vague.findFirst({
       where: { id: data.vagueId, siteId },
       select: { id: true, code: true, type: true, statut: true, nombreInitial: true },
@@ -889,6 +892,11 @@ export async function createVenteAlevinsDepuisVague(
       where: { id: venteRaw.id },
       include: VENTE_LIST_INCLUDE,
     });
+  }, {
+    // 30s : couvre le pire cas (grande vague, beaucoup de lignes, guard invariant lourd)
+    // Défaut Prisma = 5s, insuffisant en prod.
+    timeout: 30000,
+    maxWait: 10000,
   });
 }
 
