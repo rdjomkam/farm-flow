@@ -200,14 +200,14 @@ export function ReleveFilterBar({ current, vagues }: Props) {
   const activeCount = countActiveFilters(getCurrentParams());
 
   return (
-    <div className={`transition-opacity ${isPending ? "opacity-60" : ""}`}>
+    <div className={`min-w-0 flex-1 transition-opacity ${isPending ? "opacity-60" : ""}`}>
       {/* Mobile : bouton "Filtres" + Sheet */}
-      <div className="flex items-center justify-between gap-2 md:hidden">
+      <div className="flex items-center gap-2 md:hidden">
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-md border border-border bg-background text-sm font-medium hover:bg-accent transition-colors"
+              className="shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-md border border-border bg-background text-sm font-medium hover:bg-accent transition-colors"
             >
               <SlidersHorizontal className="h-4 w-4" />
               {t("global.filtres.bouton")}
