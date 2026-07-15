@@ -142,6 +142,9 @@ export default async function VagueDetailPage({
     tailleMoyenne: null,
     nombreVivants: null,
     totalMortalites: 0,
+    mortalitesElevage: 0,
+    mortalitesAvarie: 0,
+    pertePoidsTransportKg: null,
     totalAliment: 0,
     gainPoids: null,
     joursEcoules: 0,
@@ -568,7 +571,12 @@ export default async function VagueDetailPage({
 
         {/* Coût de production */}
         {permissions.includes(Permission.FINANCES_VOIR) && coutProduction && (
-          <CoutProductionCard data={coutProduction} vagueId={id} hasParents={hasIncomingTransferts} />
+          <CoutProductionCard
+            data={coutProduction}
+            vagueId={id}
+            hasParents={hasIncomingTransferts}
+            pertePoidsTransportKg={indicateurs?.pertePoidsTransportKg ?? null}
+          />
         )}
 
         {/* Calibrages */}

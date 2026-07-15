@@ -37,7 +37,11 @@
     "poidsMoyen": "Avg. weight",
     "sgr": "SGR",
     "fcr": "FCR",
-    "vivants": "Alive"
+    "vivants": "Alive",
+    "detailMortalitesTitle": "Mortality detail",
+    "mortalitesElevage": "Rearing mortality",
+    "mortalitesAvarie": "Transport mortality",
+    "pertePoidsTransport": "Transport weight loss"
   },
   "detail": {
     "alevins": "{count} fry ({poids}g)",
@@ -412,7 +416,8 @@
       "biomasseTransferee": "Biomass transferred",
       "biomasseVivante": "Live biomass",
       "poissonsVendus": "Fish sold",
-      "poissonsTransferes": "Fish transferred"
+      "poissonsTransferes": "Fish transferred",
+      "perduTransport": "lost in transport"
     },
     "rentabilite": {
       "coutTotalProduction": "- Total production cost",

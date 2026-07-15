@@ -299,6 +299,10 @@ export interface MortalitySummaryPDF {
   totalMorts: number;
   tauxMortalite: number;
   topCauses: { cause: string; count: number }[];
+  /** Mortalité élevage (cause != AVARIE) — Sprint AV (AV.5) */
+  mortalitesElevage?: number;
+  /** Mortalité transport / avarie (cause = AVARIE) — Sprint AV (AV.5) */
+  mortalitesAvarie?: number;
 }
 
 /** Résumé d'alimentation */
@@ -460,6 +464,8 @@ export interface SalesSummaryPDF {
   totalMontant: number;
   totalPoissonsVendus: number;
   poidsObjectifKg: number | null;
+  /** Perte de poids en transport (kg) — Sprint AV (AV.5) */
+  pertePoidsTransportKg?: number | null;
 }
 
 // ---------------------------------------------------------------------------

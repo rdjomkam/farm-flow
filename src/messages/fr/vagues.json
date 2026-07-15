@@ -37,7 +37,11 @@
     "poidsMoyen": "Poids moyen",
     "sgr": "TCS",
     "fcr": "ICA",
-    "vivants": "Vivants"
+    "vivants": "Vivants",
+    "detailMortalitesTitle": "Détail mortalités",
+    "mortalitesElevage": "Mortalité élevage",
+    "mortalitesAvarie": "Mortalité transport",
+    "pertePoidsTransport": "Perte poids transport"
   },
   "detail": {
     "alevins": "{count} alevins ({poids}g)",
@@ -412,7 +416,8 @@
       "biomasseTransferee": "Biomasse transférée",
       "biomasseVivante": "Biomasse vivante",
       "poissonsVendus": "Poissons vendus",
-      "poissonsTransferes": "Poissons transférés"
+      "poissonsTransferes": "Poissons transférés",
+      "perduTransport": "perdus en transport"
     },
     "rentabilite": {
       "coutTotalProduction": "- Coût total production",

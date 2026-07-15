@@ -227,6 +227,9 @@ export async function GET(
       totalMorts: totalMortsRef,
       tauxMortalite: tauxMortaliteRef,
       // topCauses kept from raw relevés (informational breakdown)
+      // AV.5 : detail elevage vs avarie transport, source de verite = indicateurs
+      mortalitesElevage: indicateurs?.mortalitesElevage ?? 0,
+      mortalitesAvarie: indicateurs?.mortalitesAvarie ?? 0,
     };
     const feedingSummary = buildFeedingSummary(rawReleves);
     const waterQualitySummary = buildWaterQualitySummary(rawReleves);
@@ -390,6 +393,7 @@ export async function GET(
         totalMontant: coutProductionSection?.resume.revenus ?? 0,
         totalPoissonsVendus: coutProductionSection?.resume.nombrePoissonsVendus ?? 0,
         poidsObjectifKg: vague.poidsObjectifKg ?? null,
+        pertePoidsTransportKg: indicateurs?.pertePoidsTransportKg ?? null,
       },
       lineage: lineageSection,
     };

@@ -78,6 +78,26 @@ export interface IndicateursVague {
   totalMortalites: number;
 
   /**
+   * Mortalites d'elevage — cause != AVARIE (naturelle, maladie, predation, etc.).
+   * Sous-ensemble de totalMortalites. Sprint AV (AV.5).
+   */
+  mortalitesElevage: number;
+
+  /**
+   * Mortalites de transport / avarie — cause = AVARIE.
+   * Sous-ensemble de totalMortalites. Sprint AV (AV.5).
+   * Ne double PAS totalMortalites ni tauxSurvie.
+   */
+  mortalitesAvarie: number;
+
+  /**
+   * Perte de poids en transport (kg) — somme sur les lignes de vente
+   * livrees de cette vague : SUM(poidsTotalKg - poidsLivreKg) WHERE poidsLivreKg IS NOT NULL.
+   * Null si aucune ligne livree n'a de poidsLivreKg renseigne. Sprint AV (AV.5).
+   */
+  pertePoidsTransportKg: number | null;
+
+  /**
    * Quantite totale d'aliment distribue en kg.
    */
   totalAliment: number;

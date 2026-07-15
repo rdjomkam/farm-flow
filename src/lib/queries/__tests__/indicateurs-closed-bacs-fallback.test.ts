@@ -28,6 +28,9 @@ vi.mock("@/lib/db", () => ({
     transfertGroupe: {
       findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
+    ligneVente: {
+      findMany: () => Promise.resolve([]),
+    },
   },
 }));
 

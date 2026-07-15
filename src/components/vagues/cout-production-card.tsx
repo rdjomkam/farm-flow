@@ -34,13 +34,18 @@ interface CoutProductionCardProps {
   vagueId: string;
   /** Si true, le toggle "Inclure pré-grossissement" est affiché (vague a des transferts entrants) */
   hasParents?: boolean;
+  /**
+   * Perte de poids en transport (kg) — Sprint AV (AV.5). Affichée en note
+   * sous la biomasse vendue, qui reste calculée sur poidsLivreKg (DV.0).
+   */
+  pertePoidsTransportKg?: number | null;
 }
 
 // ---------------------------------------------------------------------------
 // Composant
 // ---------------------------------------------------------------------------
 
-export function CoutProductionCard({ data, vagueId, hasParents = false }: CoutProductionCardProps) {
+export function CoutProductionCard({ data, vagueId, hasParents = false, pertePoidsTransportKg = null }: CoutProductionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [includeParents, setIncludeParents] = useState(false);
   const t = useTranslations("vagues.coutProduction");
@@ -183,7 +188,7 @@ export function CoutProductionCard({ data, vagueId, hasParents = false }: CoutPr
               <div className="mt-4 space-y-4 border-t border-border pt-3">
 
                 {/* Bilan Production & Ventes */}
-                <ProductionBilan resume={resume} t={t} />
+                <ProductionBilan resume={resume} t={t} pertePoidsTransportKg={pertePoidsTransportKg} />
 
                 {/* Répartition par catégorie */}
                 {coutParCategorie.length > 0 && (
@@ -394,7 +399,15 @@ export function CoutProductionCard({ data, vagueId, hasParents = false }: CoutPr
 // ProductionBilan — bilan production vs ventes
 // ---------------------------------------------------------------------------
 
-function ProductionBilan({ resume, t }: { resume: CoutProductionVague["resume"]; t: (key: string) => string }) {
+function ProductionBilan({
+  resume,
+  t,
+  pertePoidsTransportKg = null,
+}: {
+  resume: CoutProductionVague["resume"];
+  t: (key: string) => string;
+  pertePoidsTransportKg?: number | null;
+}) {
   return (
     <DetailSection
       title={t("sections.bilanProduction")}
@@ -406,7 +419,15 @@ function ProductionBilan({ resume, t }: { resume: CoutProductionVague["resume"];
             <BilanRow label={t("bilan.biomasseProduite")} value={`${formatNumber(Math.round(resume.biomasseProduite * 10) / 10)} kg`} bold />
           )}
           {resume.poidsTotalVendu > 0 && (
-            <BilanRow label={t("bilan.biomasseVendue")} value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`} />
+            <BilanRow
+              label={t("bilan.biomasseVendue")}
+              value={`${formatNumber(Math.round(resume.poidsTotalVendu * 10) / 10)} kg`}
+              note={
+                pertePoidsTransportKg && pertePoidsTransportKg > 0
+                  ? `(${formatNumber(Math.round(pertePoidsTransportKg * 10) / 10)} kg ${t("bilan.perduTransport")})`
+                  : undefined
+              }
+            />
           )}
           {resume.biomasseTransferee !== null && resume.biomasseTransferee > 0 && (
             <BilanRow label={t("bilan.biomasseTransferee")} value={`${formatNumber(Math.round(resume.biomasseTransferee * 10) / 10)} kg`} />
@@ -426,11 +447,25 @@ function ProductionBilan({ resume, t }: { resume: CoutProductionVague["resume"];
   );
 }
 
-function BilanRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function BilanRow({
+  label,
+  value,
+  bold,
+  note,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  /** Note secondaire affichée sous la valeur — Sprint AV (AV.5) */
+  note?: string;
+}) {
   return (
     <>
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={`text-sm tabular-nums text-right ${bold ? "font-semibold" : "font-medium"}`}>{value}</span>
+      <span className="text-right">
+        <span className={`block text-sm tabular-nums ${bold ? "font-semibold" : "font-medium"}`}>{value}</span>
+        {note && <span className="block text-[10px] text-destructive/80 leading-tight">{note}</span>}
+      </span>
     </>
   );
 }

@@ -753,6 +753,14 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                     <Text style={styles.kpiLabel}>Poissons vendus</Text>
                     <Text style={styles.kpiValue}>{resume.nombrePoissonsVendus}</Text>
                   </View>
+                  {(data.salesSummary?.pertePoidsTransportKg ?? 0) > 0 && (
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiLabel}>Perte poids transport</Text>
+                      <Text style={[styles.kpiValue, { color: colors.danger }]}>
+                        {formatNum(data.salesSummary?.pertePoidsTransportKg, 1, "kg")}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -1174,6 +1182,18 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 <Text style={styles.kpiLabel}>Taux de mortalité</Text>
                 <Text style={styles.kpiValue}>{formatNum(data.mortalitySummary.tauxMortalite, 1, "%")}</Text>
               </View>
+              {(data.mortalitySummary.mortalitesAvarie ?? 0) > 0 && (
+                <>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>Mortalité élevage</Text>
+                    <Text style={styles.kpiValue}>{data.mortalitySummary.mortalitesElevage ?? 0}</Text>
+                  </View>
+                  <View style={styles.kpiCard}>
+                    <Text style={styles.kpiLabel}>Mortalité transport (avarie)</Text>
+                    <Text style={styles.kpiValue}>{data.mortalitySummary.mortalitesAvarie ?? 0}</Text>
+                  </View>
+                </>
+              )}
             </View>
             {data.mortalitySummary.topCauses.length > 0 && (
               <View>

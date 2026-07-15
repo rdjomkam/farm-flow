@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { TypeReleve } from "@/types";
+import { TypeReleve, CauseMortalite } from "@/types";
 import type { IndicateursVague } from "@/types";
 import {
   calculerTauxSurvie,
@@ -45,12 +45,29 @@ export async function getIndicateursVague(
           nombreTransferes: true,
           quantiteAliment: true,
           nombreCompte: true,
+          causeMortalite: true,
         },
       },
     },
   });
 
   if (!vague) return null;
+
+  // AV.5 : perte de poids transport = SUM(poidsTotalKg - poidsLivreKg) sur les lignes
+  // de vente livrees (poidsLivreKg renseigne) rattachees a cette vague.
+  const lignesLivrees = await prisma.ligneVente.findMany({
+    where: { vagueId, siteId, poidsLivreKg: { not: null } },
+    select: { poidsTotalKg: true, poidsLivreKg: true },
+  });
+  const pertePoidsTransportKg =
+    lignesLivrees.length > 0
+      ? Math.round(
+          lignesLivrees.reduce(
+            (sum, l) => sum + (l.poidsTotalKg - (l.poidsLivreKg as number)),
+            0
+          ) * 100
+        ) / 100
+      : null;
 
   // CS.2 : charger les bacDestIds pour discriminer TRANSFERT entrants (vague GROSSISSEMENT)
   const transfertDestBacIds = await getTransfertDestBacIds(siteId, vagueId);
@@ -69,6 +86,17 @@ export async function getIndicateursVague(
     (r) => r.typeReleve === TypeReleve.ALIMENTATION
   );
   const comptages = vague.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
+
+  // AV.5 : detail mortalites elevage vs avarie (transport). Sous-ensembles de totalMortalites,
+  // ne change ni totalMortalites ni tauxSurvie.
+  const mortalitesElevage = mortalites.reduce(
+    (sum, r) => sum + (r.causeMortalite !== CauseMortalite.AVARIE ? (r.nombreMorts ?? 0) : 0),
+    0
+  );
+  const mortalitesAvarie = mortalites.reduce(
+    (sum, r) => sum + (r.causeMortalite === CauseMortalite.AVARIE ? (r.nombreMorts ?? 0) : 0),
+    0
+  );
 
   // Total aliment (global, pas par bac)
   const totalAliment = alimentations.reduce(
@@ -215,6 +243,9 @@ export async function getIndicateursVague(
     tailleMoyenne,
     nombreVivants,
     totalMortalites,
+    mortalitesElevage,
+    mortalitesAvarie,
+    pertePoidsTransportKg,
     totalAliment: Math.round(totalAliment * 100) / 100,
     gainPoids,
     joursEcoules,
