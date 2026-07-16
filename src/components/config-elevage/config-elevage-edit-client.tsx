@@ -273,7 +273,6 @@ export function ConfigElevageEditClient({ config }: Props) {
                     unit="kg"
                     min={0.1}
                     max={100}
-                    step={0.5}
                     placeholder={t("placeholders.poidsSacKg")}
                   />
                   <p className="text-xs text-muted-foreground mt-1">{t("fields.poidsSacKgHint")}</p>
