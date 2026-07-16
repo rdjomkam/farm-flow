@@ -2850,6 +2850,14 @@ export interface ConfigElevage {
   recoltePartiellePoidsSeuil: number;
   recolteJeuneAvantJours: number;
 
+  // Cout de production
+  /**
+   * Poids d'un sac d'aliment en kg pour ce profil (ex. 15 pour Skretting).
+   * Prioritaire sur Produit.contenance dans le calcul du nombre de sacs
+   * du cout de production. Null = fallback sur le produit.
+   */
+  poidsSacKg?: number | null;
+
   // Modele de croissance Gompertz — points de depart pour la calibration (optionnels)
   /** Poids asymptotique W∞ par defaut (g) — point de depart pour la calibration Gompertz */
   gompertzWInfDefault?: number | null;

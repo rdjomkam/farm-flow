@@ -2049,6 +2049,12 @@ export interface CreateConfigElevageDTO {
   densiteOptimalePoissonsM3?: number;
   recoltePartiellePoidsSeuil?: number;
   recolteJeuneAvantJours?: number;
+  /**
+   * Poids d'un sac d'aliment en kg pour ce profil (ex. 15 pour Skretting).
+   * Prioritaire sur Produit.contenance dans le calcul du nombre de sacs
+   * du cout de production. Null = fallback sur le produit.
+   */
+  poidsSacKg?: number | null;
   isDefault?: boolean;
   isActive?: boolean;
 }

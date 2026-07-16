@@ -23,6 +23,7 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   poidsObjectif: 800,
   dureeEstimeeCycle: 180,
   tauxSurvieObjectif: 85,
+  poidsSacKg: null,
   // Phases
   seuilAcclimatation: 15,
   seuilCroissanceDebut: 50,
@@ -270,7 +271,12 @@ function OptionalNumericField({
         placeholder={placeholder}
         onChange={(e) => {
           const raw = e.target.value;
-          onChange(name, raw === "" ? null : parseFloat(raw));
+          if (raw === "") {
+            onChange(name, null);
+            return;
+          }
+          const parsed = parseFloat(raw);
+          onChange(name, Number.isNaN(parsed) ? null : parsed);
         }}
         className="flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       />
@@ -309,6 +315,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
       poidsObjectif: tpl.poidsObjectif,
       dureeEstimeeCycle: tpl.dureeEstimeeCycle,
       tauxSurvieObjectif: tpl.tauxSurvieObjectif,
+      poidsSacKg: tpl.poidsSacKg ?? null,
       seuilAcclimatation: tpl.seuilAcclimatation,
       seuilCroissanceDebut: tpl.seuilCroissanceDebut,
       seuilJuvenile: tpl.seuilJuvenile,
@@ -515,10 +522,26 @@ export function ConfigElevageFormClient({ templates }: Props) {
             onToggle={() => toggleSection(section.id)}
           >
             {section.id === "objectif" && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
-                <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit={t("units.jours")} min={30} max={365} step={1} />
-                <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
+                  <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit={t("units.jours")} min={30} max={365} step={1} />
+                  <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                </div>
+                <div>
+                  <OptionalNumericField
+                    label={t("fields.poidsSacKg")}
+                    name="poidsSacKg"
+                    value={form.poidsSacKg}
+                    onChange={handleOptionalNumeric}
+                    unit="kg"
+                    min={0.1}
+                    max={100}
+                    step={0.5}
+                    placeholder={t("placeholders.poidsSacKg")}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">{t("fields.poidsSacKgHint")}</p>
+                </div>
               </div>
             )}
             {section.id === "phases" && (

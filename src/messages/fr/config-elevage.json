@@ -24,6 +24,8 @@
     "poidsObjectif": "Poids objectif",
     "dureeEstimee": "Duree estimee",
     "survieObjectif": "Survie objectif",
+    "poidsSacKg": "Poids d'un sac",
+    "poidsSacKgHint": "Utilise pour le calcul du nombre de sacs dans le cout de production. Si vide, la contenance du produit est utilisee.",
     "acclimatationFin": "Acclimatation (fin)",
     "croissanceDebutFin": "Croissance debut (fin)",
     "juvenileFin": "Juvenile (fin)",
@@ -136,7 +138,8 @@
   "placeholders": {
     "gompertzWInf": "ex : 1200",
     "gompertzK": "ex : 0.018",
-    "gompertzTi": "ex : 95"
+    "gompertzTi": "ex : 95",
+    "poidsSacKg": "ex : 15"
   },
   "units": {
     "jours": "jours"

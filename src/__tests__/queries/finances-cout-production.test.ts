@@ -318,6 +318,110 @@ describe("getCoutProductionVague — aliments avec contenance (sac de 25 kg)", (
 });
 
 // ---------------------------------------------------------------------------
+// 3bis. SC2.2 — Priorité poidsSacKg du profil (ConfigElevage) sur contenance produit
+// ---------------------------------------------------------------------------
+
+describe("getCoutProductionVague — priorité poidsSacKg profil > contenance produit (SC2.2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAllEmpty();
+  });
+
+  it("utilise poidsSacKg du profil (25) même si le produit a une contenance différente (15)", async () => {
+    mockVagueFindUniqueOrThrow.mockResolvedValue({
+      ...vagueBase,
+      configElevage: { poidsSacKg: 25 },
+    });
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 50,
+        produit: {
+          nom: "Granulé 4mm",
+          prixUnitaire: 18000,
+          uniteAchat: UniteStock.SACS,
+          contenance: 15,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    // Priorité profil : 25 kg/sac (pas 15)
+    expect(result.detailAliments[0].contenanceSac).toBe(25);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(2, 1); // 50 / 25 = 2
+  });
+
+  it("applique le poidsSacKg du profil même si uniteAchat !== SACS (décision explicite de l'éleveur)", async () => {
+    mockVagueFindUniqueOrThrow.mockResolvedValue({
+      ...vagueBase,
+      configElevage: { poidsSacKg: 25 },
+    });
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 50,
+        produit: {
+          nom: "Aliment en litres",
+          prixUnitaire: 500,
+          uniteAchat: UniteStock.LITRE,
+          contenance: 10,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments[0].contenanceSac).toBe(25);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(2, 1); // 50 / 25 = 2
+  });
+
+  it("fallback sur la contenance du produit quand poidsSacKg du profil est null", async () => {
+    mockVagueFindUniqueOrThrow.mockResolvedValue({
+      ...vagueBase,
+      configElevage: { poidsSacKg: null },
+    });
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 30,
+        produit: {
+          nom: "Granulé 3mm",
+          prixUnitaire: 15000,
+          uniteAchat: UniteStock.SACS,
+          contenance: 15,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments[0].contenanceSac).toBe(15);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(2, 1); // 30 / 15 = 2
+  });
+
+  it("fallback sur la contenance du produit quand la vague n'a pas de configElevage", async () => {
+    mockVagueFindUniqueOrThrow.mockResolvedValue({
+      ...vagueBase,
+      configElevage: null,
+    });
+    mockReleveConsommationFindMany.mockResolvedValue([
+      {
+        quantite: 186,
+        produit: {
+          nom: "Granulé 6mm",
+          prixUnitaire: 18000,
+          uniteAchat: UniteStock.SACS,
+          contenance: 15,
+        },
+      },
+    ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    expect(result.detailAliments[0].contenanceSac).toBe(15);
+    expect(result.detailAliments[0].nombreSacs).toBeCloseTo(12.4, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 4. Dépenses directes catégorie ALIMENT → exclues (anti double-comptage)
 // ---------------------------------------------------------------------------
 

@@ -258,10 +258,26 @@ export function ConfigElevageEditClient({ config }: Props) {
             onToggle={() => toggleSection(section.id)}
           >
             {section.id === "objectif" && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
-                <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit={t("units.jours")} min={30} max={365} step={1} />
-                <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
+                  <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit={t("units.jours")} min={30} max={365} step={1} />
+                  <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                </div>
+                <div>
+                  <OptionalNumericField
+                    label={t("fields.poidsSacKg")}
+                    name="poidsSacKg"
+                    value={form.poidsSacKg}
+                    onChange={handleOptionalNumeric}
+                    unit="kg"
+                    min={0.1}
+                    max={100}
+                    step={0.5}
+                    placeholder={t("placeholders.poidsSacKg")}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">{t("fields.poidsSacKgHint")}</p>
+                </div>
               </div>
             )}
             {section.id === "phases" && (

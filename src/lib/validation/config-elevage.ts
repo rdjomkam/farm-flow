@@ -289,6 +289,9 @@ const baseConfigElevageObject = z.object({
     dureeEstimeeCycle: z.number().int().positive("dureeEstimeeCycle doit etre > 0"),
     tauxSurvieObjectif: z.number().min(0).max(100, "tauxSurvieObjectif doit etre entre 0 et 100"),
 
+    // Poids d'un sac (utilise pour le cout de production par vague)
+    poidsSacKg: z.number().positive("poidsSacKg doit etre > 0").max(100, "poidsSacKg doit etre <= 100").nullable().optional(),
+
     // Seuils de phases
     seuilAcclimatation: z.number().positive().optional(),
     seuilCroissanceDebut: z.number().positive().optional(),

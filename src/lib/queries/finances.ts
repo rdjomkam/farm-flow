@@ -1090,6 +1090,9 @@ export async function getCoutProductionVague(
       dateDebut: true,
       dateFin: true,
       nombreInitial: true,
+      configElevage: {
+        select: { poidsSacKg: true },
+      },
     },
   });
 
@@ -1385,14 +1388,27 @@ export async function getCoutProductionVague(
     alimentsMap.set(rc.produit.nom, existing);
   }
 
+  // SC2.2 : priorite profil (ConfigElevage.poidsSacKg) > produit (Produit.contenance, si uniteAchat=SACS)
+  // Quand le poids vient du profil, il s'applique a TOUS les aliments (pas de condition uniteAchat).
+  const poidsSacProfil = vague.configElevage?.poidsSacKg ?? null;
+
   const detailAliments: CoutProductionDetailAliment[] = Array.from(
     alimentsMap.entries()
   ).map(([nom, data]) => {
-    const contenanceSac = data.contenance ?? null;
-    const nombreSacs =
-      data.uniteAchat === UniteStock.SACS && contenanceSac && contenanceSac > 0
-        ? data.quantite / contenanceSac
-        : null;
+    let contenanceSac: number | null;
+    let nombreSacs: number | null;
+
+    if (poidsSacProfil !== null && poidsSacProfil > 0) {
+      contenanceSac = poidsSacProfil;
+      nombreSacs = data.quantite / poidsSacProfil;
+    } else {
+      contenanceSac = data.contenance ?? null;
+      nombreSacs =
+        data.uniteAchat === UniteStock.SACS && contenanceSac && contenanceSac > 0
+          ? data.quantite / contenanceSac
+          : null;
+    }
+
     return {
       produit: nom,
       quantite: Math.round(data.quantite * 1000) / 1000,

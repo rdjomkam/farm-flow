@@ -24,6 +24,8 @@
     "poidsObjectif": "Target weight",
     "dureeEstimee": "Estimated duration",
     "survieObjectif": "Survival target",
+    "poidsSacKg": "Bag weight",
+    "poidsSacKgHint": "Used to calculate the number of bags in production cost. If empty, the product packaging size is used.",
     "acclimatationFin": "Acclimatation (end)",
     "croissanceDebutFin": "Early growth (end)",
     "juvenileFin": "Juvenile (end)",
@@ -136,7 +138,8 @@
   "placeholders": {
     "gompertzWInf": "e.g. 1200",
     "gompertzK": "e.g. 0.018",
-    "gompertzTi": "e.g. 95"
+    "gompertzTi": "e.g. 95",
+    "poidsSacKg": "e.g. 15"
   },
   "units": {
     "jours": "days"
