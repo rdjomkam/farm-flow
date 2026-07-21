@@ -109,6 +109,7 @@ import {
   StatutActivite,
   StatutAlerte,
   StatutBesoins,
+  StatutBonLivraison,
   StatutCommande,
   StatutDepense,
   StatutFacture,
@@ -147,12 +148,14 @@ import type {
   ConfigElevage,
   ConfigElevageWithRelations,
   AjustementDepense,
+  BonLivraison,
   Depense,
   DowngradeRessourcesAGarder,
   FraisPaiementDepense,
   Facture,
   Fournisseur,
   LigneCommande,
+  LigneVente,
   LigneBesoin,
   LigneBesoinWithRelations,
   ListeBesoins,
@@ -1075,6 +1078,44 @@ export interface CreatePaiementDTO {
 export interface PaiementListResponse {
   paiements: Paiement[];
   total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Bons de livraison — Sprint BL
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer un bon de livraison a partir d'une vente */
+export interface CreateBonLivraisonDTO {
+  venteId: string;
+}
+
+/** DTO pour signer un bon de livraison (client + livreur) */
+export interface SignerBonLivraisonDTO {
+  /** Signature du client — image PNG en base64 (data URL) */
+  signatureClient: string;
+  signataireClientNom: string;
+  /** Signature du livreur — image PNG en base64 (data URL) */
+  signatureLivreur: string;
+}
+
+/** Bloc paiement affiche sur le bon de livraison — Sprint BL */
+export interface BlocPaiementBonLivraison {
+  totalVente: number;
+  paye: number;
+  resteAPayer: number;
+}
+
+/** Reponse detaillee d'un bon de livraison — GET /api/ventes/[id]/bon-livraison */
+export interface BonLivraisonDetailResponse {
+  bonLivraison: BonLivraison;
+  vente: Vente & {
+    client: Client;
+    lignes?: (LigneVente & {
+      vague?: { code: string } | null;
+      bac?: { nom: string } | null;
+    })[];
+  };
+  blocPaiement: BlocPaiementBonLivraison;
 }
 
 // ---------------------------------------------------------------------------

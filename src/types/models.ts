@@ -342,6 +342,18 @@ export enum ModePaiement {
   CHEQUE = "CHEQUE",
 }
 
+/**
+ * Statut d'un bon de livraison — Sprint BL.
+ * BROUILLON : cree mais pas encore presente au client.
+ * EN_ATTENTE_SIGNATURE : ecran de signature affiche.
+ * SIGNE : les deux signatures (client + livreur) sont capturees.
+ */
+export enum StatutBonLivraison {
+  BROUILLON = "BROUILLON",
+  EN_ATTENTE_SIGNATURE = "EN_ATTENTE_SIGNATURE",
+  SIGNE = "SIGNE",
+}
+
 // ---------------------------------------------------------------------------
 // Modeles — Multi-tenancy
 // ---------------------------------------------------------------------------
@@ -385,6 +397,10 @@ export interface Site {
   ownerId: string;
   /** True si le site est bloqué (accès restreint suite à abonnement expiré) */
   isBlocked: boolean;
+  /** Signature du promoteur du site — image PNG en base64 (data URL), apposée sur chaque bon de livraison — Sprint BL */
+  signaturePromoteur: string | null;
+  /** Cachet/tampon du site — image PNG en base64 (data URL) — Sprint BL */
+  cachet: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1132,6 +1148,39 @@ export interface Paiement {
 /** Paiement avec ses relations chargees */
 export interface PaiementWithRelations extends Paiement {
   facture: Facture;
+  user: User;
+}
+
+/**
+ * BonLivraison — bon de livraison signe a la livraison d'une vente — Sprint BL.
+ *
+ * Relation 1:1 avec Vente (venteId unique). Obligatoire (statut SIGNE) pour
+ * passer une vente de EN_PREPARATION a LIVREE.
+ */
+export interface BonLivraison {
+  id: string;
+  /** Numero unique du bon de livraison (ex: "BL-2026-001") */
+  numero: string;
+  /** ID de la vente associee (relation 1:1) */
+  venteId: string;
+  statut: StatutBonLivraison;
+  /** Signature du client — image PNG encodee en base64 (data URL) */
+  signatureClient: string | null;
+  signataireClientNom: string | null;
+  /** Signature du livreur — image PNG encodee en base64 (data URL) */
+  signatureLivreur: string | null;
+  signeLe: Date | null;
+  /** Utilisateur livreur ayant cree/signe le bon de livraison */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** BonLivraison avec ses relations chargees */
+export interface BonLivraisonWithRelations extends BonLivraison {
+  vente: Vente & { client: Client };
   user: User;
 }
 

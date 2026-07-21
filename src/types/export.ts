@@ -26,6 +26,7 @@ import type {
   TypeMouvement,
   UniteStock,
   StatutVague,
+  StatutBonLivraison,
 } from "@/types";
 import type { CoutProductionVague } from "@/lib/queries/finances";
 
@@ -805,4 +806,110 @@ export interface CreateCoutProductionPDFDTO {
 
   /** Données complètes du coût de production de la vague */
   coutProduction: CoutProductionVague;
+}
+
+// ---------------------------------------------------------------------------
+// DTOs PDF — Bon de livraison (Sprint BL, story BL.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Client destinataire du bon de livraison PDF.
+ */
+export interface ClientBonLivraisonPDF {
+  /** Nom complet du client */
+  nom: string;
+  /** Numéro de téléphone (nullable) */
+  telephone: string | null;
+}
+
+/**
+ * Ligne livrée (une par LigneVente) dans le tableau du bon de livraison.
+ * Le poids livré peut différer du poids commandé (écart de livraison).
+ */
+export interface LigneBonLivraisonPDF {
+  /** Libellé du produit — code de vague ou nom du lot d'alevins */
+  designation: string;
+  /** Nom du bac d'origine (nullable) */
+  nomBac: string | null;
+  /** Nombre de poissons de la ligne */
+  nombrePoissons: number;
+  /** Poids commandé/attendu en kilogrammes */
+  poidsCommandeKg: number;
+  /** Poids réellement livré en kilogrammes (nullable si non renseigné) */
+  poidsLivreKg: number | null;
+  /** Écart = poidsLivreKg - poidsCommandeKg (nullable si poidsLivreKg absent) */
+  ecartKg: number | null;
+}
+
+/**
+ * Bloc financier du bon de livraison : total vente / payé à ce jour / reste à payer.
+ */
+export interface BlocPaiementBonLivraisonPDF {
+  totalVente: number;
+  paye: number;
+  resteAPayer: number;
+}
+
+/**
+ * Zone de signature (image base64 data URL + métadonnées) du bon de livraison PDF.
+ * L'image est nullable : la zone doit s'afficher avec le libellé même sans image
+ * (ex. asset promoteur/cachet non configuré).
+ */
+export interface SignatureBonLivraisonPDF {
+  /** Image PNG en base64 (data URL), nullable si non capturée/configurée */
+  image: string | null;
+  /** Nom de la personne (signataire client, ou livreur), nullable */
+  nom: string | null;
+  /** Date de signature (nullable — uniquement pour client/livreur) */
+  date: Date | null;
+}
+
+/**
+ * DTO pour générer un bon de livraison signé en PDF.
+ *
+ * Assemblé par la query `getBonLivraisonForPDF` dans
+ * /api/export/bon-livraison/[id]. Le PDF n'est généré que pour un BL au
+ * statut SIGNE (guard côté route).
+ *
+ * Structure du PDF :
+ * - En-tête : nom/adresse ferme + N° BL + date de livraison + N° vente
+ * - Section client : nom + téléphone
+ * - Tableau des lignes livrées : produit, poissons, poids commandé/livré, écart
+ * - Bloc paiement : total vente / payé / reste à payer (mis en évidence)
+ * - Bloc signatures : client, livreur, promoteur (+ cachet)
+ */
+export interface CreateBonLivraisonPDFDTO {
+  /** Informations du site (ferme) pour l'en-tête */
+  site: SiteInfoExport;
+
+  // --- Bon de livraison ---
+  /** Numéro unique du BL (ex: "BL-2026-001") */
+  numero: string;
+  /** Statut du BL (attendu : SIGNE) */
+  statut: StatutBonLivraison;
+  /** Date de signature (= date de livraison effective) */
+  signeLe: Date | null;
+
+  // --- Vente liée ---
+  /** Numéro unique de la vente liée */
+  venteNumero: string;
+
+  // --- Client ---
+  client: ClientBonLivraisonPDF;
+
+  // --- Lignes livrées ---
+  lignes: LigneBonLivraisonPDF[];
+
+  // --- Bloc paiement ---
+  blocPaiement: BlocPaiementBonLivraisonPDF;
+
+  // --- Signatures ---
+  signatureClient: SignatureBonLivraisonPDF;
+  signatureLivreur: SignatureBonLivraisonPDF;
+  signaturePromoteur: SignatureBonLivraisonPDF;
+  /** Cachet du site — image base64 uniquement (pas de nom/date) */
+  cachet: string | null;
+
+  /** Date de génération du PDF (pied de page) */
+  dateGeneration: string;
 }

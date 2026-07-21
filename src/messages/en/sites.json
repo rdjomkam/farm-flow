@@ -33,7 +33,16 @@
     "roleLabel": "Role",
     "annuler": "Cancel",
     "ajouterBtn": "Add",
-    "vous": "(you)"
+    "vous": "(you)",
+    "documents": "Documents",
+    "documentsDescription": "Used to generate signed delivery notes.",
+    "signaturePromoteur": "Owner's signature",
+    "cachet": "Stamp",
+    "aucuneImage": "No image",
+    "televerser": "Upload",
+    "supprimer": "Remove",
+    "erreurTailleImage": "The image is too large (500KB maximum).",
+    "erreurTypeImage": "Unsupported format. Use a PNG or JPEG image."
   },
   "memberActions": {
     "gererTitle": "Manage — {name}",

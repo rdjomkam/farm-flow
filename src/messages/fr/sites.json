@@ -33,7 +33,16 @@
     "roleLabel": "Role",
     "annuler": "Annuler",
     "ajouterBtn": "Ajouter",
-    "vous": "(vous)"
+    "vous": "(vous)",
+    "documents": "Documents",
+    "documentsDescription": "Utilises pour generer les bons de livraison signes.",
+    "signaturePromoteur": "Signature du promoteur",
+    "cachet": "Cachet",
+    "aucuneImage": "Aucune image",
+    "televerser": "Televerser",
+    "supprimer": "Supprimer",
+    "erreurTailleImage": "L'image est trop volumineuse (500KB maximum).",
+    "erreurTypeImage": "Format non supporte. Utilisez une image PNG ou JPEG."
   },
   "memberActions": {
     "gererTitle": "Gerer — {name}",

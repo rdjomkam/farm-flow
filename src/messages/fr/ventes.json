@@ -282,6 +282,61 @@
       "generic": "Erreur lors de la livraison."
     }
   },
+  "bonLivraison": {
+    "title": "Bon de livraison",
+    "loading": "Chargement du bon de livraison...",
+    "back": "Retour",
+    "next": "Suivant",
+    "validating": "Validation...",
+    "close": "Fermer",
+    "menuItem": "Bon de livraison",
+    "menuItemVoir": "Voir le bon de livraison",
+    "linkTitle": "Bon de livraison",
+    "statutSigne": "Signe",
+    "requiredBeforeCloture": "Faites d'abord signer le bon de livraison avant de cloturer la livraison.",
+    "openFlow": "Ouvrir le bon de livraison",
+    "errors": {
+      "creationFailed": "Erreur lors de la creation du bon de livraison.",
+      "loadFailed": "Erreur lors du chargement du bon de livraison."
+    },
+    "recap": {
+      "client": "Client",
+      "date": "Date",
+      "lignesTitle": "Lignes a livrer",
+      "poissons": "poissons",
+      "totalVente": "Total vente",
+      "paye": "Paye a ce jour",
+      "resteAPayer": "Reste a payer",
+      "fairesigner": "Faire signer"
+    },
+    "signatureClient": {
+      "instructions": "Faites signer le client sur l'ecran ci-dessous.",
+      "nomLabel": "Nom du signataire",
+      "nomPlaceholder": "Ex: Jean Mballa"
+    },
+    "signatureLivreur": {
+      "instructions": "Signez pour confirmer la livraison.",
+      "valider": "Valider le bon de livraison"
+    },
+    "signed": {
+      "title": "Bon de livraison signe",
+      "numero": "N° {numero}",
+      "signatureClientLabel": "Signature du client — {nom}",
+      "signatureClientAlt": "Signature du client",
+      "signatureLivreurLabel": "Signature du livreur",
+      "signatureLivreurAlt": "Signature du livreur",
+      "downloadPdf": "Telecharger le PDF",
+      "share": "Partager",
+      "partageEnCours": "Partage en cours...",
+      "shareError": "Erreur lors du partage du bon de livraison."
+    },
+    "signaturePad": {
+      "ariaLabel": "Zone de signature tactile",
+      "emptyHint": "Signez avec le doigt ou la souris",
+      "filledHint": "Signature enregistree",
+      "clear": "Effacer"
+    }
+  },
   "errorSection": {
     "saleForm": "le formulaire de vente",
     "financialEvolutionChart": "le graphique d'évolution financière",

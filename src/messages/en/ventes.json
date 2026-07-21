@@ -282,6 +282,61 @@
       "generic": "Error during delivery."
     }
   },
+  "bonLivraison": {
+    "title": "Delivery note",
+    "loading": "Loading delivery note...",
+    "back": "Back",
+    "next": "Next",
+    "validating": "Validating...",
+    "close": "Close",
+    "menuItem": "Delivery note",
+    "menuItemVoir": "View delivery note",
+    "linkTitle": "Delivery note",
+    "statutSigne": "Signed",
+    "requiredBeforeCloture": "Have the delivery note signed before closing the delivery.",
+    "openFlow": "Open delivery note",
+    "errors": {
+      "creationFailed": "Error creating the delivery note.",
+      "loadFailed": "Error loading the delivery note."
+    },
+    "recap": {
+      "client": "Client",
+      "date": "Date",
+      "lignesTitle": "Items to deliver",
+      "poissons": "fish",
+      "totalVente": "Sale total",
+      "paye": "Paid so far",
+      "resteAPayer": "Remaining balance",
+      "fairesigner": "Get signatures"
+    },
+    "signatureClient": {
+      "instructions": "Have the client sign on the screen below.",
+      "nomLabel": "Signer's name",
+      "nomPlaceholder": "E.g. Jean Mballa"
+    },
+    "signatureLivreur": {
+      "instructions": "Sign to confirm the delivery.",
+      "valider": "Validate delivery note"
+    },
+    "signed": {
+      "title": "Delivery note signed",
+      "numero": "No. {numero}",
+      "signatureClientLabel": "Client signature — {nom}",
+      "signatureClientAlt": "Client signature",
+      "signatureLivreurLabel": "Delivery person's signature",
+      "signatureLivreurAlt": "Delivery person's signature",
+      "downloadPdf": "Download PDF",
+      "share": "Share",
+      "partageEnCours": "Sharing...",
+      "shareError": "Error sharing the delivery note."
+    },
+    "signaturePad": {
+      "ariaLabel": "Touch signature area",
+      "emptyHint": "Sign with your finger or mouse",
+      "filledHint": "Signature saved",
+      "clear": "Clear"
+    }
+  },
   "errorSection": {
     "saleForm": "the sale form",
     "financialEvolutionChart": "the financial evolution chart",

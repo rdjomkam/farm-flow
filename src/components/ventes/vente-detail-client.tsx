@@ -22,6 +22,7 @@ import {
   Info,
   Trash2,
   MoreVertical,
+  FileSignature,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,12 +52,13 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { StatutFacture, StatutVente, Permission } from "@/types";
+import { StatutBonLivraison, StatutFacture, StatutVente, Permission } from "@/types";
 import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
 import { useVenteService } from "@/services";
 import { effectiveMontantBrut, totalDepensesVente, montantNetVente } from "@/lib/ventes-helpers";
 import { DepenseVenteDialog } from "@/components/ventes/depense-vente-dialog";
 import { DeleteDepenseConfirmDialog } from "@/components/ventes/delete-depense-confirm-dialog";
+import { BonLivraisonFlow } from "@/components/ventes/bon-livraison-flow";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -131,6 +133,7 @@ interface VenteData {
   lignes?: LigneVenteDisplay[];
   releves?: ReleveVenteDisplay[];
   depenses?: DepenseVenteDisplay[];
+  bonLivraison?: { id: string; numero: string; statut: string } | null;
 }
 
 interface DepenseVenteDisplay {
@@ -158,6 +161,8 @@ interface Props {
   permissions: Permission[];
   clients?: ClientOption[];
   vagues?: VagueOption[];
+  /** Nom de l'utilisateur courant — affiche comme livreur dans le bon de livraison */
+  currentUserName?: string;
 }
 
 const CATEGORIE_DEPENSE_LABELS: Record<string, string> = {
@@ -175,7 +180,13 @@ const CATEGORIE_DEPENSE_LABELS: Record<string, string> = {
   AUTRE: "Autre",
 };
 
-export function VenteDetailClient({ vente, permissions, clients = [], vagues = [] }: Props) {
+export function VenteDetailClient({
+  vente,
+  permissions,
+  clients = [],
+  vagues = [],
+  currentUserName = "",
+}: Props) {
   const t = useTranslations("ventes");
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -227,6 +238,10 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
       [ligneId]: { ...prev[ligneId], ...patch },
     }));
   }
+
+  // Bon de livraison (Sprint BL.4) — flux mobile signature
+  const [bonLivraisonFlowOpen, setBonLivraisonFlowOpen] = useState(false);
+  const bonLivraisonSigne = vente.bonLivraison?.statut === StatutBonLivraison.SIGNE;
 
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
@@ -405,6 +420,16 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                 <Pencil className="h-4 w-4" />
                 {t("ventes.detail.modifier")}
               </DropdownMenuItem>
+
+              {/* Bon de livraison (EN_PREPARATION only) — Sprint BL.4 */}
+              {vente.statut === StatutVente.EN_PREPARATION && (
+                <DropdownMenuItem onSelect={() => setBonLivraisonFlowOpen(true)}>
+                  <FileSignature className="h-4 w-4" />
+                  {bonLivraisonSigne
+                    ? t("bonLivraison.menuItemVoir")
+                    : t("bonLivraison.menuItem")}
+                </DropdownMenuItem>
+              )}
 
               {/* Close delivery (EN_PREPARATION only) */}
               {vente.statut === StatutVente.EN_PREPARATION && (
@@ -604,6 +629,29 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </DialogDescription>
           </DialogHeader>
 
+          {!bonLivraisonSigne && (
+            <div className="rounded-lg bg-warning/10 p-3 flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-warning" />
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-warning">
+                  {t("bonLivraison.requiredBeforeCloture")}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setClotureOpen(false);
+                    setBonLivraisonFlowOpen(true);
+                  }}
+                >
+                  <FileSignature className="h-4 w-4" />
+                  {t("bonLivraison.openFlow")}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-4 py-2">
             <Input
               label={t("ventes.detail.dateLivraison")}
@@ -699,7 +747,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </DialogClose>
             <Button
               onClick={handleCloture}
-              disabled={clotureLoading || !clotureValid}
+              disabled={clotureLoading || !clotureValid || !bonLivraisonSigne}
               className="min-h-[44px]"
             >
               {clotureLoading ? "..." : t("livraisonAvarie.confirmButton")}
@@ -976,6 +1024,25 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </Card>
       )}
 
+      {/* Bon de livraison signe (LIVREE/CLOTUREE) — Sprint BL.4 */}
+      {(vente.statut === StatutVente.LIVREE || vente.statut === StatutVente.CLOTUREE) &&
+        bonLivraisonSigne && (
+          <Card interactive onClick={() => setBonLivraisonFlowOpen(true)}>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileSignature className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{t("bonLivraison.linkTitle")}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {vente.bonLivraison?.numero}
+                  </span>
+                </div>
+              </div>
+              <Badge variant="terminee">{t("bonLivraison.statutSigne")}</Badge>
+            </CardContent>
+          </Card>
+        )}
+
       {/* Releves linked to this vente (VENTE + AVARIE) */}
       {(vente.releves ?? []).length > 0 && (
         <Card>
@@ -1094,6 +1161,15 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
       <p className="text-xs text-muted-foreground text-center mb-2">
         {t("ventes.detail.creePar", { name: vente.user.name })}
       </p>
+
+      {/* Flux mobile bon de livraison — Sprint BL.4 */}
+      <BonLivraisonFlow
+        open={bonLivraisonFlowOpen}
+        onOpenChange={setBonLivraisonFlowOpen}
+        venteId={vente.id}
+        currentUserName={currentUserName}
+        onSigned={() => router.refresh()}
+      />
     </div>
   );
 }

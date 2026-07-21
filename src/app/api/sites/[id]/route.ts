@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { getSiteById, updateSite, getSiteMember } from "@/lib/queries/sites";
 import { ForbiddenError } from "@/lib/permissions";
 import { Permission, SiteModule } from "@/types";
 import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { base64ImageOptionalSchema } from "@/lib/validation/common.schema";
 
 const VALID_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
+
+/** Schema Zod pour les champs image du site (signature promoteur + cachet) — Sprint BL */
+const updateSiteImagesSchema = z.object({
+  signaturePromoteur: base64ImageOptionalSchema,
+  cachet: base64ImageOptionalSchema,
+});
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -27,6 +35,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       address: site.address,
       isActive: site.isActive,
       enabledModules: site.enabledModules,
+      signaturePromoteur: site.signaturePromoteur,
+      cachet: site.cachet,
       bacCount: site._count.bacs,
       vagueCount: site._count.vagues,
       members: site.members.map((m) => ({
@@ -85,11 +95,31 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Validation Zod des champs image (signature promoteur + cachet)
+    const imagesParse = updateSiteImagesSchema.safeParse({
+      signaturePromoteur: body.signaturePromoteur,
+      cachet: body.cachet,
+    });
+    if (!imagesParse.success) {
+      return apiError(400, "Donnees d'image invalides.", {
+        errors: imagesParse.error.issues.map((issue) => ({
+          field: String(issue.path[0] ?? "image"),
+          message: issue.message,
+        })),
+      });
+    }
+
     const updated = await updateSite(id, {
       ...(body.name !== undefined && { name: body.name.trim() }),
       ...(body.address !== undefined && { address: body.address?.trim() ?? null }),
       ...(body.enabledModules !== undefined && {
         enabledModules: body.enabledModules as SiteModule[],
+      }),
+      ...(body.signaturePromoteur !== undefined && {
+        signaturePromoteur: imagesParse.data.signaturePromoteur ?? null,
+      }),
+      ...(body.cachet !== undefined && {
+        cachet: imagesParse.data.cachet ?? null,
       }),
     });
 
@@ -99,6 +129,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       address: updated.address,
       isActive: updated.isActive,
       enabledModules: updated.enabledModules,
+      signaturePromoteur: updated.signaturePromoteur,
+      cachet: updated.cachet,
       updatedAt: updated.updatedAt,
     });
   } catch (error) {

@@ -15,6 +15,7 @@ import {
   TypeVague,
   OrigineVente,
   StatutDepense,
+  StatutBonLivraison,
 } from "@/types";
 import type {
   CreateVenteDTO,
@@ -66,6 +67,7 @@ const VENTE_DETAIL_INCLUDE = {
       paiements: { orderBy: { date: "desc" as const } },
     },
   },
+  bonLivraison: { select: { id: true, numero: true, statut: true } },
   lignes: {
     select: {
       id: true,
@@ -1287,6 +1289,7 @@ export async function cloturerVente(
         vague: { select: { id: true, code: true, nombreInitial: true } },
         client: { select: { id: true, nom: true } },
         lignes: true,
+        bonLivraison: { select: { statut: true } },
       },
     });
     if (!vente) throw new Error("Vente introuvable");
@@ -1296,6 +1299,14 @@ export async function cloturerVente(
     }
     if (vente.lignes.length === 0) {
       throw new Error("Impossible de livrer une vente sans ligne");
+    }
+    // Sprint BL — guard : le bon de livraison doit etre signe avant de livrer.
+    // Retrocompat : ce guard ne s'applique qu'au chemin EN_PREPARATION -> LIVREE ;
+    // les ventes deja LIVREE/CLOTUREE ne repassent jamais par cette fonction.
+    if (vente.bonLivraison?.statut !== StatutBonLivraison.SIGNE) {
+      throw new ValidationError(
+        "Le bon de livraison doit être signé avant de livrer la vente."
+      );
     }
 
     const dateLivraison = dto.dateLivraison

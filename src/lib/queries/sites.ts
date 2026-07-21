@@ -102,7 +102,15 @@ export async function createSite(
 /** Met a jour un site */
 export async function updateSite(
   siteId: string,
-  data: { name?: string; address?: string; enabledModules?: SiteModule[] }
+  data: {
+    name?: string;
+    address?: string;
+    enabledModules?: SiteModule[];
+    /** Signature du promoteur — base64 (data URL) ou null pour supprimer — Sprint BL */
+    signaturePromoteur?: string | null;
+    /** Cachet/tampon du site — base64 (data URL) ou null pour supprimer — Sprint BL */
+    cachet?: string | null;
+  }
 ) {
   return prisma.site.update({
     where: { id: siteId },
@@ -110,6 +118,8 @@ export async function updateSite(
       ...(data.name !== undefined && { name: data.name }),
       ...(data.address !== undefined && { address: data.address }),
       ...(data.enabledModules !== undefined && { enabledModules: data.enabledModules }),
+      ...(data.signaturePromoteur !== undefined && { signaturePromoteur: data.signaturePromoteur }),
+      ...(data.cachet !== undefined && { cachet: data.cachet }),
     },
   });
 }

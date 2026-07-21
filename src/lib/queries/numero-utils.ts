@@ -12,7 +12,7 @@ type PrismaTransactionClient = Parameters<
  * Model names that support auto-generated `numero` fields.
  * Maps to the Prisma delegate used for `findFirst`.
  */
-type NumeroModel = "depense" | "commande" | "vente" | "facture";
+type NumeroModel = "depense" | "commande" | "vente" | "facture" | "bonLivraison";
 
 /**
  * Generate the next sequential `numero` for a given model+prefix+site.

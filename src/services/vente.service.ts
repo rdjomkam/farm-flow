@@ -16,6 +16,9 @@ import type {
   VenteWithRelations,
   FactureWithRelations,
   Client,
+  BonLivraisonWithRelations,
+  BonLivraisonDetailResponse,
+  SignerBonLivraisonDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -239,6 +242,49 @@ export function useVenteService() {
     [call]
   );
 
+  // -- Bon de livraison (Sprint BL) --
+
+  /** Cree (idempotent) le bon de livraison d'une vente EN_PREPARATION */
+  const createBonLivraison = useCallback(
+    (venteId: string) =>
+      call<BonLivraisonWithRelations>(
+        `/api/ventes/${venteId}/bon-livraison`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+        { silentError: true }
+      ),
+    [call]
+  );
+
+  /** Recupere le bon de livraison d'une vente (detail + bloc paiement) */
+  const getBonLivraison = useCallback(
+    (venteId: string) =>
+      call<BonLivraisonDetailResponse>(
+        `/api/ventes/${venteId}/bon-livraison`,
+        undefined,
+        { silentError: true }
+      ),
+    [call]
+  );
+
+  /** Signe un bon de livraison (client + livreur) */
+  const signerBonLivraison = useCallback(
+    (bonLivraisonId: string, dto: SignerBonLivraisonDTO) =>
+      call<BonLivraisonWithRelations>(
+        `/api/bons-livraison/${bonLivraisonId}/signer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Bon de livraison signé." }
+      ),
+    [call]
+  );
+
   return {
     listVentes,
     getVente,
@@ -258,5 +304,8 @@ export function useVenteService() {
     createClient,
     updateClient,
     createFacture,
+    createBonLivraison,
+    getBonLivraison,
+    signerBonLivraison,
   };
 }

@@ -98,3 +98,21 @@ export const raisonSchema = z
   .trim()
   .min(5, "La raison doit contenir au moins 5 caracteres.")
   .max(500, "La raison ne peut pas depasser 500 caracteres.");
+
+// ---------------------------------------------------------------------------
+// Images base64 (signatures, cachet, etc.) — Sprint BL
+// ---------------------------------------------------------------------------
+
+/**
+ * Schema pour une image PNG encodee en base64 (data URL), avec limite de
+ * taille raisonnable pour eviter les abus (~500KB en base64, soit environ
+ * 375KB de donnees binaires reelles). Utilise pour les signatures du bon de
+ * livraison ainsi que la signature du promoteur et le cachet du site.
+ */
+export const base64ImageSchema = z
+  .string()
+  .startsWith("data:image/", "L'image doit etre une data URL (data:image/...).")
+  .max(500_000, "L'image est trop volumineuse (500KB maximum).");
+
+/** Variante nullable/optionnelle — pour les champs modifiables ou supprimables. */
+export const base64ImageOptionalSchema = base64ImageSchema.optional().nullable();

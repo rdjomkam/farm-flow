@@ -101,6 +101,10 @@ export interface UpdateSiteDTO {
   address?: string;
   isActive?: boolean;
   enabledModules?: string[];
+  /** Signature du promoteur — image PNG en base64 (data URL), ou null pour supprimer — Sprint BL */
+  signaturePromoteur?: string | null;
+  /** Cachet/tampon du site — image PNG en base64 (data URL), ou null pour supprimer — Sprint BL */
+  cachet?: string | null;
 }
 
 /** Corps de la requete PUT /api/auth/site (changer le site actif) */

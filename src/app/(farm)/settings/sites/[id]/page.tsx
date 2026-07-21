@@ -57,6 +57,8 @@ export default async function SiteDetailPage({
             bacCount: site._count.bacs,
             vagueCount: site._count.vagues,
             enabledModules: site.enabledModules as string[],
+            signaturePromoteur: site.signaturePromoteur,
+            cachet: site.cachet,
           }}
           members={members}
           siteRoles={siteRoles}

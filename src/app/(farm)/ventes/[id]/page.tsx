@@ -63,6 +63,7 @@ export default async function VenteDetailPage({
           permissions={permissions}
           clients={clientOptions}
           vagues={vagueOptions}
+          currentUserName={session.name}
         />
       </div>
     </>

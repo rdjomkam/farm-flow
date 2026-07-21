@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { cloturerVente } from "@/lib/queries/ventes";
 import { ValidationError } from "@/lib/errors";
-import { StatutVente, TypeReleve, CauseMortalite } from "@/types";
+import { StatutVente, TypeReleve, CauseMortalite, StatutBonLivraison } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks Prisma
@@ -104,6 +104,7 @@ function makeVente(overrides: Partial<{
     factureId: null,
     siteId: SITE_ID,
     client: { nom: "Test Client" },
+    bonLivraison: { statut: StatutBonLivraison.SIGNE },
     lignes: [
       {
         id: LIGNE_ID,

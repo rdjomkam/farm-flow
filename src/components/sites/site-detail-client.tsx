@@ -33,6 +33,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { MemberActionsDialog } from "@/components/sites/member-actions-dialog";
+import { ImageUploadField } from "@/components/sites/image-upload-field";
 import { cn } from "@/lib/utils";
 import { Permission, SiteModule } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
@@ -67,6 +68,8 @@ interface Props {
     bacCount: number;
     vagueCount: number;
     enabledModules: string[];
+    signaturePromoteur: string | null;
+    cachet: string | null;
   };
   members: MemberData[];
   siteRoles: SiteRoleOption[];
@@ -92,6 +95,26 @@ export function SiteDetailClient({
   // Modules state (optimistic)
   const [enabledModules, setEnabledModules] = useState<string[]>(site.enabledModules);
   const [modulesLoading, setModulesLoading] = useState(false);
+
+  // Documents (signature promoteur + cachet)
+  const [signaturePromoteur, setSignaturePromoteur] = useState<string | null>(
+    site.signaturePromoteur
+  );
+  const [cachet, setCachet] = useState<string | null>(site.cachet);
+
+  async function handleUpdateSignature(value: string | null) {
+    const previous = signaturePromoteur;
+    setSignaturePromoteur(value);
+    const { ok } = await userService.updateSite(site.id, { signaturePromoteur: value });
+    if (!ok) setSignaturePromoteur(previous);
+  }
+
+  async function handleUpdateCachet(value: string | null) {
+    const previous = cachet;
+    setCachet(value);
+    const { ok } = await userService.updateSite(site.id, { cachet: value });
+    if (!ok) setCachet(previous);
+  }
 
   async function handleToggleModule(moduleValue: SiteModule) {
     if (!canManageSite || modulesLoading) return;
@@ -217,6 +240,38 @@ export function SiteDetailClient({
           <p className="text-xs text-muted-foreground mt-2">
             {t("detail.modulesDescription")}
           </p>
+        </section>
+      )}
+
+      {/* Documents section (signature promoteur + cachet) — visible only to admins */}
+      {canManageSite && (
+        <section className="border-b border-border pb-3">
+          <h3 className="text-sm font-semibold mb-1">{t("detail.documents")}</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            {t("detail.documentsDescription")}
+          </p>
+          <div className="flex flex-col gap-4">
+            <ImageUploadField
+              label={t("detail.signaturePromoteur")}
+              value={signaturePromoteur}
+              onChange={handleUpdateSignature}
+              emptyLabel={t("detail.aucuneImage")}
+              removeLabel={t("detail.supprimer")}
+              uploadLabel={t("detail.televerser")}
+              errorTooLarge={t("detail.erreurTailleImage")}
+              errorInvalidType={t("detail.erreurTypeImage")}
+            />
+            <ImageUploadField
+              label={t("detail.cachet")}
+              value={cachet}
+              onChange={handleUpdateCachet}
+              emptyLabel={t("detail.aucuneImage")}
+              removeLabel={t("detail.supprimer")}
+              uploadLabel={t("detail.televerser")}
+              errorTooLarge={t("detail.erreurTailleImage")}
+              errorInvalidType={t("detail.erreurTypeImage")}
+            />
+          </div>
         </section>
       )}
 

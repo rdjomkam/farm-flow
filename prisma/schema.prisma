@@ -137,6 +137,18 @@ enum ModePaiement {
   CHEQUE
 }
 
+/**
+ * Statut du bon de livraison — Sprint BL.
+ * BROUILLON : créé mais pas encore présenté au client.
+ * EN_ATTENTE_SIGNATURE : écran de signature affiché.
+ * SIGNE : les deux signatures (client + livreur) sont capturées.
+ */
+enum StatutBonLivraison {
+  BROUILLON
+  EN_ATTENTE_SIGNATURE
+  SIGNE
+}
+
 enum StatutVente {
   EN_PREPARATION
   LIVREE
@@ -718,6 +730,7 @@ model Site {
   lignesVente            LigneVente[]             @relation("SiteLignesVente")
   factures               Facture[]
   paiements              Paiement[]
+  bonsLivraison          BonLivraison[]
   reproducteurs          Reproducteur[]
   pontes                 Ponte[]
   lotsAlevins            LotAlevins[]
@@ -787,6 +800,16 @@ model Site {
    * Site bloqué (accès entièrement restreint, ex: impayé critique).
    */
   isBlocked              Boolean                  @default(false)
+  // Sprint BL — Bon de livraison signé : assets promoteur pour le PDF
+  /**
+   * Signature du promoteur du site — image PNG encodée en base64 (data URL),
+   * apposée sur chaque bon de livraison généré.
+   */
+  signaturePromoteur     String?
+  /**
+   * Cachet/tampon du site — image PNG encodée en base64 (data URL).
+   */
+  cachet                 String?
   // ADR-021 — Cycle de vie & audit
   /**
    * /**
@@ -1117,6 +1140,7 @@ model User {
   ventes                 Vente[]                 @relation("VenteUser")
   factures               Facture[]               @relation("FactureUser")
   paiements              Paiement[]              @relation("PaiementUser")
+  bonsLivraison          BonLivraison[]
   configAlertes          ConfigAlerte[]
   notifications          Notification[]
   activitesCreees        Activite[]              @relation("ActivitesCreees")
@@ -1691,6 +1715,7 @@ model Vente {
   userId            String
   user              User             @relation("VenteUser", fields: [userId], references: [id])
   facture           Facture?
+  bonLivraison      BonLivraison?
   releves           Releve[]         @relation("VenteReleves")
   lignes            LigneVente[]     @relation("VenteLignes")
   depenses          Depense[]        @relation("VenteDepenses")
@@ -1755,6 +1780,41 @@ model Facture {
 
   @@index([siteId])
   @@index([statut])
+}
+
+/**
+ * BonLivraison — Sprint BL. Un bon de livraison par vente (1:1), signé sur
+ * place par le client et le livreur au moment de la livraison. Obligatoire
+ * (statut SIGNE) pour passer une vente de EN_PREPARATION à LIVREE.
+ */
+model BonLivraison {
+  id                  String             @id @default(cuid())
+  numero              String             @unique
+  venteId             String             @unique
+  vente               Vente              @relation(fields: [venteId], references: [id])
+  statut              StatutBonLivraison @default(BROUILLON)
+  /**
+   * Signature du client — image PNG encodée en base64 (data URL)
+   */
+  signatureClient     String?
+  signataireClientNom String?
+  /**
+   * Signature du livreur — image PNG encodée en base64 (data URL)
+   */
+  signatureLivreur    String?
+  signeLe             DateTime?
+  /**
+   * Utilisateur livreur ayant créé/signé le bon de livraison
+   */
+  userId              String
+  user                User               @relation(fields: [userId], references: [id])
+  siteId              String
+  site                Site               @relation(fields: [siteId], references: [id])
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([siteId])
+  @@index([userId])
 }
 
 model Paiement {
