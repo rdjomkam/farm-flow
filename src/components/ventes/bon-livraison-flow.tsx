@@ -17,7 +17,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { SignaturePad, type SignaturePadHandle } from "@/components/ventes/signature-pad";
+import { SignaturePad, type SignaturePadHandle } from "@/components/ui/signature-pad";
 import { useVenteService } from "@/services";
 import { queryKeys } from "@/lib/query-keys";
 import { formatNumber } from "@/lib/format";

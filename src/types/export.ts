@@ -827,7 +827,11 @@ export interface ClientBonLivraisonPDF {
  * Le poids livré peut différer du poids commandé (écart de livraison).
  */
 export interface LigneBonLivraisonPDF {
-  /** Libellé du produit — code de vague ou nom du lot d'alevins */
+  /**
+   * Libellé du produit, simplifié pour le client final (pas de référence
+   * interne vague/bac) : "Silure" ou "Alevins silure" si la ligne provient
+   * d'un lot d'alevins.
+   */
   designation: string;
   /** Nom du bac d'origine (nullable) */
   nomBac: string | null;

@@ -183,5 +183,11 @@
     "updated": "Filter updated",
     "deleted": "Filter deleted",
     "empty": "No saved filters"
+  },
+  "signaturePad": {
+    "ariaLabel": "Touch signature area",
+    "emptyHint": "Sign with your finger or mouse",
+    "filledHint": "Signature saved",
+    "clear": "Clear"
   }
 }

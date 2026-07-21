@@ -329,12 +329,6 @@
       "share": "Partager",
       "partageEnCours": "Partage en cours...",
       "shareError": "Erreur lors du partage du bon de livraison."
-    },
-    "signaturePad": {
-      "ariaLabel": "Zone de signature tactile",
-      "emptyHint": "Signez avec le doigt ou la souris",
-      "filledHint": "Signature enregistree",
-      "clear": "Effacer"
     }
   },
   "errorSection": {

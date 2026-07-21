@@ -54,7 +54,7 @@ function buildFullDTO(
     client: { nom: "Jean Client", telephone: "+237600000000" },
     lignes: [
       {
-        designation: "Silures — Vague V-2026-001",
+        designation: "Silure",
         nomBac: "Bac A1",
         nombrePoissons: 200,
         poidsCommandeKg: 150,
@@ -104,7 +104,7 @@ describe("renderBonLivraisonPDF", () => {
     const dto = buildFullDTO({
       lignes: [
         {
-          designation: "Silures — Vague V-2026-001",
+          designation: "Silure",
           nomBac: "Bac A1",
           nombrePoissons: 100,
           poidsCommandeKg: 80,
@@ -112,7 +112,7 @@ describe("renderBonLivraisonPDF", () => {
           ecartKg: -5,
         },
         {
-          designation: "Silures — Vague V-2026-002",
+          designation: "Silure",
           nomBac: null,
           nombrePoissons: 50,
           poidsCommandeKg: 40,
@@ -128,7 +128,7 @@ describe("renderBonLivraisonPDF", () => {
     const dto = buildFullDTO({
       lignes: [
         {
-          designation: "Alevins — Lot LOT-2026-003",
+          designation: "Alevins silure",
           nomBac: null,
           nombrePoissons: 500,
           poidsCommandeKg: 10,

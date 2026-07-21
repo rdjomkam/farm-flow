@@ -44,7 +44,10 @@
     "televerser": "Televerser",
     "supprimer": "Supprimer",
     "erreurTailleImage": "L'image est trop volumineuse (500KB maximum).",
-    "erreurTypeImage": "Format non supporte. Utilisez une image PNG ou JPEG."
+    "erreurTypeImage": "Format non supporte. Utilisez une image PNG ou JPEG.",
+    "dessiner": "Dessiner",
+    "redessiner": "Redessiner",
+    "enregistrerSignature": "Enregistrer la signature"
   },
   "memberActions": {
     "gererTitle": "Gerer — {name}",

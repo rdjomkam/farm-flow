@@ -44,7 +44,10 @@
     "televerser": "Upload",
     "supprimer": "Remove",
     "erreurTailleImage": "The image is too large (500KB maximum).",
-    "erreurTypeImage": "Unsupported format. Use a PNG or JPEG image."
+    "erreurTypeImage": "Unsupported format. Use a PNG or JPEG image.",
+    "dessiner": "Draw",
+    "redessiner": "Redraw",
+    "enregistrerSignature": "Save signature"
   },
   "memberActions": {
     "gererTitle": "Manage — {name}",

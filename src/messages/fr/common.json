@@ -183,5 +183,11 @@
     "updated": "Filtre mis a jour",
     "deleted": "Filtre supprime",
     "empty": "Aucun filtre enregistre"
+  },
+  "signaturePad": {
+    "ariaLabel": "Zone de signature tactile",
+    "emptyHint": "Signez avec le doigt ou la souris",
+    "filledHint": "Signature enregistree",
+    "clear": "Effacer"
   }
 }

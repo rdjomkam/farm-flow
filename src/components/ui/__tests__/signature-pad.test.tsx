@@ -2,7 +2,7 @@
 /**
  * Tests — SignaturePad (Story BL.4)
  *
- * Composant : src/components/ventes/signature-pad.tsx
+ * Composant : src/components/ui/signature-pad.tsx
  * Canvas de signature tactile natif (pointer events, pas de lib externe).
  *
  * Couverture :
@@ -17,7 +17,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createRef } from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { SignaturePad, type SignaturePadHandle } from "@/components/ventes/signature-pad";
+import { SignaturePad, type SignaturePadHandle } from "@/components/ui/signature-pad";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {

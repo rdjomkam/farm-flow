@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { MemberActionsDialog } from "@/components/sites/member-actions-dialog";
 import { ImageUploadField } from "@/components/sites/image-upload-field";
+import { SignatureDrawField } from "@/components/sites/signature-draw-field";
 import { cn } from "@/lib/utils";
 import { Permission, SiteModule } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
@@ -276,15 +277,14 @@ export function SiteDetailClient({
               maxLength={100}
               disabled={nomPromoteurSaving}
             />
-            <ImageUploadField
+            <SignatureDrawField
               label={t("detail.signaturePromoteur")}
               value={signaturePromoteur}
               onChange={handleUpdateSignature}
-              emptyLabel={t("detail.aucuneImage")}
               removeLabel={t("detail.supprimer")}
-              uploadLabel={t("detail.televerser")}
-              errorTooLarge={t("detail.erreurTailleImage")}
-              errorInvalidType={t("detail.erreurTypeImage")}
+              drawLabel={t("detail.dessiner")}
+              redrawLabel={t("detail.redessiner")}
+              saveLabel={t("detail.enregistrerSignature")}
             />
             <ImageUploadField
               label={t("detail.cachet")}

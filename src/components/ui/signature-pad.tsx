@@ -42,7 +42,7 @@ interface SignaturePadProps {
  */
 export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
   function SignaturePad({ height = 200, onChangeEmpty, className }, ref) {
-    const t = useTranslations("ventes.bonLivraison.signaturePad");
+    const t = useTranslations("common.signaturePad");
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const drawingRef = useRef(false);

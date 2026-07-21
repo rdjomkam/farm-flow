@@ -329,12 +329,6 @@
       "share": "Share",
       "partageEnCours": "Sharing...",
       "shareError": "Error sharing the delivery note."
-    },
-    "signaturePad": {
-      "ariaLabel": "Touch signature area",
-      "emptyHint": "Sign with your finger or mouse",
-      "filledHint": "Signature saved",
-      "clear": "Clear"
     }
   },
   "errorSection": {

@@ -55,11 +55,7 @@ export async function GET(
           poidsLivreKg === null ? null : poidsLivreKg - poidsCommandeKg;
 
         const designation =
-          ligne.vague?.code != null
-            ? `Silures — Vague ${ligne.vague.code}`
-            : ligne.lotAlevins?.code != null
-              ? `Alevins — Lot ${ligne.lotAlevins.code}`
-              : "Poissons";
+          ligne.lotAlevins?.code != null ? "Alevins silure" : "Silure";
 
         return {
           designation,
