@@ -29,33 +29,35 @@ import {
 // calculerTauxSurvie
 // ---------------------------------------------------------------------------
 describe("calculerTauxSurvie", () => {
+  // Signature actuelle : calculerTauxSurvie(nombreInitial, totalMortalites)
+  // taux = (nombreInitial - totalMortalites) / nombreInitial * 100
   it("calcule correctement le taux de survie avec des valeurs réalistes", () => {
-    // 500 alevins, 450 survivants → 90%
-    expect(calculerTauxSurvie(450, 500)).toBe(90);
+    // 500 alevins, 50 morts → 90%
+    expect(calculerTauxSurvie(500, 50)).toBe(90);
   });
 
   it("retourne 100% quand aucune mortalité", () => {
-    expect(calculerTauxSurvie(1000, 1000)).toBe(100);
+    expect(calculerTauxSurvie(1000, 0)).toBe(100);
   });
 
-  it("retourne 0% quand aucun survivant", () => {
-    expect(calculerTauxSurvie(0, 500)).toBe(0);
+  it("retourne 0% quand tous morts", () => {
+    expect(calculerTauxSurvie(500, 500)).toBe(0);
   });
 
   it("retourne null si nombreInitial est 0 (division par zéro)", () => {
-    expect(calculerTauxSurvie(100, 0)).toBeNull();
+    expect(calculerTauxSurvie(0, 100)).toBeNull();
   });
 
   it("retourne null si nombreInitial est négatif", () => {
-    expect(calculerTauxSurvie(100, -10)).toBeNull();
+    expect(calculerTauxSurvie(-10, 100)).toBeNull();
   });
 
-  it("retourne null si nombreVivants est null", () => {
-    expect(calculerTauxSurvie(null, 500)).toBeNull();
+  it("retourne null si totalMortalites est null", () => {
+    expect(calculerTauxSurvie(500, null)).toBeNull();
   });
 
   it("retourne null si nombreInitial est null", () => {
-    expect(calculerTauxSurvie(450, null)).toBeNull();
+    expect(calculerTauxSurvie(null, 450)).toBeNull();
   });
 
   it("retourne null si les deux paramètres sont null", () => {
@@ -63,8 +65,8 @@ describe("calculerTauxSurvie", () => {
   });
 
   it("gère un taux de survie faible (mortalité élevée de silures)", () => {
-    // 2000 alevins, 1200 survivants → 60%
-    expect(calculerTauxSurvie(1200, 2000)).toBe(60);
+    // 2000 alevins, 800 morts → 60%
+    expect(calculerTauxSurvie(2000, 800)).toBe(60);
   });
 });
 

@@ -30,6 +30,7 @@ const mockLigneBesoinUpdate = vi.fn();
 const mockLigneBesoinFindMany = vi.fn();
 const mockCommandeCreate = vi.fn();
 const mockCommandeFindFirst = vi.fn();
+const mockCommandeFindUniqueOrThrow = vi.fn();
 const mockDepenseCreate = vi.fn();
 const mockDepenseFindFirst = vi.fn();
 const mockLigneDepenseCreateMany = vi.fn();
@@ -66,6 +67,7 @@ vi.mock("@/lib/db", () => ({
     commande: {
       create: (...args: unknown[]) => mockCommandeCreate(...args),
       findFirst: (...args: unknown[]) => mockCommandeFindFirst(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockCommandeFindUniqueOrThrow(...args),
     },
     depense: {
       create: (...args: unknown[]) => mockDepenseCreate(...args),
@@ -105,6 +107,7 @@ vi.mock("@/lib/db", () => ({
         commande: {
           create: mockCommandeCreate,
           findFirst: mockCommandeFindFirst,
+          findUniqueOrThrow: mockCommandeFindUniqueOrThrow,
         },
         depense: {
           create: mockDepenseCreate,
@@ -255,7 +258,9 @@ describe("Workflow — transitions valides", () => {
   it("SOUMISE → APPROUVEE via approuverBesoins", async () => {
     mockListeBesoinsFindFirst.mockResolvedValue(FAKE_LISTE_SOUMISE);
     const updated = { ...FAKE_LISTE_SOUMISE, statut: StatutBesoins.APPROUVEE, valideurId: "user-2" };
-    mockListeBesoinsUpdate.mockResolvedValue({ ...updated, lignes: [], depenses: [], demandeur: null, valideur: null, vague: null, _count: { lignes: 0 } });
+    mockListeBesoinsUpdate.mockResolvedValue(updated);
+    // approuverBesoins fait update() puis findUniqueOrThrow(include: ...) — le resultat vient de findUniqueOrThrow
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({ ...updated, lignes: [], depenses: [], demandeur: null, valideur: null, vague: null, _count: { lignes: 0 } });
 
     const result = await approuverBesoins("bes-1", "site-1", "user-2");
     expect(result.statut).toBe(StatutBesoins.APPROUVEE);
@@ -265,7 +270,9 @@ describe("Workflow — transitions valides", () => {
   it("SOUMISE → REJETEE via rejeterBesoins", async () => {
     mockListeBesoinsFindFirst.mockResolvedValue(FAKE_LISTE_SOUMISE);
     const updated = { ...FAKE_LISTE_SOUMISE, statut: StatutBesoins.REJETEE, motifRejet: "Budget depassé" };
-    mockListeBesoinsUpdate.mockResolvedValue({ ...updated, lignes: [], depenses: [], demandeur: null, valideur: null, vague: null, _count: { lignes: 0 } });
+    mockListeBesoinsUpdate.mockResolvedValue(updated);
+    // rejeterBesoins fait update() puis findUniqueOrThrow(include: ...) — le resultat vient de findUniqueOrThrow
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({ ...updated, lignes: [], depenses: [], demandeur: null, valideur: null, vague: null, _count: { lignes: 0 } });
 
     const result = await rejeterBesoins("bes-1", "site-1", "user-2", "Budget depassé");
     expect(result.statut).toBe(StatutBesoins.REJETEE);
@@ -607,6 +614,11 @@ describe("POST /api/besoins/[id]/approuver", () => {
       ...FAKE_LISTE_SOUMISE,
       statut: StatutBesoins.APPROUVEE,
       valideurId: "user-1",
+    });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_LISTE_SOUMISE,
+      statut: StatutBesoins.APPROUVEE,
+      valideurId: "user-1",
       lignes: [],
       depenses: [],
       demandeur: null,
@@ -662,6 +674,11 @@ describe("POST /api/besoins/[id]/rejeter", () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockListeBesoinsFindFirst.mockResolvedValue(FAKE_LISTE_SOUMISE);
     mockListeBesoinsUpdate.mockResolvedValue({
+      ...FAKE_LISTE_SOUMISE,
+      statut: StatutBesoins.REJETEE,
+      motifRejet: "Budget insuffisant",
+    });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
       ...FAKE_LISTE_SOUMISE,
       statut: StatutBesoins.REJETEE,
       motifRejet: "Budget insuffisant",
@@ -730,6 +747,11 @@ describe("POST /api/besoins/[id]/traiter", () => {
     mockCommandeFindFirst.mockResolvedValue(null);
     mockDepenseFindFirst.mockResolvedValue(null);
     mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-010",
+      lignes: [{ id: "lc-new-1", produitId: "prod-1" }],
+    });
+    mockCommandeFindUniqueOrThrow.mockResolvedValue({
       id: "cmd-new",
       numero: "CMD-2026-010",
       lignes: [{ id: "lc-new-1", produitId: "prod-1" }],
@@ -1005,6 +1027,11 @@ describe("traiterBesoins — COMMANDE sans fournisseur leve une erreur", () => {
       numero: "CMD-2026-001",
       lignes: [{ id: "lc-1", produitId: "prod-orphan" }],
     });
+    mockCommandeFindUniqueOrThrow.mockResolvedValue({
+      id: "cmd-1",
+      numero: "CMD-2026-001",
+      lignes: [{ id: "lc-1", produitId: "prod-orphan" }],
+    });
     mockLigneBesoinUpdateMany.mockResolvedValue({ count: 1 });
     mockListeBesoinsUpdate.mockResolvedValue({
       ...FAKE_LISTE_APPROUVEE,
@@ -1073,6 +1100,11 @@ describe("creerCommandeDepuisBesoin", () => {
       numero: "CMD-2026-005",
       lignes: [{ id: "lc-new", produitId: "prod-3" }],
     });
+    mockCommandeFindUniqueOrThrow.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-005",
+      lignes: [{ id: "lc-new", produitId: "prod-3" }],
+    });
     mockLigneBesoinUpdate.mockResolvedValue({ id: "lb-orph" });
     mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
       ...FAKE_LISTE_CLOTUREE,
@@ -1113,6 +1145,11 @@ describe("creerCommandeDepuisBesoin", () => {
     });
     mockCommandeFindFirst.mockResolvedValue(null);
     mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-006",
+      lignes: [{ id: "lc-new", produitId: "prod-3" }],
+    });
+    mockCommandeFindUniqueOrThrow.mockResolvedValue({
       id: "cmd-new",
       numero: "CMD-2026-006",
       lignes: [{ id: "lc-new", produitId: "prod-3" }],
@@ -1276,6 +1313,11 @@ describe("POST /api/besoins/[id]/commandes", () => {
     });
     mockCommandeFindFirst.mockResolvedValue(null);
     mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-010",
+      lignes: [{ id: "lc-new", produitId: "prod-1" }],
+    });
+    mockCommandeFindUniqueOrThrow.mockResolvedValue({
       id: "cmd-new",
       numero: "CMD-2026-010",
       lignes: [{ id: "lc-new", produitId: "prod-1" }],

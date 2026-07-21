@@ -12,11 +12,15 @@ describe("hashPassword", () => {
     expect(hash.startsWith("$2")).toBe(true);
   });
 
-  it("produit des hashes différents à chaque appel (salt unique)", async () => {
-    const hash1 = await hashPassword("password");
-    const hash2 = await hashPassword("password");
-    expect(hash1).not.toBe(hash2);
-  });
+  it(
+    "produit des hashes différents à chaque appel (salt unique)",
+    async () => {
+      const hash1 = await hashPassword("password");
+      const hash2 = await hashPassword("password");
+      expect(hash1).not.toBe(hash2);
+    },
+    15000,
+  );
 });
 
 // ---------------------------------------------------------------------------

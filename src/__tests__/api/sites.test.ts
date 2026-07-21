@@ -73,6 +73,9 @@ vi.mock("@/lib/auth", () => ({
     }
   },
   SESSION_COOKIE_NAME: "session_token",
+  // Cookie compagnon d'abonnement — pas de comportement a verifier ici, no-op suffit
+  setSubscriptionCookie: vi.fn(),
+  clearSubscriptionCookie: vi.fn(),
 }));
 
 vi.mock("@/lib/permissions", () => {
@@ -134,6 +137,8 @@ vi.mock("@/lib/abonnements/check-quotas", () => ({
 vi.mock("@/lib/abonnements/check-subscription", () => ({
   getSubscriptionStatus: (...args: unknown[]) => mockGetSubscriptionStatus(...args),
   getSubscriptionStatusByUser: (...args: unknown[]) => mockGetSubscriptionStatus(...args),
+  // isBlocked est une fonction pure — reimplementee ici pour eviter de tirer le module reel
+  isBlocked: (statut: string | null) => statut === "EXPIRE" || statut === "ANNULE",
 }));
 
 import { GET as getSites, POST as postSite } from "@/app/api/sites/route";
@@ -1000,6 +1005,13 @@ describe("PUT /api/auth/site", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireAuth.mockResolvedValue(SESSION);
+    // Route appelle getSubscriptionStatus pour construire le cookie d'abonnement
+    mockGetSubscriptionStatus.mockResolvedValue({
+      statut: "ACTIF",
+      daysRemaining: 25,
+      planType: "ELEVEUR",
+      isDecouverte: false,
+    });
   });
 
   it("change le site actif et retourne siteRole comme objet {id, name, permissions}", async () => {

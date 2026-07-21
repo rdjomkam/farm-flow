@@ -88,11 +88,15 @@ vi.mock("@/lib/queries/finances", () => ({
   getCoutProductionVague: vi.fn().mockResolvedValue({
     resume: {
       coutTotal: 0,
+      poidsTotalVendu: 0,
+      nombrePoissonsVendus: 0,
       coutParKg: 0,
       prixMoyenVenteKg: 0,
       margeParKg: 0,
+      revenus: 0,
       roi: 0,
     },
+    ventes: [],
   }),
 }));
 

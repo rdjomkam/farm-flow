@@ -179,6 +179,7 @@ describe("POST /api/commandes", () => {
   });
 
   const validBody = {
+    listeBesoinsId: "bes-1",
     fournisseurId: "four-1",
     dateCommande: "2026-03-01T00:00:00.000Z",
     lignes: [
@@ -202,6 +203,7 @@ describe("POST /api/commandes", () => {
     expect(response.status).toBe(201);
     expect(data.id).toBe("cmd-1");
     expect(mockCreateCommande).toHaveBeenCalledWith("site-1", "user-1", {
+      listeBesoinsId: "bes-1",
       fournisseurId: "four-1",
       dateCommande: "2026-03-01T00:00:00.000Z",
       lignes: [
