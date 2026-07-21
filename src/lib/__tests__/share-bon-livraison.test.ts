@@ -90,7 +90,7 @@ describe("shareBonLivraisonPDF", () => {
     expect(result.cancelled).toBe(true);
   });
 
-  it("retourne une erreur si navigator.share echoue pour une autre raison", async () => {
+  it("bascule sur le fallback telechargement quand navigator.share echoue pour une autre raison que l'annulation", async () => {
     const shareMock = vi.fn().mockRejectedValue(new Error("boom"));
     const canShareMock = vi.fn().mockReturnValue(true);
 
@@ -100,13 +100,62 @@ describe("shareBonLivraisonPDF", () => {
       share: shareMock,
     });
 
+    const createObjectURLMock = vi.fn().mockReturnValue("blob:fake-url");
+    const revokeObjectURLMock = vi.fn();
+    vi.stubGlobal("URL", {
+      ...globalThis.URL,
+      createObjectURL: createObjectURLMock,
+      revokeObjectURL: revokeObjectURLMock,
+    });
+
+    const clickMock = vi.fn();
+    const appendChildSpy = vi
+      .spyOn(document.body, "appendChild")
+      .mockImplementation((node) => node as Node);
+    const removeChildSpy = vi
+      .spyOn(document.body, "removeChild")
+      .mockImplementation((node) => node as Node);
+    const createElementSpy = vi
+      .spyOn(document, "createElement")
+      .mockImplementation((tag: string) => {
+        if (tag === "a") {
+          return {
+            click: clickMock,
+            href: "",
+            download: "",
+          } as unknown as HTMLAnchorElement;
+        }
+        return document.createElement(tag);
+      });
+
     const result = await shareBonLivraisonPDF("bl-1", "BL-2026-001", baseData);
 
-    expect(result.ok).toBe(false);
-    expect(result.error).toBeTruthy();
+    expect(result.ok).toBe(true);
+    expect(shareMock).toHaveBeenCalledTimes(1);
+    expect(createObjectURLMock).toHaveBeenCalled();
+    expect(clickMock).toHaveBeenCalledTimes(1);
+
+    createElementSpy.mockRestore();
+    appendChildSpy.mockRestore();
+    removeChildSpy.mockRestore();
   });
 
-  it("bascule sur le fallback telechargement + wa.me quand canShare est absent", async () => {
+  it("tente navigator.share meme sans canShare quand navigator.share existe", async () => {
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+
+    vi.stubGlobal("navigator", {
+      ...globalThis.navigator,
+      canShare: undefined,
+      share: shareMock,
+    });
+
+    const result = await shareBonLivraisonPDF("bl-1", "BL-2026-001", baseData);
+
+    expect(result.ok).toBe(true);
+    expect(shareMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("bascule sur le simple telechargement quand navigator.share est indisponible (desktop), sans ouvrir WhatsApp", async () => {
     vi.stubGlobal("navigator", {
       ...globalThis.navigator,
       canShare: undefined,
@@ -149,8 +198,7 @@ describe("shareBonLivraisonPDF", () => {
     expect(result.ok).toBe(true);
     expect(createObjectURLMock).toHaveBeenCalled();
     expect(clickMock).toHaveBeenCalledTimes(1);
-    expect(windowOpenMock).toHaveBeenCalledTimes(1);
-    expect(windowOpenMock.mock.calls[0][0]).toContain("wa.me");
+    expect(windowOpenMock).not.toHaveBeenCalled();
 
     createElementSpy.mockRestore();
     appendChildSpy.mockRestore();

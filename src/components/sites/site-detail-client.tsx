@@ -70,6 +70,7 @@ interface Props {
     enabledModules: string[];
     signaturePromoteur: string | null;
     cachet: string | null;
+    nomPromoteur: string | null;
   };
   members: MemberData[];
   siteRoles: SiteRoleOption[];
@@ -101,6 +102,8 @@ export function SiteDetailClient({
     site.signaturePromoteur
   );
   const [cachet, setCachet] = useState<string | null>(site.cachet);
+  const [nomPromoteur, setNomPromoteur] = useState<string>(site.nomPromoteur ?? "");
+  const [nomPromoteurSaving, setNomPromoteurSaving] = useState(false);
 
   async function handleUpdateSignature(value: string | null) {
     const previous = signaturePromoteur;
@@ -114,6 +117,19 @@ export function SiteDetailClient({
     setCachet(value);
     const { ok } = await userService.updateSite(site.id, { cachet: value });
     if (!ok) setCachet(previous);
+  }
+
+  async function handleUpdateNomPromoteur() {
+    const value = nomPromoteur.trim();
+    setNomPromoteurSaving(true);
+    try {
+      const { ok } = await userService.updateSite(site.id, {
+        nomPromoteur: value || null,
+      });
+      if (!ok) setNomPromoteur(site.nomPromoteur ?? "");
+    } finally {
+      setNomPromoteurSaving(false);
+    }
   }
 
   async function handleToggleModule(moduleValue: SiteModule) {
@@ -251,6 +267,15 @@ export function SiteDetailClient({
             {t("detail.documentsDescription")}
           </p>
           <div className="flex flex-col gap-4">
+            <Input
+              label={t("detail.nomPromoteur")}
+              placeholder={t("detail.nomPromoteurPlaceholder")}
+              value={nomPromoteur}
+              onChange={(e) => setNomPromoteur(e.target.value.slice(0, 100))}
+              onBlur={handleUpdateNomPromoteur}
+              maxLength={100}
+              disabled={nomPromoteurSaving}
+            />
             <ImageUploadField
               label={t("detail.signaturePromoteur")}
               value={signaturePromoteur}

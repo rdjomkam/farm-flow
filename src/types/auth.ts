@@ -105,6 +105,8 @@ export interface UpdateSiteDTO {
   signaturePromoteur?: string | null;
   /** Cachet/tampon du site — image PNG en base64 (data URL), ou null pour supprimer — Sprint BL */
   cachet?: string | null;
+  /** Nom du promoteur affiché sous la signature dans le PDF du bon de livraison, ou null pour supprimer — Sprint BL */
+  nomPromoteur?: string | null;
 }
 
 /** Corps de la requete PUT /api/auth/site (changer le site actif) */

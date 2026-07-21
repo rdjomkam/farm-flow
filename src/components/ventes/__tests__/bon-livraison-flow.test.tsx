@@ -219,6 +219,31 @@ describe("BonLivraisonFlow — Navigation signature", () => {
       expect(screen.getByText("Nom du signataire")).toBeInTheDocument();
     });
   });
+
+  it("pre-remplit le nom du signataire avec le nom du client", async () => {
+    mockGetBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
+    });
+
+    render(
+      <BonLivraisonFlow
+        open
+        onOpenChange={() => {}}
+        venteId="vente-1"
+        currentUserName="Livreur Test"
+      />
+    );
+
+    await waitFor(() => screen.getByText("Faire signer"));
+    fireEvent.click(screen.getByText("Faire signer"));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Nom du signataire")).toHaveValue(
+        "Restaurant Le Mboa"
+      );
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

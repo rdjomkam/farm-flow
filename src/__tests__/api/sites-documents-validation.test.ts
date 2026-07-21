@@ -221,3 +221,64 @@ describe("PUT /api/sites/[id] — validation documents (signaturePromoteur / cac
     expect(callArgs).not.toHaveProperty("cachet");
   });
 });
+
+describe("PUT /api/sites/[id] — validation nomPromoteur", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRequireAuth.mockResolvedValue(SESSION);
+    mockGetSiteMember.mockResolvedValue(makeCallerMember(ALL_PERMISSIONS));
+  });
+
+  it("accepte une chaine valide pour nomPromoteur", async () => {
+    mockUpdateSite.mockResolvedValue(
+      baseUpdatedSite({ nomPromoteur: "Jean Dupont" })
+    );
+
+    const request = makeRequest("/api/sites/site-1", {
+      nomPromoteur: "Jean Dupont",
+    });
+
+    const response = await putSite(request, {
+      params: Promise.resolve({ id: "site-1" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.nomPromoteur).toBe("Jean Dupont");
+    expect(mockUpdateSite).toHaveBeenCalledWith(
+      "site-1",
+      expect.objectContaining({ nomPromoteur: "Jean Dupont" })
+    );
+  });
+
+  it("accepte null pour supprimer nomPromoteur", async () => {
+    mockUpdateSite.mockResolvedValue(baseUpdatedSite({ nomPromoteur: null }));
+
+    const request = makeRequest("/api/sites/site-1", { nomPromoteur: null });
+
+    const response = await putSite(request, {
+      params: Promise.resolve({ id: "site-1" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.nomPromoteur).toBeNull();
+    expect(mockUpdateSite).toHaveBeenCalledWith(
+      "site-1",
+      expect.objectContaining({ nomPromoteur: null })
+    );
+  });
+
+  it("rejette un nomPromoteur de plus de 100 caracteres avec 400", async () => {
+    const request = makeRequest("/api/sites/site-1", {
+      nomPromoteur: "A".repeat(101),
+    });
+
+    const response = await putSite(request, {
+      params: Promise.resolve({ id: "site-1" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(mockUpdateSite).not.toHaveBeenCalled();
+  });
+});

@@ -401,6 +401,8 @@ export interface Site {
   signaturePromoteur: string | null;
   /** Cachet/tampon du site — image PNG en base64 (data URL) — Sprint BL */
   cachet: string | null;
+  /** Nom du promoteur affiché sous la signature dans le PDF du bon de livraison — Sprint BL */
+  nomPromoteur: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

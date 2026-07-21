@@ -810,6 +810,10 @@ model Site {
    * Cachet/tampon du site — image PNG encodée en base64 (data URL).
    */
   cachet                 String?
+  /**
+   * Nom du promoteur affiché sous la signature dans le PDF du bon de livraison.
+   */
+  nomPromoteur           String?
   // ADR-021 — Cycle de vie & audit
   /**
    * /**

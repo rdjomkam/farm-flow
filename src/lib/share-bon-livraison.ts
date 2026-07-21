@@ -1,10 +1,9 @@
 /**
  * Utilitaires pour partager un bon de livraison signe (PDF) via le
- * selecteur natif (WhatsApp, etc.) ou, a defaut, un fallback
- * telechargement + wa.me.
+ * selecteur natif du navigateur/telephone (navigator.share) ou, a defaut,
+ * un simple telechargement local du PDF.
  */
 import { formatNumber, formatDate } from "@/lib/format";
-import { buildWhatsAppUrl } from "@/lib/share-commande";
 
 export interface ShareBonLivraisonData {
   numero: string;
@@ -60,12 +59,14 @@ function downloadBlob(blob: Blob, filename: string): void {
  * Partage le PDF signe d'un bon de livraison.
  *
  * 1. Recupere le PDF via la route d'export (le BL doit etre SIGNE).
- * 2. Si le navigateur supporte le partage de fichiers (mobile), ouvre le
- *    selecteur natif — l'utilisateur peut choisir WhatsApp et le client
- *    recoit le vrai fichier PDF.
- * 3. Sinon, fallback : telecharge le PDF localement ET ouvre wa.me avec un
- *    message texte recap, pour que l'utilisateur puisse joindre le fichier
- *    telecharge manuellement.
+ * 2. Si le navigateur expose `navigator.share`, tente le partage natif avec
+ *    le fichier PDF (sheet natif du telephone/navigateur — l'utilisateur
+ *    choisit lui-meme le canal : WhatsApp, email, etc.). On tente meme si
+ *    `navigator.canShare` est indisponible (certains navigateurs) ; si
+ *    `canShare` existe et repond explicitement non, on saute directement au
+ *    fallback.
+ * 3. Sinon (pas de partage natif, ou echec du partage natif hors
+ *    annulation), fallback : simple telechargement local du PDF.
  */
 export async function shareBonLivraisonPDF(
   bonLivraisonId: string,
@@ -88,8 +89,9 @@ export async function shareBonLivraisonPDF(
   const message = formatBonLivraisonMessage(data);
 
   const nav = typeof navigator !== "undefined" ? navigator : undefined;
+  const canShareFiles = nav?.canShare ? nav.canShare({ files: [file] }) : true;
 
-  if (nav?.canShare?.({ files: [file] })) {
+  if (nav?.share && canShareFiles) {
     try {
       await nav.share({
         files: [file],
@@ -103,12 +105,16 @@ export async function shareBonLivraisonPDF(
         // Utilisateur a annule le partage — pas une erreur
         return { ok: true, cancelled: true };
       }
-      return { ok: false, error: "Erreur lors du partage du bon de livraison." };
+      // Echec du partage natif (autre que l'annulation) : on bascule
+      // silencieusement sur le fallback telechargement ci-dessous.
     }
   }
 
-  // Fallback : telechargement local + ouverture de wa.me avec le message
-  downloadBlob(blob, filename);
-  window.open(buildWhatsAppUrl(message), "_blank", "noopener,noreferrer");
-  return { ok: true };
+  // Fallback : simple telechargement local du PDF
+  try {
+    downloadBlob(blob, filename);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erreur lors du téléchargement du bon de livraison." };
+  }
 }

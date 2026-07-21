@@ -110,6 +110,8 @@ export async function updateSite(
     signaturePromoteur?: string | null;
     /** Cachet/tampon du site — base64 (data URL) ou null pour supprimer — Sprint BL */
     cachet?: string | null;
+    /** Nom du promoteur affiche sous la signature dans le PDF du bon de livraison — Sprint BL */
+    nomPromoteur?: string | null;
   }
 ) {
   return prisma.site.update({
@@ -120,6 +122,7 @@ export async function updateSite(
       ...(data.enabledModules !== undefined && { enabledModules: data.enabledModules }),
       ...(data.signaturePromoteur !== undefined && { signaturePromoteur: data.signaturePromoteur }),
       ...(data.cachet !== undefined && { cachet: data.cachet }),
+      ...(data.nomPromoteur !== undefined && { nomPromoteur: data.nomPromoteur }),
     },
   });
 }

@@ -59,6 +59,7 @@ export default async function SiteDetailPage({
             enabledModules: site.enabledModules as string[],
             signaturePromoteur: site.signaturePromoteur,
             cachet: site.cachet,
+            nomPromoteur: site.nomPromoteur,
           }}
           members={members}
           siteRoles={siteRoles}

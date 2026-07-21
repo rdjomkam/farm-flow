@@ -36,6 +36,8 @@
     "vous": "(vous)",
     "documents": "Documents",
     "documentsDescription": "Utilises pour generer les bons de livraison signes.",
+    "nomPromoteur": "Nom du promoteur",
+    "nomPromoteurPlaceholder": "Ex: Jean Dupont",
     "signaturePromoteur": "Signature du promoteur",
     "cachet": "Cachet",
     "aucuneImage": "Aucune image",

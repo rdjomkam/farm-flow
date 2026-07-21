@@ -158,6 +158,7 @@ const BON_LIVRAISON_PDF_INCLUDE = {
       name: true,
       address: true,
       signaturePromoteur: true,
+      nomPromoteur: true,
       cachet: true,
     },
   },

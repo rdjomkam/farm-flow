@@ -14,6 +14,7 @@ const VALID_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
 const updateSiteImagesSchema = z.object({
   signaturePromoteur: base64ImageOptionalSchema,
   cachet: base64ImageOptionalSchema,
+  nomPromoteur: z.string().trim().max(100).nullable().optional(),
 });
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       enabledModules: site.enabledModules,
       signaturePromoteur: site.signaturePromoteur,
       cachet: site.cachet,
+      nomPromoteur: site.nomPromoteur,
       bacCount: site._count.bacs,
       vagueCount: site._count.vagues,
       members: site.members.map((m) => ({
@@ -99,6 +101,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const imagesParse = updateSiteImagesSchema.safeParse({
       signaturePromoteur: body.signaturePromoteur,
       cachet: body.cachet,
+      nomPromoteur: body.nomPromoteur,
     });
     if (!imagesParse.success) {
       return apiError(400, "Donnees d'image invalides.", {
@@ -121,6 +124,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       ...(body.cachet !== undefined && {
         cachet: imagesParse.data.cachet ?? null,
       }),
+      ...(body.nomPromoteur !== undefined && {
+        nomPromoteur: imagesParse.data.nomPromoteur ?? null,
+      }),
     });
 
     return NextResponse.json({
@@ -131,6 +137,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       enabledModules: updated.enabledModules,
       signaturePromoteur: updated.signaturePromoteur,
       cachet: updated.cachet,
+      nomPromoteur: updated.nomPromoteur,
       updatedAt: updated.updatedAt,
     });
   } catch (error) {

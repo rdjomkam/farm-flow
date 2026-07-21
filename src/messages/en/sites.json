@@ -36,6 +36,8 @@
     "vous": "(you)",
     "documents": "Documents",
     "documentsDescription": "Used to generate signed delivery notes.",
+    "nomPromoteur": "Owner's name",
+    "nomPromoteurPlaceholder": "E.g.: John Doe",
     "signaturePromoteur": "Owner's signature",
     "cachet": "Stamp",
     "aucuneImage": "No image",

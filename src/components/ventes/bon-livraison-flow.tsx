@@ -337,7 +337,7 @@ export function BonLivraisonFlow({
                   <img
                     src={bonLivraison.signatureClient}
                     alt={t("signed.signatureClientAlt")}
-                    className="w-full h-32 object-contain rounded-lg border border-border bg-[var(--background)]"
+                    className="w-full h-32 object-contain"
                   />
                 </div>
               )}
@@ -351,7 +351,7 @@ export function BonLivraisonFlow({
                   <img
                     src={bonLivraison.signatureLivreur}
                     alt={t("signed.signatureLivreurAlt")}
-                    className="w-full h-32 object-contain rounded-lg border border-border bg-[var(--background)]"
+                    className="w-full h-32 object-contain"
                   />
                 </div>
               )}
@@ -383,7 +383,12 @@ export function BonLivraisonFlow({
         <DialogFooter>
           {step === "recap" && (
             <Button
-              onClick={() => setStep("signature-client")}
+              onClick={() => {
+                // Pre-remplir le nom du signataire avec le nom du client
+                // (modifiable), sans ecraser une saisie deja effectuee
+                setSignataireClientNom((prev) => prev || data?.vente.client.nom || "");
+                setStep("signature-client");
+              }}
               className="min-h-[44px]"
               disabled={!bonLivraison}
             >

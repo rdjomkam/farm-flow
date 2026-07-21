@@ -253,9 +253,6 @@ const styles = StyleSheet.create({
   },
   signatureBox: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 4,
     padding: 8,
     minHeight: 130,
   },

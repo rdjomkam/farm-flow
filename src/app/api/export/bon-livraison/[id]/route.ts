@@ -99,7 +99,7 @@ export async function GET(
       },
       signaturePromoteur: {
         image: bonLivraison.site.signaturePromoteur ?? null,
-        nom: null,
+        nom: bonLivraison.site.nomPromoteur ?? null,
         date: null,
       },
       cachet: bonLivraison.site.cachet ?? null,

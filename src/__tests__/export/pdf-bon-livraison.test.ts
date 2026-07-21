@@ -154,4 +154,26 @@ describe("renderBonLivraisonPDF", () => {
     });
     await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
   });
+
+  it("rend un PDF sans erreur avec le nom du promoteur renseigné", async () => {
+    const dto = buildFullDTO({
+      signaturePromoteur: {
+        image: "data:image/png;base64,CCCC",
+        nom: "Paul Promoteur",
+        date: null,
+      },
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur quand le nom du promoteur est absent", async () => {
+    const dto = buildFullDTO({
+      signaturePromoteur: {
+        image: "data:image/png;base64,CCCC",
+        nom: null,
+        date: null,
+      },
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
 });
