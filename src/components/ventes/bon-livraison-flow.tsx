@@ -87,6 +87,9 @@ export function BonLivraisonFlow({
   const [signataireClientNom, setSignataireClientNom] = useState("");
   const [clientSignatureEmpty, setClientSignatureEmpty] = useState(true);
   const [livreurSignatureEmpty, setLivreurSignatureEmpty] = useState(true);
+  // Signature client capturee AVANT le demontage du pad (le pad n'est monte
+  // que pendant l'etape signature-client ; a l'etape livreur clientPadRef est null)
+  const [clientSignatureData, setClientSignatureData] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sharing, setSharing] = useState(false);
 
@@ -104,6 +107,7 @@ export function BonLivraisonFlow({
       setSignataireClientNom("");
       setClientSignatureEmpty(true);
       setLivreurSignatureEmpty(true);
+      setClientSignatureData(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, venteId]);
@@ -139,7 +143,7 @@ export function BonLivraisonFlow({
 
   async function handleValidateSignature() {
     if (!data) return;
-    const signatureClient = clientPadRef.current?.toDataURL();
+    const signatureClient = clientSignatureData;
     const signatureLivreur = livreurPadRef.current?.toDataURL();
     if (!signatureClient || !signatureLivreur || !signataireClientNom.trim()) return;
 
@@ -397,7 +401,11 @@ export function BonLivraisonFlow({
                 {t("back")}
               </Button>
               <Button
-                onClick={() => setStep("signature-livreur")}
+                onClick={() => {
+                  // Capturer la signature avant le demontage du pad
+                  setClientSignatureData(clientPadRef.current?.toDataURL() ?? null);
+                  setStep("signature-livreur");
+                }}
                 disabled={clientSignatureEmpty || !signataireClientNom.trim()}
                 className="min-h-[44px]"
               >
@@ -410,7 +418,12 @@ export function BonLivraisonFlow({
             <>
               <Button
                 variant="outline"
-                onClick={() => setStep("signature-client")}
+                onClick={() => {
+                  // Le pad client remonte vide : reinitialiser l'etat capture
+                  setClientSignatureData(null);
+                  setClientSignatureEmpty(true);
+                  setStep("signature-client");
+                }}
                 className="min-h-[44px]"
               >
                 {t("back")}
