@@ -27,6 +27,7 @@ const mockReleveConsommationAggregate = vi.fn();
 const mockVagueFindMany = vi.fn();
 const mockReleveFindMany = vi.fn();
 const mockCalibrageFindMany = vi.fn();
+const mockTransfertGroupeFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -49,6 +50,9 @@ vi.mock("@/lib/db", () => ({
     },
     configElevage: {
       findFirst: vi.fn().mockResolvedValue(null),
+    },
+    transfertGroupe: {
+      findMany: (...args: unknown[]) => mockTransfertGroupeFindMany(...args),
     },
   },
 }));
@@ -140,6 +144,7 @@ function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: 
 describe("getScoresFournisseurs — liste vide", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("retourne [] si aucun produit ALIMENT actif sur le site", async () => {
@@ -177,6 +182,7 @@ describe("getScoresFournisseurs — liste vide", () => {
 describe("getScoresFournisseurs — fournisseur sans consommation exclu", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("fournisseur dont le produit a quantiteTotale=0 est exclu (guard analytique.quantiteTotale <= 0)", async () => {
@@ -210,6 +216,7 @@ describe("getScoresFournisseurs — fournisseur sans consommation exclu", () => 
 describe("getScoresFournisseurs — fournisseur avec un seul produit", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("fournisseur avec 1 produit : nombreProduits = 1", async () => {
@@ -257,6 +264,7 @@ describe("getScoresFournisseurs — fournisseur avec un seul produit", () => {
 describe("getScoresFournisseurs — tri par scoreMoyen DESC", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("fournisseurs avec scoreMoyen null sont en fin de liste", async () => {
@@ -298,6 +306,7 @@ describe("getScoresFournisseurs — tri par scoreMoyen DESC", () => {
 describe("getScoresFournisseurs — agregation par fournisseur", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("deux produits du meme fournisseur → un seul entree avec nombreProduits=2", async () => {
@@ -362,6 +371,7 @@ describe("getScoresFournisseurs — agregation par fournisseur", () => {
 describe("getScoresFournisseurs — structure du resultat", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockTransfertGroupeFindMany.mockResolvedValue([]);
   });
 
   it("chaque entree possede les champs attendus", async () => {

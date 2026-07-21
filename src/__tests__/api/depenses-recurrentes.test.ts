@@ -18,6 +18,7 @@ import { FrequenceRecurrence, Permission, CategorieDepense } from "@/types";
 
 const mockDepenseRecurrenteFindMany = vi.fn();
 const mockDepenseRecurrenteCreate = vi.fn();
+const mockDepenseRecurrenteFindUniqueOrThrow = vi.fn();
 const mockDepenseRecurrenteUpdateMany = vi.fn();
 const mockDepenseRecurrenteDeleteMany = vi.fn();
 const mockDepenseRecurrenteFindFirst = vi.fn();
@@ -42,6 +43,7 @@ vi.mock("@/lib/db", () => ({
       deleteMany: (...args: unknown[]) => mockDepenseRecurrenteDeleteMany(...args),
       findFirst: (...args: unknown[]) => mockDepenseRecurrenteFindFirst(...args),
       update: (...args: unknown[]) => mockDepenseRecurrenteUpdate(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockDepenseRecurrenteFindUniqueOrThrow(...args),
     },
     depense: {
       create: (...args: unknown[]) => mockDepenseCreate(...args),
@@ -393,7 +395,8 @@ describe("POST /api/depenses-recurrentes", () => {
 
   it("retourne 201 avec le template cree", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockDepenseRecurrenteCreate.mockResolvedValue({
+    mockDepenseRecurrenteCreate.mockResolvedValue(TEMPLATE_MENSUEL);
+    mockDepenseRecurrenteFindUniqueOrThrow.mockResolvedValue({
       ...TEMPLATE_MENSUEL,
       user: { id: "user-1", name: "Admin" },
     });

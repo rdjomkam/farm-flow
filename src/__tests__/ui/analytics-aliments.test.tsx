@@ -27,6 +27,11 @@ const analyticsTranslations: Record<string, string> = {
   "aliments.coutKgLabel": "Cout/kg",
   "aliments.detail": "Detail",
   "bacs.detail": "Detail",
+  "EXCELLENT": "Excellent",
+  "BON": "Bon",
+  "ACCEPTABLE": "Acceptable",
+  "MAUVAIS": "Mauvais",
+  "recommendation.title": "Recommandation",
 };
 
 const vaguesTranslations: Record<string, string | ((params: Record<string, unknown>) => string)> = {
@@ -39,7 +44,7 @@ const vaguesTranslations: Record<string, string | ((params: Record<string, unkno
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string, params?: Record<string, unknown>) => {
-    const ns = namespace === "analytics" ? analyticsTranslations : vaguesTranslations;
+    const ns = namespace.startsWith("analytics") ? analyticsTranslations : vaguesTranslations;
     const val = ns[key];
     if (typeof val === "function") return val(params ?? {});
     if (typeof val === "string" && params) {

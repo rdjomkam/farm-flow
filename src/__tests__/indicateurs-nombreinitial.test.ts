@@ -139,9 +139,12 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     expect(result).not.toBeNull();
 
     // vivants = (200-10) + (200-10) = 380 (fallback: assignation.nombreInitial - mortsBac)
-    // tauxSurvie = 380 / 500 * 100 = 76%  (denominateur = vague.nombreInitial)
-    // Si on avait utilise la somme des bacs (400) : 380/400 = 95% → mauvais
-    expect(result!.tauxSurvie).toBeCloseTo(76, 0);
+    // Sprint SV fix : tauxSurvie = (vague.nombreInitial - totalMortalites) / vague.nombreInitial,
+    // et non nombreVivants / nombreInitial (ventes/transferts ne sont pas des morts, donc le
+    // denominateur "vivants" par bac ne doit pas piloter le taux de survie).
+    // totalMortalites = 10 + 10 = 20 → tauxSurvie = (500 - 20) / 500 * 100 = 96%
+    // Si on avait utilise la somme des bacs (400) comme denominateur : (400-20)/400 = 95% → mauvais
+    expect(result!.tauxSurvie).toBeCloseTo(96, 0);
     expect(result!.nombreVivants).toBe(380);
   });
 
@@ -257,8 +260,11 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     // vague.nombreInitial = 500
     // COMPTAGE jour 10 → 460 poissons
     // 10 morts apres le COMPTAGE
-    // vivants = 460 - 10 = 450
-    // tauxSurvie = 450 / 500 = 90%   (pas 450/460 = 97.8%)
+    // vivants = 460 - 10 = 450 (base sur le COMPTAGE, pas sur nombreInitial)
+    // Sprint SV fix : tauxSurvie = (vague.nombreInitial - totalMortalites) / vague.nombreInitial.
+    // Seule la MORTALITE apres le COMPTAGE (10) compte comme mortalite — le COMPTAGE
+    // lui-meme n'est pas une mortalite (ecart possible du a des ventes/transferts/erreurs
+    // de comptage anterieures). tauxSurvie = (500 - 10) / 500 * 100 = 98%   (pas 450/500 = 90%)
     const vague = makeVague({
       nombreInitial: 500,
       poidsMoyenInitial: 10,
@@ -277,7 +283,7 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     expect(result).not.toBeNull();
 
     expect(result!.nombreVivants).toBe(450);
-    // Denominateur = vague.nombreInitial = 500
-    expect(result!.tauxSurvie).toBeCloseTo(90, 0);
+    // Denominateur = vague.nombreInitial = 500, numerateur = totalMortalites (10) uniquement
+    expect(result!.tauxSurvie).toBeCloseTo(98, 0);
   });
 });

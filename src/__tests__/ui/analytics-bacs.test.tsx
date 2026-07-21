@@ -26,6 +26,10 @@ const analyticsBacsTranslations: Record<string, string> = {
   viewVagueAnalytics: "Voir les analytiques par vague",
   vagueTracking: "Les indicateurs de performance (FCR, SGR...) sont calculés au niveau de la vague.",
   detail: "Detail",
+  EXCELLENT: "Excellent",
+  BON: "Bon",
+  ACCEPTABLE: "Acceptable",
+  MAUVAIS: "Mauvais",
 };
 
 vi.mock("next-intl", () => ({
@@ -40,6 +44,7 @@ vi.mock("next-intl", () => ({
     }
     return analyticsBacsTranslations[key] ?? key;
   },
+  useLocale: () => "fr",
 }));
 
 // ---------------------------------------------------------------------------

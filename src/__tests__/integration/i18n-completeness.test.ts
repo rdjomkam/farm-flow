@@ -85,6 +85,10 @@ import frSites from "@/messages/fr/sites.json";
 import enSites from "@/messages/en/sites.json";
 import frReproduction from "@/messages/fr/reproduction.json";
 import enReproduction from "@/messages/en/reproduction.json";
+import frArrivages from "@/messages/fr/arrivages.json";
+import enArrivages from "@/messages/en/arrivages.json";
+import frTransferts from "@/messages/fr/transferts.json";
+import enTransferts from "@/messages/en/transferts.json";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -190,6 +194,8 @@ const namespaceFiles: Record<
   remises: { fr: frRemises as Record<string, unknown>, en: enRemises as Record<string, unknown> },
   sites: { fr: frSites as Record<string, unknown>, en: enSites as Record<string, unknown> },
   reproduction: { fr: frReproduction as Record<string, unknown>, en: enReproduction as Record<string, unknown> },
+  arrivages: { fr: frArrivages as Record<string, unknown>, en: enArrivages as Record<string, unknown> },
+  transferts: { fr: frTransferts as Record<string, unknown>, en: enTransferts as Record<string, unknown> },
 };
 
 // ---------------------------------------------------------------------------
@@ -201,8 +207,8 @@ describe("i18n — registre des namespaces (src/messages/index.ts)", () => {
     expect(Array.isArray(namespaces)).toBe(true);
   });
 
-  it("contient exactement 35 namespaces", () => {
-    expect(namespaces).toHaveLength(35);
+  it("contient exactement 36 namespaces", () => {
+    expect(namespaces).toHaveLength(36);
   });
 
   it("contient tous les namespaces Sprint 39 (common, format)", () => {
@@ -693,7 +699,7 @@ describe("i18n — coherence metier cross-namespace (Sprint 39-42)", () => {
 // ---------------------------------------------------------------------------
 
 describe("i18n — couverture globale Sprint 39-42", () => {
-  it("tous les 35 namespaces ont des fichiers fr et en non vides", () => {
+  it("tous les 36 namespaces ont des fichiers fr et en non vides", () => {
     for (const ns of namespaces) {
       const { fr, en } = namespaceFiles[ns];
       const frKeys = extractKeys(fr);
@@ -703,13 +709,13 @@ describe("i18n — couverture globale Sprint 39-42", () => {
     }
   });
 
-  it("le nombre total de cles couvre l'integralite des 35 namespaces (>= 2500 cles fr)", () => {
+  it("le nombre total de cles couvre l'integralite des 36 namespaces (>= 2500 cles fr)", () => {
     let totalFrKeys = 0;
     for (const ns of namespaces) {
       const { fr } = namespaceFiles[ns];
       totalFrKeys += extractKeys(fr).length;
     }
-    // Les 35 namespaces representent au minimum 2500 cles
+    // Les 36 namespaces representent au minimum 2500 cles
     expect(totalFrKeys).toBeGreaterThanOrEqual(2500);
   });
 

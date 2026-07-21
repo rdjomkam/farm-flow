@@ -251,10 +251,8 @@ describe("POST /api/ventes — idempotency", () => {
 
   const validVenteBody = {
     clientId: "client-1",
-    vagueId: "vague-1",
-    quantitePoissons: 50,
-    poidsTotalKg: 25,
     prixUnitaireKg: 2000,
+    lignes: [{ vagueId: "vague-1", bacId: "bac-1", poidsTotalKg: 25 }],
   };
 
   const FAKE_VENTE = { id: "v-1", numero: "VTE-2026-001", montantTotal: 50000 };
@@ -354,6 +352,7 @@ describe("POST /api/commandes — idempotency", () => {
 
   const validCommandeBody = {
     fournisseurId: "four-1",
+    listeBesoinsId: "bes-1",
     dateCommande: "2026-03-01T00:00:00.000Z",
     lignes: [{ produitId: "prod-1", quantite: 100, prixUnitaire: 5000 }],
   };

@@ -411,7 +411,8 @@ describe("IndicateursCards — Rendu des indicateurs", () => {
       joursEcoules: 0,
     };
     render(<IndicateursCards indicateurs={emptyIndicateurs} />);
+    // 6 cartes affichees (vivants, tauxSurvie, biomasse, poidsMoyen, sgr, fcr) — toutes a "—" quand null
     const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBe(5);
+    expect(dashes.length).toBe(6);
   });
 });
