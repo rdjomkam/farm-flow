@@ -173,6 +173,7 @@ function setupCreateMocks(vivants: number) {
   mockTransfertGroupeFindMany.mockResolvedValue([]);
   mockVagueFindFirst.mockResolvedValue(makeVague());
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([])                                // 0. GT.2 — capture ecarts preexistants (avant ecriture)
     .mockResolvedValueOnce(makeSourceAssignation(vivants))    // 1. sourceAssignations
     .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])          // 2. destAssignations
     .mockResolvedValueOnce([{ bacId: BAC_SOURCE_ID, nombreInitial: vivants }]) // 3. allAssignationsVague
@@ -269,6 +270,7 @@ describe("createCalibrage — conservation stricte", () => {
     mockTransfertGroupeFindMany.mockResolvedValue([]);
     mockVagueFindFirst.mockResolvedValue(makeVague());
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                            // 0. GT.2 — capture ecarts preexistants
       .mockResolvedValueOnce(makeSourceAssignation(5973))   // 1. sourceAssignations
       .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])      // 2. destAssignations
       // 3. allAssignationsVague — NE contient PAS BAC_SOURCE_ID → Map.get retournera undefined
@@ -342,11 +344,13 @@ describe("patchCalibrage — conservation stricte", () => {
 
     // Appels assignationBac.findMany dans patchCalibrage (quand groupes modifies) :
     // Call 1 : Etape 5 destAssignationsPatch — verifie que les bacs dest appartiennent a la vague
-    // Call 2 : Etape 5b allAssignationsVagueModif — snapshot avec bac inclus
-    // Call 3 : Guard post-écriture — verifyAssignationInvariant
+    // Call 2 : GT.2 — capture ecarts preexistants (avant ecriture Etape 6)
+    // Call 3 : Etape 5b allAssignationsVagueModif — snapshot avec bac inclus
+    // Call 4 : Guard post-écriture — verifyAssignationInvariant
     mockAssignationBacFindMany
       .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])  // Call 1: Etape 5 destAssignationsPatch
-      .mockResolvedValueOnce([                          // Call 2: Etape 5b allAssignationsVagueModif
+      .mockResolvedValueOnce([])                        // Call 2: GT.2 capture ecarts preexistants
+      .mockResolvedValueOnce([                          // Call 3: Etape 5b allAssignationsVagueModif
         {
           bacId: BAC_SOURCE_ID,
           nombreActuel: 0,

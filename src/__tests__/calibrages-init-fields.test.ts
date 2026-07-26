@@ -158,6 +158,7 @@ function setupBaseCreateMocks(vivants = VIVANTS) {
   mockVagueFindFirst.mockResolvedValue(makeVague(vivants));
 
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([])                                   // 0. GT.2 — capture ecarts preexistants
     .mockResolvedValueOnce(makeSourceAssignation(vivants))       // 1. sourceAssignations
     .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])             // 2. destAssignations
     .mockResolvedValueOnce([                                     // 3. allAssignationsVague
@@ -378,6 +379,7 @@ describe("CX.1 — patchCalibrage Pass 2 : dest existant avec init=0", () => {
 
     mockAssignationBacFindMany
       .mockResolvedValueOnce([{ bacId: BAC_DEST_ID }])           // Etape 5: destAssignationsPatch
+      .mockResolvedValueOnce([])                                 // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([                                   // Etape 5b: allAssignationsVagueModif
         {
           bacId: BAC_SOURCE_ID,

@@ -6,6 +6,7 @@ import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateVenteDTO, CreateLigneVenteDTO, CreateVenteAlevinsDTO, VenteFilters } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
+import { ConservationError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -179,6 +180,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(vente, { status: 201 });
   } catch (error) {
+    // GT.3 — le guard de conservation (verifyAssignationInvariant) declenche
+    // une ConservationError differente de celle des calibrages (422) : ici
+    // l'operation elle-meme a aggrave un ecart existant, message actionnable
+    // en 409 avec le nom du bac.
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError("POST /api/ventes", error, "Erreur serveur lors de la creation de la vente.", {
       statusMap: [
         { match: "inactif", status: 404 },

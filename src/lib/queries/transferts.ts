@@ -31,7 +31,10 @@ import type {
   TransfertGroupeWithRelations,
 } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import {
+  verifyAssignationInvariant,
+  captureEcartsAssignation,
+} from "@/lib/guards/assignation-invariant";
 
 // ---------------------------------------------------------------------------
 // Helper interne — moyenne pondérée cumulative
@@ -219,6 +222,43 @@ export async function createTransfert(
             `La vague destination ${vagueDest.code} n'est pas EN_COURS`
           );
         }
+      }
+
+      // GT.2 — capture les écarts préexistants EN TOUTE PREMIÈRE opération de
+      // bac de la transaction (avant la première écriture d'AssignationBac à
+      // l'Étape 6). vagueDestId est maintenant connu (Étape 3/4), les bacs
+      // source/destination sont dérivés de dto.groupes (superset identique à
+      // celui utilisé par le guard en fin de transaction).
+      const ecartsRefParVagueTransfert = new Map<string, Map<string, number>>();
+      for (const vagueSourceId of uniqueSourceIds) {
+        const sourceBacsForVagueCapture = dto.groupes
+          .filter((g) => g.vagueSourceId === vagueSourceId && g.bacSourceId)
+          .map((g) => g.bacSourceId as string);
+        if (sourceBacsForVagueCapture.length > 0) {
+          ecartsRefParVagueTransfert.set(
+            vagueSourceId,
+            await captureEcartsAssignation(
+              tx,
+              siteId,
+              vagueSourceId,
+              [...new Set(sourceBacsForVagueCapture)],
+            ),
+          );
+        }
+      }
+      const destBacIdsForCapture = dto.groupes
+        .filter((g) => g.bacDestId)
+        .map((g) => g.bacDestId as string);
+      if (destBacIdsForCapture.length > 0) {
+        ecartsRefParVagueTransfert.set(
+          vagueDestId,
+          await captureEcartsAssignation(
+            tx,
+            siteId,
+            vagueDestId,
+            [...new Set(destBacIdsForCapture)],
+          ),
+        );
       }
 
       // -----------------------------------------------------------------------
@@ -655,7 +695,13 @@ export async function createTransfert(
           .filter((g) => g.vagueSourceId === vagueSourceId && g.bacSourceId)
           .map((g) => g.bacSourceId as string);
         if (sourceBacsForVague.length > 0) {
-          await verifyAssignationInvariant(tx, siteId, vagueSourceId, [...new Set(sourceBacsForVague)]);
+          await verifyAssignationInvariant(
+            tx,
+            siteId,
+            vagueSourceId,
+            [...new Set(sourceBacsForVague)],
+            ecartsRefParVagueTransfert.get(vagueSourceId),
+          );
         }
       }
       // Bacs destination appartiennent à vagueDestId
@@ -663,7 +709,13 @@ export async function createTransfert(
         .filter((g) => g.bacDestId)
         .map((g) => g.bacDestId as string);
       if (destBacIdsForInvariant.length > 0) {
-        await verifyAssignationInvariant(tx, siteId, vagueDestId, [...new Set(destBacIdsForInvariant)]);
+        await verifyAssignationInvariant(
+          tx,
+          siteId,
+          vagueDestId,
+          [...new Set(destBacIdsForInvariant)],
+          ecartsRefParVagueTransfert.get(vagueDestId),
+        );
       }
 
       return transfert as unknown as TransfertWithGroupes;
@@ -875,6 +927,44 @@ export async function updateTransfertGroupe(
         dto.bacSourceId !== undefined ? dto.bacSourceId : ancienBacSourceId;
       const nouveauBacDestId =
         dto.bacDestId !== undefined ? dto.bacDestId : ancienBacDestId;
+
+      // GT.2 — capture les écarts préexistants AVANT la première écriture
+      // (Étape 4 ci-dessous). Superset = anciens ET nouveaux bacs source/dest
+      // (mêmes bacs que updateSourceBacs/updateDestBacs utilisés par le guard
+      // en fin de transaction).
+      const updateBacIdsForCapture: string[] = [];
+      if (nouveauBacSourceId) updateBacIdsForCapture.push(nouveauBacSourceId);
+      if (ancienBacSourceId && ancienBacSourceId !== nouveauBacSourceId)
+        updateBacIdsForCapture.push(ancienBacSourceId);
+      if (nouveauBacDestId) updateBacIdsForCapture.push(nouveauBacDestId);
+      if (ancienBacDestId && ancienBacDestId !== nouveauBacDestId)
+        updateBacIdsForCapture.push(ancienBacDestId);
+
+      const updateSourceBacsForCapture = updateBacIdsForCapture.filter(
+        (id) => id === nouveauBacSourceId || id === ancienBacSourceId
+      );
+      const updateDestBacsForCapture = updateBacIdsForCapture.filter(
+        (id) => id === nouveauBacDestId || id === ancienBacDestId
+      );
+
+      const ecartsRefUpdateSource =
+        updateSourceBacsForCapture.length > 0
+          ? await captureEcartsAssignation(
+              tx,
+              siteId,
+              groupe.vagueSource.id,
+              [...new Set(updateSourceBacsForCapture)],
+            )
+          : undefined;
+      const ecartsRefUpdateDest =
+        updateDestBacsForCapture.length > 0
+          ? await captureEcartsAssignation(
+              tx,
+              siteId,
+              groupe.vagueDest.id,
+              [...new Set(updateDestBacsForCapture)],
+            )
+          : undefined;
 
       // -----------------------------------------------------------------------
       // Étape 4 — Annulation des effets précédents
@@ -1217,6 +1307,7 @@ export async function updateTransfertGroupe(
           siteId,
           groupe.vagueSource.id,
           [...new Set(updateSourceBacs)],
+          ecartsRefUpdateSource,
         );
       }
       if (updateDestBacs.length > 0) {
@@ -1225,6 +1316,7 @@ export async function updateTransfertGroupe(
           siteId,
           groupe.vagueDest.id,
           [...new Set(updateDestBacs)],
+          ecartsRefUpdateDest,
         );
       }
 

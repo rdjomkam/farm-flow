@@ -126,9 +126,13 @@ function setupDefaultMocks() {
     .mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 0, poidsMoyenInitial: 0 });
   mockVagueFindUniqueOrThrow.mockResolvedValue({ id: VAGUE_DEST_ID, nombreInitial: 0, poidsMoyenInitial: 0 });
   mockVagueUpdate.mockResolvedValue({});
+  // Call 0a : GT.2 — capture ecarts preexistants (vague source)
+  // Call 0b : GT.2 — capture ecarts preexistants (vague dest)
   // Call 1 : étape 5 conservation source
   // Call 2 : étape 12 clôture check (50 restants → pas de clôture)
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([]) // GT.2 capture source
+    .mockResolvedValueOnce([]) // GT.2 capture dest
     .mockResolvedValueOnce([
       { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
     ])

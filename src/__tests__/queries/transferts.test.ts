@@ -292,6 +292,8 @@ function setupHappyPathMocks(overrides?: {
 
   // Étape 5 — assignationsBacs source (nombreInitial = nombreActuelSrc pour que computeVivantsByBac donne les bons vivants)
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+    .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
     .mockResolvedValueOnce([
       { ...assignationSrc, nombreActuel: nombreActuelSrc, nombreInitial: nombreActuelSrc },
     ])
@@ -355,6 +357,8 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ nombreActuel: 800 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
@@ -409,6 +413,7 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest ; pas de bacSourceId ici → pas de capture source)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreInitial: 1000, nombreActuel: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ id: "assign-src-001", nombreActuel: 1000 }]) // étape 8 (distribution sans bac)
       .mockResolvedValueOnce([{ nombreActuel: 999 }]); // étape 12
@@ -446,6 +451,8 @@ describe("computeWeightedAverage — via createTransfert Mode A", () => {
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreInitial: 1000, nombreActuel: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ nombreActuel: 800 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
@@ -509,6 +516,8 @@ describe("createTransfert", () => {
     mockVagueFindFirst.mockResolvedValue(null); // code non pris
     mockVagueCreate.mockResolvedValue({ id: "vague-new-001" });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }]) // étape 5
       .mockResolvedValueOnce([{ nombreActuel: 800 }]); // étape 12
     mockReleveFindMany.mockResolvedValue([]);
@@ -579,6 +588,8 @@ describe("createTransfert", () => {
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);
     mockVagueFindFirst.mockResolvedValue(vagueGross); // vague dest existante
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 300 }]);
     mockReleveFindMany.mockResolvedValue([]);
@@ -612,6 +623,8 @@ describe("createTransfert", () => {
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);
     mockVagueFindFirst.mockResolvedValue(vagueGross);
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 800 }]);
     mockReleveFindMany.mockResolvedValue([]);
@@ -682,9 +695,12 @@ describe("createTransfert", () => {
   it("TC07 — Erreur : conservation violée (transfert > vivants disponibles)", async () => {
     // Vivants réels = 1000 (aucune mortalité), transfert = 1500 → violation
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);
-    mockAssignationBacFindMany.mockResolvedValueOnce([
-      { ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 },
-    ]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
+      .mockResolvedValueOnce([
+        { ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 },
+      ]);
     mockReleveFindMany.mockResolvedValue([]);
 
     const dto = makeModeADto({ nombrePoissons: 1500 });
@@ -762,6 +778,8 @@ describe("createTransfert", () => {
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 0 }]); // 0 restants après transfert
     mockReleveFindMany.mockResolvedValue([]);
@@ -802,9 +820,12 @@ describe("createTransfert", () => {
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
-    mockAssignationBacFindMany.mockResolvedValueOnce([
-      { ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 },
-    ]); // étape 5 — conservation OK à ce stade
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
+      .mockResolvedValueOnce([
+        { ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 },
+      ]); // étape 5 — conservation OK à ce stade
     mockReleveFindMany.mockResolvedValue([]);
     mockAssignationBacFindFirst
       .mockResolvedValueOnce({ id: "ad-1" }) // étape 6
@@ -1325,6 +1346,8 @@ describe("CS.2 — createTransfert crée relevé TRANSFERT miroir côté destina
     mockVagueFindFirst.mockResolvedValue(null); // code non pris
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 800 }]);
     mockReleveFindMany.mockResolvedValue([]);
@@ -1378,6 +1401,8 @@ describe("CS.2 — createTransfert crée relevé TRANSFERT miroir côté destina
     mockVagueFindFirst.mockResolvedValue(null);
     mockVagueCreate.mockResolvedValue({ id: VAGUE_DEST_ID });
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 800 }]);
     mockReleveFindMany.mockResolvedValue([]);
@@ -1413,6 +1438,8 @@ describe("CS.2 — createTransfert crée relevé TRANSFERT miroir côté destina
     mockVagueFindMany.mockResolvedValue([vaguePreGross]);
     mockVagueFindFirst.mockResolvedValue(vagueGross); // Mode B
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (dest)
       .mockResolvedValueOnce([{ ...assignationSrc, nombreActuel: 1000, nombreInitial: 1000 }])
       .mockResolvedValueOnce([{ nombreActuel: 800 }]);
     mockReleveFindMany.mockResolvedValue([]);

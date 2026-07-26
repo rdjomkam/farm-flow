@@ -221,6 +221,7 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     //  3. allBacsVague pour computeVivantsByBac (BUG-048) → toutes les assignations
     //  4. snapshot allBacsOfVague → toutes les assignations
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                                              // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([assignationBacSource])                           // sources
       .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])            // destinations (select bacId)
       .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
@@ -248,7 +249,8 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
 
     // Vérifier que la recherche des bacs sources passe bien par assignationBac.findMany
     expect(mockAssignationBacFindMany).toHaveBeenCalled();
-    const sourceCall = mockAssignationBacFindMany.mock.calls[0][0];
+    // Index 0 = capture GT.2 (avant écriture), index 1 = validation sources
+    const sourceCall = mockAssignationBacFindMany.mock.calls[1][0];
     expect(sourceCall.where.bacId).toEqual({ in: [bacSourceViaAssignationOnly.id] });
     expect(sourceCall.where.vagueId).toBe(VAGUE_ID);
     expect(sourceCall.where.dateFin).toBeNull();
@@ -257,6 +259,7 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
   it("accepte un bac destination sans Bac.vagueId mais avec AssignationBac active", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                                                       // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([assignationBacSource])                                    // sources
       .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
       .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
@@ -278,9 +281,10 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     ).resolves.toBeDefined();
 
     // Vérifier que la recherche des bacs destinations passe par assignationBac.findMany
-    // (4 appels métier + 1 appel du guard verifyAssignationInvariant — GD.1)
-    expect(mockAssignationBacFindMany).toHaveBeenCalledTimes(5);
-    const destCall = mockAssignationBacFindMany.mock.calls[1][0];
+    // (1 appel capture GT.2 + 4 appels métier + 1 appel du guard verifyAssignationInvariant — GD.1)
+    expect(mockAssignationBacFindMany).toHaveBeenCalledTimes(6);
+    // Index 0 = capture GT.2, index 2 = validation destinations
+    const destCall = mockAssignationBacFindMany.mock.calls[2][0];
     expect(destCall.where.bacId).toEqual({ in: [bacDestSanAssignation.id] });
     expect(destCall.where.vagueId).toBe(VAGUE_ID);
     expect(destCall.where.dateFin).toBeNull();
@@ -319,6 +323,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     // 3. vivants BUG-048
     // 4. snapshot
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                                                       // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([assignationBacSource])                                    // sources
       .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
       .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
@@ -360,6 +365,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
   it("ne crée pas d'AssignationBac si une existe déjà pour le bac destination", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                                                       // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([assignationBacSource])                                    // sources
       .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
       .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
@@ -389,6 +395,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
 
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([])                                                       // GT.2: capture ecarts preexistants
       .mockResolvedValueOnce([assignationBacSource])                                    // sources
       .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
       .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
@@ -606,6 +613,7 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
     // 2. étape 5b : snapshot all bacs de la vague
     mockAssignationBacFindManyPatch
       .mockResolvedValueOnce([{ bacId: bacDestViaAssignationOnly.id }]) // étape 5 : dest trouvé
+      .mockResolvedValueOnce([])                                        // GT.2 : capture ecarts preexistants
       .mockResolvedValueOnce([assignationDestViaAssignationOnly]);       // étape 5b : snapshot
 
     // Étapes 6, 7 — opérations sur assignations

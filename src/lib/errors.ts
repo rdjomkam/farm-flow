@@ -21,6 +21,7 @@ export class ConservationError extends Error {
     public readonly saisiTotal: number,
     public readonly ecart: number,
     public readonly nombreMorts: number,
+    public readonly bacId?: string,
   ) {
     super(message);
     this.name = "ConservationError";

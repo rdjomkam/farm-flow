@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateTransfertGroupeDTO } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string; groupeId: string }> };
 
@@ -77,6 +78,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    // GT.3 — ConservationError du guard de conservation (verifyAssignationInvariant) :
+    // sans ce catch dédié, l'erreur tombait dans le fallback générique (500 opaque).
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError(
       "PATCH /api/transferts/[id]/groupes/[groupeId]",
       error,

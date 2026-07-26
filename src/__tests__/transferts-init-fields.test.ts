@@ -137,6 +137,8 @@ function setupCreateTransfertVirginDest() {
   //   3. guard dest vague: verifyAssignationInvariant for VAGUE_DEST_ID
   const transferDate = new Date("2026-01-10");
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([]) // 0a. GT.2 capture ecarts preexistants (source)
+    .mockResolvedValueOnce([]) // 0b. GT.2 capture ecarts preexistants (dest)
     .mockResolvedValueOnce([ // 1. étape 5 conservation source
       { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
     ])
@@ -261,6 +263,8 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     const firstTransferDate = new Date("2026-01-05");
     const secondTransferDate = new Date("2026-01-10");
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (dest)
       .mockResolvedValueOnce([ // étape 5 : assignations source
         { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
       ])
@@ -401,6 +405,8 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     const updateDate = new Date("2026-03-26");
     // Étape 5 : validation conservation
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (dest — ancien + nouveau bac)
       .mockResolvedValueOnce([ // étape 5 : assignations source
         { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
       ])
@@ -513,6 +519,8 @@ describe("CS.1 — nombreInitial + poidsMoyenInitial sur AssignationBac destinat
     const updateDate = new Date("2026-03-26"); // current update date
     // Étape 5
     mockAssignationBacFindMany
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (source)
+      .mockResolvedValueOnce([]) // GT.2 capture ecarts preexistants (dest)
       .mockResolvedValueOnce([ // étape 5 : assignations source
         { bacId: BAC_SOURCE_ID, nombreInitial: 100, nombreActuel: 100 },
       ])

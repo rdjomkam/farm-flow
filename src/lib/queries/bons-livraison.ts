@@ -12,7 +12,10 @@
 
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import {
+  verifyAssignationInvariant,
+  captureEcartsAssignation,
+} from "@/lib/guards/assignation-invariant";
 import { ValidationError } from "@/lib/errors";
 import { StatutBonLivraison, StatutVente, TypeReleve, CauseMortalite } from "@/types";
 import type {
@@ -464,11 +467,42 @@ export async function signerBonLivraison(
     const dateLivraison = bonLivraison.dateLivraison ?? new Date();
 
     // -------------------------------------------------------------------
+    // GT.2 — pre-scan des lignes AVANT la boucle de traitement, pour capturer
+    // les ecarts preexistants en toute premiere operation de bac de la
+    // transaction (avant les ecritures ci-dessous). Seules les lignes avec
+    // nombreMortsTransport > 0 modifient une quantite de bac (creation d'un
+    // releve MORTALITE qui entre dans le replay du guard) ; une ligne sans
+    // avarie ne touche a aucune quantite de bac et n'a donc pas besoin d'etre
+    // dans bacsParVague. Si une future story ajoute une ecriture de quantite
+    // de bac pour une ligne SANS avarie, il faudra etendre ce pre-scan (et
+    // bacsParVague plus bas) pour l'inclure.
+    const bacsParVaguePreScan = new Map<string, Set<string>>();
+    for (const ligne of vente.lignes) {
+      const ligneBL = bonLivraison.lignes.find((l) => l.ligneVenteId === ligne.id);
+      const nombreMortsTransportPreScan = ligneBL?.nombreMortsTransport ?? 0;
+      if (nombreMortsTransportPreScan > 0 && ligne.vagueId && ligne.bacId) {
+        const set = bacsParVaguePreScan.get(ligne.vagueId) ?? new Set<string>();
+        set.add(ligne.bacId);
+        bacsParVaguePreScan.set(ligne.vagueId, set);
+      }
+    }
+    const ecartsRefParVagueBL = new Map<string, Map<string, number>>();
+    for (const [vagueId, bacIds] of bacsParVaguePreScan) {
+      ecartsRefParVagueBL.set(
+        vagueId,
+        await captureEcartsAssignation(tx, siteId, vagueId, [...bacIds]),
+      );
+    }
+
+    // -------------------------------------------------------------------
     // Traiter chaque ligne : quantites lues depuis LigneBonLivraison
     // -------------------------------------------------------------------
     let totalPoidsLivre = 0;
     let totalQuantiteLivree = 0;
     let totalNombreMorts = 0;
+    // bacsParVague : accumule PENDANT la boucle ci-dessous (par ligne traitee).
+    // Redondant avec bacsParVaguePreScan (memes criteres nombreMortsTransport
+    // > 0) mais conserve pour la lisibilite locale de la boucle existante.
     const bacsParVague = new Map<string, Set<string>>();
 
     for (const ligne of vente.lignes) {
@@ -606,7 +640,13 @@ export async function signerBonLivraison(
     // Guard : verifier l'invariant AssignationBac sur les bacs impactes par une avarie
     // — apres les updates de ligne, avant la relecture finale
     for (const [vagueId, bacIds] of bacsParVague) {
-      await verifyAssignationInvariant(tx, siteId, vagueId, [...bacIds]);
+      await verifyAssignationInvariant(
+        tx,
+        siteId,
+        vagueId,
+        [...bacIds],
+        ecartsRefParVagueBL.get(vagueId),
+      );
     }
 
     // Mettre a jour la facture si elle existe — avant la relecture finale, au

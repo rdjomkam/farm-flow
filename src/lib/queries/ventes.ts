@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import {
+  verifyAssignationInvariant,
+  captureEcartsAssignation,
+} from "@/lib/guards/assignation-invariant";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { getTransfertGroupesByVague } from "./transferts";
 import { ValidationError } from "@/lib/errors";
@@ -362,6 +365,24 @@ export async function createVente(
       lignesEnrichies.push({ ligne, ...enriched });
     }
 
+    // GT.2 — capture les écarts préexistants EN TOUTE PREMIÈRE opération de
+    // bac de la transaction (avant la déduction de stock à l'étape 6).
+    // Grouper les bacs par vagueId (même regroupement que le guard final).
+    const venteVagueBacMap = new Map<string, Set<string>>();
+    for (const { ligne } of lignesEnrichies) {
+      if (!venteVagueBacMap.has(ligne.vagueId)) {
+        venteVagueBacMap.set(ligne.vagueId, new Set());
+      }
+      venteVagueBacMap.get(ligne.vagueId)!.add(ligne.bacId);
+    }
+    const ecartsRefParVagueVente = new Map<string, Map<string, number>>();
+    for (const [vgId, bacSet] of venteVagueBacMap.entries()) {
+      ecartsRefParVagueVente.set(
+        vgId,
+        await captureEcartsAssignation(tx, siteId, vgId, [...bacSet]),
+      );
+    }
+
     // Etape 3 : Calculer les agregats
     const poidsTotalKg = lignesEnrichies.reduce(
       (sum, { ligne }) => sum + ligne.poidsTotalKg,
@@ -416,16 +437,14 @@ export async function createVente(
     });
 
     // Guard post-écriture — vérifie l'invariant sur les bacs vendus (par vague)
-    // Grouper les bacs par vagueId pour appeler verifyAssignationInvariant une fois par vague
-    const venteVagueBacMap = new Map<string, Set<string>>();
-    for (const { ligne } of lignesEnrichies) {
-      if (!venteVagueBacMap.has(ligne.vagueId)) {
-        venteVagueBacMap.set(ligne.vagueId, new Set());
-      }
-      venteVagueBacMap.get(ligne.vagueId)!.add(ligne.bacId);
-    }
     for (const [vgId, bacSet] of venteVagueBacMap.entries()) {
-      await verifyAssignationInvariant(tx, siteId, vgId, [...bacSet]);
+      await verifyAssignationInvariant(
+        tx,
+        siteId,
+        vgId,
+        [...bacSet],
+        ecartsRefParVagueVente.get(vgId),
+      );
     }
 
     return vente;
@@ -743,7 +762,17 @@ export async function createVenteAlevinsDepuisVague(
   const venteDate = new Date(data.dateCommande);
 
   // === PHASE 2 — Écritures dans la transaction ===
+  const bacIdsPourGuard = [...new Set(lignesEnrichies.map((l) => l.bacId))];
   return prisma.$transaction(async (tx) => {
+    // GT.2 — capture en toute première opération de la Phase 2 (les bacIds
+    // sont déjà connus depuis la Phase 1, lue hors transaction).
+    const ecartsRefVenteAlevins = await captureEcartsAssignation(
+      tx,
+      siteId,
+      data.vagueId,
+      bacIdsPourGuard,
+    );
+
     const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
 
     const venteRaw = await tx.vente.create({
@@ -806,8 +835,13 @@ export async function createVenteAlevinsDepuisVague(
     }
 
     // 6. Guard post-ecriture — verifie l'invariant sur les bacs vendus
-    const bacIds = [...new Set(lignesEnrichies.map((l) => l.bacId))];
-    await verifyAssignationInvariant(tx, siteId, data.vagueId, bacIds);
+    await verifyAssignationInvariant(
+      tx,
+      siteId,
+      data.vagueId,
+      bacIdsPourGuard,
+      ecartsRefVenteAlevins,
+    );
 
     // 7. Depenses liees a la vente (optionnel)
     if (data.depenses && data.depenses.length > 0) {

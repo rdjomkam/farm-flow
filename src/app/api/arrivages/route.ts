@@ -4,6 +4,7 @@ import { Permission } from "@/types";
 import type { CreateArrivageDTO, ArrivageGroupeInputDTO } from "@/types";
 import { createArrivage } from "@/lib/queries/arrivages";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,22 @@ export async function POST(request: NextRequest) {
     const arrivage = await createArrivage(auth.activeSiteId, auth.userId, dto);
     return NextResponse.json(arrivage, { status: 201 });
   } catch (error) {
+    // GT.3 — ConservationError du guard de conservation (verifyAssignationInvariant)
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError("POST /api/arrivages", error, "Erreur lors de la création de l'arrivage.", {
       statusMap: [
         { match: ["pré-grossissement", "EN_COURS", "n'est pas de type", "introuvable", "conflit"], status: 400 },

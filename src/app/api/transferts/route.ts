@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, ModeTransfert } from "@/types";
 import type { CreateTransfertDTO } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 const VALID_MODES = new Set(Object.values(ModeTransfert));
 
@@ -162,6 +163,22 @@ export async function POST(request: NextRequest) {
     const result = await createTransfert(auth.activeSiteId, auth.userId, dto);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    // GT.3 — ConservationError du guard de conservation (verifyAssignationInvariant)
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError("POST /api/transferts", error, "Erreur serveur lors de la creation du transfert.", {
       statusMap: [
         { match: ["Conservation violée", "Modification impossible", "Annulation impossible"], status: 409 },

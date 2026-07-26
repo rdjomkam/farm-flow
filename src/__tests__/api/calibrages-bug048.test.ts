@@ -200,6 +200,7 @@ function setupHappyPathMocks() {
  */
 function setupAssignationBacFindMany() {
   mockAssignationBacFindMany
+    .mockResolvedValueOnce([])                                     // 0. GT.2 — capture ecarts preexistants
     .mockResolvedValueOnce([assignationBacSrc])                    // 1. source validation
     .mockResolvedValueOnce([{ bacId: BAC_DEST }])                  // 2. dest validation
     .mockResolvedValueOnce([{ bacId: BAC_SRC, nombreInitial: 5048 }]) // 3. vivants

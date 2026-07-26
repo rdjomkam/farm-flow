@@ -33,7 +33,10 @@ import type {
   ArrivageWithRelations,
   ArrivageGroupe,
 } from "@/types";
-import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import {
+  verifyAssignationInvariant,
+  captureEcartsAssignation,
+} from "@/lib/guards/assignation-invariant";
 
 // ---------------------------------------------------------------------------
 // Include standard pour ArrivageWithRelations
@@ -202,6 +205,15 @@ export async function createArrivage(
         })),
       };
 
+      // GT.2 — capture les écarts préexistants juste avant la première écriture
+      // (uniqueDestBacIds déjà connu depuis l'Étape 3).
+      const ecartsRefArrivage = await captureEcartsAssignation(
+        tx,
+        siteId,
+        dto.vagueId,
+        uniqueDestBacIds,
+      );
+
       // -----------------------------------------------------------------------
       // Étape 5 — Créer l'en-tête Arrivage + groupes (Prisma 7 pattern)
       //           create sans include, puis findUniqueOrThrow avec relations
@@ -360,7 +372,13 @@ export async function createArrivage(
       }
 
       // Guard post-écriture — vérifie l'invariant sur les bacs destination
-      await verifyAssignationInvariant(tx, siteId, dto.vagueId, uniqueDestBacIds);
+      await verifyAssignationInvariant(
+        tx,
+        siteId,
+        dto.vagueId,
+        uniqueDestBacIds,
+        ecartsRefArrivage,
+      );
 
       return arrivage as unknown as ArrivageWithRelations;
     },
@@ -511,6 +529,19 @@ export async function updateArrivageGroupe(
       const nouveauNombrePoissons = dto.nombrePoissons ?? ancienNombrePoissons;
       const nouveauPoidsMoyen = dto.poidsMoyen ?? ancienPoidsMoyen;
       const nouveauDestBacId = dto.destinationBacId ?? ancienDestBacId;
+
+      // GT.2 — capture les écarts préexistants AVANT la première écriture
+      // (superset = ancien bac destination ∪ nouveau bac destination, mêmes
+      // bacs que arrivageUpdateBacIds utilisé par le guard en fin de transaction).
+      const arrivageUpdateBacIdsForCapture = [
+        ...new Set([ancienDestBacId, nouveauDestBacId]),
+      ];
+      const ecartsRefArrivageUpdate = await captureEcartsAssignation(
+        tx,
+        siteId,
+        vagueId,
+        arrivageUpdateBacIdsForCapture,
+      );
 
       // -----------------------------------------------------------------------
       // Étape 5 — Annulation des effets précédents
@@ -733,7 +764,13 @@ export async function updateArrivageGroupe(
 
       // Guard post-écriture — vérifie l'invariant sur les bacs destination affectés
       const arrivageUpdateBacIds = [...new Set([ancienDestBacId, nouveauDestBacId])];
-      await verifyAssignationInvariant(tx, siteId, vagueId, arrivageUpdateBacIds);
+      await verifyAssignationInvariant(
+        tx,
+        siteId,
+        vagueId,
+        arrivageUpdateBacIds,
+        ecartsRefArrivageUpdate,
+      );
 
       return updated as unknown as ArrivageGroupe;
     },

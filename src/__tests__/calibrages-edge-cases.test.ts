@@ -134,6 +134,8 @@ function makeCreateDTO(redistribues: number, morts: number) {
 function setupBaseMocks() {
   vi.resetAllMocks();
   mockVagueFindFirst.mockResolvedValue(makeVague());
+  // GT.2 — capture ecarts preexistants (avant ecriture) — appel 0
+  mockAssignationBacFindMany.mockResolvedValueOnce([]);
   // sourceAssignations — appel 1
   mockAssignationBacFindMany.mockResolvedValueOnce(
     makeSourceAssignation(NOMBRE_INITIAL_VAGUE, NOMBRE_INITIAL_VAGUE)

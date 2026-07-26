@@ -4,6 +4,7 @@ import { Permission } from "@/types";
 import { signerBonLivraison } from "@/lib/queries/bons-livraison";
 import { signerBonLivraisonSchema } from "@/lib/validation/bon-livraison";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,6 +39,23 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(bonLivraison);
   } catch (error) {
+    // GT.3 — ConservationError du guard de conservation (verifyAssignationInvariant),
+    // ex. avarie transport sur un bac dont l'ecart preexistant a ete aggrave.
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError(
       "POST /api/bons-livraison/[id]/signer",
       error,

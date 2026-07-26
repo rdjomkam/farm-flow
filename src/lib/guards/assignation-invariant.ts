@@ -5,7 +5,7 @@
  * (dateFin IS NULL) modifiée, on recalcule le nombre de poissons attendu à
  * partir des relevés persistés et on le compare à nombreActuel.
  *
- * Algorithme :
+ * Algorithme (partagé par capture ET vérification via calculerEcartsParBac) :
  *  - Point de départ : nombrePoissonsInitial (AssignationBac.nombreInitial)
  *  - Si un relevé COMPTAGE existe, il devient la base ; on rejoue uniquement
  *    les opérations POSTÉRIEURES à sa date.
@@ -20,7 +20,11 @@
  * même vague ; discriminer par bac produirait un signe faux pour l'un des
  * deux relevés (BUG-049).
  *
- * Tolérance : 0 strict — aucune perte de tête autorisée.
+ * Tolérance (GT.1) : le guard est DIFFÉRENTIEL. On tolère un écart
+ * préexistant (mesuré avant l'opération, via captureEcartsAssignation) et
+ * on n'échoue que si l'opération l'a AGGRAVÉ. Un bac dont l'AssignationBac
+ * est créée dans la même transaction (absent de ecartsRef) reste vérifié en
+ * strict (écart de référence = 0 par défaut).
  *
  * Doit être appelé À L'INTÉRIEUR de prisma.$transaction (R4).
  *
@@ -40,24 +44,36 @@ type PrismaTransactionClient = Parameters<
   Parameters<typeof prisma.$transaction>[0]
 >[0];
 
+export interface EcartBac {
+  expected: number;
+  actual: number;
+  ecart: number;
+  bacNom: string;
+}
+
 /**
- * Vérifie l'invariant de conservation sur une liste de bacs après une écriture.
+ * Calcule, pour chaque AssignationBac active des bacs demandés, le nombre
+ * attendu (replay des relevés) et l'écart avec nombreActuel. Ne throw jamais :
+ * c'est une fonction pure de lecture, partagée par la capture (avant écriture)
+ * et la vérification (après écriture) pour garantir qu'elles ne divergent
+ * jamais entre elles.
  *
- * Throws ConservationError (→ rollback) si AssignationBac.nombreActuel ne correspond
- * pas au cumul des opérations persistées pour ce bac.
+ * Un bac sans AssignationBac active (dateFin IS NULL) n'apparaît pas dans la
+ * map retournée.
  *
  * @param tx      - Client Prisma de transaction (PAS le client global).
  * @param siteId  - Identifiant du site (filtre multi-tenant R8).
  * @param vagueId - Identifiant de la vague dont on vérifie les bacs.
- * @param bacIds  - Bacs à vérifier (typiquement : bacs source + destination modifiés).
+ * @param bacIds  - Bacs à examiner.
  */
-export async function verifyAssignationInvariant(
+export async function calculerEcartsParBac(
   tx: PrismaTransactionClient,
   siteId: string,
   vagueId: string,
   bacIds: string[],
-): Promise<void> {
-  if (bacIds.length === 0) return;
+): Promise<Map<string, EcartBac>> {
+  const result = new Map<string, EcartBac>();
+  if (bacIds.length === 0) return result;
 
   // -------------------------------------------------------------------------
   // 1. Charger les AssignationBac actives pour les bacs demandés
@@ -75,10 +91,11 @@ export async function verifyAssignationInvariant(
       nombreActuel: true,
       nombreInitial: true,
       dateAssignation: true,
+      bac: { select: { nom: true } },
     },
   });
 
-  if (assignations.length === 0) return;
+  if (assignations.length === 0) return result;
 
   // -------------------------------------------------------------------------
   // 2. Charger tous les relevés affectant ces bacs pour cette vague
@@ -140,7 +157,7 @@ export async function verifyAssignationInvariant(
 
   // -------------------------------------------------------------------------
   // 4. Pour chaque assignation active, recalculer le nombre attendu
-  //    et le comparer à nombreActuel
+  //    et l'écart avec nombreActuel
   // -------------------------------------------------------------------------
   // Map dateAssignation par bacId pour filtrer les relevés antérieurs à l'assignation.
   // Si dateAssignation est null/undefined → pas de filtre (on rejoue tout depuis nombreInitial).
@@ -229,17 +246,108 @@ export async function verifyAssignationInvariant(
     }
 
     const actual = ab.nombreActuel ?? 0;
+    const ecart = actual - expected;
+    const bacNom = (ab as { bac?: { nom?: string | null } | null }).bac?.nom ?? ab.bacId;
 
-    if (expected !== actual) {
-      const ecart = actual - expected;
+    result.set(ab.bacId, { expected, actual, ecart, bacNom });
+  }
+
+  return result;
+}
+
+/**
+ * Capture l'écart de conservation (nombreActuel − expected) pour chaque bac,
+ * AVANT les écritures d'une transaction métier. À appeler en toute première
+ * opération de la transaction (avec `tx`, jamais le client `prisma` global)
+ * pour préserver l'isolation transactionnelle (R4).
+ *
+ * Un bac sans AssignationBac active n'apparaît pas dans la map retournée :
+ * l'appelant doit considérer son écart de référence comme 0 (guard strict),
+ * ce qui est le comportement voulu pour une assignation créée plus tard dans
+ * la même transaction.
+ */
+export async function captureEcartsAssignation(
+  tx: PrismaTransactionClient,
+  siteId: string,
+  vagueId: string,
+  bacIds: string[],
+): Promise<Map<string, number>> {
+  const ecarts = await calculerEcartsParBac(tx, siteId, vagueId, bacIds);
+  const result = new Map<string, number>();
+  for (const [bacId, e] of ecarts) {
+    result.set(bacId, e.ecart);
+  }
+  return result;
+}
+
+/**
+ * Vérifie l'invariant de conservation sur une liste de bacs après une écriture.
+ *
+ * Throws ConservationError (→ rollback) si l'écart mesuré après l'opération
+ * diffère de l'écart de référence (mesuré avant l'opération via
+ * captureEcartsAssignation). Sans `ecartsRef`, comportement strict identique
+ * au guard historique (écart de référence = 0 pour tous les bacs).
+ *
+ * @param tx        - Client Prisma de transaction (PAS le client global).
+ * @param siteId    - Identifiant du site (filtre multi-tenant R8).
+ * @param vagueId   - Identifiant de la vague dont on vérifie les bacs.
+ * @param bacIds    - Bacs à vérifier (typiquement : bacs source + destination modifiés).
+ * @param ecartsRef - Écarts préexistants (bacId → ecart), capturés avant l'opération.
+ *                    Optionnel : absent → guard strict (écart de référence 0).
+ */
+export async function verifyAssignationInvariant(
+  tx: PrismaTransactionClient,
+  siteId: string,
+  vagueId: string,
+  bacIds: string[],
+  ecartsRef?: Map<string, number>,
+): Promise<void> {
+  if (bacIds.length === 0) return;
+
+  const ecarts = await calculerEcartsParBac(tx, siteId, vagueId, bacIds);
+
+  for (const [bacId, e] of ecarts) {
+    const ecartAvant = ecartsRef?.get(bacId) ?? 0;
+
+    // Décision GT.1 (corrigée GT.2) : on n'accepte que si l'écart est inchangé, ou s'il
+    // s'est rapproché de zéro DU MÊME CÔTÉ (0 étant considéré des deux côtés). Comparer
+    // uniquement les valeurs absolues laissait passer une inversion de signe (ex. +2 →
+    // −2) qui représente pourtant une vraie rupture de conservation (4 poissons de
+    // dérive) même si la magnitude reste identique ou diminue. Toute augmentation de
+    // magnitude ET toute inversion de signe sont donc rejetées. Sans ecartsRef,
+    // ecartAvant vaut 0 pour tous les bacs : la condition redevient alors strictement
+    // "e.ecart === 0", identique au guard historique (non différentiel).
+    const ecartTolere =
+      e.ecart === ecartAvant ||
+      (ecartAvant >= 0
+        ? e.ecart >= 0 && e.ecart < ecartAvant
+        : e.ecart <= 0 && e.ecart > ecartAvant);
+
+    if (!ecartTolere) {
       throw new ConservationError(
-        `Invariant cassé sur le bac ${ab.bacId} (vague ${vagueId}) : ` +
-          `AssignationBac.nombreActuel=${actual} mais le calcul des opérations donne ${expected} ` +
-          `(écart ${ecart > 0 ? "+" : ""}${ecart}).`,
-        expected,
-        actual,
-        ecart,
+        `Le bac "${e.bacNom}" affiche un écart de ${e.ecart > 0 ? "+" : ""}${e.ecart} poissons ` +
+          `après cette opération (avant : ${ecartAvant > 0 ? "+" : ""}${ecartAvant}, ` +
+          `après : ${e.ecart > 0 ? "+" : ""}${e.ecart}). ` +
+          `Vérifiez les derniers relevés de ce bac ou faites un comptage avant de continuer.`,
+        e.expected,
+        e.actual,
+        e.ecart,
         0,
+        bacId,
+      );
+    }
+
+    if (e.ecart !== 0) {
+      // Écart préexistant toléré (identique avant/après) : on journalise pour
+      // traçabilité et correction ultérieure, mais on ne bloque pas.
+      console.warn(
+        "[assignation-invariant] Écart préexistant toléré",
+        JSON.stringify({
+          bacId,
+          bacNom: e.bacNom,
+          vagueId,
+          ecart: e.ecart,
+        }),
       );
     }
   }

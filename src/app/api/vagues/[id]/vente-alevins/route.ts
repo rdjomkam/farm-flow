@@ -138,19 +138,23 @@ export async function POST(
 
     return NextResponse.json(vente, { status: 201 });
   } catch (error) {
+    // GT.3 — le guard de conservation (verifyAssignationInvariant) declenche
+    // une ConservationError differente de celle des calibrages (422) : ici
+    // l'operation elle-meme a aggrave un ecart existant, message actionnable
+    // en 409 avec le nom du bac (pattern aligne sur les 6 autres routes GT.3).
     if (error instanceof ConservationError) {
       return NextResponse.json(
         {
-          status: 422,
+          status: 409,
           message: error.message,
           details: {
-            sources: error.sourcesTotal,
-            saisi: error.saisiTotal,
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
             ecart: error.ecart,
-            morts: error.nombreMorts,
+            bacId: error.bacId,
           },
         },
-        { status: 422 }
+        { status: 409 }
       );
     }
     if (error instanceof ValidationError) {

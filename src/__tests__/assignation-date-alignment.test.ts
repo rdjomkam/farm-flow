@@ -187,6 +187,8 @@ describe("CG.4 — Cas 1 : createCalibrage antidaté → dateAssignation === cal
     // 3. allAssignationsVague (computeVivantsByBac)
     // 4. snapshotAvant
     mockCalibrageTx.assignationBac.findMany
+      // 0. GT.2 — capture ecarts preexistants (avant ecriture)
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         { id: "a-src", bacId: BAC_SOURCE_ID, vagueId: VAGUE_ID, siteId: SITE_ID, dateFin: null, nombreActuel: 100, nombreInitial: 100, poidsMoyenInitial: 50, bac: { id: BAC_SOURCE_ID, nom: "Bac Src" } },
       ])

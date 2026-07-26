@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateArrivageGroupeDTO } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { ConservationError } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string; groupeId: string }> };
 
@@ -41,6 +42,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const result = await updateArrivageGroupe(auth.activeSiteId, auth.userId, groupeId, dto);
     return NextResponse.json(result);
   } catch (error) {
+    // GT.3 — ConservationError du guard de conservation (verifyAssignationInvariant) :
+    // sans ce catch dédié, l'erreur tombait dans le fallback générique de
+    // handleApiError (500 opaque), le message ne contenant ni "Conservation"
+    // ni les autres motifs du statusMap ci-dessous.
+    if (error instanceof ConservationError) {
+      return NextResponse.json(
+        {
+          status: 409,
+          message: error.message,
+          details: {
+            expected: error.sourcesTotal,
+            actual: error.saisiTotal,
+            ecart: error.ecart,
+            bacId: error.bacId,
+          },
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError("PATCH /api/arrivages/[id]/groupes/[groupeId]", error, "Erreur lors de la modification.", {
       statusMap: [
         { match: ["raison", "Conservation"], status: 409 },

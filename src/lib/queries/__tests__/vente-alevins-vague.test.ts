@@ -180,7 +180,8 @@ describe("createVenteAlevinsDepuisVague — vente valide", () => {
     mockVagueFindFirst.mockResolvedValue(makeVaguePG());
     mockClientFindFirst.mockResolvedValue(makeClient());
     mockAssignationBacFindMany
-      .mockResolvedValueOnce(makeAssignations(100))
+      .mockResolvedValueOnce(makeAssignations(100)) // Phase 1 : lecture assignations (hors tx)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (première op. Phase 2)
       .mockResolvedValueOnce(
         [BAC1, BAC2, BAC3].map((bacId) => ({
           id: `ab-${bacId}`,
@@ -283,7 +284,8 @@ describe("createVenteAlevinsDepuisVague — auto-clôture", () => {
     mockVagueFindFirst.mockResolvedValue(makeVaguePG());
     mockClientFindFirst.mockResolvedValue(makeClient());
     mockAssignationBacFindMany
-      .mockResolvedValueOnce(makeAssignations(100))
+      .mockResolvedValueOnce(makeAssignations(100)) // Phase 1 : lecture assignations (hors tx)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (première op. Phase 2)
       .mockResolvedValueOnce(
         [BAC1, BAC2, BAC3].map((bacId) => ({
           id: `ab-${bacId}`,
@@ -337,7 +339,8 @@ describe("createVenteAlevinsDepuisVague — guard invariant", () => {
     mockVagueFindFirst.mockResolvedValue(makeVaguePG());
     mockClientFindFirst.mockResolvedValue(makeClient());
     mockAssignationBacFindMany
-      .mockResolvedValueOnce(makeAssignations(100))
+      .mockResolvedValueOnce(makeAssignations(100)) // Phase 1 : lecture assignations (hors tx)
+      .mockResolvedValueOnce([]) // GT.2 — capture ecarts preexistants (première op. Phase 2)
       .mockResolvedValueOnce([
         { id: `ab-${BAC1}`, bacId: BAC1, nombreActuel: 999, nombreInitial: 100, dateAssignation: null },
       ]);

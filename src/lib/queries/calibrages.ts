@@ -5,7 +5,10 @@ import type { CalibrageWithModifications, CalibrageModificationWithUser } from "
 import { computeVivantsByBac } from "@/lib/calculs";
 import { ConservationError } from "@/lib/errors";
 import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
-import { verifyAssignationInvariant } from "@/lib/guards/assignation-invariant";
+import {
+  verifyAssignationInvariant,
+  captureEcartsAssignation,
+} from "@/lib/guards/assignation-invariant";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
 export async function getCalibrages(
@@ -74,6 +77,22 @@ export async function createCalibrage(
   const transfertGroupesById = await getTransfertGroupesByVague(siteId, data.vagueId);
 
   return prisma.$transaction(async (tx) => {
+    // GT.2 — capture les écarts de conservation préexistants EN TOUTE PREMIÈRE
+    // opération de la transaction (avec tx, pas le client global) : les bacs
+    // impactés (sources + destinations) sont déjà connus via `data`.
+    const allCalibrageBacIdsForCapture = [
+      ...new Set([
+        ...data.sourceBacIds,
+        ...data.groupes.map((g) => g.destinationBacId),
+      ]),
+    ];
+    const ecartsRefCalibrage = await captureEcartsAssignation(
+      tx,
+      siteId,
+      data.vagueId,
+      allCalibrageBacIdsForCapture,
+    );
+
     // 1. Verify vague belongs to site and is EN_COURS
     const vague = await tx.vague.findFirst({
       where: { id: data.vagueId, siteId },
@@ -459,7 +478,13 @@ export async function createCalibrage(
     const allCalibrageBacIds = [
       ...new Set([...data.sourceBacIds, ...destBacIds]),
     ];
-    await verifyAssignationInvariant(tx, siteId, data.vagueId, allCalibrageBacIds);
+    await verifyAssignationInvariant(
+      tx,
+      siteId,
+      data.vagueId,
+      allCalibrageBacIds,
+      ecartsRefCalibrage,
+    );
 
     return calibrage;
   });
@@ -572,6 +597,26 @@ export async function patchCalibrage(
       if (destAssignationsPatch.length !== uniqueNewDestIds.length) {
         throw new Error("Un ou plusieurs bacs de destination n'appartiennent pas a la vague");
       }
+    }
+
+    // GT.2 — capture les écarts préexistants AVANT la première écriture
+    // (Etape 6 ci-dessous). Superset = bacs sources de l'ancien calibrage ∪
+    // destinations des nouveaux groupes — mêmes bacs que allPatchBacIds
+    // utilisé par le guard en fin de transaction.
+    let ecartsRefPatchCalibrage: Map<string, number> | undefined;
+    if (data.groupes !== undefined) {
+      const allPatchBacIdsForCapture = [
+        ...new Set([
+          ...ancienCalibrage.sourceBacIds,
+          ...nouveauxGroupes.map((g) => g.destinationBacId),
+        ]),
+      ];
+      ecartsRefPatchCalibrage = await captureEcartsAssignation(
+        tx,
+        siteId,
+        ancienCalibrage.vague.id,
+        allPatchBacIdsForCapture,
+      );
     }
 
     // ----------------------------------------------------------------
@@ -1012,7 +1057,13 @@ export async function patchCalibrage(
           ...nouveauxGroupes.map((g) => g.destinationBacId),
         ]),
       ];
-      await verifyAssignationInvariant(tx, siteId, ancienCalibrage.vague.id, allPatchBacIds);
+      await verifyAssignationInvariant(
+        tx,
+        siteId,
+        ancienCalibrage.vague.id,
+        allPatchBacIds,
+        ecartsRefPatchCalibrage,
+      );
     }
 
     return { calibrage: result, modifications: newModifications };
