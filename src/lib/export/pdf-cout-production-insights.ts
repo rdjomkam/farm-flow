@@ -7,6 +7,7 @@
 
 import type { CoutProductionVague } from "@/lib/queries/finances";
 import { StatutVague } from "@/types";
+import { formatNumPDF, formatDecimalPDF } from "./pdf-format-utils";
 
 export interface PdfInsights {
   /** Résumé exécutif en haut du rapport (2-3 phrases) */
@@ -353,11 +354,11 @@ function formatK(n: number): string {
   if (abs >= 10_000) {
     return `${Math.round(n / 1000)}k FCFA`;
   }
-  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
+  return `${formatNumPDF(n)} FCFA`;
 }
 
 function formatKg(n: number): string {
-  return `${(Math.round(n * 10) / 10).toLocaleString("fr-FR")} kg`;
+  return `${formatDecimalPDF(n, 1)} kg`;
 }
 
 function formatDateShort(d: Date): string {

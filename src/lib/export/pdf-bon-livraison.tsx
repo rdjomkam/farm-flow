@@ -20,6 +20,7 @@ import {
 import type { CreateBonLivraisonPDFDTO } from "@/types/export";
 import { StatutBonLivraison } from "@/types";
 import { decodeImageDataUrl } from "@/lib/validation/image-decode";
+import { formatDecimalPDF } from "./pdf-format-utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,7 +46,7 @@ function formatMontant(n: number): string {
 
 function fmtKg(n: number | null): string {
   if (n === null) return "—";
-  return `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} kg`;
+  return `${formatDecimalPDF(n, 2)} kg`;
 }
 
 const statutLabels: Record<StatutBonLivraison, string> = {

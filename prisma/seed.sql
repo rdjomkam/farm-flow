@@ -130,9 +130,11 @@ VALUES
       'CLIENTS_GERER',
       'VENTES_VOIR',
       'VENTES_CREER',
+      'VENTES_MODIFIER',
       'FACTURES_VOIR',
       'FACTURES_GERER',
       'PAIEMENTS_CREER',
+      'PAIEMENTS_SUPPRIMER',
       'ALEVINS_VOIR',
       'ALEVINS_GERER',
       'ALEVINS_CREER',
@@ -160,9 +162,11 @@ VALUES
       'DEPENSES_MODIFIER',
       'DEPENSES_PAYER',
       'DEPENSES_SUPPRIMER',
+      'DEPENSES_VENTE_RETRO',
       'BESOINS_SOUMETTRE',
       'BESOINS_APPROUVER',
       'BESOINS_TRAITER',
+      'BESOINS_MODIFIER_RETRO',
       'GERER_PACKS',
       'ACTIVER_PACKS',
       'GERER_CONFIG_ELEVAGE',
@@ -188,7 +192,16 @@ VALUES
       'COMMISSIONS_GERER',
       'COMMISSION_PREMIUM',
       'PORTEFEUILLE_VOIR',
-      'PORTEFEUILLE_GERER'
+      'PORTEFEUILLE_GERER',
+      -- Bons de livraison rectificatifs (Sprint BF phase 2) — arbitrage
+      -- story SU.8 : accordee par defaut a l'Administrateur de site
+      -- uniquement (rectifier un BL signe engage une correction de stock et
+      -- de montants). Rien n'empeche un Administrateur de l'accorder ensuite
+      -- a un Gerant via l'UI de gestion des roles.
+      'BONS_LIVRAISON_RECTIFIER'
+      -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021, admin plateforme)
+      -- volontairement absentes : reservees au Role.ADMIN global (bypass getServerPermissions),
+      -- pas des permissions de SiteRole.
     ]::"Permission"[],
     true,
     'site_01',
@@ -218,9 +231,11 @@ VALUES
       'CLIENTS_GERER',
       'VENTES_VOIR',
       'VENTES_CREER',
+      'VENTES_MODIFIER',
       'FACTURES_VOIR',
       'FACTURES_GERER',
       'PAIEMENTS_CREER',
+      'PAIEMENTS_SUPPRIMER',
       'ALEVINS_VOIR',
       'ALEVINS_GERER',
       'ALEVINS_CREER',
@@ -248,9 +263,11 @@ VALUES
       'DEPENSES_MODIFIER',
       'DEPENSES_PAYER',
       'DEPENSES_SUPPRIMER',
+      'DEPENSES_VENTE_RETRO',
       'BESOINS_SOUMETTRE',
       'BESOINS_APPROUVER',
       'BESOINS_TRAITER',
+      'BESOINS_MODIFIER_RETRO',
       'GERER_PACKS',
       'ACTIVER_PACKS',
       'GERER_CONFIG_ELEVAGE',
@@ -271,6 +288,11 @@ VALUES
       'COMMISSION_PREMIUM',
       'PORTEFEUILLE_VOIR',
       'PORTEFEUILLE_GERER'
+      -- NB: pas de UTILISATEURS_*, SITES_*, ANALYTICS_PLATEFORME (reserve Administrateur/plateforme)
+      -- BONS_LIVRAISON_RECTIFIER volontairement absente (arbitrage story SU.8
+      -- — reservee a l'Administrateur de site par defaut). Un Administrateur
+      -- peut l'accorder a ce role via l'UI de gestion des roles si le
+      -- fonctionnement de la ferme le justifie.
     ]::"Permission"[],
     true,
     'site_01',
@@ -327,9 +349,11 @@ VALUES
       'CLIENTS_GERER',
       'VENTES_VOIR',
       'VENTES_CREER',
+      'VENTES_MODIFIER',
       'FACTURES_VOIR',
       'FACTURES_GERER',
       'PAIEMENTS_CREER',
+      'PAIEMENTS_SUPPRIMER',
       'ALEVINS_VOIR',
       'ALEVINS_GERER',
       'ALEVINS_CREER',
@@ -357,9 +381,11 @@ VALUES
       'DEPENSES_MODIFIER',
       'DEPENSES_PAYER',
       'DEPENSES_SUPPRIMER',
+      'DEPENSES_VENTE_RETRO',
       'BESOINS_SOUMETTRE',
       'BESOINS_APPROUVER',
       'BESOINS_TRAITER',
+      'BESOINS_MODIFIER_RETRO',
       'GERER_PACKS',
       'ACTIVER_PACKS',
       'GERER_CONFIG_ELEVAGE',
@@ -383,7 +409,10 @@ VALUES
       'COMMISSIONS_GERER',
       'COMMISSION_PREMIUM',
       'PORTEFEUILLE_VOIR',
-      'PORTEFEUILLE_GERER'
+      'PORTEFEUILLE_GERER',
+      'BONS_LIVRAISON_RECTIFIER'
+      -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021) volontairement absentes
+      -- (reserve Role.ADMIN global) — cf. story SU.10.
     ]::"Permission"[],
     true,
     'site_client_01',

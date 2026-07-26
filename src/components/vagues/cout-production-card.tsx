@@ -241,10 +241,15 @@ export function CoutProductionCard({ data, vagueId, hasParents = false, pertePoi
                             <span>Qté : {formatNumber(aliment.quantite)} kg</span>
                             {aliment.nombreSacs !== null && (
                               <span>
-                                {t("sections.detailAlimentationSacs", {
-                                  sacs: aliment.nombreSacs.toFixed(1),
-                                  contenance: aliment.contenanceSac ?? 0,
-                                })}
+                                {t(
+                                  aliment.nombreSacs > 1
+                                    ? "sections.detailAlimentationSacs"
+                                    : "sections.detailAlimentationSac",
+                                  {
+                                    sacs: aliment.nombreSacs.toFixed(1),
+                                    contenance: aliment.contenanceSac ?? 0,
+                                  }
+                                )}
                               </span>
                             )}
                             <span>Prix unitaire : {formatNumber(Math.round(aliment.prixUnitaire))} FCFA/kg</span>

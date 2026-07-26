@@ -716,30 +716,46 @@ export function VenteDetailClient({
                   {vagueCode}
                 </p>
                 {/* Per-bac cards */}
-                {groupLignes.map((ligne) => (
-                  <div
-                    key={ligne.id}
-                    className="rounded-lg bg-muted/30 p-3 flex flex-col gap-1"
-                  >
-                    <p className="font-medium text-sm">
-                      {ligne.bac?.nom ?? t("ventes.detail.perBac")}
-                    </p>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-1">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-foreground font-medium">{ligne.poidsTotalKg} kg</span>
-                        <span>{t("ventes.detail.poidsTotalKg")}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-foreground font-medium">{ligne.poidsMoyenG} g</span>
-                        <span>{t("ventes.form.avgWeight")}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-foreground font-medium">{ligne.nombrePoissons}</span>
-                        <span>{t("ventes.detail.poissons")}</span>
+                {groupLignes.map((ligne) => {
+                  // SU.1 : ligne.poidsTotalKg reste TOUJOURS la valeur commandee
+                  // (jamais reecrite apres signature), alors que ligne.nombrePoissons
+                  // EST reecrit au nombre reellement livre a la signature du bon de
+                  // livraison (cf. signerBonLivraison). Avant cette correction, la
+                  // carte affichait les deux valeurs cote a cote sans les distinguer,
+                  // laissant croire a tort que le poids affiche etait, lui aussi,
+                  // le poids livre. On labellise explicitement chaque valeur selon
+                  // l'etat reel de la vente plutot que de changer la source de
+                  // donnees (poidsLivreKg par ligne n'est pas expose par cette query).
+                  const estLivree = vente.statut !== StatutVente.EN_PREPARATION;
+                  return (
+                    <div
+                      key={ligne.id}
+                      className="rounded-lg bg-muted/30 p-3 flex flex-col gap-1"
+                    >
+                      <p className="font-medium text-sm">
+                        {ligne.bac?.nom ?? t("ventes.detail.perBac")}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-1">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-foreground font-medium">{ligne.poidsTotalKg} kg</span>
+                          <span>{t("ventes.detail.poidsCommandeKg")}</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-foreground font-medium">{ligne.poidsMoyenG} g</span>
+                          <span>{t("ventes.form.avgWeight")}</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-foreground font-medium">{ligne.nombrePoissons}</span>
+                          <span>
+                            {estLivree
+                              ? t("ventes.detail.poissonsLivres")
+                              : t("ventes.detail.poissonsCommandes")}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </CardContent>

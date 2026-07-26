@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,8 @@ interface ImageUploadFieldProps {
   uploadLabel: string;
   errorTooLarge: string;
   errorInvalidType: string;
+  /** Id explicite optionnel pour l'input file. Genere via useId() si absent. */
+  id?: string;
 }
 
 /**
@@ -68,7 +70,10 @@ export function ImageUploadField({
   uploadLabel,
   errorTooLarge,
   errorInvalidType,
+  id: idProp,
 }: ImageUploadFieldProps) {
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,7 +141,7 @@ export function ImageUploadField({
             type="file"
             accept="image/png,image/jpeg"
             className="hidden"
-            id={`upload-${label}`}
+            id={id}
             onChange={handleFileSelect}
             disabled={loading}
           />

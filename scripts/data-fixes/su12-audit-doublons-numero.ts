@@ -1,0 +1,227 @@
+/**
+ * SU.12 — Audit READ-ONLY des doublons (siteId, numero/code) avant/après la
+ * migration de la contrainte d'unicité de globale vers composite par site.
+ *
+ * Contexte (voir docs/analysis/pre-analysis-sprint-SU-3.md, section
+ * « Incohérences trouvées » item 4) : les champs `numero`/`code` des modèles
+ * ci-dessous étaient contraints par un `@unique` GLOBAL dans Prisma, alors
+ * que le calcul de la séquence (`generateNextNumero`, src/lib/queries/numero-utils.ts)
+ * est scopé par `siteId` (+ année pour la plupart, + sexe pour LotGeniteurs).
+ * Deux sites distincts généraient donc systématiquement le même numéro
+ * (ex. `FAC-2026-001`) dès leur première création de l'année — une collision
+ * déterministe, pas une simple race condition.
+ *
+ * La migration `20260726174843_numero_unique_par_site` remplace le `@unique`
+ * global par `@@unique([siteId, numero])` (ou `[siteId, code]`) pour les
+ * 9 familles concernées :
+ *   Facture, Depense, Commande, Vente, BonLivraison, ListeBesoins,
+ *   Ponte (code), Incubation (code), LotGeniteurs (code).
+ *
+ * SU.13 — `LotAlevins.code` présentait exactement le même double défaut
+ * (race condition hors transaction + `@unique` global) mais avait été omis
+ * de SU.3/SU.12. La migration
+ * `20260726212515_lotalevins_code_unique_par_site` applique le même correctif
+ * à cette 10e famille — voir docs/analysis/pre-analysis-sprint-SU-numero.md
+ * (item D).
+ *
+ * Ce script :
+ *   - AVANT la migration : détecte les doublons (siteId, numero/code) qui
+ *     empêcheraient l'application de la contrainte composite (le
+ *     `CREATE UNIQUE INDEX` échouerait sinon). Si des doublons existent, la
+ *     migration ne doit PAS être appliquée telle quelle — il faut d'abord
+ *     dédupliquer les données (remédiation manuelle, hors scope de ce script).
+ *   - APRÈS la migration : sert de vérification de non-régression (le
+ *     résultat doit toujours être vide, la contrainte DB l'empêche
+ *     désormais nativement — mais utile pour un contrôle indépendant de
+ *     l'index, ou pour auditer un environnement où la migration n'est pas
+ *     encore appliquée, ex. la production avant déploiement).
+ *
+ * STRICTEMENT READ-ONLY : aucun UPDATE/INSERT/DELETE n'est jamais émis. Les
+ * doublons détectés sont uniquement listés — la remédiation (renommage
+ * manuel d'un des deux numéros en doublon) est une décision séparée.
+ *
+ * Utilise `pg` (node-postgres, déjà une dépendance) en accès direct plutôt
+ * que le PrismaClient généré : le générateur Prisma 7 "prisma-client"
+ * produit du code ESM (`import.meta.url`) qui échoue sous tsx/CJS (voir
+ * MEMORY.md « Prisma 7 + ESM Issue » et ERR-003 dans
+ * docs/knowledge/ERRORS-AND-FIXES.md). Un simple SELECT en lecture seule ne
+ * justifie pas de contourner ce problème connu.
+ *
+ * Usage DEV (Docker, port 8432 par défaut — voir .env DATABASE_URL) :
+ *   source ~/.nvm/nvm.sh && nvm use 22
+ *   npx tsx scripts/data-fixes/su12-audit-doublons-numero.ts
+ *
+ * Usage PROD (Prisma Postgres) — À LANCER MANUELLEMENT PAR L'UTILISATEUR,
+ * jamais depuis cet agent sans autorisation explicite, IDÉALEMENT AVANT tout
+ * déploiement de la migration `20260726174843_numero_unique_par_site` en
+ * production :
+ *   DATABASE_URL="<url-de-prod>" npx tsx scripts/data-fixes/su12-audit-doublons-numero.ts
+ *
+ * Code de sortie :
+ *   0 = aucun doublon détecté sur les 10 familles
+ *   1 = au moins un doublon (siteId, numero/code) détecté — NE PAS déployer
+ *       la migration de contrainte tant que la donnée n'est pas corrigée
+ *   2 = erreur d'exécution du script (connexion DB, etc.)
+ */
+
+import { Pool } from "pg";
+
+interface TableSpec {
+  table: string;
+  field: "numero" | "code";
+}
+
+// Les 9 familles concernées par SU.12 (voir docs/analysis/pre-analysis-sprint-SU-3.md)
+// + LotAlevins (SU.13), pour un total de 10 familles auditées.
+const TABLES: TableSpec[] = [
+  { table: "Facture", field: "numero" },
+  { table: "Depense", field: "numero" },
+  { table: "Commande", field: "numero" },
+  { table: "Vente", field: "numero" },
+  { table: "BonLivraison", field: "numero" },
+  { table: "ListeBesoins", field: "numero" },
+  { table: "Ponte", field: "code" },
+  { table: "Incubation", field: "code" },
+  { table: "LotGeniteurs", field: "code" },
+  { table: "LotAlevins", field: "code" },
+];
+
+export interface DoublonRow {
+  table: string;
+  field: "numero" | "code";
+  siteId: string;
+  valeur: string;
+  count: number;
+  ids: string[];
+}
+
+/**
+ * Requête GROUP BY siteId, <field> HAVING count(*) > 1 pour une table donnée.
+ * Retourne aussi les `id` en conflit (array_agg) pour faciliter la remédiation
+ * manuelle sans requête supplémentaire.
+ */
+export async function findDoublons(
+  pool: Pool,
+  spec: TableSpec
+): Promise<DoublonRow[]> {
+  const fieldIdent = `"${spec.field}"`;
+  const query = `
+    SELECT "siteId", ${fieldIdent} AS valeur, count(*)::int AS count,
+           array_agg(id ORDER BY id) AS ids
+    FROM "${spec.table}"
+    GROUP BY "siteId", ${fieldIdent}
+    HAVING count(*) > 1
+    ORDER BY "siteId", valeur
+  `;
+  const { rows } = await pool.query<{
+    siteId: string;
+    valeur: string;
+    count: number;
+    ids: string[];
+  }>(query);
+
+  return rows.map((r) => ({
+    table: spec.table,
+    field: spec.field,
+    siteId: r.siteId,
+    valeur: r.valeur,
+    count: r.count,
+    ids: r.ids,
+  }));
+}
+
+function printDoublon(d: DoublonRow): void {
+  console.log(
+    `${d.table}.${d.field} | siteId=${d.siteId} | valeur="${d.valeur}" | occurrences=${d.count} | ids=[${d.ids.join(", ")}]`
+  );
+}
+
+/** Masque le mot de passe dans l'URL affichée dans les logs. */
+function maskDatabaseUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) parsed.password = "***";
+    return parsed.toString();
+  } catch {
+    return "(URL non parseable — masquée par précaution)";
+  }
+}
+
+async function main(): Promise<number> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error("ERREUR : DATABASE_URL n'est pas défini dans l'environnement.");
+    return 2;
+  }
+
+  const pool = new Pool({ connectionString: databaseUrl });
+  const allDoublons: DoublonRow[] = [];
+
+  try {
+    console.log(
+      "=== SU.12 — Audit read-only des doublons (siteId, numero/code) (STRICTEMENT LECTURE SEULE) ==="
+    );
+    console.log(`Cible : ${maskDatabaseUrl(databaseUrl)}`);
+    console.log("");
+
+    for (const spec of TABLES) {
+      console.log(`--- ${spec.table}.${spec.field} ---`);
+      const doublons = await findDoublons(pool, spec);
+      if (doublons.length === 0) {
+        console.log("  Aucun doublon.");
+      } else {
+        for (const d of doublons) {
+          printDoublon(d);
+          allDoublons.push(d);
+        }
+      }
+      console.log("");
+    }
+
+    console.log("=== RÉSUMÉ ===");
+    console.log(`Total groupes en doublon détectés : ${allDoublons.length}`);
+
+    if (allDoublons.length > 0) {
+      console.log("");
+      console.log(
+        "AU MOINS UN DOUBLON DÉTECTÉ — ne pas déployer/appliquer la contrainte " +
+          "@@unique([siteId, numero|code]) tant que ces lignes ne sont pas " +
+          "dédupliquées manuellement (renommage d'un des numéros en conflit)."
+      );
+      return 1;
+    }
+
+    console.log(
+      "Aucun doublon (siteId, numero/code) détecté sur les 10 familles auditées. " +
+        "La contrainte composite peut être appliquée en toute sécurité."
+    );
+    return 0;
+  } finally {
+    await pool.end();
+  }
+}
+
+/**
+ * Ne lance `main()` que si ce fichier est exécuté directement (`npx tsx
+ * su12-audit-doublons-numero.ts`), jamais quand il est importé comme module
+ * (ex. par un test vitest qui importe `findDoublons` pour un test avec un
+ * mock de pool, sans connexion DB réelle).
+ */
+const isMainModule = (() => {
+  try {
+    return import.meta.url === `file://${process.argv[1]}`;
+  } catch {
+    return false;
+  }
+})();
+
+if (isMainModule) {
+  main()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((err) => {
+      console.error("ERREUR inattendue pendant l'audit :", err instanceof Error ? err.message : err);
+      process.exitCode = 2;
+    });
+}

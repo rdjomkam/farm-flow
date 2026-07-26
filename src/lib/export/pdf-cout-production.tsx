@@ -19,6 +19,7 @@ import {
 import type { CreateCoutProductionPDFDTO } from "@/types/export";
 import { StatutVague, CategorieDepense } from "@/types";
 import { generatePdfInsights } from "./pdf-cout-production-insights";
+import { formatNumPDF } from "./pdf-format-utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,12 +31,6 @@ function formatDate(date: Date | string): string {
     month: "long",
     year: "numeric",
   });
-}
-
-function formatNumPDF(n: number): string {
-  const abs = Math.abs(Math.round(n));
-  const formatted = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return n < 0 ? "-" + formatted : formatted;
 }
 
 function formatMontant(n: number): string {
@@ -620,7 +615,10 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
               >
                 <Text style={[styles.tableCell, styles.colAlProduit]}>{a.produit}</Text>
                 <Text style={[styles.tableCell, styles.colAlQte]}>
-                  {a.quantite} kg{a.nombreSacs !== null ? ` (≈ ${a.nombreSacs.toFixed(1)} sacs)` : ""}
+                  {formatNumPDF(a.quantite)} kg
+                  {a.nombreSacs !== null
+                    ? ` (≈ ${a.nombreSacs.toFixed(1)} sac${a.nombreSacs > 1 ? "s" : ""} (${a.contenanceSac ?? 0} kg/sac))`
+                    : ""}
                 </Text>
                 <Text style={[styles.tableCell, styles.colAlPrix]}>
                   {formatMontant(a.prixUnitaire)}

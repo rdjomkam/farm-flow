@@ -97,6 +97,8 @@ export {
   ComportementAlimentaire,
   // Unite de Production
   TypeUniteProduction,
+  // ADR-048 — Persistance des ecarts de conservation
+  ContexteDetectionEcart,
 } from "./models";
 export type {
   Site,
@@ -251,6 +253,9 @@ export type {
   UniteProductionWithRelations,
   TransfertInterne,
   TransfertInterneWithRelations,
+  // ADR-048 — Persistance des ecarts de conservation
+  EcartAssignationConstate,
+  BacEnDerive,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)

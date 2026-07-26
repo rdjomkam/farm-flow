@@ -62,6 +62,9 @@ vi.mock("@/lib/db", () => ({
     vague: { findFirst: vi.fn() },
     commande: { findFirst: vi.fn() },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({
+      // SU.3 — generateNextNumero pose un pg_advisory_xact_lock via $executeRaw
+      // avant de lire le dernier numero. Le tx mocke doit exposer cette methode.
+      $executeRaw: vi.fn().mockResolvedValue(0),
       depense: {
         findFirst: mockPrismaDepenseFindFirst,
         findUniqueOrThrow: (...args: unknown[]) => mockPrismaDepenseFindUniqueOrThrow(...args),

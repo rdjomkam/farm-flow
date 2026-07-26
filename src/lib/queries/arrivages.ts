@@ -24,7 +24,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { StatutVague, TypeVague, TypeReleve } from "@/types";
+import { StatutVague, TypeVague, TypeReleve, ContexteDetectionEcart } from "@/types";
 import type {
   CreateArrivageDTO,
   UpdateArrivageGroupeDTO,
@@ -378,6 +378,7 @@ export async function createArrivage(
         dto.vagueId,
         uniqueDestBacIds,
         ecartsRefArrivage,
+        { userId, contexte: ContexteDetectionEcart.ARRIVAGE },
       );
 
       return arrivage as unknown as ArrivageWithRelations;
@@ -770,6 +771,7 @@ export async function updateArrivageGroupe(
         vagueId,
         arrivageUpdateBacIds,
         ecartsRefArrivageUpdate,
+        { userId, contexte: ContexteDetectionEcart.ARRIVAGE },
       );
 
       return updated as unknown as ArrivageGroupe;

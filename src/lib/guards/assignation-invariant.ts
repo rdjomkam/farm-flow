@@ -37,12 +37,102 @@
 
 import { prisma } from "@/lib/db";
 import { ConservationError } from "@/lib/errors";
-import { TypeReleve } from "@/types";
+import { ContexteDetectionEcart, TypeReleve } from "@/types";
 
 // Type extrait dynamiquement du client Prisma (identique au pattern assignation-bac.ts)
 type PrismaTransactionClient = Parameters<
   Parameters<typeof prisma.$transaction>[0]
 >[0];
+
+/**
+ * Options optionnelles de `verifyAssignationInvariant` / `persisterEcartConstate`
+ * — ADR-048 (Sprint SU, story SU.2). Les deux champs sont optionnels : le
+ * guard doit rester utilisable par des call sites non encore migrés (ADR-048
+ * section 8.6) sans breaking change de signature.
+ */
+export interface PersisterEcartOptions {
+  userId?: string;
+  contexte?: ContexteDetectionEcart;
+}
+
+/**
+ * Persiste (upsert par bac) l'état de dérive constaté par le guard —
+ * ADR-048. Doit être appelée À L'INTÉRIEUR de la même transaction (`tx`) que
+ * le guard lui-même (R4) : si l'opération est rollback, l'écart constaté ne
+ * doit pas être persisté non plus (il ne s'est jamais matérialisé).
+ *
+ * IMPORTANT : cette fonction ne doit JAMAIS faire échouer l'opération
+ * métier appelante. Un échec d'écriture du journal d'écart est avalé et
+ * loggé (console.error), pas propagé — la persistance est un
+ * best-effort de traçabilité, pas une condition de validité de
+ * l'opération métier.
+ *
+ * Comportement (ADR-048 section 8.4) :
+ * - `ecart !== 0` : upsert par `bacId`. `create` renseigne
+ *   `premiereDetectionLe`. `update` NE touche PAS `premiereDetectionLe`
+ *   (préserve la date de première détection), mais met à jour `ecart`,
+ *   `dernierContexte`, `dernierActorId`, et remet `resoluLe: null` (une
+ *   dérive précédemment résolue qui réapparaît redevient active).
+ * - `ecart === 0` : si une ligne existe pour ce `bacId` avec
+ *   `resoluLe: null`, la marquer résolue (`ecart: 0`, `resoluLe: now()`)
+ *   sans la supprimer (historique). Si aucune ligne n'existe, ne rien
+ *   faire (pas de bruit pour un bac qui n'a jamais dérivé).
+ */
+export async function persisterEcartConstate(
+  tx: PrismaTransactionClient,
+  siteId: string,
+  vagueId: string,
+  bacId: string,
+  ecart: number,
+  options?: PersisterEcartOptions,
+): Promise<void> {
+  try {
+    const userId = options?.userId;
+    const contexte = options?.contexte ?? ContexteDetectionEcart.INDETERMINE;
+
+    if (ecart !== 0) {
+      await tx.ecartAssignationConstate.upsert({
+        where: { bacId },
+        create: {
+          siteId,
+          bacId,
+          vagueId,
+          ecart,
+          dernierContexte: contexte,
+          dernierActorId: userId ?? null,
+        },
+        update: {
+          siteId,
+          vagueId,
+          ecart,
+          dernierContexte: contexte,
+          dernierActorId: userId ?? null,
+          resoluLe: null,
+        },
+      });
+    } else {
+      const existing = await tx.ecartAssignationConstate.findUnique({
+        where: { bacId },
+        select: { id: true, resoluLe: true },
+      });
+      if (existing && existing.resoluLe === null) {
+        await tx.ecartAssignationConstate.update({
+          where: { bacId },
+          data: { ecart: 0, resoluLe: new Date() },
+        });
+      }
+    }
+  } catch (err) {
+    // Ne jamais transformer un échec de persistance de traçabilité en échec
+    // de l'opération métier appelante (risque de régression majeur :
+    // transformer un console.warn éphémère en 500). Voir ADR-048 section 6.
+    console.error(
+      "[assignation-invariant] Échec de persistance de l'écart constaté (non bloquant)",
+      JSON.stringify({ siteId, vagueId, bacId, ecart }),
+      err,
+    );
+  }
+}
 
 export interface EcartBac {
   expected: number;
@@ -294,6 +384,11 @@ export async function captureEcartsAssignation(
  * @param bacIds    - Bacs à vérifier (typiquement : bacs source + destination modifiés).
  * @param ecartsRef - Écarts préexistants (bacId → ecart), capturés avant l'opération.
  *                    Optionnel : absent → guard strict (écart de référence 0).
+ * @param options   - ADR-048 (Sprint SU, story SU.2) : `userId` et `contexte` optionnels,
+ *                    utilisés pour attribuer la persistance de l'écart constaté (le cas
+ *                    échéant) à un acteur et un contexte métier. Paramètre non-breaking :
+ *                    absent, la persistance se fait quand même (dernierActorId: null,
+ *                    dernierContexte: INDETERMINE).
  */
 export async function verifyAssignationInvariant(
   tx: PrismaTransactionClient,
@@ -301,6 +396,7 @@ export async function verifyAssignationInvariant(
   vagueId: string,
   bacIds: string[],
   ecartsRef?: Map<string, number>,
+  options?: PersisterEcartOptions,
 ): Promise<void> {
   if (bacIds.length === 0) return;
 
@@ -339,7 +435,9 @@ export async function verifyAssignationInvariant(
 
     if (e.ecart !== 0) {
       // Écart préexistant toléré (identique avant/après) : on journalise pour
-      // traçabilité et correction ultérieure, mais on ne bloque pas.
+      // traçabilité et correction ultérieure, mais on ne bloque pas. Le
+      // console.warn est conservé (observabilité immédiate dev/staging) EN
+      // PLUS de la persistance ADR-048 — pas remplacé (ADR-048 section 6).
       console.warn(
         "[assignation-invariant] Écart préexistant toléré",
         JSON.stringify({
@@ -350,5 +448,11 @@ export async function verifyAssignationInvariant(
         }),
       );
     }
+
+    // ADR-048 (Sprint SU, story SU.2) : persiste l'état de dérive constaté
+    // pour ce bac (upsert si ecart !== 0, marque résolu si ecart === 0 et
+    // qu'une dérive antérieure existait). Jamais bloquant pour l'opération
+    // métier appelante (cf. persisterEcartConstate).
+    await persisterEcartConstate(tx, siteId, vagueId, bacId, e.ecart, options);
   }
 }

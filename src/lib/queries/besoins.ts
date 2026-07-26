@@ -23,23 +23,6 @@ import { convertirQuantiteAchat } from "@/lib/calculs";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Genere le numero auto BES-YYYY-NNN pour une liste de besoins */
-async function generateNumeroBesoin(siteId: string): Promise<string> {
-  const annee = new Date().getFullYear();
-  const prefixe = `BES-${annee}-`;
-  const derniere = await prisma.listeBesoins.findFirst({
-    where: { siteId, numero: { startsWith: prefixe } },
-    orderBy: { numero: "desc" },
-    select: { numero: true },
-  });
-  let seq = 1;
-  if (derniere) {
-    const partie = derniere.numero.split("-")[2];
-    seq = (parseInt(partie, 10) || 0) + 1;
-  }
-  return `${prefixe}${String(seq).padStart(3, "0")}`;
-}
-
 /** Calcule le montantEstime d'une liste (SUM quantite * prixEstime) */
 function calculerMontantEstime(
   lignes: Array<{ quantite: number; prixEstime: number }>
@@ -337,10 +320,13 @@ export async function createListeBesoins(
   if (data.vagues && data.vagues.length > 0) {
     validerRatios(data.vagues);
   }
-  const numero = await generateNumeroBesoin(siteId);
   const montantEstime = calculerMontantEstime(data.lignes);
 
   return prisma.$transaction(async (tx) => {
+    // Numero genere DANS la transaction (verrou anti-collision, cf. SU.3) :
+    // auparavant genere hors transaction (fenetre de course plus large).
+    const numero = await generateNextNumero(tx, "listeBesoins", "BES", siteId);
+
     const liste = await tx.listeBesoins.create({
       data: {
         numero,
@@ -636,32 +622,19 @@ export async function traiterBesoins(
       }
     }
 
-    // Année partagée pour la numérotation commandes et dépenses (évite deux appels new Date())
-    const annee = new Date().getFullYear();
-
-    // Generer le numero de commande
-    const dernierCmd = await tx.commande.findFirst({
-      where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
-      orderBy: { numero: "desc" },
-      select: { numero: true },
-    });
-    let seqCmd = 1;
-    if (dernierCmd) {
-      const p = dernierCmd.numero.split("-")[2];
-      seqCmd = (parseInt(p, 10) || 0) + 1;
-    }
-
     // Map ligneBesoinId → ligneCommandeId, construit pendant la boucle de création (BUG-1)
     const ligneBesoinToLigneCommande = new Map<string, string>();
 
     // Creer une commande par groupe fournisseur
+    // Numero genere via le helper commun (verrou anti-collision, cf. SU.3) —
+    // auparavant duplique inline ici alors que ce meme fichier importe deja
+    // generateNextNumero pour Depense un peu plus loin.
     for (const [fournisseurId, lignes] of groupesFournisseur.entries()) {
       const montantCmd = lignes.reduce(
         (s, l) => s + l.quantite * l.prixUnitaire,
         0
       );
-      const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
-      seqCmd++;
+      const numeroCmd = await generateNextNumero(tx, "commande", "CMD", siteId);
 
       const commandeCreated = await tx.commande.create({
         data: {
@@ -961,26 +934,14 @@ export async function creerCommandeDepuisBesoin(
       }
 
       const dateCommande = dto.dateCommande ? new Date(dto.dateCommande) : new Date();
-      const annee = dateCommande.getFullYear();
 
-      const dernierCmd = await tx.commande.findFirst({
-        where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
-        orderBy: { numero: "desc" },
-        select: { numero: true },
-      });
-      let seqCmd = 1;
-      if (dernierCmd) {
-        const p = dernierCmd.numero.split("-")[2];
-        seqCmd = (parseInt(p, 10) || 0) + 1;
-      }
-
+      // Numero genere via le helper commun (verrou anti-collision, cf. SU.3).
       for (const [fournisseurId, lignes] of groupes.entries()) {
         const montantCmd = lignes.reduce(
           (s, l) => s + l.quantite * (l.prixReel ?? l.prixEstime),
           0
         );
-        const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
-        seqCmd++;
+        const numeroCmd = await generateNextNumero(tx, "commande", "CMD", siteId);
 
         const commandeCreated2 = await tx.commande.create({
           data: {

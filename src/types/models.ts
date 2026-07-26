@@ -4032,3 +4032,73 @@ export interface TransfertWithGroupes extends Transfert {
   /** Utilisateur ayant cree le transfert (partiel) */
   user?: { id: string; name: string };
 }
+
+// ---------------------------------------------------------------------------
+// ADR-048 — EcartAssignationConstate (persistance des ecarts de conservation
+// toleres par le guard verifyAssignationInvariant, GT.1/GT.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Contexte (operation metier en cours) lors de la derniere detection d'un
+ * ecart de conservation tolere sur un bac. R1 : valeurs en MAJUSCULES.
+ */
+export enum ContexteDetectionEcart {
+  ARRIVAGE = "ARRIVAGE",
+  TRANSFERT = "TRANSFERT",
+  CALIBRAGE = "CALIBRAGE",
+  VENTE = "VENTE",
+  VENTE_ALEVINS = "VENTE_ALEVINS",
+  BON_LIVRAISON = "BON_LIVRAISON",
+  /** Call site non encore migre pour fournir un contexte explicite (ADR-048 section 8.6). */
+  INDETERMINE = "INDETERMINE",
+}
+
+/**
+ * EcartAssignationConstate — Etat courant (upserte par bac) de l'ecart de
+ * conservation tolere par verifyAssignationInvariant.
+ *
+ * Une seule ligne vivante par bac (bacId unique) : mise a jour a chaque
+ * nouvelle detection, jamais dupliquee. Conservee apres resolution
+ * (resoluLe non-null) pour l'historique — jamais supprimee automatiquement.
+ *
+ * R3 : miroir exact du modele Prisma EcartAssignationConstate.
+ * R7 : nullabilite explicite — dernierActorId et resoluLe sont nullable
+ * (voir ADR-048 section 5 et 8.2), tous les autres champs sont requis.
+ * R8 : siteId obligatoire.
+ */
+export interface EcartAssignationConstate {
+  id: string;
+  siteId: string;
+  bacId: string;
+  vagueId: string;
+  /** Ecart signe constate (actual - expected), identique a EcartBac.ecart du guard. */
+  ecart: number;
+  /** Date de la toute premiere detection de cette derive — jamais reecrite apres creation. */
+  premiereDetectionLe: Date;
+  /** Date de la detection la plus recente — mise a jour a chaque upsert. */
+  derniereDetectionLe: Date;
+  /** Contexte de la derniere detection. */
+  dernierContexte: ContexteDetectionEcart;
+  /**
+   * Utilisateur ayant declenche l'operation lors de la derniere detection.
+   * Nullable (R7) : verifyAssignationInvariant n'a pas toujours userId
+   * disponible tant que les 9 call sites ne sont pas tous migres.
+   */
+  dernierActorId: string | null;
+  /** Date de resolution (comptage correctif ramenant l'ecart a 0) — null tant que non resolu. */
+  resoluLe: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** EcartAssignationConstate enrichi pour l'affichage (nom du bac, code de la vague) — cf. getBacsEnDerive. */
+export interface BacEnDerive {
+  bacId: string;
+  bacNom: string;
+  vagueId: string;
+  vagueCode: string;
+  ecart: number;
+  premiereDetectionLe: Date;
+  derniereDetectionLe: Date;
+  dernierContexte: ContexteDetectionEcart;
+}

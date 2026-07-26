@@ -7394,3 +7394,95 @@ Voir : [SPRINT-PRE-GROSSISSEMENT.md](sprints/SPRINT-PRE-GROSSISSEMENT.md)
 | PG.9 — Rapport PDF coût production + toggle | INTEGRATION | TODO |
 | PG.10 — Rapport PDF général + toggle + lineage | INTEGRATION | TODO |
 | PG.11 — Tests E2E + review finale R1-R9 | TEST | TODO |
+
+---
+
+## Sprint PX — Robustesse du rendu PDF (bon de livraison)
+Voir : [SPRINT-PX-ROBUSTESSE-PDF.md](sprints/SPRINT-PX-ROBUSTESSE-PDF.md)
+
+> **Inscrit RÉTROACTIVEMENT dans ce backlog via la story SU.9** — le sprint PX avait été clôturé et validé sans jamais avoir été inscrit dans `docs/TASKS.md` ; son critère de clôture (PX.7 : « le sprint PX est marqué clôturé dans `docs/TASKS.md` ») était donc resté sans objet, faute d'entrée à mettre à jour.
+
+**Statut :** `FAIT`
+**Sévérité :** CRITIQUE — DoS authentifié : `GET /api/export/bon-livraison/[id]` peut ne jamais répondre et tuer le worker Node.
+**Objectif :** Rendre le rendu PDF robuste aux images corrompues. `@react-pdf/png-js` (`decodePixels()`) exécute `zlib.inflate(..., (err, data) => { if (err) throw err; ... })` — chemin emprunté uniquement pour les PNG RGBA / palette-transparente / entrelacés, exactement le format produit par un pad de signature tactile. Un PNG RGBA à IDAT corrompu provoque à la fois une promesse `renderToBuffer()` jamais réglée et une exception échappée au niveau `process`, hors de portée de tout `try/catch` applicatif. Les 4 champs image (`BonLivraison.signatureClient`, `signatureLivreur`, `Site.signaturePromoteur`, `Site.cachet`) n'étaient validés qu'au préfixe `data:image/` et à la taille, jamais au contenu réel des octets.
+**Décisions :** [ADR-047-robustesse-rendu-pdf.md](decisions/ADR-047-robustesse-rendu-pdf.md) — §D3 révisée en PX.3-bis (fail-open → fail-safe).
+
+| Story | Titre | Type | Agent | Statut |
+|-------|-------|------|-------|--------|
+| PX.1 | Décodeur défensif d'image + branchement Zod | BUGFIX (fondations) | @developer | `FAIT` |
+| PX.2 | Pré-validation des 4 images au rendu + mode dégradé | BUGFIX (rendu) | @developer | `FAIT` |
+| PX.3 | Wrapper `renderPdfSafely()` inconditionnel sur les 5 routes d'export | BUGFIX (défense en profondeur) | @developer | `FAIT` |
+| PX.4 | Tests non mockés (repro du bug + non-régression) | TEST | @tester | `FAIT` |
+| PX.5 | Audit read-only des signatures/cachets en base | SCHEMA/QUERIES (lecture seule) | @db-specialist | `FAIT` |
+| PX.6 | Review sprint (obligatoire, sévérité Critique) | REVIEW | @code-reviewer | `FAIT` |
+| PX.7 | Capitalisation ERR-XXX | Capitalisation | @knowledge-keeper | `FAIT` |
+
+**Review :** `docs/reviews/review-sprint-PX.md` — verdict **VALIDÉ** (+ section delta-review : les 3 corrections non bloquantes ont été apportées et revues).
+**Rapport de test :** `docs/tests/rapport-sprint-PX.md`
+**Capitalisation :** **ERR-103** dans `docs/knowledge/ERRORS-AND-FIXES.md` — un callback Node asynchrone qui `throw` au lieu de rejeter une promesse (`zlib.inflate(buf, (err, data) => { if (err) throw err; ... })`) provoque à la fois une promesse jamais réglée ET une uncaught exception process-level ; toute librairie tierce embarquant ce pattern sur des entrées utilisateur doit être pré-validée en amont, jamais utilisée comme validateur de confiance.
+**Vérification finale (R9) :** `npx vitest run` → 211 fichiers, 5554 tests passés, 26 todo, 0 échec ; `npm run build` → OK.
+
+**Reliquat — audit PROD à exécuter par l'utilisateur :** l'audit des signatures/cachets n'a été exécuté qu'en environnement de dev (6 images inspectées, **0 corrompue**). L'audit PROD reste à exécuter :
+`DATABASE_URL="<url-prod>" npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts`
+
+---
+
+## Sprint SU — Rattrapage des suivis non bloquants accumulés
+Voir : [SPRINT-SU.md](sprints/SPRINT-SU.md)
+
+**Statut :** `TERMINÉ` — lancé et clos le 2026-07-26 (**13 stories**)
+**Objectif :** Aucune nouvelle fonctionnalité. Ce sprint solde les réserves de suivi (« nit », « non bloquant », « à qualifier », « reporté ») laissées ouvertes par les reviews des sprints BL, BF phase 1, BF phase 2, GT et SC, plus un point de traçabilité process (l'absence du sprint PX dans `docs/TASKS.md`). Chaque story est traitée jusqu'à sa clôture propre : soit corrigée, soit explicitement tranchée et documentée comme fermée sans action.
+**Review :** `docs/reviews/review-sprint-SU.md` — verdict **VALIDÉ AVEC RÉSERVES** (aucune réserve bloquante)
+
+| Story | Type | Sujet | Sévérité | Origine | Statut |
+|-------|------|-------|----------|---------|--------|
+| SU.1 | UI/BUGFIX | Incohérence écran / PDF signé — commandé vs livré | HAUTE | review-sprint-BF nit 1, review-sprint-BF-phase2 suivi 2 | `FAIT` |
+| SU.2 | SCHEMA/QUERIES | Persister les écarts de conservation tolérés (ADR-048) | — | review-sprint-GT, review-sprint-BF-phase2 | `FAIT` |
+| SU.3 | REFACTOR | `generateNextNumero` : collision concurrente (advisory lock) | — | review-sprint-BL | `FAIT` |
+| SU.4 | TEST | Robustesse transactionnelle de la signature BL | — | review-sprint-BF nit 3 | `FAIT` |
+| SU.5 | BUGFIX (à qualifier) | Relevé de mortalité sans `bacId` (vente d'alevins) | — | review-sprint-BF nit 4 | `FAIT` — fermée sans action |
+| SU.6 | UI | Nits d'affichage du sprint SC (4 points) | — | review-sprint-SC | `FAIT` |
+| SU.7 | UI | `image-upload-field.tsx:139` — id HTML instable | — | review-sprint-BL | `FAIT` |
+| SU.8 | REVIEW/arbitrage | Permission `BONS_LIVRAISON_RECTIFIER` orpheline | — | introduite sprint BF phase 2 | `FAIT` |
+| SU.9 | DOC | Traçabilité : inscrire PX et SU dans `docs/TASKS.md` | — | absence constatée | `FAIT` |
+| SU.10 | BUGFIX | Permissions orphelines (`VENTES_MODIFIER`) + labels + test de garde | HAUTE | découverte connexe — pré-analyse SU.8 | `FAIT` |
+| SU.11 | BUGFIX | Piège d'encodage WinAnsi dans les exports PDF | — | découverte — pré-analyse SU.6 (déjà en production) | `FAIT` |
+| SU.12 | SCHEMA | Unicité des numéros par site (9 familles) | — | bug de conception détecté en pré-analyse SU.3, arbitré par l'utilisateur | `FAIT` |
+| SU.13 | SCHEMA | `LotAlevins.code` : 10ᵉ famille de numérotation | — | réserve n°4 de `review-sprint-SU.md` | `FAIT` |
+
+**SU.5 — `FAIT`, fermée sans action.** La pré-analyse a établi qu'aucun calcul n'est faussé : le relevé orphelin a `vagueId: null` **ET** `bacId: null`, et tous les consommateurs (guard de conservation, indicateurs, dashboard, analytics, calibrages, transferts, `fcr-by-feed`, alertes, liste UI, protection suppression) l'excluent nativement par filtre ou le sautent explicitement. Point clos, aucune correction de code à apporter. Référence : `docs/analysis/pre-analysis-sprint-SU-BL.md`.
+
+**SU.8 — `FAIT`.** Arbitrage utilisateur rendu : le droit de rectifier un bon de livraison signé découle de la détention de la permission `BONS_LIVRAISON_RECTIFIER` (pas d'un rôle codé en dur), accordée **par défaut** au rôle système « Administrateur » uniquement (`SYSTEM_ROLE_DEFINITIONS` et `prisma/seed.sql`, blocs `sr_admin_site_01`/`sr_admin_client_01`), à l'exclusion explicite du « Gérant » (cohérent avec l'impact financier de l'opération — correction de stock et de montants sur une vente déjà livrée). Rien n'empêche un Administrateur de l'accorder ensuite à un Gérant via l'UI de gestion des rôles (`PERMISSION_GROUPS.ventes` l'expose déjà, avec son libellé dans `role-form-labels.ts`, satisfait depuis SU.10). Backfill des sites existants via la migration `20260726170000_backfill_bons_livraison_rectifier` (ciblant uniquement les `SiteRole` `isSystem=true` nommés `Administrateur`), appliquée en non-interactif (`migrate deploy`, ERR-002). Garde-fou `permissions-orphan-guard.test.ts` mis à jour : `BONS_LIVRAISON_RECTIFIER` n'est plus dans la liste d'exclusion et est désormais couverte par le test générique. Aucune restriction codée en dur détectée sur cette permission (grep exhaustif) — le contrôle d'accès est une simple vérification de possession.
+
+**SU.12 — `FAIT`.** Bug de conception détecté lors de la pré-analyse de SU.3 et arbitré par l'utilisateur (« corriger maintenant, la migration est bien moins risquée qu'après l'apparition de doublons »). Les contraintes `@unique` sur `numero`/`code` étaient **globales** alors que le compteur de numérotation est scopé par `siteId` : deux sites généraient donc le même `FAC-2026-001` — collision **déterministe** multi-tenant, pas une simple race. Livré : `@@unique([siteId, numero|code])` en **remplacement** de la contrainte globale sur 9 modèles (`Facture`, `Depense`, `Commande`, `Vente`, `BonLivraison`, `ListeBesoins`, `Ponte`, `Incubation`, `LotGeniteurs`), migration `20260726174843_numero_unique_par_site`, contrôle préalable d'absence de doublons en base (0 trouvé), call-sites `findUnique` migrés vers la clé composite, script d'audit prod read-only `scripts/data-fixes/su12-audit-doublons-numero.ts`, tests de garde. **Complémentaire de SU.3** (verrou d'advisory lock), pas alternatif.
+
+**SU.13 — `FAIT`.** Ouverte pour lever la réserve n°4 de la review de sprint. `LotAlevins.code` présentait le même double défaut que les 9 familles de SU.12 mais avait été oublié : génération **hors** transaction (`$transaction([...])` de forme *array*, qui ne fournit pas de client `tx` et empêche donc de poser le verrou) et `@unique` **global**. Livré : intégration au helper commun `numero-utils.ts`, conversion de `recordEclosion` en `$transaction(async (tx) => …)` (forme callback) à sémantique et ordre d'opérations préservés, `@@unique([siteId, code])`, migration `20260726212515_lotalevins_code_unique_par_site`, contrôle de doublons (0 trouvé), 5 call-sites de `lots-alevins.ts` migrés vers la clé composite, script d'audit étendu à 10 familles, tests de garde étendus.
+
+**Note — points PX déjà couverts, non repris en story SU :** le `maxOutputLength` explicite dans `src/lib/validation/image-decode.ts` et le garde-fou structurel `pdf-image-predecode-guard.test.ts` ont été traités dans le cadre du sprint PX.
+
+**Critères de clôture du sprint :** checklist R1-R9 (avec R3 étendu Prisma = TypeScript = Zod) ; `npx vitest run` verte ; `npm run build` OK ; mobile-first 360px pour SU.1/SU.6/SU.7 ; migrations Prisma en non-interactif si SU.2 crée un modèle ; `docs/reviews/review-sprint-SU.md` produit ; `docs/TASKS.md` mis à jour (SU.9).
+
+### Clôture du Sprint SU
+
+**Réserves de la review et leur traitement :**
+
+| # | Réserve | Traitement |
+|---|---------|-----------|
+| 1 | `docs/TASKS.md` — tableau Sprint SU incomplet (SU.10-12 absentes, statuts périmés) | **Levée** par la présente mise à jour |
+| 2 | `docs/sprints/SPRINT-SU.md` — stale (SU.8 encore `BLOQUÉ`, pas de section SU.12, « 9 stories ») | **Levée** par la présente mise à jour |
+| 3 | ERR-104 référencé dans le code et les tests mais absent de `docs/knowledge/ERRORS-AND-FIXES.md` | **Levée** — ERR-104 à ERR-108 ajoutées à `docs/knowledge/ERRORS-AND-FIXES.md` |
+| 4 | `LotAlevins.code` — 10ᵉ famille d'unicité globale oubliée par SU.12 | **Levée** par la story **SU.13** |
+| 5 | `tx[model] as any` dans `numero-utils.ts` | **Nit accepté en l'état** (usage isolé, commenté) |
+
+**Vérification finale (R9), machine libre de tout agent concurrent :** `npx vitest run` → **5688 tests passés sur 5731**. 3 échecs résiduels (`plan-form-dialog`, `plan-toggle`, `bon-livraison-flow`) sont des **timeouts purs de 5000 ms** dans des tests UI sans rapport avec le périmètre du sprint, chacun **vérifié vert en relance isolée** — faux positifs de contention documentés en ERR-107. `npm run build` → **exit code 0**, aucune erreur TypeScript.
+
+**Capitalisation (`docs/knowledge/ERRORS-AND-FIXES.md`) :**
+- **ERR-104** — piège WinAnsi / `toLocaleString` dans les PDF
+- **ERR-105** — permissions orphelines et backfill des rôles stockés en base
+- **ERR-106** — unicité globale vs compteur scopé par site
+- **ERR-107** — faux positifs de tests sous contention CPU
+- **ERR-108** — race de génération de numéro et forme de la transaction
+
+**Migrations Prisma appliquées en non-interactif durant le sprint :** `20260726160000_backfill_ventes_modifier_permissions`, `20260726170000_backfill_bons_livraison_rectifier`, `20260726174843_numero_unique_par_site`, `20260726180000_add_ecart_assignation_constate`, `20260726212515_lotalevins_code_unique_par_site`.
+
+**Suivi ouvert — dette explicite pour un sprint ultérieur (PAS une story de ce sprint) :** **vue UI « Bacs en dérive »**. L'ADR-048 et le @db-specialist recommandent une carte sur le dashboard site alimentée par `getBacsEnDerive` : la donnée persistée par SU.2 n'a de valeur opérationnelle que si elle est visible sans lire les logs serveur. Hors périmètre du Sprint SU par décision explicite.

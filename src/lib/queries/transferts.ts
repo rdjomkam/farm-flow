@@ -20,6 +20,7 @@ import {
   TypeReleve,
   CauseMortalite,
   ModeTransfert,
+  ContexteDetectionEcart,
 } from "@/types";
 import type {
   CreateTransfertDTO,
@@ -701,6 +702,7 @@ export async function createTransfert(
             vagueSourceId,
             [...new Set(sourceBacsForVague)],
             ecartsRefParVagueTransfert.get(vagueSourceId),
+            { userId, contexte: ContexteDetectionEcart.TRANSFERT },
           );
         }
       }
@@ -715,6 +717,7 @@ export async function createTransfert(
           vagueDestId,
           [...new Set(destBacIdsForInvariant)],
           ecartsRefParVagueTransfert.get(vagueDestId),
+          { userId, contexte: ContexteDetectionEcart.TRANSFERT },
         );
       }
 
@@ -1308,6 +1311,7 @@ export async function updateTransfertGroupe(
           groupe.vagueSource.id,
           [...new Set(updateSourceBacs)],
           ecartsRefUpdateSource,
+          { userId, contexte: ContexteDetectionEcart.TRANSFERT },
         );
       }
       if (updateDestBacs.length > 0) {
@@ -1317,6 +1321,7 @@ export async function updateTransfertGroupe(
           groupe.vagueDest.id,
           [...new Set(updateDestBacs)],
           ecartsRefUpdateDest,
+          { userId, contexte: ContexteDetectionEcart.TRANSFERT },
         );
       }
 

@@ -53,8 +53,13 @@ const mockReleveModificationCreate = vi.fn();
 const mockFactureUpdate = vi.fn();
 const mockSiteAuditLogCreate = vi.fn();
 
+const mockExecuteRaw = vi.fn().mockResolvedValue(0);
+
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
+    // SU.3 — generateNextNumero pose un pg_advisory_xact_lock via $executeRaw
+    // avant de lire le dernier numero. Le tx mocke doit exposer cette methode.
+    $executeRaw: (...args: unknown[]) => mockExecuteRaw(...args),
     vente: {
       findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
       update: (...args: unknown[]) => mockVenteUpdate(...args),

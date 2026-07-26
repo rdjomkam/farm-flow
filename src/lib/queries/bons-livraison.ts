@@ -23,6 +23,7 @@ import {
   StatutFacture,
   TypeReleve,
   CauseMortalite,
+  ContexteDetectionEcart,
 } from "@/types";
 import type {
   SignerBonLivraisonDTO,
@@ -806,6 +807,33 @@ export async function signerBonLivraison(
                   rawVendus,
                 }
               );
+              // ADR-048 section 4 — anomalie de calcul rarissime (jamais censee
+              // se declencher en usage normal) : evenement diagnostique
+              // append-only dans SiteAuditLog, distinct de EcartAssignationConstate
+              // (etat de derive du guard). userId deja en scope, zero friction
+              // actorId NOT NULL.
+              try {
+                await tx.siteAuditLog.create({
+                  data: {
+                    siteId,
+                    actorId: userId,
+                    action: "BL_CLAMP_NOMBRE_VENDUS_NEGATIF",
+                    details: {
+                      mode: "rectificatif",
+                      ligneVenteId: ligne.id,
+                      oldVendus,
+                      deltaMorts,
+                      rawVendus,
+                      bonLivraisonId,
+                    },
+                  },
+                });
+              } catch (auditErr) {
+                console.error(
+                  "[signerBonLivraison] echec ecriture SiteAuditLog (clamp nombreVendus, non bloquant)",
+                  auditErr
+                );
+              }
             }
             const newVendus = Math.max(0, rawVendus);
             await tx.releve.update({
@@ -934,6 +962,30 @@ export async function signerBonLivraison(
                   rawVendus,
                 }
               );
+              // ADR-048 section 4 — meme anomalie que le mode rectificatif,
+              // meme action SiteAuditLog, distinguee par details.mode.
+              try {
+                await tx.siteAuditLog.create({
+                  data: {
+                    siteId,
+                    actorId: userId,
+                    action: "BL_CLAMP_NOMBRE_VENDUS_NEGATIF",
+                    details: {
+                      mode: "normal",
+                      ligneVenteId: ligne.id,
+                      oldVendus,
+                      nombreMortsTransport,
+                      rawVendus,
+                      bonLivraisonId,
+                    },
+                  },
+                });
+              } catch (auditErr) {
+                console.error(
+                  "[signerBonLivraison] echec ecriture SiteAuditLog (clamp nombreVendus, non bloquant)",
+                  auditErr
+                );
+              }
             }
             const newVendus = Math.max(0, rawVendus);
             await tx.releve.update({
@@ -1065,6 +1117,7 @@ export async function signerBonLivraison(
         vagueId,
         [...bacIds],
         ecartsRefParVagueBL.get(vagueId),
+        { userId, contexte: ContexteDetectionEcart.BON_LIVRAISON },
       );
     }
 

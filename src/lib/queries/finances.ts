@@ -1365,7 +1365,7 @@ export async function getCoutProductionVague(
       quantite: number;
       prixUnitaire: number;
       total: number;
-      uniteAchat: string | null;
+      uniteAchat: UniteStock | null;
       contenance: number | null;
     }
   >();
@@ -1380,7 +1380,7 @@ export async function getCoutProductionVague(
       quantite: 0,
       prixUnitaire: prixBase,
       total: 0,
-      uniteAchat: rc.produit.uniteAchat,
+      uniteAchat: rc.produit.uniteAchat as UniteStock | null,
       contenance: rc.produit.contenance,
     };
     existing.quantite += rc.quantite;

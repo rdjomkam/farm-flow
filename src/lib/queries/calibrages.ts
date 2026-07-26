@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutVague, TypeReleve, CauseMortalite, MethodeComptage, CategorieCalibrage } from "@/types";
+import { StatutVague, TypeReleve, CauseMortalite, MethodeComptage, CategorieCalibrage, ContexteDetectionEcart } from "@/types";
 import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "@/types";
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
@@ -484,6 +484,7 @@ export async function createCalibrage(
       data.vagueId,
       allCalibrageBacIds,
       ecartsRefCalibrage,
+      { userId, contexte: ContexteDetectionEcart.CALIBRAGE },
     );
 
     return calibrage;
@@ -1063,6 +1064,7 @@ export async function patchCalibrage(
         ancienCalibrage.vague.id,
         allPatchBacIds,
         ecartsRefPatchCalibrage,
+        { userId, contexte: ContexteDetectionEcart.CALIBRAGE },
       );
     }
 

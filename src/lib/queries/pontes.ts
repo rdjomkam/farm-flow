@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { StatutPonte, StatutReproducteur, CauseEchecPonte, TypeHormone } from "@/types";
 import type {
   CreatePonteDTO,
@@ -25,34 +26,6 @@ export type {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Genere le prochain code de ponte au format PONTE-YYYY-NNN pour un site.
- * Utilise findFirst+orderBy (meme pattern que numero-utils.ts) pour eviter
- * les race conditions en cas de requetes concurrentes.
- */
-async function generatePonteCode(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  siteId: string
-): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `PONTE-${year}-`;
-
-  const last = await tx.ponte.findFirst({
-    where: { siteId, code: { startsWith: prefix } },
-    orderBy: { code: "desc" },
-    select: { code: true },
-  });
-
-  let seq = 1;
-  if (last) {
-    const parts = last.code.split("-");
-    // code = PONTE-YYYY-NNN => parts[2] = NNN
-    seq = (parseInt(parts[2], 10) || 0) + 1;
-  }
-
-  return `${prefix}${String(seq).padStart(3, "0")}`;
-}
 
 // ---------------------------------------------------------------------------
 // Queries — Lecture
@@ -270,10 +243,13 @@ export async function createPonteV2(siteId: string, dto: CreatePonteV2DTO) {
     }
 
     // --- Code auto-genere si absent ---
-    const code = dto.code ?? (await generatePonteCode(tx, siteId));
+    const code =
+      dto.code ?? (await generateNextNumero(tx, "ponte", "PONTE", siteId, { field: "code" }));
 
-    // Verifier unicite du code
-    const existing = await tx.ponte.findFirst({ where: { code } });
+    // Verifier unicite du code (@@unique([siteId, code]) sur Prisma — SU.12)
+    const existing = await tx.ponte.findUnique({
+      where: { siteId_code: { siteId, code } },
+    });
     if (existing) {
       throw new Error(`Le code "${code}" est deja utilise`);
     }
@@ -353,9 +329,9 @@ export async function createPonteV2(siteId: string, dto: CreatePonteV2DTO) {
 
 /** Cree une ponte — API historique (workflow simple sans multi-etapes) */
 export async function createPonte(siteId: string, data: CreatePonteDTO) {
-  // Verifier unicite du code
+  // Verifier unicite du code (@@unique([siteId, code]) sur Prisma — SU.12)
   const existing = await prisma.ponte.findUnique({
-    where: { code: data.code },
+    where: { siteId_code: { siteId, code: data.code } },
   });
   if (existing) {
     throw new Error(`Le code "${data.code}" est deja utilise`);
@@ -625,10 +601,12 @@ export async function updatePonte(
   siteId: string,
   data: UpdatePonteDTO
 ) {
-  // Verifier unicite du code si modifie
+  // Verifier unicite du code si modifie (scope siteId — SU.12 : contrainte
+  // desormais composite @@unique([siteId, code]), un doublon inter-sites n'est
+  // plus une collision reelle)
   if (data.code !== undefined) {
     const existing = await prisma.ponte.findFirst({
-      where: { code: data.code, NOT: { id } },
+      where: { siteId, code: data.code, NOT: { id } },
     });
     if (existing) {
       throw new Error(`Le code "${data.code}" est deja utilise`);

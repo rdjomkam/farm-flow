@@ -28,7 +28,7 @@ import type { CoutProductionVague } from "@/lib/queries/finances";
 // ---------------------------------------------------------------------------
 
 vi.mock("next-intl", () => ({
-  useTranslations: (ns?: string) => (key: string) => {
+  useTranslations: (ns?: string) => (key: string, values?: Record<string, string | number>) => {
     // Flat map simulating vagues.coutProduction namespace
     const map: Record<string, string> = {
       "buttons.export": "Exporter",
@@ -48,6 +48,7 @@ vi.mock("next-intl", () => ({
       "sections.repartitionCategorieDesc": "Part de chaque poste dans le coût total",
       "sections.detailAlimentation": "Détail alimentation",
       "sections.detailAlimentationDesc": "Quantités et coûts par type d'aliment consommé",
+      "sections.detailAlimentationSac": "≈ {sacs} sac ({contenance} kg/sac)",
       "sections.detailAlimentationSacs": "≈ {sacs} sacs ({contenance} kg/sac)",
       "sections.depensesDirectes": "Dépenses directes",
       "sections.depensesDirectesDesc": "Dépenses spécifiques à cette vague",
@@ -81,7 +82,11 @@ vi.mock("next-intl", () => ({
       "categories.AUTRE": "Autre",
       "categories.MULTI_VAGUE": "Coûts partagés",
     };
-    return map[key] ?? key;
+    const template = map[key] ?? key;
+    if (!values) return template;
+    return template.replace(/\{(\w+)\}/g, (match, token) =>
+      token in values ? String(values[token]) : match
+    );
   },
 }));
 
@@ -453,6 +458,71 @@ describe("CoutProductionCard — Détail alimentation (nombre de sacs)", () => {
     fireEvent.click(expandBtn);
     expect(screen.getByText("Granulé en vrac")).toBeInTheDocument();
     expect(screen.queryByText(/sacs/)).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // SU.6(b) — Singulier vs pluriel selon nombreSacs (seuil > 1)
+  // -------------------------------------------------------------------------
+
+  it("affiche le singulier 'sac' (pas 'sacs') quand nombreSacs = 1.0", () => {
+    const dataWithOneSac: CoutProductionVague = {
+      ...dataWithCosts,
+      detailAliments: [
+        {
+          produit: "Granulé démarrage",
+          quantite: 15,
+          prixUnitaire: 1200,
+          total: 18000,
+          contenanceSac: 15,
+          nombreSacs: 1.0,
+        },
+      ],
+    };
+    render(<CoutProductionCard data={dataWithOneSac} vagueId="vague-1" />);
+    const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
+    fireEvent.click(expandBtn);
+    expect(screen.getByText("≈ 1.0 sac (15 kg/sac)")).toBeInTheDocument();
+    expect(screen.queryByText(/1\.0 sacs/)).not.toBeInTheDocument();
+  });
+
+  it("affiche le pluriel 'sacs' quand nombreSacs = 1.5 (seuil > 1, pas !== 1)", () => {
+    const dataWithOnePointFiveSacs: CoutProductionVague = {
+      ...dataWithCosts,
+      detailAliments: [
+        {
+          produit: "Granulé démarrage",
+          quantite: 22.5,
+          prixUnitaire: 1200,
+          total: 27000,
+          contenanceSac: 15,
+          nombreSacs: 1.5,
+        },
+      ],
+    };
+    render(<CoutProductionCard data={dataWithOnePointFiveSacs} vagueId="vague-1" />);
+    const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
+    fireEvent.click(expandBtn);
+    expect(screen.getByText("≈ 1.5 sacs (15 kg/sac)")).toBeInTheDocument();
+  });
+
+  it("affiche le pluriel 'sacs' quand nombreSacs = 2.0", () => {
+    const dataWithTwoSacs: CoutProductionVague = {
+      ...dataWithCosts,
+      detailAliments: [
+        {
+          produit: "Granulé démarrage",
+          quantite: 30,
+          prixUnitaire: 1200,
+          total: 36000,
+          contenanceSac: 15,
+          nombreSacs: 2.0,
+        },
+      ],
+    };
+    render(<CoutProductionCard data={dataWithTwoSacs} vagueId="vague-1" />);
+    const expandBtn = screen.getByRole("button", { name: "Voir le détail" });
+    fireEvent.click(expandBtn);
+    expect(screen.getByText("≈ 2.0 sacs (15 kg/sac)")).toBeInTheDocument();
   });
 });
 

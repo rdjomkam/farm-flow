@@ -161,8 +161,8 @@ describe("SYSTEM_ROLE_DEFINITIONS", () => {
   describe("Gerant", () => {
     const gerantDef = SYSTEM_ROLE_DEFINITIONS.find((r) => r.name === "Gerant")!;
 
-    it("a 25 permissions (tout sauf SITE_GERER et MEMBRES_GERER)", () => {
-      expect(gerantDef.permissions).toHaveLength(ALL_PERMISSIONS.length - 2);
+    it("a toutes les permissions sauf SITE_GERER, MEMBRES_GERER et BONS_LIVRAISON_RECTIFIER", () => {
+      expect(gerantDef.permissions).toHaveLength(ALL_PERMISSIONS.length - 3);
     });
 
     it("n'a pas SITE_GERER", () => {
@@ -173,9 +173,16 @@ describe("SYSTEM_ROLE_DEFINITIONS", () => {
       expect(gerantDef.permissions).not.toContain(Permission.MEMBRES_GERER);
     });
 
+    it("n'a pas BONS_LIVRAISON_RECTIFIER par defaut (arbitrage story SU.8 — reservee a l'Administrateur, assignable ensuite via l'UI)", () => {
+      expect(gerantDef.permissions).not.toContain(Permission.BONS_LIVRAISON_RECTIFIER);
+    });
+
     it("a toutes les autres permissions", () => {
       const expected = ALL_PERMISSIONS.filter(
-        (p) => p !== Permission.SITE_GERER && p !== Permission.MEMBRES_GERER
+        (p) =>
+          p !== Permission.SITE_GERER &&
+          p !== Permission.MEMBRES_GERER &&
+          p !== Permission.BONS_LIVRAISON_RECTIFIER
       );
       expect(new Set(gerantDef.permissions)).toEqual(new Set(expected));
     });

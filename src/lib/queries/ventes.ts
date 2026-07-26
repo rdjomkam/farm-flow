@@ -18,6 +18,7 @@ import {
   TypeVague,
   OrigineVente,
   StatutDepense,
+  ContexteDetectionEcart,
 } from "@/types";
 import type {
   CreateVenteDTO,
@@ -465,6 +466,7 @@ export async function createVente(
         vgId,
         [...bacSet],
         ecartsRefParVagueVente.get(vgId),
+        { userId, contexte: ContexteDetectionEcart.VENTE },
       );
     }
 
@@ -862,6 +864,7 @@ export async function createVenteAlevinsDepuisVague(
       data.vagueId,
       bacIdsPourGuard,
       ecartsRefVenteAlevins,
+      { userId, contexte: ContexteDetectionEcart.VENTE_ALEVINS },
     );
 
     // 7. Depenses liees a la vente (optionnel)

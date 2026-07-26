@@ -151,6 +151,8 @@
       "livraisonComplete": "Full delivery — no loss",
       "livraisonAvecPerte": "Delivery with {perte} kg loss",
       "sources": "Sources",
+      "poissonsCommandes": "Fish ordered",
+      "poissonsLivres": "Fish delivered",
       "perBac": "Per tank",
       "multipleBatches": "Multiple batches",
       "fishCount": "{count} fish",

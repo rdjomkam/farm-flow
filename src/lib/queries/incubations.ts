@@ -25,62 +25,7 @@ import type {
   CreateTraitementIncubationDTO,
 } from "@/types";
 import { getDureeIncubationH } from "@/lib/reproduction/calculs";
-
-// ---------------------------------------------------------------------------
-// Helpers internes
-// ---------------------------------------------------------------------------
-
-/**
- * Génère le prochain code d'incubation pour un site.
- * Format : "INC-{YYYY}-{NNN}"  (ex: "INC-2026-001", "INC-2026-042")
- *
- * Utilise findFirst + orderBy desc pour éviter les race-conditions
- * (même pattern que generateNextNumero dans numero-utils.ts).
- */
-async function generateIncubationCode(siteId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `INC-${year}-`;
-
-  const last = await prisma.incubation.findFirst({
-    where: { siteId, code: { startsWith: prefix } },
-    orderBy: { code: "desc" },
-    select: { code: true },
-  });
-
-  let seq = 1;
-  if (last) {
-    // code = "INC-2026-042" → parts[2] = "042"
-    const parts = last.code.split("-");
-    const parsed = parseInt(parts[2] ?? "0", 10);
-    if (!isNaN(parsed)) seq = parsed + 1;
-  }
-
-  return `${prefix}${String(seq).padStart(3, "0")}`;
-}
-
-/**
- * Génère le prochain code de lot d'alevins pour un site.
- * Format : "LOT-{YYYY}-{NNN}"  (ex: "LOT-2026-001")
- */
-async function generateLotAlevinsCode(siteId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `LOT-${year}-`;
-
-  const last = await prisma.lotAlevins.findFirst({
-    where: { siteId, code: { startsWith: prefix } },
-    orderBy: { code: "desc" },
-    select: { code: true },
-  });
-
-  let seq = 1;
-  if (last) {
-    const parts = last.code.split("-");
-    const parsed = parseInt(parts[2] ?? "0", 10);
-    if (!isNaN(parsed)) seq = parsed + 1;
-  }
-
-  return `${prefix}${String(seq).padStart(3, "0")}`;
-}
+import { generateNextNumero } from "./numero-utils";
 
 // ---------------------------------------------------------------------------
 // Incubation — CRUD
@@ -175,15 +120,6 @@ export async function createIncubation(
   siteId: string,
   dto: CreateIncubationDTO
 ) {
-  // Résoudre le code : fourni ou auto-généré
-  const code = dto.code ?? (await generateIncubationCode(siteId));
-
-  // Vérifier l'unicité du code
-  const existing = await prisma.incubation.findUnique({ where: { code } });
-  if (existing) {
-    throw new Error(`Le code "${code}" est déjà utilisé`);
-  }
-
   // Résoudre la date de début
   const dateDebutIncubation = dto.dateDebutIncubation
     ? new Date(dto.dateDebutIncubation)
@@ -211,20 +147,34 @@ export async function createIncubation(
     dateEclosionPrevue = new Date(dto.dateEclosionPrevue);
   }
 
-  const created = await prisma.incubation.create({
-    data: {
-      code,
-      ponteId: dto.ponteId,
-      substrat: dto.substrat ?? SubstratIncubation.RACINES_PISTIA,
-      temperatureEauC: dto.temperatureEauC ?? null,
-      dureeIncubationH,
-      dateDebutIncubation,
-      dateEclosionPrevue,
-      nombreOeufsPlaces: dto.nombreOeufsPlaces ?? null,
-      statut: StatutIncubation.EN_COURS,
-      notes: dto.notes ?? null,
-      siteId,
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    // Résoudre le code : fourni ou auto-généré (verrou anti-collision, cf. SU.3)
+    const code =
+      dto.code ?? (await generateNextNumero(tx, "incubation", "INC", siteId, { field: "code" }));
+
+    // Vérifier l'unicité du code (@@unique([siteId, code]) sur Prisma — SU.12)
+    const existing = await tx.incubation.findUnique({
+      where: { siteId_code: { siteId, code } },
+    });
+    if (existing) {
+      throw new Error(`Le code "${code}" est déjà utilisé`);
+    }
+
+    return tx.incubation.create({
+      data: {
+        code,
+        ponteId: dto.ponteId,
+        substrat: dto.substrat ?? SubstratIncubation.RACINES_PISTIA,
+        temperatureEauC: dto.temperatureEauC ?? null,
+        dureeIncubationH,
+        dateDebutIncubation,
+        dateEclosionPrevue,
+        nombreOeufsPlaces: dto.nombreOeufsPlaces ?? null,
+        statut: StatutIncubation.EN_COURS,
+        notes: dto.notes ?? null,
+        siteId,
+      },
+    });
   });
 
   return prisma.incubation.findUniqueOrThrow({
@@ -423,13 +373,30 @@ export async function recordEclosion(
 
   const dateEclosionReelle = new Date(data.dateEclosionReelle);
 
-  // Générer le code du lot avant la transaction (évite un appel Prisma imbriqué)
-  const lotCode = await generateLotAlevinsCode(siteId);
+  // R4 — Transaction atomique (interactive : forme callback, PAS array).
+  // La forme array ($transaction([...])) ne fournit pas de client `tx` : le
+  // verrou consultatif (pg_advisory_xact_lock) posé par generateNextNumero ne
+  // peut donc être posé QUE dans une transaction interactive — d'où la
+  // conversion depuis l'ancienne forme array (SU.13, cf. SU.3/SU.12).
+  return prisma.$transaction(async (tx) => {
+    // Code du lot d'alevins : généré + verrouillé DANS la transaction (SU.13).
+    const lotCode = await generateNextNumero(tx, "lotAlevins", "LOT", siteId, {
+      field: "code",
+    });
 
-  // R4 — Transaction atomique
-  const [updatedIncubation, lotAlevins] = await prisma.$transaction([
+    // Garde-fou défensif : vérifie l'unicité (siteId, code) avant le create
+    // (filet applicatif au-dessus de la contrainte @@unique([siteId, code])
+    // — même pattern que createIncubation/createLotGeniteurs, SU.12).
+    const codeConflict = await tx.lotAlevins.findUnique({
+      where: { siteId_code: { siteId, code: lotCode } },
+      select: { id: true },
+    });
+    if (codeConflict) {
+      throw new Error(`Le code "${lotCode}" est déjà utilisé`);
+    }
+
     // 1. Mettre à jour l'incubation
-    prisma.incubation.update({
+    const updatedIncubation = await tx.incubation.update({
       where: { id },
       data: {
         nombreLarvesEcloses: data.nombreLarvesEcloses,
@@ -440,10 +407,10 @@ export async function recordEclosion(
         statut: StatutIncubation.TERMINEE,
         ...(data.notes !== undefined && { notes: data.notes }),
       },
-    }),
+    });
 
     // 2. Créer le lot d'alevins en phase LARVAIRE
-    prisma.lotAlevins.create({
+    const lotAlevins = await tx.lotAlevins.create({
       data: {
         code: lotCode,
         ponteId: incubation.ponteId,
@@ -457,8 +424,8 @@ export async function recordEclosion(
         nombreDeformesRetires: nombreDeformes,
         siteId,
       },
-    }),
-  ]);
+    });
 
-  return { incubation: updatedIncubation, lotAlevins };
+    return { incubation: updatedIncubation, lotAlevins };
+  });
 }

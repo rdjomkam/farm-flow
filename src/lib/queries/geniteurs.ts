@@ -25,40 +25,7 @@ import type {
   UpdateLotGeniteurDTO,
   UpdateReproducteurDTO,
 } from "@/types";
-
-// ---------------------------------------------------------------------------
-// Helpers internes
-// ---------------------------------------------------------------------------
-
-/**
- * Génère le prochain code LotGeniteurs pour un site et un sexe donnés.
- * Format : LG-{F|M}-{NNN}  (ex: "LG-F-001", "LG-M-042")
- *
- * Utilise findFirst + orderBy desc pour éviter les race-conditions
- * (même pattern que generateNextNumero dans numero-utils.ts).
- */
-async function generateLotCode(
-  siteId: string,
-  sexe: SexeReproducteur
-): Promise<string> {
-  const prefix = sexe === SexeReproducteur.FEMELLE ? "LG-F-" : "LG-M-";
-
-  const last = await prisma.lotGeniteurs.findFirst({
-    where: { siteId, code: { startsWith: prefix } },
-    orderBy: { code: "desc" },
-    select: { code: true },
-  });
-
-  let seq = 1;
-  if (last) {
-    // code = "LG-F-042" → parts[2] = "042"
-    const parts = last.code.split("-");
-    const parsed = parseInt(parts[2] ?? "0", 10);
-    if (!isNaN(parsed)) seq = parsed + 1;
-  }
-
-  return `${prefix}${String(seq).padStart(3, "0")}`;
-}
+import { generateNextNumero } from "./numero-utils";
 
 // ---------------------------------------------------------------------------
 // LotGeniteurs — mode GROUPE
@@ -142,40 +109,51 @@ export async function createLotGeniteurs(
   siteId: string,
   dto: CreateLotGeniteurDTO
 ) {
-  // Résoudre le code : fourni ou auto-généré
-  const code = dto.code ?? (await generateLotCode(siteId, dto.sexe));
+  const created = await prisma.$transaction(async (tx) => {
+    // Résoudre le code : fourni ou auto-généré (verrou anti-collision, cf. SU.3)
+    // Format sans année : LG-F-NNN / LG-M-NNN, portée = préfixe + sexe + site.
+    const prefix = dto.sexe === SexeReproducteur.FEMELLE ? "LG-F" : "LG-M";
+    const code =
+      dto.code ??
+      (await generateNextNumero(tx, "lotGeniteurs", prefix, siteId, {
+        field: "code",
+        includeYear: false,
+      }));
 
-  // Vérifier l'unicité du code (@@unique sur Prisma)
-  const existing = await prisma.lotGeniteurs.findUnique({ where: { code } });
-  if (existing) {
-    throw new Error(`Le code "${code}" est déjà utilisé`);
-  }
+    // Vérifier l'unicité du code (@@unique([siteId, code]) sur Prisma — SU.12)
+    const existing = await tx.lotGeniteurs.findUnique({
+      where: { siteId_code: { siteId, code } },
+    });
+    if (existing) {
+      throw new Error(`Le code "${code}" est déjà utilisé`);
+    }
 
-  const created = await prisma.lotGeniteurs.create({
-    data: {
-      code,
-      nom: dto.nom,
-      sexe: dto.sexe,
-      nombrePoissons: dto.nombrePoissons,
-      poidsMoyenG: dto.poidsMoyenG ?? null,
-      poidsMinG: dto.poidsMinG ?? null,
-      poidsMaxG: dto.poidsMaxG ?? null,
-      origine: dto.origine ?? null,
-      sourcing: dto.sourcing ?? SourcingGeniteur.ACHAT_FERMIER,
-      generation: dto.generation ?? GenerationGeniteur.INCONNUE,
-      dateAcquisition: dto.dateAcquisition
-        ? new Date(dto.dateAcquisition)
-        : new Date(),
-      nombreMalesDisponibles: dto.nombreMalesDisponibles ?? null,
-      seuilAlerteMales: dto.seuilAlerteMales ?? null,
-      dateRenouvellementGenetique: dto.dateRenouvellementGenetique
-        ? new Date(dto.dateRenouvellementGenetique)
-        : null,
-      bacId: dto.bacId ?? null,
-      statut: dto.statut ?? StatutReproducteur.ACTIF,
-      notes: dto.notes ?? null,
-      siteId,
-    },
+    return tx.lotGeniteurs.create({
+      data: {
+        code,
+        nom: dto.nom,
+        sexe: dto.sexe,
+        nombrePoissons: dto.nombrePoissons,
+        poidsMoyenG: dto.poidsMoyenG ?? null,
+        poidsMinG: dto.poidsMinG ?? null,
+        poidsMaxG: dto.poidsMaxG ?? null,
+        origine: dto.origine ?? null,
+        sourcing: dto.sourcing ?? SourcingGeniteur.ACHAT_FERMIER,
+        generation: dto.generation ?? GenerationGeniteur.INCONNUE,
+        dateAcquisition: dto.dateAcquisition
+          ? new Date(dto.dateAcquisition)
+          : new Date(),
+        nombreMalesDisponibles: dto.nombreMalesDisponibles ?? null,
+        seuilAlerteMales: dto.seuilAlerteMales ?? null,
+        dateRenouvellementGenetique: dto.dateRenouvellementGenetique
+          ? new Date(dto.dateRenouvellementGenetique)
+          : null,
+        bacId: dto.bacId ?? null,
+        statut: dto.statut ?? StatutReproducteur.ACTIF,
+        notes: dto.notes ?? null,
+        siteId,
+      },
+    });
   });
 
   return prisma.lotGeniteurs.findUniqueOrThrow({

@@ -20,8 +20,17 @@ export const SYSTEM_ROLE_DEFINITIONS = [
   {
     name: "Gerant",
     description: "Gestion quotidienne sans administration",
+    // BONS_LIVRAISON_RECTIFIER (Sprint BF phase 2) : reservee par defaut a
+    // l'Administrateur de site (arbitrage story SU.8 — rectifier un BL signe
+    // engage une correction de stock/montants). Rien n'empeche un
+    // Administrateur d'accorder ensuite cette permission a un Gerant via
+    // l'UI de gestion des roles (aucune restriction codee en dur) — c'est
+    // uniquement le defaut a la creation du site qui l'exclut ici.
     permissions: Object.values(Permission).filter(
-      (p) => p !== Permission.SITE_GERER && p !== Permission.MEMBRES_GERER
+      (p) =>
+        p !== Permission.SITE_GERER &&
+        p !== Permission.MEMBRES_GERER &&
+        p !== Permission.BONS_LIVRAISON_RECTIFIER
     ),
   },
   {

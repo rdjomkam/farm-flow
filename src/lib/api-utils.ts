@@ -118,8 +118,20 @@ export function handleApiError(
   ) {
     console.error(`[${routeLabel}] P2002`, error);
     const target = (error as { meta?: { target?: string[] } }).meta?.target;
-    const fields = target?.length ? ` (${target.join(", ")})` : "";
-    return apiError(409, `Cette valeur existe déjà${fields}.`);
+    const fields = target?.length ? target.join(", ") : "";
+    // Message actionnable dédié pour une collision de numéro/code auto-généré
+    // (SU.3) : le verrou advisory de numero-utils.ts rend cette collision très
+    // improbable, mais si elle survient malgré tout (ex. numero fourni
+    // manuellement), l'utilisateur doit savoir qu'un simple réessai résout le
+    // problème plutôt que de recevoir un message générique.
+    if (/numero|code/i.test(fields)) {
+      return apiError(
+        409,
+        "Un numéro identique vient d'être attribué à un autre enregistrement au même instant. Réessayez."
+      );
+    }
+    const fieldsSuffix = fields ? ` (${fields})` : "";
+    return apiError(409, `Cette valeur existe déjà${fieldsSuffix}.`);
   }
 
   // Route-specific mappings (highest priority)

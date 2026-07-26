@@ -155,6 +155,126 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-108 — Race condition de génération de numéro : forme de transaction et périmètre du retry
+**Sprint :** SU (story SU.3) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/numero-utils.ts`, `src/lib/queries/besoins.ts`, `src/lib/queries/factures.ts`, `src/lib/queries/commandes.ts`, `src/lib/queries/ventes.ts`, `src/lib/queries/bons-livraison.ts`
+
+**Symptôme :**
+Le pattern « lire le max existant + 1 » pour générer un `numero`/`code` séquentiel (Facture, Commande, Vente, BonLivraison, Besoin) est dupliqué à l'identique dans 4 modules. En isolation Read Committed (le niveau par défaut de PostgreSQL), deux transactions concurrentes peuvent lire le même max et calculer le même numéro suivant avant que l'une des deux ne commit — la contrainte `@unique` transforme alors la collision en 500 opaque au lieu d'un retry ou d'un message actionnable.
+
+**Cause racine :**
+Read Committed ne bloque pas une lecture concurrente d'un `SELECT MAX(...)` — chaque transaction voit l'état commité au moment de sa propre lecture, pas les écritures en cours d'une transaction sœur non encore commitée. Le pattern « lire puis calculer puis écrire » n'est jamais atomique sans un verrou explicite.
+
+**Fix :**
+`pg_advisory_xact_lock` posé sur `tx` (jamais sur le client Prisma global — un verrou posé hors transaction ne protège rien, il se relâche immédiatement), avec une clé dérivée de la portée réelle du compteur (modèle + préfixe + année + site) pour ne pas bloquer des portées disjointes entre elles. Piège associé : un `$transaction([...])` de forme **array** ne fournit aucun client `tx` sur lequel poser un verrou — il faut convertir en forme **callback** `$transaction(async (tx) => { ... })`.
+
+**Leçon / Règle :**
+1. Le pattern « lire le max + 1 » pour une séquence est intrinsèquement vulnérable en Read Committed — ne jamais le considérer safe sans verrou explicite ou séquence PostgreSQL dédiée.
+2. Un verrou (`pg_advisory_xact_lock` ou équivalent) n'a de sens que posé sur le client de la transaction en cours (`tx`), jamais sur le client global.
+3. Un retry sur violation `P2002` (unicité) ne peut jamais se limiter à relancer uniquement la génération du numéro : une transaction Postgres avortée par une violation de contrainte rejette **toute** requête suivante sur cette même transaction — le retry doit englober la transaction entière, pas seulement le calcul du numéro.
+4. Corriger ce pattern une fois dans un module partagé (`numero-utils.ts`), jamais dans chaque appelant séparément — la duplication de ce pattern précis est elle-même le facteur de risque (4 corrections à maintenir en synchronisation au lieu d'une).
+
+**Références :** [review-sprint-SU](../reviews/review-sprint-SU.md)
+
+---
+
+### ERR-107 — Faux positifs de tests sous forte contention CPU (timeouts sans assertion cassée)
+**Sprint :** SU | **Date :** 2026-07-26
+**Sévérité :** Moyenne
+**Fichier(s) :** (transverse — n'importe quel fichier de test sous `npx vitest run`)
+
+**Symptôme :**
+Lors d'un sprint fortement parallélisé (plusieurs agents actifs simultanément sur la même machine), `npx vitest run` a produit jusqu'à 69 échecs, **tous** de la forme `Test timed out in 5000ms`, sans aucune assertion cassée, répartis sur des fichiers sans rapport entre eux, et **variables d'un run à l'autre** (un fichier en échec à un run passe au run suivant sans modification de code).
+
+**Cause racine :**
+Signature classique de saturation machine (CPU/mémoire partagés entre plusieurs process concurrents), pas une régression de code. Un timeout par défaut de 5 s devient statistiquement franchissable dès que le scheduler de la machine est sous forte pression, indépendamment de la correction du code testé.
+
+**Fix :**
+Ne jamais conclure à une régression uniquement sur la base d'un run global bruyant. Relancer le(s) fichier(s) suspect(s) **en isolation** (`npx vitest run <fichier>`, machine autrement libre) — un résultat vert en isolation confirme le faux positif. Utiliser `--testTimeout` pour neutraliser le bruit ponctuel si la contention est connue et temporaire.
+
+**Leçon / Règle :**
+La baseline de référence pour "la suite est verte" doit être obtenue **machine libre de tout agent concurrent**. Un échec en timeout pur (aucune assertion cassée), non reproductible en isolation, et dispersé sur des fichiers sans rapport thématique est un signal de contention, pas de bug — ne jamais lancer une investigation de régression ou un rollback sur cette seule base. Documenter ce contexte dans le rapport de test si un sprint a été fortement parallélisé (cf. constat de process, `review-sprint-SU.md`).
+
+**Références :** [review-sprint-SU](../reviews/review-sprint-SU.md), [rapport-sprint-SU](../tests/rapport-sprint-SU.md)
+
+---
+
+### ERR-106 — Unicité `@unique` globale sur un champ généré par compteur scopé par site (collision multi-tenant déterministe)
+**Sprint :** SU (story SU.12) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (10 familles : Facture, Commande, Vente, BonLivraison, Besoin, et 5 autres — dont `LotAlevins.code`, cf. SU.13), `src/lib/queries/**` (call sites `findUnique({ where: { numero } })`)
+
+**Symptôme :**
+Un champ `numero`/`code` généré par une séquence **scopée par `siteId`** (ex. `FAC-2026-001` recommence à 001 pour chaque site) mais contraint `@unique` **global** en base produit une collision **déterministe**, pas une simple race : deux sites différents génèrent chacun légitimement `FAC-2026-001`, et le second `create()` échoue systématiquement avec une violation de contrainte unique — sans qu'aucune concurrence ne soit nécessaire pour déclencher le bug.
+
+**Cause racine :**
+Le compteur de génération est raisonné "par site" (relance à 1 par site et par année), mais la contrainte de schéma n'a pas été alignée sur cette portée — elle reste `@unique` sur la seule colonne, donc globale à toute la table, toutes tenants confondus.
+
+**Fix :**
+Remplacer `@unique` global par `@@unique([siteId, numero])` (ou `[siteId, code]`) — la contrainte doit exactement matcher la portée du compteur, ni plus étroite ni plus large. **Ne pas conserver les deux contraintes en parallèle** : garder `@unique` global en plus du composite rend le composite inutile (le global continue de bloquer la collision légitime inter-site). Penser systématiquement aux call sites `findUnique({ where: { numero } })`, qui cessent de compiler une fois `numero` retiré de `@unique` seul — remplacer par `where: { siteId_numero: { siteId, numero } }`.
+
+**Leçon / Règle :**
+Dès qu'un identifiant métier est généré par une séquence **scopée** (par site, par année, par tenant), la contrainte d'unicité en base doit être composite et **exactement** alignée sur cette portée — jamais laissée globale "pour faire simple", et jamais dupliquée (global + composite) en même temps. Lors de toute revue de schéma multi-tenant (R8), vérifier systématiquement la correspondance entre la logique de génération de compteur et la contrainte `@unique`/`@@unique` réelle. Un audit read-only (grep `@unique` sur les champs `numero`/`code`/`reference` face à leur logique de génération) doit faire partie de la checklist R8 pour tout nouveau modèle avec compteur.
+
+**Références :** [review-sprint-SU](../reviews/review-sprint-SU.md)
+
+---
+
+### ERR-105 — Permissions orphelines : ajout d'une valeur d'enum `Permission` sans backfill des `SiteRole` existants
+**Sprint :** SU (stories SU.8, SU.10) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (enum `Permission`), `src/lib/role-form-labels.ts`, `prisma/seed.sql`, migrations `20260401000000_backfill_subscription_permissions`, `20260726160000_backfill_ventes_modifier_permissions`, `20260726170000_backfill_bons_livraison_rectifier`, `src/__tests__/permissions-orphan-guard.test.ts`
+
+**Symptôme :**
+Une nouvelle valeur ajoutée à l'enum `Permission` (et présente dans `SYSTEM_ROLE_DEFINITIONS` pour les *nouveaux* sites) reste absente du tableau `SiteRole.permissions` de tous les sites **déjà créés** en base. Concrètement lors du sprint SU : 4 permissions étaient orphelines de tout `SiteRole` seedé (`VENTES_MODIFIER`, `PAIEMENTS_SUPPRIMER`, `DEPENSES_VENTE_RETRO`, `BESOINS_MODIFIER_RETRO`), dont une (`VENTES_MODIFIER`) cassait entièrement le flux de création/signature de bon de livraison pour tout utilisateur non-admin (seul `Role.ADMIN` global court-circuite les permissions et n'était donc pas affecté, masquant le bug en test superficiel).
+
+**Cause racine :**
+`SiteRole.permissions` est un tableau **stocké en base** au moment de la création du rôle, pas recalculé dynamiquement depuis `SYSTEM_ROLE_DEFINITIONS`. Ajouter une permission à l'enum et à la définition des rôles système ne change donc que le comportement des rôles créés **après** ce changement — les lignes `SiteRole` déjà persistées restent figées avec leur ancien tableau de permissions. C'est une généralisation du problème déjà identifié en ERR-088 (labels UI oubliés) : ici la portée est plus large, elle inclut aussi les données déjà en base, pas seulement le mapping d'affichage.
+
+**Fix :**
+Toute nouvelle permission ajoutée à l'enum `Permission` exige systématiquement les 4 actions suivantes, jamais 3 :
+1. Une **migration de backfill idempotente** qui ajoute la permission aux `SiteRole` existants concernés (précédents : les 3 migrations listées ci-dessus) ;
+2. Un **label** dans `src/lib/role-form-labels.ts` — sans label la permission est invisible dans l'UI de gestion des rôles, donc **inattribuable manuellement** même après un backfill correct (cf. ERR-088) ;
+3. L'ajout de la permission au **seed** (`prisma/seed.sql`), pour que les environnements re-seedés (dev, tests, démo) reflètent le même état que la prod backfillée ;
+4. Un **test de garde** (`src/__tests__/permissions-orphan-guard.test.ts`) qui échoue si une valeur de l'enum `Permission` n'est portée par aucun `SiteRole` seedé **ou** n'a pas de label — avec une liste d'exclusion explicite et commentée pour les permissions réellement plateforme (justifiées individuellement, jamais une exclusion large "pour que le test passe").
+
+**Leçon / Règle :**
+Ajouter une valeur à l'enum `Permission` sans backfill est un bug latent qui ne se déclenche qu'en production, sur des sites déjà créés — il est invisible en dev/seed frais où les rôles sont toujours créés après la modification. Toute PR touchant l'enum `Permission` doit systématiquement produire les 4 livrables ci-dessus, jamais seulement le code + label. Le test de garde `permissions-orphan-guard.test.ts` doit rester dans la suite standard exécutée à chaque `npx vitest run` — c'est le seul filet qui détecte l'oubli avant la prod.
+
+**Références :** [review-sprint-SU](../reviews/review-sprint-SU.md), ERR-088 (variante restreinte aux seuls labels)
+
+---
+
+### ERR-104 — Piège WinAnsi : `toLocaleString("fr-FR")` produit un séparateur invisible dans un PDF sans police custom
+**Sprint :** SU (story SU.11) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/export/pdf-format-utils.ts`, `src/lib/export/pdf-cout-production-insights.ts`, `src/__tests__/export/pdf-winansi-format-guard.test.ts`
+
+**Symptôme :**
+Un nombre formaté avec `(1234).toLocaleString("fr-FR")` sur Node 22 produit `"1 234"` où l'espace de séparation des milliers est en réalité le caractère **U+202F** (narrow no-break space / espace fine insécable), pas un espace ASCII classique (U+0020). Ce caractère est absent de la table d'encodage WinAnsi/Windows-1252. Aucun template PDF du projet n'enregistre de police custom (`Font.register` absent partout) : la police par défaut Helvetica de `@react-pdf/pdfkit` est un `AFMFont` utilisant `WinAnsiEncoding`. Un caractère hors table **ne lève aucune exception** au rendu : il retombe silencieusement sur `.notdef` (glyphe vide, largeur nulle) — le séparateur de milliers disparaît sans laisser de trace, un bug totalement silencieux, indétectable sans extraction de texte réelle du PDF généré (une inspection visuelle superficielle du rendu peut manquer l'absence d'un simple espace).
+
+**Cause racine :**
+`Intl.NumberFormat`/`toLocaleString` avec la locale `fr-FR` a changé de comportement selon les versions de Node/ICU : les versions récentes utilisent U+202F pour le séparateur de milliers en français (conforme à la norme Unicode CLDR), un caractère qui n'a jamais fait partie du jeu WinAnsi historique conçu pour Windows-1252 (issu de l'ère pré-Unicode). react-pdf/pdfkit, en l'absence de police custom enregistrée, encode tout le texte en WinAnsi — tout code point hors de cette table est purement et simplement ignoré au rendu.
+
+**Fix :**
+Utiliser exclusivement `formatNumPDF`/`formatDecimalPDF` de `src/lib/export/pdf-format-utils.ts` pour tout texte numérique destiné à être injecté dans un composant `<Text>` react-pdf — ces helpers utilisent un séparateur ASCII construit manuellement, jamais `toLocaleString`. Ne jamais utiliser `toLocaleString`/`Intl.NumberFormat` avec une locale pour du texte react-pdf tant qu'aucune police custom couvrant Unicode n'est enregistrée.
+
+**Non concerné (vérifié empiriquement) :**
+- `toLocaleDateString("fr-FR")` ne produit que des espaces ASCII standards — pas de piège identique sur les dates.
+- Les exports Excel ne passent par aucune police PDF (pas de contrainte WinAnsi) — `toLocaleString` y reste sans risque.
+
+**Garde anti-récidive :** `src/__tests__/export/pdf-winansi-format-guard.test.ts`, à deux volets :
+1. Structurel : échoue si le pattern `.toLocaleString(` apparaît dans un fichier de `src/lib/export/*` (grep de code) ;
+2. Runtime : détecte tout caractère hors table WinAnsi dans un texte réellement destiné à un composant PDF.
+
+**Leçon / Règle :**
+Un caractère hors table d'encodage dans un moteur de rendu bas niveau (WinAnsi, Latin-1, etc.) ne provoque généralement **pas d'exception** — il est silencieusement supprimé ou remplacé par un glyphe vide. Ce type de bug ne se détecte jamais par inspection visuelle rapide ni par un test qui vérifie seulement "le PDF se génère sans erreur" : il faut extraire le texte réel du PDF produit et le comparer caractère par caractère. Toute fonction de formatage numérique/textuel destinée à react-pdf doit passer par un helper dédié (`pdf-format-utils.ts`), jamais par les API d'internationalisation standard du navigateur/Node, tant que le projet n'enregistre pas de police custom couvrant Unicode.
+
+**Références :** [review-sprint-SU](../reviews/review-sprint-SU.md)
+
+---
+
 ### ERR-103 — `throw` dans un callback zlib async : promesse jamais réglée + uncaughtException hors chaîne (lib tierce sur entrée utilisateur)
 **Sprint :** PX | **Date :** 2026-07-26
 **Sévérité :** Critique

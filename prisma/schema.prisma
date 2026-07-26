@@ -832,6 +832,8 @@ model Site {
    */
   deletedAt              DateTime?
   auditLogs              SiteAuditLog[]
+  // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
+  ecartsAssignation      EcartAssignationConstate[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
@@ -1190,6 +1192,8 @@ model User {
   retraitsTraites        RetraitPortefeuille[]   @relation("RetraitTraiteur")
   // ADR-021 — Audit log des actions admin
   auditLogsActed         SiteAuditLog[]          @relation("AuditLogActor")
+  // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
+  ecartsAssignationActes EcartAssignationConstate[] @relation("EcartAssignationActor")
   // ADR-maintenance-mode — FeatureFlags modifies par ce super-admin
   featureFlags           FeatureFlag[]
   // ADR-maintenance-mode — PlatformAuditLog
@@ -1266,6 +1270,8 @@ model Bac {
   lotGeniteurs        LotGeniteurs[]
   // R1-S4 — Reproducteurs individuels hébergés dans ce bac
   reproducteurs       Reproducteur[]
+  // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
+  ecartsAssignation   EcartAssignationConstate[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -1332,6 +1338,8 @@ model Vague {
   // PG.2 — Transferts pré-grossissement
   transfertsSource       TransfertGroupe[]        @relation("TransfertsSource")
   transfertsDestination  TransfertGroupe[]        @relation("TransfertsDestination")
+  // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
+  ecartsAssignation      EcartAssignationConstate[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
@@ -1598,7 +1606,7 @@ model MouvementStock {
 
 model Commande {
   id             String           @id @default(cuid())
-  numero         String           @unique
+  numero         String
   fournisseurId  String
   fournisseur    Fournisseur      @relation(fields: [fournisseurId], references: [id])
   statut         StatutCommande   @default(BROUILLON)
@@ -1623,6 +1631,7 @@ model Commande {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([fournisseurId])
   @@index([statut])
@@ -1692,7 +1701,7 @@ model Client {
 
 model Vente {
   id                String           @id @default(cuid())
-  numero            String           @unique
+  numero            String
   clientId          String
   client            Client           @relation(fields: [clientId], references: [id])
   vagueId           String?
@@ -1733,6 +1742,7 @@ model Vente {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([clientId])
   @@index([vagueId])
@@ -1776,7 +1786,7 @@ model LigneVente {
 
 model Facture {
   id           String        @id @default(cuid())
-  numero       String        @unique
+  numero       String
   venteId      String        @unique
   vente        Vente         @relation(fields: [venteId], references: [id])
   statut       StatutFacture @default(BROUILLON)
@@ -1793,6 +1803,7 @@ model Facture {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([statut])
 }
@@ -1808,7 +1819,7 @@ model Facture {
  */
 model BonLivraison {
   id                  String              @id @default(cuid())
-  numero              String              @unique
+  numero              String
   /**
    * Plusieurs BL peuvent exister pour une meme vente (rectificatifs, Sprint BF
    * phase 2) — l'unicite a ete levee au profit d'un index simple. Un seul BL
@@ -1860,6 +1871,7 @@ model BonLivraison {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([userId])
   @@index([venteId])
@@ -1958,7 +1970,7 @@ model Reproducteur {
 
 model Ponte {
   id                   String                 @id @default(cuid())
-  code                 String                 @unique
+  code                 String
   femelleId            String
   femelle              Reproducteur           @relation("PonteFemelle", fields: [femelleId], references: [id])
   maleId               String?
@@ -2003,6 +2015,7 @@ model Ponte {
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
 
+  @@unique([siteId, code])
   @@index([siteId])
   @@index([femelleId])
   @@index([siteId, statut])
@@ -2012,7 +2025,7 @@ model Ponte {
 
 model LotAlevins {
   id                    String             @id @default(cuid())
-  code                  String             @unique
+  code                  String
   ponteId               String
   ponte                 Ponte              @relation(fields: [ponteId], references: [id])
   nombreInitial         Int
@@ -2048,6 +2061,7 @@ model LotAlevins {
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
+  @@unique([siteId, code])
   @@index([siteId])
   @@index([ponteId])
   @@index([siteId, statut])
@@ -2067,7 +2081,7 @@ model LotAlevins {
  */
 model LotGeniteurs {
   id                          String             @id @default(cuid())
-  code                        String             @unique
+  code                        String
   nom                         String
   sexe                        SexeReproducteur
   nombrePoissons              Int
@@ -2092,6 +2106,7 @@ model LotGeniteurs {
   createdAt                   DateTime           @default(now())
   updatedAt                   DateTime           @updatedAt
 
+  @@unique([siteId, code])
   @@index([siteId])
   @@index([siteId, sexe])
   @@index([siteId, statut])
@@ -2104,7 +2119,7 @@ model LotGeniteurs {
  */
 model Incubation {
   id                  String                 @id @default(cuid())
-  code                String                 @unique
+  code                String
   ponteId             String
   ponte               Ponte                  @relation(fields: [ponteId], references: [id])
   substrat            SubstratIncubation     @default(RACINES_PISTIA)
@@ -2128,6 +2143,7 @@ model Incubation {
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
+  @@unique([siteId, code])
   @@index([siteId])
   @@index([ponteId])
 }
@@ -2394,7 +2410,7 @@ model Depense {
   /**
    * Numéro auto-généré format DEP-YYYY-NNN
    */
-  numero              String              @unique
+  numero              String
   description         String
   categorieDepense    CategorieDepense
   montantTotal        Float
@@ -2459,6 +2475,7 @@ model Depense {
   @@index([siteId])
   @@index([siteId, categorieDepense])
   @@index([siteId, statut])
+  @@unique([siteId, numero])
   @@index([commandeId])
   @@index([vagueId])
   @@index([venteId])
@@ -2654,7 +2671,7 @@ model ListeBesoins {
   /**
    * Numéro auto-généré format BES-YYYY-NNN
    */
-  numero            String              @unique
+  numero            String
   titre             String
   demandeurId       String
   demandeur         User                @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
@@ -2696,6 +2713,7 @@ model ListeBesoins {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([siteId, statut])
   @@index([demandeurId])
@@ -3679,6 +3697,60 @@ model SiteAuditLog {
   @@index([siteId])
   @@index([actorId])
   @@index([createdAt])
+}
+
+// ──────────────────────────────────────────
+// Modèle — EcartAssignationConstate (ADR-048, Sprint SU, story SU.2)
+// ──────────────────────────────────────────
+
+/**
+ * Contexte (operation metier en cours) lors de la derniere detection d'un
+ * ecart de conservation tolere sur un bac. R1 : valeurs en MAJUSCULES.
+ */
+enum ContexteDetectionEcart {
+  ARRIVAGE
+  TRANSFERT
+  CALIBRAGE
+  VENTE
+  VENTE_ALEVINS
+  BON_LIVRAISON
+  INDETERMINE
+}
+
+/// EcartAssignationConstate — État courant (upserté) de l'écart de conservation
+/// toléré sur un bac. Une ligne par bac en dérive (ou ayant déjà dérivé et
+/// depuis résolu — conservée pour historique, cf. resoluLe).
+/// R8 : siteId obligatoire.
+model EcartAssignationConstate {
+  id                  String                 @id @default(cuid())
+  siteId              String
+  site                Site                   @relation(fields: [siteId], references: [id])
+  bacId               String                 @unique
+  bac                 Bac                    @relation(fields: [bacId], references: [id])
+  vagueId             String
+  vague               Vague                  @relation(fields: [vagueId], references: [id])
+  /// Écart signé constaté (actual - expected), identique à EcartBac.ecart du guard.
+  ecart               Int
+  /// Date de la toute première détection de cette dérive (jamais réécrite après création).
+  premiereDetectionLe DateTime               @default(now())
+  /// Date de la détection la plus récente (mise à jour à chaque upsert).
+  derniereDetectionLe DateTime               @default(now()) @updatedAt
+  /// Contexte (quelle opération métier était en cours) lors de la dernière détection.
+  dernierContexte     ContexteDetectionEcart @default(INDETERMINE)
+  /// Utilisateur ayant déclenché l'opération lors de la dernière détection.
+  /// Nullable (R7) : verifyAssignationInvariant n'a pas toujours userId
+  /// disponible (paramètre optionnel, cf. ADR-048 section 5) tant que les 9
+  /// call sites ne sont pas tous migrés.
+  dernierActorId      String?
+  dernierActor        User?                  @relation("EcartAssignationActor", fields: [dernierActorId], references: [id])
+  /// Date à laquelle l'écart est repassé à 0 (comptage correctif). Null tant que
+  /// non résolu. La ligne n'est PAS supprimée à la résolution (historique conservé).
+  resoluLe            DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([siteId, ecart])
+  @@index([vagueId])
 }
 
 // ──────────────────────────────────────────

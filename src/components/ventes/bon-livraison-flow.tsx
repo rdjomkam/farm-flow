@@ -507,6 +507,17 @@ export function BonLivraisonFlow({
                       const ligneBL = lignesBLparLigneVente.get(ligne.id);
                       const poidsLivre = ligneBL?.poidsLivreKg ?? ligne.poidsTotalKg;
                       const ecart = ligne.poidsTotalKg - poidsLivre;
+                      // Nombre de poissons reellement livres — meme source de
+                      // verite que le PDF (route export/bon-livraison) : le
+                      // snapshot fige LigneBonLivraison.nombrePoissonsLivres en
+                      // priorite, sinon la meme formule que signerBonLivraison
+                      // appliquera a la signature (commande - morts transport).
+                      // Avant cette correction, le recap affichait encore
+                      // ligne.nombrePoissons (valeur commandee brute), ce qui
+                      // divergeait du PDF signe (ex. 90 a l'ecran vs 87 sur le PDF).
+                      const poissonsLivres =
+                        ligneBL?.nombrePoissonsLivres ??
+                        ligne.nombrePoissons - (ligneBL?.nombreMortsTransport ?? 0);
                       return (
                         <div
                           key={ligne.id}
@@ -518,7 +529,7 @@ export function BonLivraisonFlow({
                               {ligne.bac?.nom ? ` — ${ligne.bac.nom}` : ""}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {ligne.nombrePoissons} {t("recap.poissons")}
+                              {poissonsLivres} {t("recap.poissons")}
                             </span>
                             {Math.abs(ecart) > 0.01 && (
                               <span className="text-xs text-warning">

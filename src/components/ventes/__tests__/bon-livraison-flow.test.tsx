@@ -301,6 +301,73 @@ describe("BonLivraisonFlow — Etape quantites", () => {
     });
     expect(screen.queryByText("40 kg")).not.toBeInTheDocument();
   });
+
+  // SU.1 — non-regression : le recap affichait encore le nombre de poissons
+  // COMMANDE (ligne.nombrePoissons brut) au lieu du nombre reellement LIVRE
+  // (commande - morts en transport), alors que le PDF signe affiche deja le
+  // livre. Le client signait donc en regardant un chiffre different de celui
+  // du document contractuel (ex. constate : 90 a l'ecran, 87 sur le PDF).
+  it("affiche le recap avec le nombre de poissons reellement livre (commande 90, 3 morts transport => 87)", async () => {
+    const venteAvecNombrePoissons90 = {
+      ...baseVente,
+      lignes: [{ ...baseVente.lignes[0], nombrePoissons: 90 }],
+    };
+
+    mockGetBonLivraison
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          bonLivraison: baseBonLivraison,
+          vente: venteAvecNombrePoissons90,
+          blocPaiement,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          bonLivraison: {
+            ...baseBonLivraison,
+            lignes: [{ ...baseBonLivraison.lignes[0], nombreMortsTransport: 3 }],
+          },
+          vente: venteAvecNombrePoissons90,
+          blocPaiement,
+        },
+      });
+    mockEnregistrerQuantitesBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { ...baseBonLivraison, statut: "EN_ATTENTE_SIGNATURE" },
+    });
+
+    render(
+      <BonLivraisonFlow
+        open
+        onOpenChange={() => {}}
+        venteId="vente-1"
+        currentUserName="Livreur Test"
+      />
+    );
+
+    await waitFor(() => screen.getByLabelText("Poissons morts en transport"));
+    fireEvent.change(screen.getByLabelText("Poissons morts en transport"), {
+      target: { value: "3" },
+    });
+
+    fireEvent.click(screen.getByText("Suivant"));
+
+    await waitFor(() => {
+      expect(mockEnregistrerQuantitesBonLivraison).toHaveBeenCalledWith(
+        "bl-1",
+        expect.objectContaining({
+          lignes: [expect.objectContaining({ nombreMortsTransport: 3 })],
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("87 poissons")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("90 poissons")).not.toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------

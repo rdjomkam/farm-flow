@@ -169,6 +169,48 @@ function buildDTO(
 }
 
 // ---------------------------------------------------------------------------
+// Helper — walk the raw React element tree captured by mockRenderToBuffer.
+//
+// Document/Page/View/Text are mocked as pass-through functions (`({children})
+// => children`), and the top-level element passed to `renderToBuffer` is the
+// UNEXECUTED `<CoutProductionPDF data={data} />` element — its function body
+// has not run yet (React lazily calls component functions during render).
+// Since none of these components use hooks/context, we can safely invoke
+// them directly as plain functions to walk the whole tree synchronously,
+// without needing a real React renderer or jsdom.
+// ---------------------------------------------------------------------------
+
+function renderTree(node: unknown): unknown {
+  if (node === null || node === undefined || typeof node === "boolean") return null;
+  if (typeof node === "string" || typeof node === "number") return node;
+  if (Array.isArray(node)) return node.map(renderTree);
+  if (typeof node === "object" && "type" in (node as Record<string, unknown>)) {
+    const el = node as { type: unknown; props: Record<string, unknown> };
+    if (typeof el.type === "function") {
+      const output = (el.type as (props: Record<string, unknown>) => unknown)(el.props);
+      return renderTree(output);
+    }
+    return renderTree(el.props?.children);
+  }
+  return null;
+}
+
+function extractText(node: unknown): string {
+  const rendered = renderTree(node);
+  return flattenText(rendered);
+}
+
+function flattenText(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join("");
+  if (typeof node === "object" && "props" in (node as Record<string, unknown>)) {
+    return flattenText((node as { props?: { children?: unknown } }).props?.children);
+  }
+  return "";
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -483,5 +525,94 @@ describe("renderCoutProductionPDF", () => {
     });
 
     await expect(renderCoutProductionPDF(dto)).resolves.not.toThrow();
+  });
+
+  // -----------------------------------------------------------------------
+  // 7. SU.6(c) — la contenance du sac apparaît dans le détail alimentation
+  // -----------------------------------------------------------------------
+
+  it("inclut la contenance du sac (kg/sac) dans le détail alimentation, comme l'UI", async () => {
+    const dto = buildDTO();
+    await renderCoutProductionPDF(dto);
+
+    const [element] = mockRenderToBuffer.mock.calls[0];
+    const text = extractText(element);
+
+    // detailAliments[0] : quantite 200, nombreSacs 13.3, contenanceSac 15
+    expect(text).toContain("(≈ 13.3 sacs (15 kg/sac))");
+  });
+
+  // -----------------------------------------------------------------------
+  // 8. SU.6(d) — séparateur de milliers via formatNumPDF (pas toLocaleString)
+  // -----------------------------------------------------------------------
+
+  it("formate la quantité d'aliment avec un séparateur de milliers ASCII (pas U+202F)", async () => {
+    const dto = buildDTO({
+      detailAliments: [
+        {
+          produit: "Granulé flottant 3mm",
+          quantite: 1234,
+          prixUnitaire: 600,
+          total: 740400,
+          contenanceSac: 15,
+          nombreSacs: 82.3,
+        },
+      ],
+    });
+    await renderCoutProductionPDF(dto);
+
+    const [element] = mockRenderToBuffer.mock.calls[0];
+    const text = extractText(element);
+
+    expect(text).toContain("1 234 kg");
+    // Piège WinAnsi (ERR-104) : jamais U+202F (narrow no-break space) produit par toLocaleString("fr-FR")
+    expect(text).not.toContain(" ");
+  });
+
+  // -----------------------------------------------------------------------
+  // 9. SU.6(b) — singulier vs pluriel pour "sac" dans le PDF (seuil > 1)
+  // -----------------------------------------------------------------------
+
+  it("affiche 'sac' au singulier quand nombreSacs = 1.0", async () => {
+    const dto = buildDTO({
+      detailAliments: [
+        {
+          produit: "Granulé démarrage",
+          quantite: 15,
+          prixUnitaire: 1200,
+          total: 18000,
+          contenanceSac: 15,
+          nombreSacs: 1.0,
+        },
+      ],
+    });
+    await renderCoutProductionPDF(dto);
+
+    const [element] = mockRenderToBuffer.mock.calls[0];
+    const text = extractText(element);
+
+    expect(text).toContain("(≈ 1.0 sac (15 kg/sac))");
+    expect(text).not.toContain("1.0 sacs");
+  });
+
+  it("affiche 'sacs' au pluriel quand nombreSacs = 1.5 (seuil > 1)", async () => {
+    const dto = buildDTO({
+      detailAliments: [
+        {
+          produit: "Granulé démarrage",
+          quantite: 22.5,
+          prixUnitaire: 1200,
+          total: 27000,
+          contenanceSac: 15,
+          nombreSacs: 1.5,
+        },
+      ],
+    });
+    await renderCoutProductionPDF(dto);
+
+    const [element] = mockRenderToBuffer.mock.calls[0];
+    const text = extractText(element);
+
+    expect(text).toContain("(≈ 1.5 sacs (15 kg/sac))");
   });
 });

@@ -88,9 +88,9 @@ export async function createLotAlevins(
   siteId: string,
   data: CreateLotAlevinsDTO
 ) {
-  // Verifier unicite du code
+  // Verifier unicite du code (@@unique([siteId, code]) sur Prisma — SU.13)
   const existing = await prisma.lotAlevins.findUnique({
-    where: { code: data.code },
+    where: { siteId_code: { siteId, code: data.code } },
   });
   if (existing) {
     throw new Error(`Le code "${data.code}" est deja utilise`);
@@ -146,10 +146,12 @@ export async function updateLotAlevins(
   siteId: string,
   data: UpdateLotAlevinsDTO
 ) {
-  // Verifier unicite du code si modifie
+  // Verifier unicite du code si modifie (scope siteId — SU.13 : contrainte
+  // desormais composite @@unique([siteId, code]), un doublon inter-sites
+  // n'est plus une collision reelle)
   if (data.code !== undefined) {
     const existing = await prisma.lotAlevins.findFirst({
-      where: { code: data.code, NOT: { id } },
+      where: { siteId, code: data.code, NOT: { id } },
     });
     if (existing) {
       throw new Error(`Le code "${data.code}" est deja utilise`);
@@ -479,9 +481,9 @@ export async function getLotById(id: string, siteId: string) {
  * R8 : siteId obligatoire.
  */
 export async function createLot(siteId: string, dto: CreateLotAlevinsDTO) {
-  // Verifier l'unicite du code
+  // Verifier l'unicite du code (@@unique([siteId, code]) sur Prisma — SU.13)
   const existing = await prisma.lotAlevins.findUnique({
-    where: { code: dto.code },
+    where: { siteId_code: { siteId, code: dto.code } },
   });
   if (existing) {
     throw new Error(`Le code "${dto.code}" est deja utilise`);
@@ -558,10 +560,12 @@ export async function updateLot(
   siteId: string,
   data: UpdateLotAlevinsDTO
 ) {
-  // Verifier l'unicite du code si modifie
+  // Verifier l'unicite du code si modifie (scope siteId — SU.13 : contrainte
+  // desormais composite @@unique([siteId, code]), un doublon inter-sites
+  // n'est plus une collision reelle)
   if (data.code !== undefined) {
     const conflict = await prisma.lotAlevins.findFirst({
-      where: { code: data.code, NOT: { id } },
+      where: { siteId, code: data.code, NOT: { id } },
       select: { id: true },
     });
     if (conflict) {
@@ -721,9 +725,9 @@ export async function splitLot(
       const suffix = alphabet[i] ?? String(i + 1);
       const code = sl.code ?? `${parent.code}-${suffix}`;
 
-      // Verifier l'unicite du code
+      // Verifier l'unicite du code (@@unique([siteId, code]) sur Prisma — SU.13)
       const codeConflict = await tx.lotAlevins.findUnique({
-        where: { code },
+        where: { siteId_code: { siteId, code } },
         select: { id: true },
       });
       if (codeConflict) {
