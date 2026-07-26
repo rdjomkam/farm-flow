@@ -11,7 +11,7 @@
 -- Conclusion : pas de situation pathologique en base. Le patch CF.1 est preventif.
 --
 -- Execution :
---   docker exec -i silures-db psql -U dkfarm -d farm-flow < prisma/data-fixes/CF1-audit-stale-assignations.sql
+--   docker exec -i silures-db psql -U dkfarm -d farm-flow < scripts/audits/cf1-audit-stale-assignations.sql
 
 
 -- ---------------------------------------------------------------------------

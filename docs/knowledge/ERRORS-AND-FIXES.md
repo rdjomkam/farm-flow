@@ -8,6 +8,115 @@
 
 ## Catégorie : Schema
 
+### ERR-112 — `docker-entrypoint.sh` avale un échec de `prisma migrate deploy` : le conteneur démarre sur un schéma non migré, silencieusement
+**Sprint :** MG (story MG.7) | **Date :** 2026-07-26
+**Sévérité :** Critique
+**Fichier(s) :** `docker-entrypoint.sh`
+
+**Symptôme :**
+Une migration échoue au démarrage du conteneur de production. Rien ne le signale à l'opérateur : le script d'entrée capture l'échec (`|| echo WARNING ... continuing`) et démarre quand même le serveur Next.js. L'application tourne alors sur un schéma désynchronisé du code déployé — colonnes/contraintes/index attendus par le code mais absents en base, ou inversement — jusqu'à ce qu'une erreur runtime opaque (Prisma `P2022` colonne inconnue, contrainte manquante, etc.) survienne ailleurs, sans lien évident avec sa cause réelle.
+
+**Cause racine :**
+Le garde-fou (`migrate deploy` qui échoue proprement en cas de problème) est rendu inopérant par le pipeline de déploiement lui-même : peu importe la rigueur d'une migration (idempotence, précondition qui `RAISE EXCEPTION`, etc. — voir ERR-109, ADR-049 §3.3.d), si le processus qui l'exécute avale l'échec et continue, la migration échouée n'a plus aucun effet de blocage réel. C'est le même problème que celui identifié par la pré-analyse du sprint MG pour les deux migrations d'unicité (`20260726174843`, `20260726212515`) : un `RAISE EXCEPTION` dans une migration est censé arrêter le déploiement, mais `docker-entrypoint.sh` ne le laisse pas faire.
+
+**Fix :**
+`docker-entrypoint.sh` doit propager l'échec de `prisma migrate deploy` (arrêter le démarrage du serveur, code de sortie non nul) au lieu de le journaliser et continuer.
+
+**Leçon / Règle :**
+Un garde-fou de migration (précondition, idempotence, contrainte) n'a de valeur que si le pipeline qui l'exécute respecte réellement son code de sortie. Avant de concevoir ou de faire confiance à un garde-fou de migration, toujours vérifier comment `migrate deploy` est invoqué en production (script d'entrypoint, CI/CD) et si un échec y est réellement bloquant — un garde-fou bien écrit mais silencieusement contourné par l'orchestrateur donne une fausse impression de sécurité.
+
+**Références :** [ADR-049](../decisions/ADR-049-correctifs-donnees-migrations.md), [pre-analysis-sprint-MG](../analysis/pre-analysis-sprint-MG.md)
+
+---
+
+### ERR-111 — Correctif de données recalculant un agrégat dérivé : une valeur cible littérale figée peut écraser une valeur redevenue correcte entre-temps
+**Sprint :** MG (story MG.3) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/*_data_fix_*/migration.sql` (tout correctif touchant un champ dérivé/recalculé : compteurs, totaux, biomasses)
+
+**Symptôme :**
+Un correctif de données idempotent, protégé par un `WHERE col != <valeur_cible>` classique, semble parfaitement sûr — mais s'il porte sur un **agrégat dérivé** (ex. `Bac.nombrePoissons`, `AssignationBac.nombreActuel`) recalculé au moment de l'investigation d'un bug, il peut écraser à tort une valeur qu'une opération métier légitime (nouveau relevé, transfert) a fait évoluer entre la rédaction du correctif et son déploiement effectif. Le `WHERE != <cible>` protège contre le rejeu du correctif, pas contre ce cas : il matche encore, et écrase, toute ligne dont la valeur diffère de la cible — y compris une valeur devenue correcte pour une raison indépendante du bug corrigé.
+
+**Cause racine :**
+La condition de garde habituelle (`WHERE col != <valeur_cible>`) répond à la question « cette ligne a-t-elle déjà été corrigée par CE correctif ? », pas à la question « cette ligne est-elle toujours dans l'état buggé que ce correctif a été écrit pour réparer ? ». Pour un champ recalculé à chaque opération métier (agrégat dérivé), ces deux questions ne sont pas équivalentes : une ligne peut avoir une valeur différente de la cible pour une bonne raison (des opérations légitimes ont eu lieu depuis l'investigation), pas seulement parce qu'elle n'a pas encore été corrigée.
+
+**Fix :**
+Conditionner l'`UPDATE` à la **valeur buggée connue** identifiée pendant l'investigation, pas à la simple différence avec la cible :
+```sql
+-- ANTI-PATTERN : écrase toute valeur différente de la cible, y compris une valeur légitime récente
+UPDATE "Bac" SET "nombrePoissons" = 1564
+WHERE id = 'bac_x' AND "nombrePoissons" != 1564;
+
+-- PATTERN CORRECT : ne touche que la valeur buggée précisément identifiée
+UPDATE "Bac" SET "nombrePoissons" = 1564
+WHERE id = 'bac_x' AND "nombrePoissons" = 1812; -- 1812 = valeur buggée constatée lors de l'investigation
+```
+Si la valeur buggée exacte ne peut être connue avec certitude (plusieurs états buggés possibles), recalculer la valeur cible **dynamiquement** dans la migration (même formule de replay que le code applicatif) plutôt que d'utiliser une constante littérale figée.
+
+**Leçon / Règle :**
+Pour un correctif de données qui réécrit un agrégat dérivé/recalculé (pas une valeur saisie une fois pour toutes), la garde d'idempotence correcte est `WHERE col = <valeur_buggée_avant_fix>`, jamais `WHERE col != <valeur_cible>`. Cette dernière protège contre le rejeu, mais pas contre l'écrasement d'une valeur devenue légitimement correcte par une opération métier survenue entre l'investigation et le déploiement du correctif.
+
+**Références :** [ADR-049](../decisions/ADR-049-correctifs-donnees-migrations.md), [pre-analysis-sprint-MG](../analysis/pre-analysis-sprint-MG.md)
+
+---
+
+### ERR-110 — `ON CONFLICT (id) DO NOTHING` ne protège pas contre une violation de clé étrangère
+**Sprint :** MG (story MG.3) | **Date :** 2026-07-26
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/*_data_fix_*/migration.sql`
+
+**Symptôme :**
+Un `INSERT` de correctif de données référence des FK codées en dur (`bacId`, `vagueId`, `siteId`, `userId`, `calibrageId` de production) et est protégé par `ON CONFLICT (id) DO NOTHING`, censé le rendre idempotent et sans risque. Sur une base qui ne possède pas ces lignes de référence (dev, environnement de test, nouveau site multi-tenant), la migration échoue en dur avec une violation de contrainte de clé étrangère — pas un no-op silencieux comme attendu. Pire : la migration en échec bloque alors définitivement tout futur `migrate deploy` sur cet environnement (la table `_prisma_migrations` reste dans un état "failed", aucune migration ultérieure ne s'applique tant que l'échec n'est pas résolu manuellement).
+
+**Cause racine :**
+`ON CONFLICT` ne s'évalue qu'**après** que PostgreSQL a validé toutes les contraintes de la ligne à insérer, y compris les FK. Une violation de FK est détectée et lève une exception **avant** que le moteur n'atteigne la clause `ON CONFLICT` — cette clause ne protège donc que contre les doublons de clé primaire/unique, jamais contre une FK pointant vers une ligne absente.
+
+**Fix :**
+Réécrire en `INSERT ... SELECT ... WHERE EXISTS (<toutes les FK référencées existent>) AND NOT EXISTS (<la ligne cible existe déjà>)` :
+```sql
+-- ANTI-PATTERN : échoue en dur sur une base sans les FK de production
+INSERT INTO "Releve" (id, "bacId", "vagueId", "siteId", "calibrageId", ...)
+VALUES ('releve_x', 'bac_prod_07', 'vague_prod_2601', 'site_prod_1', 'calibrage_prod_may14', ...)
+ON CONFLICT (id) DO NOTHING;
+
+-- PATTERN CORRECT : vrai no-op silencieux si les FK n'existent pas sur cette base
+INSERT INTO "Releve" (id, "bacId", "vagueId", "siteId", "calibrageId", ...)
+SELECT 'releve_x', 'bac_prod_07', 'vague_prod_2601', 'site_prod_1', 'calibrage_prod_may14', ...
+WHERE EXISTS (SELECT 1 FROM "Bac" WHERE id = 'bac_prod_07')
+  AND EXISTS (SELECT 1 FROM "Vague" WHERE id = 'vague_prod_2601')
+  AND EXISTS (SELECT 1 FROM "Site" WHERE id = 'site_prod_1')
+  AND EXISTS (SELECT 1 FROM "Calibrage" WHERE id = 'calibrage_prod_may14')
+  AND NOT EXISTS (SELECT 1 FROM "Releve" WHERE id = 'releve_x');
+```
+
+**Leçon / Règle :**
+`ON CONFLICT DO NOTHING` protège uniquement contre une violation d'unicité (clé primaire ou contrainte `UNIQUE`) sur la ligne insérée elle-même — jamais contre une violation de clé étrangère référencée par cette ligne. Tout `INSERT` de correctif de données qui code en dur des FK de production doit systématiquement être un `INSERT ... SELECT ... WHERE EXISTS (...) AND NOT EXISTS (...)`, jamais un simple `INSERT ... VALUES ... ON CONFLICT DO NOTHING`, pour rester un no-op silencieux sur toute base (dev, test, nouveau site) qui ne possède pas ces lignes de référence.
+
+**Références :** [ADR-049](../decisions/ADR-049-correctifs-donnees-migrations.md), [pre-analysis-sprint-MG](../analysis/pre-analysis-sprint-MG.md)
+
+---
+
+### ERR-109 — Un `.sql` à la racine de `prisma/migrations/` est inerte : Prisma ne lit que les sous-dossiers contenant `migration.sql`
+**Sprint :** MG (stories MG.1-MG.3) | **Date :** 2026-07-26
+**Sévérité :** Critique
+**Fichier(s) :** `prisma/migrations/fix-vague2601-phantom-fish.sql`, `prisma/migrations/fix-bes033-cmd015-duplicate.sql`, `prisma/migrations/fix-calibrage-may14-missing-biometrie.sql`, `prisma/migrations/fix-vte004-missing-vagueid.sql` (commit `c259b48`)
+
+**Symptôme :**
+Un fichier de correctif de données (`.sql`) est présent au dépôt, directement à la racine de `prisma/migrations/` (pas dans un sous-dossier). `npx prisma migrate status` répond que tout est à jour, aucune migration en attente. Pourtant les données visées par le correctif ne sont pas corrigées en base — et aucune erreur n'apparaît nulle part : ni au déploiement, ni dans les logs, ni dans `migrate status`. Le correctif est silencieusement resté lettre morte, potentiellement pendant plusieurs sprints, sans qu'aucun signal n'alerte quiconque.
+
+**Cause racine :**
+Prisma ne considère comme migration que les **sous-dossiers** de `prisma/migrations/` contenant un fichier `migration.sql` — c'est cette structure de dossier, et seulement elle, que `migrate deploy` lit et enregistre dans la table `_prisma_migrations`. Un fichier `.sql` posé directement à la racine (hors de tout sous-dossier) est totalement invisible au mécanisme de migration : il n'est ni exécuté, ni signalé comme en attente, ni signalé comme absent. Mais le problème de fond dépasse ce simple mécanisme technique : un correctif appliqué (ou censé l'être) « à la main » sur la production ne laisse ni trace, ni date d'exécution, ni indication de la base cible, ni garantie qu'il a tourné sur tous les environnements qui en auraient besoin (nouveau site multi-tenant, restauration, staging). Même si le fichier avait été exécuté manuellement une fois, rien dans le dépôt ne permettrait de le confirmer ni de le rejouer de façon fiable ailleurs.
+
+**Fix :**
+Convertir chaque correctif en une véritable migration Prisma versionnée : créer manuellement `prisma/migrations/<timestamp>_<nom>/migration.sql` (le dossier de migration standard ne peut pas être généré par `migrate diff` pour un correctif de données pur, puisqu'aucun changement de `schema.prisma` n'y correspond — voir ADR-049 §3.2), rendre le SQL idempotent et no-op silencieux si les données visées sont absentes, puis déployer via `npx prisma migrate deploy` comme toute autre migration. Voir ADR-049 pour la taxonomie complète (correctif de données / audit lecture seule / garde-fou de précondition) et les exigences détaillées (idempotence, journalisation, échec avant modification).
+
+**Leçon / Règle :**
+Un fichier `.sql`, aussi correctement écrit soit-il, n'a aucun effet s'il n'est pas dans un sous-dossier de `prisma/migrations/` portant un `migration.sql` — vérifier systématiquement la structure de dossier, pas seulement le contenu SQL, avant de croire qu'un correctif a été ou sera appliqué. Plus largement (R10, ADR-049) : tout correctif de données de production doit être une migration Prisma versionnée, jamais un script exécuté à la main — c'est la seule façon de rendre son application vérifiable (`_prisma_migrations`), reproductible sur tout environnement, et incluse automatiquement dans le pipeline de déploiement standard.
+
+**Références :** [ADR-049](../decisions/ADR-049-correctifs-donnees-migrations.md), [ADR-050](../decisions/ADR-050-sort-des-scripts-audit.md), [pre-analysis-sprint-MG](../analysis/pre-analysis-sprint-MG.md)
+
+---
+
 ### ERR-083 — ADD VALUE seul (sans UPDATE) est valide hors transaction : ERR-001 ne couvre pas ce cas
 **Sprint :** ADR-045 | **Date :** 2026-04-07
 **Sévérité :** Moyenne

@@ -16,7 +16,7 @@
  * n'atteigne le moteur de rendu bugué (`@react-pdf/png-js`), à la fois :
  * - à l'écriture (Zod `.refine()` dans `common.schema.ts`) ;
  * - à la lecture, en mode dégradé (`pdf-bon-livraison.tsx`) ;
- * - en audit read-only (`scripts/data-fixes/px-audit-signatures-corrompues.*`).
+ * - en audit read-only (`scripts/audits/px-audit-signatures-corrompues.*`).
  *
  * IMPORTANT : ne JAMAIS réutiliser `@react-pdf/png-js` comme validateur de
  * confiance — c'est la librairie bugguée elle-même.

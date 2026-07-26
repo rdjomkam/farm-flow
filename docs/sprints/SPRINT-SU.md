@@ -290,7 +290,7 @@ Implémentation :
 - Migration `20260726174843_numero_unique_par_site`
 - Contrôle préalable d'absence de doublons en base avant application (0 doublon trouvé)
 - Call-sites `findUnique` migrés vers la clé composite
-- Script d'audit prod **read-only** `scripts/data-fixes/su12-audit-doublons-numero.ts`
+- Script d'audit prod **read-only** `scripts/audits/su12-audit-doublons-numero.ts`
 - Tests de garde
 
 ---

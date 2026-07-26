@@ -114,4 +114,4 @@ Identique à Bac 07 — attendre l'opération métier de peuplement.
 
 ## Fichier SQL
 
-`/prisma/data-fixes/CX3-audit-empty-assignations.sql` — SELECT uniquement, aucun effet de bord.
+`/scripts/audits/cx3-audit-empty-assignations.sql` — SELECT uniquement, aucun effet de bord.

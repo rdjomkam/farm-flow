@@ -147,10 +147,10 @@ Créer `src/lib/validation/__tests__/image-decode.test.ts` couvrant au minimum l
 **Dépendances** : aucune (parallélisable avec PX.1)
 
 **Description** :
-Écrire un script Node (pas de SQL pur — la décodabilité nécessite `zlib.inflateSync`) `scripts/data-fixes/px-audit-signatures-corrompues.*` qui se connecte via `DATABASE_URL`, sélectionne les 4 colonnes (`BonLivraison.signatureClient`, `signatureLivreur`, `Site.signaturePromoteur`, `cachet`) non nulles, applique `isDecodableImage()` (réutilisé de PX.1, jamais dupliqué) à chacune, et imprime un rapport (`numero/id | champ | décodable OUI/NON | taille`). Strictement read-only : aucune mutation, aucun `UPDATE`.
+Écrire un script Node (pas de SQL pur — la décodabilité nécessite `zlib.inflateSync`) `scripts/audits/px-audit-signatures-corrompues.*` qui se connecte via `DATABASE_URL`, sélectionne les 4 colonnes (`BonLivraison.signatureClient`, `signatureLivreur`, `Site.signaturePromoteur`, `cachet`) non nulles, applique `isDecodableImage()` (réutilisé de PX.1, jamais dupliqué) à chacune, et imprime un rapport (`numero/id | champ | décodable OUI/NON | taille`). Strictement read-only : aucune mutation, aucun `UPDATE`.
 
 **Fichiers concernés** :
-- `scripts/data-fixes/px-audit-signatures-corrompues.*` (nouveau)
+- `scripts/audits/px-audit-signatures-corrompues.*` (nouveau)
 
 **Critères d'acceptation** :
 - [x] Le script ne réalise aucune écriture en base (vérifié par lecture du code : aucun `UPDATE`/`INSERT`/`DELETE`)
@@ -225,4 +225,4 @@ PX.1 et PX.5 sont parallélisables (aucune dépendance mutuelle). PX.2 dépend d
 ## Reliquats / suites
 
 - **Audit PROD à exécuter par l'utilisateur** (non exécuté dans ce sprint) :
-  `DATABASE_URL="<url-prod>" npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts`
+  `DATABASE_URL="<url-prod>" npx tsx scripts/audits/px-audit-signatures-corrompues.ts`

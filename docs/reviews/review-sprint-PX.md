@@ -4,7 +4,7 @@
 **Sévérité du bug :** CRITIQUE
 **Verdict : VALIDÉ**
 
-**Périmètre revu :** `src/lib/validation/image-decode.ts`, `src/lib/validation/common.schema.ts`, `src/lib/export/render-pdf-safely.ts`, `src/lib/export/pdf-bon-livraison.tsx`, les 5 routes d'export, `scripts/data-fixes/px-audit-signatures-corrompues.ts`, et l'ensemble des tests du sprint.
+**Périmètre revu :** `src/lib/validation/image-decode.ts`, `src/lib/validation/common.schema.ts`, `src/lib/export/render-pdf-safely.ts`, `src/lib/export/pdf-bon-livraison.tsx`, les 5 routes d'export, `scripts/audits/px-audit-signatures-corrompues.ts`, et l'ensemble des tests du sprint.
 
 ## Point d'attention n°1 (a) — Exhaustivité de la pré-validation
 

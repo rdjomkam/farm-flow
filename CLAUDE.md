@@ -78,7 +78,7 @@ Le projet est organisé en **12 sprints** (Phase 1 : 1-5, Phase 2 : 6-12). Chaqu
 
 ---
 
-## Phase 2 — Règles obligatoires (R1-R9)
+## Phase 2 — Règles obligatoires (R1-R10)
 
 Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour tous les agents.
 
@@ -93,6 +93,15 @@ Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour 
 | R7 | **Nullabilité explicite** | Décider required/nullable dès le schéma, pas après |
 | R8 | **siteId PARTOUT** | Chaque nouveau modèle DOIT avoir un `siteId` (FK Site) |
 | R9 | **Tests avant review** | Toujours exécuter `npx vitest run` + `npm run build` avant chaque review |
+| R10 | **Tout correctif de données est une migration** | Jamais un `.sql` à la racine de `prisma/migrations/`, jamais appliqué à la main en prod |
+
+### R10 — Détail
+
+- **Interdit** : un `.sql` de correctif à la racine de `prisma/migrations/` (Prisma ne lit que les sous-dossiers contenant un `migration.sql` — un fichier à la racine est inerte, jamais exécuté par `migrate deploy`). Interdit aussi : appliquer un correctif à la main sur la production (aucune trace, aucune garantie de rejeu).
+- **Correctif de données** (UPDATE/DELETE/INSERT de rattrapage) = `prisma/migrations/<timestamp>_<nom>/migration.sql`, idempotent (valeur cible, jamais un delta relatif) et no-op silencieux si les lignes visées sont absentes.
+- **Audit en lecture seule** (zéro écriture) = script dans `scripts/audits/`, nommé `*-audit-*`.
+- **Garde-fou de précondition** (doit bloquer la migration si les données ne satisfont pas une contrainte) = dans la migration elle-même, jamais dans un script préalable qu'un humain doit penser à lancer.
+- Détail complet, taxonomie et exemples : [ADR-049](docs/decisions/ADR-049-correctifs-donnees-migrations.md), [ADR-050](docs/decisions/ADR-050-sort-des-scripts-audit.md).
 
 ## Phase 2 — Descriptions des agents
 
@@ -103,7 +112,7 @@ Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour 
 | @db-specialist | 19 nouveaux modèles Prisma, 16 enums, migrations, queries, transactions critiques, agrégation financière |
 | @developer | ~50 API routes, ~30 pages UI, mobile-first, formulaires multi-étapes, graphiques Recharts |
 | @tester | Tests unitaires, API, UI, non-régression, vérification build, rapports dans docs/tests/ |
-| @code-reviewer | Review par sprint selon checklist R1-R9, auth/permissions, accessibilité, mobile-first |
+| @code-reviewer | Review par sprint selon checklist R1-R10, auth/permissions, accessibilité, mobile-first |
 
 ## Phase 2 — Processus de bugfixing
 
@@ -121,6 +130,8 @@ Détection → Rapport → Triage → Assignation → Fix → Test → Vérifica
 | **Vérification** | @tester | Vérifie le fix + exécute la suite de tests complète |
 | **Review** | @code-reviewer | Review obligatoire si sévérité Critique ou Haute |
 | **Clôture** | @project-manager | Met à jour le fichier bug et TASKS.md |
+
+> Si le fix implique de corriger des données déjà en production (pas seulement du code), voir R10 : le correctif est une migration Prisma versionnée, jamais un script exécuté à la main.
 
 ### Template bug (`docs/bugs/BUG-XXX.md`)
 ```markdown
@@ -162,7 +173,7 @@ Pour chaque sprint, vérifier :
 3. `npx vitest run` — Tous les tests passent (anciens + nouveaux)
 4. `npm run build` — Build production OK
 5. Test manuel mobile (360px) + desktop
-6. Checklist review (R1-R9 respectées)
+6. Checklist review (R1-R10 respectées)
 7. `docs/reviews/review-sprint-X.md` produit
 
 ## Phase 2 — Fichiers critiques

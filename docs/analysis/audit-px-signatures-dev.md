@@ -3,7 +3,7 @@
 **Date d'exécution** : 2026-07-26
 **Environnement** : DEV (PostgreSQL 16 Docker, conteneur `silures-db`, port `8432`, DB `farm-flow`)
 **Exécuté par** : @db-specialist
-**Script** : `scripts/data-fixes/px-audit-signatures-corrompues.ts` (strictement read-only)
+**Script** : `scripts/audits/px-audit-signatures-corrompues.ts` (strictement read-only)
 
 ## Contexte
 
@@ -24,7 +24,7 @@ section « Preuve de détection » ci-dessous pour la preuve indépendante de la
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
 set -a; source /Users/ronald/project/dkfarm/farm-flow/.env; set +a
-npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts
+npx tsx scripts/audits/px-audit-signatures-corrompues.ts
 ```
 
 (Le `.env` du dépôt contient `DATABASE_URL` pointant vers le Docker `silures-db` sur le
@@ -73,7 +73,7 @@ Aucune donnée corrompue n'a été insérée en base (ni temporairement, ni déf
 produire cette preuve — conformément à la consigne. La preuve est apportée par un test
 vitest **sans connexion base de données** :
 
-- Fichier : `scripts/data-fixes/__tests__/px-audit-signatures-corrompues.test.ts`
+- Fichier : `scripts/audits/__tests__/px-audit-signatures-corrompues.test.ts`
 - La fonction d'inspection unitaire du script (`auditValue()`, désormais exportée) est
   appelée directement avec deux fixtures PNG RGBA construites en mémoire :
   - un PNG RGBA valide (mono-IDAT) → classé `decodable: true`, `format: "png"` ;
@@ -87,7 +87,7 @@ vitest **sans connexion base de données** :
 
 Extrait du run :
 ```
-✓ scripts/data-fixes/__tests__/px-audit-signatures-corrompues.test.ts (5 tests) 830ms
+✓ scripts/audits/__tests__/px-audit-signatures-corrompues.test.ts (5 tests) 830ms
   ✓ détecte un PNG RGBA à IDAT corrompu comme non décodable (preuve que l'audit détecte un cas corrompu) 497ms
 ```
 
@@ -113,7 +113,7 @@ return 1`).
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
-DATABASE_URL="<url-de-prod-prisma-postgres>" npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts
+DATABASE_URL="<url-de-prod-prisma-postgres>" npx tsx scripts/audits/px-audit-signatures-corrompues.ts
 echo "Code de sortie : $?"
 ```
 

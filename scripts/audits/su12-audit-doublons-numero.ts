@@ -24,17 +24,38 @@
  * à cette 10e famille — voir docs/analysis/pre-analysis-sprint-SU-numero.md
  * (item D).
  *
- * Ce script :
- *   - AVANT la migration : détecte les doublons (siteId, numero/code) qui
- *     empêcheraient l'application de la contrainte composite (le
- *     `CREATE UNIQUE INDEX` échouerait sinon). Si des doublons existent, la
- *     migration ne doit PAS être appliquée telle quelle — il faut d'abord
- *     dédupliquer les données (remédiation manuelle, hors scope de ce script).
- *   - APRÈS la migration : sert de vérification de non-régression (le
- *     résultat doit toujours être vide, la contrainte DB l'empêche
- *     désormais nativement — mais utile pour un contrôle indépendant de
- *     l'index, ou pour auditer un environnement où la migration n'est pas
- *     encore appliquée, ex. la production avant déploiement).
+ * STATUT (ADR-050 §4.1, story MG.5) : cet audit N'EST PAS un prérequis
+ * bloquant avant le déploiement des migrations `20260726174843_numero_unique_par_site`
+ * et `20260726212515_lotalevins_code_unique_par_site` — c'est un outil de
+ * diagnostic OPTIONNEL. Raison, contre-intuitive à premiere lecture : un
+ * index composite `(siteId, numero)`/`(siteId, code)` est strictement PLUS
+ * PERMISSIF que l'ancien `@unique` global sur `numero`/`code` seul (il
+ * autorise tout ce que l'ancien autorisait, plus des combinaisons
+ * supplémentaires inter-sites). Si l'ancienne contrainte globale interdisait
+ * déjà tout doublon de `numero`/`code` tous sites confondus, alors il ne peut
+ * *a fortiori* pas exister de doublon `(siteId, numero/code)` sur une base
+ * qui sort de cette contrainte — ces migrations ne peuvent donc
+ * structurellement pas échouer sur un `CREATE UNIQUE INDEX` pour cause de
+ * doublons de données. Voir ADR-050 §4.1 pour le raisonnement complet.
+ *
+ * Ce script conserve néanmoins une utilité résiduelle réelle, non bloquante :
+ *   1. Détecter une dérive de schéma non documentée (ERR-038) — le seul
+ *      scénario qui ferait échouer `CREATE UNIQUE INDEX` serait que l'unique
+ *      global sur `numero`/`code` ait déjà été retiré ou contourné hors
+ *      migration Prisma (hotfix manuel, script de dev). Cet audit reste le
+ *      seul moyen de le vérifier empiriquement contre une base réelle.
+ *   2. Servir de contrôle avant l'introduction de futures familles de
+ *      numérotation scopées par site — toute nouvelle famille `numero`/`code`
+ *      migrant un jour d'un `@unique` global vers un composite bénéficierait
+ *      du même raisonnement logique, mais relancer cet audit reste un filet
+ *      de sécurité peu coûteux, en particulier si le contexte de départ
+ *      diffère (ex. une contrainte partant déjà d'un état composite plus
+ *      étroit, où le raisonnement de l'ADR-050 §4.1 ne s'appliquerait plus).
+ *
+ * Voir ADR-050 (docs/decisions/ADR-050-sort-des-scripts-audit.md) pour la
+ * décision complète, y compris le sort de l'emplacement canonique des
+ * scripts d'audit (`scripts/audits/`, story MG.6 — ce fichier n'a pas encore
+ * été déplacé).
  *
  * STRICTEMENT READ-ONLY : aucun UPDATE/INSERT/DELETE n'est jamais émis. Les
  * doublons détectés sont uniquement listés — la remédiation (renommage
@@ -49,18 +70,21 @@
  *
  * Usage DEV (Docker, port 8432 par défaut — voir .env DATABASE_URL) :
  *   source ~/.nvm/nvm.sh && nvm use 22
- *   npx tsx scripts/data-fixes/su12-audit-doublons-numero.ts
+ *   npx tsx scripts/audits/su12-audit-doublons-numero.ts
  *
  * Usage PROD (Prisma Postgres) — À LANCER MANUELLEMENT PAR L'UTILISATEUR,
- * jamais depuis cet agent sans autorisation explicite, IDÉALEMENT AVANT tout
- * déploiement de la migration `20260726174843_numero_unique_par_site` en
- * production :
- *   DATABASE_URL="<url-de-prod>" npx tsx scripts/data-fixes/su12-audit-doublons-numero.ts
+ * jamais depuis cet agent sans autorisation explicite. Diagnostic optionnel
+ * (voir STATUT ci-dessus, ADR-050 §4.1) — utile en cas de doute sur une
+ * dérive de schéma (ERR-038), pas requis pour que la migration de contrainte
+ * réussisse :
+ *   DATABASE_URL="<url-de-prod>" npx tsx scripts/audits/su12-audit-doublons-numero.ts
  *
  * Code de sortie :
  *   0 = aucun doublon détecté sur les 10 familles
- *   1 = au moins un doublon (siteId, numero/code) détecté — NE PAS déployer
- *       la migration de contrainte tant que la donnée n'est pas corrigée
+ *   1 = au moins un doublon (siteId, numero/code) détecté — signale une
+ *       dérive de schéma inattendue (ERR-038) à investiguer ; ne bloque pas
+ *       à lui seul le déploiement des migrations de contrainte composite
+ *       (voir STATUT ci-dessus, ADR-050 §4.1)
  *   2 = erreur d'exécution du script (connexion DB, etc.)
  */
 

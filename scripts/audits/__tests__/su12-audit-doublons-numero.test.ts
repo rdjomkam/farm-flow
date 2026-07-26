@@ -3,7 +3,7 @@
  * (siteId, numero|code) construit correctement la requête GROUP BY / HAVING
  * et interprète son résultat, sans se connecter à aucune base de données
  * réelle (Pool `pg` mocké — voir pattern
- * scripts/data-fixes/__tests__/px-audit-signatures-corrompues.test.ts).
+ * scripts/audits/__tests__/px-audit-signatures-corrompues.test.ts).
  */
 
 import { describe, it, expect, vi } from "vitest";

@@ -7423,7 +7423,7 @@ Voir : [SPRINT-PX-ROBUSTESSE-PDF.md](sprints/SPRINT-PX-ROBUSTESSE-PDF.md)
 **Vérification finale (R9) :** `npx vitest run` → 211 fichiers, 5554 tests passés, 26 todo, 0 échec ; `npm run build` → OK.
 
 **Reliquat — audit PROD à exécuter par l'utilisateur :** l'audit des signatures/cachets n'a été exécuté qu'en environnement de dev (6 images inspectées, **0 corrompue**). L'audit PROD reste à exécuter :
-`DATABASE_URL="<url-prod>" npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts`
+`DATABASE_URL="<url-prod>" npx tsx scripts/audits/px-audit-signatures-corrompues.ts`
 
 ---
 
@@ -7454,7 +7454,7 @@ Voir : [SPRINT-SU.md](sprints/SPRINT-SU.md)
 
 **SU.8 — `FAIT`.** Arbitrage utilisateur rendu : le droit de rectifier un bon de livraison signé découle de la détention de la permission `BONS_LIVRAISON_RECTIFIER` (pas d'un rôle codé en dur), accordée **par défaut** au rôle système « Administrateur » uniquement (`SYSTEM_ROLE_DEFINITIONS` et `prisma/seed.sql`, blocs `sr_admin_site_01`/`sr_admin_client_01`), à l'exclusion explicite du « Gérant » (cohérent avec l'impact financier de l'opération — correction de stock et de montants sur une vente déjà livrée). Rien n'empêche un Administrateur de l'accorder ensuite à un Gérant via l'UI de gestion des rôles (`PERMISSION_GROUPS.ventes` l'expose déjà, avec son libellé dans `role-form-labels.ts`, satisfait depuis SU.10). Backfill des sites existants via la migration `20260726170000_backfill_bons_livraison_rectifier` (ciblant uniquement les `SiteRole` `isSystem=true` nommés `Administrateur`), appliquée en non-interactif (`migrate deploy`, ERR-002). Garde-fou `permissions-orphan-guard.test.ts` mis à jour : `BONS_LIVRAISON_RECTIFIER` n'est plus dans la liste d'exclusion et est désormais couverte par le test générique. Aucune restriction codée en dur détectée sur cette permission (grep exhaustif) — le contrôle d'accès est une simple vérification de possession.
 
-**SU.12 — `FAIT`.** Bug de conception détecté lors de la pré-analyse de SU.3 et arbitré par l'utilisateur (« corriger maintenant, la migration est bien moins risquée qu'après l'apparition de doublons »). Les contraintes `@unique` sur `numero`/`code` étaient **globales** alors que le compteur de numérotation est scopé par `siteId` : deux sites généraient donc le même `FAC-2026-001` — collision **déterministe** multi-tenant, pas une simple race. Livré : `@@unique([siteId, numero|code])` en **remplacement** de la contrainte globale sur 9 modèles (`Facture`, `Depense`, `Commande`, `Vente`, `BonLivraison`, `ListeBesoins`, `Ponte`, `Incubation`, `LotGeniteurs`), migration `20260726174843_numero_unique_par_site`, contrôle préalable d'absence de doublons en base (0 trouvé), call-sites `findUnique` migrés vers la clé composite, script d'audit prod read-only `scripts/data-fixes/su12-audit-doublons-numero.ts`, tests de garde. **Complémentaire de SU.3** (verrou d'advisory lock), pas alternatif.
+**SU.12 — `FAIT`.** Bug de conception détecté lors de la pré-analyse de SU.3 et arbitré par l'utilisateur (« corriger maintenant, la migration est bien moins risquée qu'après l'apparition de doublons »). Les contraintes `@unique` sur `numero`/`code` étaient **globales** alors que le compteur de numérotation est scopé par `siteId` : deux sites généraient donc le même `FAC-2026-001` — collision **déterministe** multi-tenant, pas une simple race. Livré : `@@unique([siteId, numero|code])` en **remplacement** de la contrainte globale sur 9 modèles (`Facture`, `Depense`, `Commande`, `Vente`, `BonLivraison`, `ListeBesoins`, `Ponte`, `Incubation`, `LotGeniteurs`), migration `20260726174843_numero_unique_par_site`, contrôle préalable d'absence de doublons en base (0 trouvé), call-sites `findUnique` migrés vers la clé composite, script d'audit prod read-only `scripts/audits/su12-audit-doublons-numero.ts`, tests de garde. **Complémentaire de SU.3** (verrou d'advisory lock), pas alternatif.
 
 **SU.13 — `FAIT`.** Ouverte pour lever la réserve n°4 de la review de sprint. `LotAlevins.code` présentait le même double défaut que les 9 familles de SU.12 mais avait été oublié : génération **hors** transaction (`$transaction([...])` de forme *array*, qui ne fournit pas de client `tx` et empêche donc de poser le verrou) et `@unique` **global**. Livré : intégration au helper commun `numero-utils.ts`, conversion de `recordEclosion` en `$transaction(async (tx) => …)` (forme callback) à sémantique et ordre d'opérations préservés, `@@unique([siteId, code])`, migration `20260726212515_lotalevins_code_unique_par_site`, contrôle de doublons (0 trouvé), 5 call-sites de `lots-alevins.ts` migrés vers la clé composite, script d'audit étendu à 10 familles, tests de garde étendus.
 
@@ -7486,3 +7486,40 @@ Voir : [SPRINT-SU.md](sprints/SPRINT-SU.md)
 **Migrations Prisma appliquées en non-interactif durant le sprint :** `20260726160000_backfill_ventes_modifier_permissions`, `20260726170000_backfill_bons_livraison_rectifier`, `20260726174843_numero_unique_par_site`, `20260726180000_add_ecart_assignation_constate`, `20260726212515_lotalevins_code_unique_par_site`.
 
 **Suivi ouvert — dette explicite pour un sprint ultérieur (PAS une story de ce sprint) :** **vue UI « Bacs en dérive »**. L'ADR-048 et le @db-specialist recommandent une carte sur le dashboard site alimentée par `getBacsEnDerive` : la donnée persistée par SU.2 n'a de valeur opérationnelle que si elle est visible sans lire les logs serveur. Hors périmètre du Sprint SU par décision explicite.
+
+---
+
+## Sprint MG — Tout correctif de données est une migration
+Voir : [SPRINT-MG.md](sprints/SPRINT-MG.md)
+
+**Statut :** `FAIT` — lancé et clos le 2026-07-26 (**7 stories**)
+**Objectif :** Aucune nouvelle fonctionnalité. Établir et faire appliquer la règle : aucun correctif de données ne doit rester un script inerte ou un geste manuel non tracé. Origine : quatre correctifs de données de production commités à la racine de `prisma/migrations/` (commit `c259b48`), donc jamais lus ni exécutés par `migrate deploy`, plus un cinquième appliqué **manuellement** en production hors de tout mécanisme de migration (`gd3-*`, incident Bac 11 / Vague-26-03-Prep, cf. ADR-048).
+**Décisions :** [ADR-049-correctifs-donnees-migrations.md](decisions/ADR-049-correctifs-donnees-migrations.md), [ADR-050-sort-des-scripts-audit.md](decisions/ADR-050-sort-des-scripts-audit.md)
+**Review :** `docs/reviews/review-sprint-MG.md` — verdict **VALIDÉ AVEC RÉSERVES** — aucun constat Critique ni Haut, rien de bloquant pour le déploiement.
+
+| Story | Type | Sujet | Agent | Livrable principal | Statut |
+|-------|------|-------|-------|--------------------|--------|
+| MG.1 | ADR | Établir la règle : tout correctif de données est une migration Prisma versionnée | @architect | `docs/decisions/ADR-049-correctifs-donnees-migrations.md` | `FAIT` |
+| MG.2 | ANALYSE | Statut réel des 5 correctifs orphelins en production | @db-specialist | `docs/analysis/MG2-statut-correctifs-orphelins.md` | `FAIT` |
+| MG.3 | SCHEMA | Convertir les 4 correctifs orphelins + `gd3-*` (Bac 11) en migrations idempotentes ; supprimer les fichiers inertes et `gd3-apply.sh` | @db-specialist | 5 migrations `20260727090001` → `20260727090005` | `FAIT` |
+| MG.4 | SCHEMA | Rendre auto-suffisante l'unicité des numéros par site (échec avant modification si doublons) | @db-specialist | `20260727090006_unicite_numero_par_site_autosuffisante` | `FAIT` |
+| MG.5 | ANALYSE/DOC | Sort des deux scripts d'audit (`su12-audit-doublons-numero.ts`, `px-audit-signatures-corrompues.ts`) | @architect | `docs/decisions/ADR-050-sort-des-scripts-audit.md` | `FAIT` |
+| MG.6 | TEST | Garde-fou anti-récidive + règle R10 dans `CLAUDE.md` + capitalisation | @tester | `src/__tests__/mg6-correctif-donnees-guard.test.ts` (18 tests), R10, ERR-109 à ERR-112 | `FAIT` |
+| MG.7 | BUGFIX | Un échec de `prisma migrate deploy` doit bloquer le démarrage du conteneur | @developer | `docker-entrypoint.sh` | `FAIT` |
+
+**MG.4 — précision.** Les deux migrations existantes (`20260726174843_numero_unique_par_site`, `20260726212515_lotalevins_code_unique_par_site`) n'ont **volontairement PAS** été éditées, pour ne pas casser leur checksum Prisma alors que leur statut en production est inconnu. Le durcissement est livré sous forme d'une **nouvelle** migration.
+
+**MG.5 — précision.** Les deux scripts d'audit sont confirmés **strictement en lecture seule** (aucun correctif déguisé) et déplacés vers `scripts/audits/`.
+
+**MG.7 — précision.** `docker-entrypoint.sh` **avalait** l'échec de migration (`|| echo WARNING ... continuing`), ce qui rendait inopérant tout garde-fou de migration : le conteneur démarrait sur un schéma non migré, silencieusement. Documenté en **ERR-112**.
+
+**Capitalisation (`docs/knowledge/ERRORS-AND-FIXES.md`) :** **ERR-109** à **ERR-112**. Règle **R10** ajoutée à `CLAUDE.md`.
+
+**Vérification finale (R9) :** `npm run build` vert ; `npx vitest run` → **5703 tests passés sur 5749** (223 fichiers). Les 6 échecs sont des **timeouts de contention préexistants** au sens ERR-107, confirmés verts en ré-exécution isolée (**104/104**).
+
+**Déploiement en production :** déployer normalement (`npx prisma migrate deploy`, ou redémarrage du conteneur). Les 6 migrations s'appliquent dans l'ordre `20260727090001` → `20260727090006`, **aucune action manuelle préalable n'est requise**. Procédure complète (lecture des `RAISE NOTICE`, conduite à tenir si `20260727090006` détecte des doublons, rotation du mot de passe PostgreSQL exposé dans l'historique git) : section « Ce que l'utilisateur devra exécuter en production » de [SPRINT-MG.md](sprints/SPRINT-MG.md).
+
+**Dette laissée ouverte (PAS des stories de ce sprint) :**
+- **9 correctifs de données orphelins historiques non convertis**, tolérés par une liste d'exclusion datée et justifiée dans le test de garde : `prisma/fix-vague-26-01.sql`, `scripts/fix-missing-mouvements.sql`, `scripts/fix-depense-mouvement-link.sql`, `scripts/repair-bug041.sql`, et sous `prisma/data-fixes/` : `CG2-bacdest-null.sql`, `CG4-assignation-dates.sql`, `CS1-init-fields-prod.sql`, `CS2-mirror-transfert-releves.sql`, `GP3-cleanup-nan-gompertz.sql`. Leur état d'application en production est **inconnu**, ils n'ont donc pas été convertis à l'aveugle. À solder par un sprint dédié.
+- `Vague.code` et `Reproducteur.code` restent en `@unique` **global** au lieu de `@@unique([siteId, code])` : à trancher (scoper par site, ou assumer et documenter). Constat **M1** de la review.
+- Enrichir le `RAISE NOTICE` de `20260727090001` d'un renvoi à **ADR-043** (constat **B1**, cosmétique).

@@ -31,11 +31,11 @@
  *
  * Usage DEV (Docker, port 8432 par défaut — voir .env DATABASE_URL) :
  *   source ~/.nvm/nvm.sh && nvm use 22
- *   npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts
+ *   npx tsx scripts/audits/px-audit-signatures-corrompues.ts
  *
  * Usage PROD (Prisma Postgres) — À LANCER MANUELLEMENT PAR L'UTILISATEUR,
  * jamais depuis cet agent sans autorisation explicite :
- *   DATABASE_URL="<url-de-prod>" npx tsx scripts/data-fixes/px-audit-signatures-corrompues.ts
+ *   DATABASE_URL="<url-de-prod>" npx tsx scripts/audits/px-audit-signatures-corrompues.ts
  *
  * Code de sortie :
  *   0 = tout est décodable (ou aucune ligne à inspecter)
@@ -246,7 +246,7 @@ function maskDatabaseUrl(url: string): string {
  * Ne lance `main()` que si ce fichier est exécuté directement (`npx tsx
  * px-audit-signatures-corrompues.ts`), jamais quand il est importé comme
  * module (ex. par un test vitest qui importe `auditValue`/`dataUrlByteSize`
- * pour un test sans connexion DB — voir scripts/data-fixes/__tests__/).
+ * pour un test sans connexion DB — voir scripts/audits/__tests__/).
  */
 const isMainModule = (() => {
   try {
