@@ -10,6 +10,7 @@ import { requirePermission } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-utils";
 import { getFactureById } from "@/lib/queries/factures";
 import { renderFacturePDF } from "@/lib/export/pdf-facture";
+import { renderPdfSafely } from "@/lib/export/render-pdf-safely";
 import { Permission, StatutFacture, ModePaiement } from "@/types";
 import type { CreateFacturePDFDTO } from "@/types/export";
 import { prisma } from "@/lib/db";
@@ -86,7 +87,13 @@ export async function GET(
     };
 
     // Générer le PDF (renderFacturePDF utilise JSX natif dans le fichier .tsx)
-    const buffer = await renderFacturePDF(dto);
+    const buffer = await renderPdfSafely(() => renderFacturePDF(dto), {
+      context: {
+        route: "GET /api/export/facture/[id]",
+        documentType: "facture",
+        documentId: id,
+      },
+    });
     // Convertir Buffer Node.js → Uint8Array pour la Web API Response
     const uint8 = new Uint8Array(buffer);
 

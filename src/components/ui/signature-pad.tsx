@@ -9,6 +9,18 @@ import { Button } from "@/components/ui/button";
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * devicePixelRatio plafonné à 2 — voir commentaire de `resizeCanvas` pour la
+ * justification (delta-review Sprint PX, review-sprint-PX.md Delta 1).
+ * Utilisé à la fois pour dimensionner le canvas et pour le vider
+ * correctement (`handleClear`) : les deux doivent utiliser le même facteur
+ * d'échelle, sinon `clearRect` calculerait des dimensions logiques fausses
+ * si `window.devicePixelRatio` dépasse 2.
+ */
+function getCappedDevicePixelRatio(): number {
+  return Math.min(window.devicePixelRatio || 1, 2);
+}
+
 export interface SignaturePadHandle {
   /** Exporte le contenu du canvas en data URL PNG (null si vide) */
   toDataURL: () => string | null;
@@ -55,13 +67,27 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       return canvas.getContext("2d");
     }, []);
 
-    // Redimensionne le canvas selon le devicePixelRatio pour un trait net
+    // Redimensionne le canvas selon le devicePixelRatio pour un trait net.
+    //
+    // Défense en profondeur (delta-review Sprint PX, voir
+    // review-sprint-PX.md Delta 1) : le devicePixelRatio physique est
+    // plafonné à 2 avant de dimensionner le canvas. Un devicePixelRatio de 3
+    // (courant sur écrans desktop/mobile haute densité) combiné à un
+    // conteneur large (desktop ≈ 1200 px) produit un canvas physique
+    // ~3600x600 px, dont l'image PNG RGBA correspondante décompresse à la
+    // limite de MAX_INFLATE_OUTPUT_BYTES (voir image-decode.ts). Plafonner
+    // à 2 ramène ce cas à ~2400x400 px (~3,7 Mo décompressés), grande marge
+    // de sécurité, SANS dégrader la netteté perceptible : le trait de
+    // signature fait 2.5 px de large (ligne épaisse, pas de texte fin) — la
+    // différence entre dpr 2 et 3 n'est pas discernable à l'œil nu pour ce
+    // type de tracé, y compris sur mobile haute densité (cas d'usage
+    // principal, signature contractuelle sur le terrain).
     const resizeCanvas = useCallback(() => {
       const canvas = canvasRef.current;
       const container = containerRef.current;
       if (!canvas || !container) return;
 
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getCappedDevicePixelRatio();
       const width = container.clientWidth || 300;
 
       canvas.width = width * dpr;
@@ -135,7 +161,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       const canvas = canvasRef.current;
       const ctx = getContext();
       if (!canvas || !ctx) return;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getCappedDevicePixelRatio();
       ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
       setEmpty(true);
     }

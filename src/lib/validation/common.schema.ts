@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { isDecodableImage } from "./image-decode";
 
 // ---------------------------------------------------------------------------
 // Date
@@ -123,15 +124,32 @@ export const raisonSchema = z
 // ---------------------------------------------------------------------------
 
 /**
- * Schema pour une image PNG encodee en base64 (data URL), avec limite de
- * taille raisonnable pour eviter les abus (~500KB en base64, soit environ
+ * Schema pour une image PNG/JPEG encodee en base64 (data URL), avec limite
+ * de taille raisonnable pour eviter les abus (~500KB en base64, soit environ
  * 375KB de donnees binaires reelles). Utilise pour les signatures du bon de
  * livraison ainsi que la signature du promoteur et le cachet du site.
+ *
+ * Sprint PX (ADR-047, D1) — durcissement anti-DoS : deux controles ajoutes
+ * en plus du prefixe/de la taille :
+ * 1. Allowlist stricte de MIME (`image/png`, `image/jpeg`, `image/jpg`) —
+ *    WEBP/GIF/SVG et tout autre format sont rejetes explicitement (SVG en
+ *    particulier presente un risque XSS/XXE, cf. ADR-047).
+ * 2. Decodage reel via `isDecodableImage()` (zlib natif, zero nouvelle
+ *    dependance) — protege contre le bug de `@react-pdf/png-js` qui bloque
+ *    indefiniment (et peut faire planter le worker Node) le rendu PDF quand
+ *    un PNG RGBA porte un flux IDAT corrompu. Voir ADR-047 pour le detail.
  */
 export const base64ImageSchema = z
   .string()
-  .startsWith("data:image/", "L'image doit etre une data URL (data:image/...).")
-  .max(500_000, "L'image est trop volumineuse (500KB maximum).");
+  .refine(
+    (val) => /^data:image\/(png|jpe?g);base64,/i.test(val),
+    "Format d'image non supporté (PNG ou JPEG uniquement)."
+  )
+  .refine(
+    (val) => val.length <= 500_000,
+    "L'image est trop volumineuse (500KB maximum)."
+  )
+  .refine(isDecodableImage, "Image illisible ou corrompue.");
 
 /** Variante nullable/optionnelle — pour les champs modifiables ou supprimables. */
 export const base64ImageOptionalSchema = base64ImageSchema.optional().nullable();

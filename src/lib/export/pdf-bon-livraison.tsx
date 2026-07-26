@@ -19,6 +19,7 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateBonLivraisonPDFDTO } from "@/types/export";
 import { StatutBonLivraison } from "@/types";
+import { decodeImageDataUrl } from "@/lib/validation/image-decode";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,6 +53,51 @@ const statutLabels: Record<StatutBonLivraison, string> = {
   [StatutBonLivraison.EN_ATTENTE_SIGNATURE]: "EN ATTENTE DE SIGNATURE",
   [StatutBonLivraison.SIGNE]: "SIGNÉ",
 };
+
+// ---------------------------------------------------------------------------
+// Pré-validation des images (Sprint PX, ADR-047 D2/D3-a)
+// ---------------------------------------------------------------------------
+
+/**
+ * Texte exact du mode dégradé (ADR-047 D2), distinct du placeholder
+ * « Non renseignée » — affiché quand une image EST présente en base mais
+ * n'est pas décodable (données legacy antérieures au durcissement à
+ * l'écriture, ou tout autre cas résiduel). Ne jamais faire échouer tout le
+ * document pour ce cas : un bon de livraison signé est une pièce
+ * contractuelle existante.
+ */
+const SIGNATURE_ILLISIBLE_TEXT =
+  "Signature illisible (fichier image corrompu) — à régénérer auprès de l'administrateur du site";
+
+interface SafeImage {
+  image: string | null;
+  /** true si une image était présente mais n'a pas pu être décodée. */
+  corrupted: boolean;
+}
+
+/**
+ * Pré-valide une image AVANT qu'elle ne soit injectée dans un composant
+ * `<Image>` — donc AVANT tout appel à `renderToBuffer` (protection primaire,
+ * ADR-047 D3-a). Toute image non décodable est journalisée (niveau `warn`)
+ * puis remplacée par `null` : le composant affiche alors le placeholder
+ * dégradé au lieu de transmettre un buffer corrompu à `@react-pdf/png-js`.
+ */
+function safeSignatureImage(
+  raw: string | null,
+  context: { numero: string; champ: string }
+): SafeImage {
+  if (!raw) return { image: null, corrupted: false };
+
+  const result = decodeImageDataUrl(raw);
+  if (result.ok) return { image: raw, corrupted: false };
+
+  console.warn(
+    `[pdf-bon-livraison] Image non décodable pour le BL ${context.numero} (champ: ${context.champ})${
+      result.reason ? ` — ${result.reason}` : ""
+    }.`
+  );
+  return { image: null, corrupted: true };
+}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -297,6 +343,45 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: colors.muted,
   },
+  // Mode dégradé — image présente mais non décodable (Sprint PX, ADR-047 D2).
+  // Visuellement distinct du placeholder « Non renseignée » (fond ambre,
+  // texte orange) pour qu'un lecteur du document comprenne sans ambiguïté
+  // qu'une signature existait mais n'a pas pu être restituée.
+  signaturePlaceholderCorrupted: {
+    width: "100%",
+    height: 60,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.warning,
+    backgroundColor: "#fef3c7",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 4,
+  },
+  signaturePlaceholderCorruptedText: {
+    fontSize: 6.5,
+    color: colors.warning,
+    textAlign: "center",
+  },
+  cachetCorruptedBadge: {
+    position: "absolute",
+    right: 6,
+    bottom: 6,
+    width: 50,
+    height: 50,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.warning,
+    backgroundColor: "#fef3c7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cachetCorruptedText: {
+    fontSize: 5.5,
+    color: colors.warning,
+    textAlign: "center",
+  },
   signatureName: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
@@ -344,19 +429,29 @@ const styles = StyleSheet.create({
     color: colors.dark,
   },
   // Filigrane bon annulé (BF.7c)
+  // Volontairement NI `fixed` NI plus large que la page : le document tient sur
+  // une seule page, et un bloc `fixed` qui déborde est un risque connu de boucle
+  // de pagination dans react-pdf. Texte coupé en deux lignes courtes pour tenir
+  // sans retour à la ligne automatique.
   watermark: {
     position: "absolute",
-    top: 360,
-    left: -100,
-    width: 800,
+    top: 330,
+    left: 0,
+    right: 0,
     transform: "rotate(-35deg)",
     textAlign: "center",
   },
   watermarkText: {
-    fontSize: 46,
+    fontSize: 68,
     fontFamily: "Helvetica-Bold",
     color: colors.danger,
-    opacity: 0.25,
+    opacity: 0.22,
+  },
+  watermarkSub: {
+    fontSize: 18,
+    fontFamily: "Helvetica-Bold",
+    color: colors.danger,
+    opacity: 0.22,
   },
 });
 
@@ -367,31 +462,52 @@ const styles = StyleSheet.create({
 function SignatureBlock({
   title,
   image,
+  imageCorrupted = false,
   nom,
   date,
   overlayImage,
+  overlayCorrupted = false,
 }: {
   title: string;
   image: string | null;
+  /** true si une image était présente en base mais non décodable (Sprint PX). */
+  imageCorrupted?: boolean;
   nom: string | null;
   date: Date | null;
   /** Image superposée en coin (ex: cachet superposé à la signature promoteur) */
   overlayImage?: string | null;
+  /** true si le cachet était présent en base mais non décodable (Sprint PX). */
+  overlayCorrupted?: boolean;
 }) {
+  const overlayNode = overlayImage ? (
+    <Image src={overlayImage} style={styles.cachetImage} />
+  ) : overlayCorrupted ? (
+    <View style={styles.cachetCorruptedBadge}>
+      <Text style={styles.cachetCorruptedText}>Cachet illisible</Text>
+    </View>
+  ) : null;
+
   return (
     <View style={styles.signatureBox}>
       <Text style={styles.signatureBoxTitle}>{title}</Text>
       {image ? (
         <View style={{ position: "relative" }}>
           <Image src={image} style={styles.signatureImage} />
-          {overlayImage && <Image src={overlayImage} style={styles.cachetImage} />}
+          {overlayNode}
+        </View>
+      ) : imageCorrupted ? (
+        <View style={styles.signaturePlaceholderCorrupted}>
+          <Text style={styles.signaturePlaceholderCorruptedText}>
+            {SIGNATURE_ILLISIBLE_TEXT}
+          </Text>
+          {overlayNode}
         </View>
       ) : (
         <View style={styles.signaturePlaceholder}>
           <Text style={styles.signaturePlaceholderText}>
-            {overlayImage ? "Cachet uniquement" : "Non renseignée"}
+            {overlayImage || overlayCorrupted ? "Cachet uniquement" : "Non renseignée"}
           </Text>
-          {overlayImage && <Image src={overlayImage} style={styles.cachetImage} />}
+          {overlayNode}
         </View>
       )}
       {nom && <Text style={styles.signatureName}>{nom}</Text>}
@@ -408,14 +524,35 @@ export function BonLivraisonPDF({ data }: { data: CreateBonLivraisonPDFDTO }) {
   const { blocPaiement } = data;
   const entierementPaye = blocPaiement.resteAPayer <= 0;
 
+  // Pré-validation des 4 images AVANT tout <Image> / renderToBuffer
+  // (protection primaire, ADR-047 D3-a). Toute image non décodable bascule
+  // en mode dégradé (placeholder distinct), sans faire échouer le document.
+  const signatureClientSafe = safeSignatureImage(data.signatureClient.image, {
+    numero: data.numero,
+    champ: "signatureClient",
+  });
+  const signatureLivreurSafe = safeSignatureImage(data.signatureLivreur.image, {
+    numero: data.numero,
+    champ: "signatureLivreur",
+  });
+  const signaturePromoteurSafe = safeSignatureImage(data.signaturePromoteur.image, {
+    numero: data.numero,
+    champ: "signaturePromoteur",
+  });
+  const cachetSafe = safeSignatureImage(data.cachet, {
+    numero: data.numero,
+    champ: "cachet",
+  });
+
   return (
     <Document title={`Bon de livraison ${data.numero}`} author="FarmFlow">
       <Page size="A4" style={styles.page}>
         {/* ===================== FILIGRANE — BON ANNULÉ (BF.7c) ===================== */}
         {data.rectifiePar && (
-          <View style={styles.watermark} fixed>
-            <Text style={styles.watermarkText}>
-              ANNULÉ — REMPLACÉ PAR {data.rectifiePar.numero}
+          <View style={styles.watermark}>
+            <Text style={styles.watermarkText}>ANNULÉ</Text>
+            <Text style={styles.watermarkSub}>
+              Remplacé par {data.rectifiePar.numero}
             </Text>
           </View>
         )}
@@ -569,22 +706,26 @@ export function BonLivraisonPDF({ data }: { data: CreateBonLivraisonPDFDTO }) {
         <View style={styles.signaturesSection}>
           <SignatureBlock
             title="Le client"
-            image={data.signatureClient.image}
+            image={signatureClientSafe.image}
+            imageCorrupted={signatureClientSafe.corrupted}
             nom={data.signatureClient.nom}
             date={data.signatureClient.date}
           />
           <SignatureBlock
             title="Le livreur"
-            image={data.signatureLivreur.image}
+            image={signatureLivreurSafe.image}
+            imageCorrupted={signatureLivreurSafe.corrupted}
             nom={data.signatureLivreur.nom}
             date={data.signatureLivreur.date}
           />
           <SignatureBlock
             title="Le promoteur"
-            image={data.signaturePromoteur.image}
+            image={signaturePromoteurSafe.image}
+            imageCorrupted={signaturePromoteurSafe.corrupted}
             nom={data.signaturePromoteur.nom}
             date={null}
-            overlayImage={data.cachet}
+            overlayImage={cachetSafe.image}
+            overlayCorrupted={cachetSafe.corrupted}
           />
         </View>
 

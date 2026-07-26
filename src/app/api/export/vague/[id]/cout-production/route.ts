@@ -10,6 +10,7 @@ import { requirePermission } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-utils";
 import { getCoutProductionVague } from "@/lib/queries/finances";
 import { renderCoutProductionPDF } from "@/lib/export/pdf-cout-production";
+import { renderPdfSafely } from "@/lib/export/render-pdf-safely";
 import { Permission } from "@/types";
 import type { CreateCoutProductionPDFDTO } from "@/types/export";
 import { prisma } from "@/lib/db";
@@ -56,7 +57,13 @@ export async function GET(
     };
 
     // Générer le PDF
-    const buffer = await renderCoutProductionPDF(dto);
+    const buffer = await renderPdfSafely(() => renderCoutProductionPDF(dto), {
+      context: {
+        route: "GET /api/export/vague/[id]/cout-production",
+        documentType: "cout-production",
+        documentId: id,
+      },
+    });
     const uint8 = new Uint8Array(buffer);
 
     return new Response(uint8, {

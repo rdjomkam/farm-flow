@@ -155,6 +155,37 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-103 — `throw` dans un callback zlib async : promesse jamais réglée + uncaughtException hors chaîne (lib tierce sur entrée utilisateur)
+**Sprint :** PX | **Date :** 2026-07-26
+**Sévérité :** Critique
+**Fichier(s) :**
+- `node_modules/@react-pdf/png-js/lib/png-js.js` (lib vendue, non modifiée)
+- `src/lib/validation/image-decode.ts` (nouveau)
+- `src/lib/export/render-pdf-safely.ts` (nouveau)
+- `src/lib/export/pdf-bon-livraison.tsx`
+
+**Symptôme :**
+Une requête HTTP qui ne répond jamais (`render: 90s` dans les logs, `curl` renvoie HTTP `000`), sans 500 ni timeout, lors de la génération d'un PDF de bon de livraison. En parallèle, une `Uncaught Exception: Error: incorrect data check` (`Z_DATA_ERROR`) apparaît dans les logs serveur, émise depuis `Zlib.zlibOnError`, hors de toute route ou requête identifiable.
+
+**Cause racine :**
+`@react-pdf/png-js` (`lib/png-js.js` l. 145) fait `zlib.inflate(data, (err) => { if (err) throw err })`. Un `throw` dans un **callback asynchrone Node** n'a aucune chaîne de promesse à rejeter : la promesse englobante (`renderToBuffer()`) reste pendante **pour toujours**, et l'exception s'échappe directement au niveau `process` (comportement Node par défaut : le worker est tué). Ce chemin bugué n'est emprunté que pour les PNG **avec canal alpha (RGBA)**, à palette indexée avec transparence, ou entrelacés — exactement le format produit par une signature de pad tactile (canvas HTML à fond transparent). Un PNG RGB opaque corrompu à l'identique rend **sans aucune erreur** (le flux brut est ré-embarqué sans jamais appeler le décodeur bugué), ce qui rend le bug particulièrement trompeur à reproduire et à corréler.
+
+**Fix :**
+Double barrière, aucune des deux ne remplace l'autre :
+1. **Pré-validation à l'écriture** (`src/lib/validation/image-decode.ts`) : décoder défensivement toute image base64 issue d'une entrée utilisateur avant qu'elle n'entre en base — concaténer **tous** les chunks `IDAT` d'un PNG avant `zlib.inflateSync` (inflater le premier chunk seul produirait un faux positif de rejet sur les PNG multi-IDAT légitimes, cas fréquent et testé explicitement).
+2. **Wrapper de rendu inconditionnel** (`src/lib/export/render-pdf-safely.ts`), en défense en profondeur pour couvrir tout bug similaire futur : timeout dur (indépendant de tout le reste) + capture fail-safe de `uncaughtException` par refcount partagé tant qu'au moins un rendu est en vol — pas de filtrage par heuristique de reconnaissance de stack (voir leçon c).
+
+**Leçon / Règle :**
+a. Une bibliothèque tierce qui traite des **entrées utilisateur** doit être considérée comme pouvant ne jamais rendre la main. Tout appel de ce type doit être borné par un **timeout dur** — un `try/catch` local ne protège **pas** contre une promesse jamais réglée.
+b. Un `throw` dans un callback async (`zlib.*`, `fs.*`, streams, callbacks de libs C-bindings) ne devient **jamais** un rejet de promesse. Ne jamais présumer qu'une erreur de lib remontera dans le `.catch()` englobant.
+c. Un garde-fou basé sur une **heuristique de reconnaissance** (marqueurs de stack, patterns de message) est **fail-open** : il laisse passer tout ce qu'il ne reconnaît pas. Sur un chemin de disponibilité (une requête qui doit toujours répondre), préférer le **fail-safe** (capturer par défaut pendant toute la fenêtre à risque, ne qualifier l'attribution qu'à titre diagnostique dans le log).
+d. Un validateur maison et le décodeur réel de la lib **ne sont pas le même code**. La validation amont est un filtre d'ergonomie (message d'erreur utile, fermeture du vecteur d'écriture) — jamais la barrière ultime. La barrière de disponibilité doit être posée au point d'usage (au moment du rendu), pas seulement à l'écriture.
+e. **Un test qui mocke le moteur ne teste pas le moteur.** `src/__tests__/export/pdf-bon-livraison.test.ts` mockait intégralement `@react-pdf/renderer` (y compris `Image: () => null`) ; ses 15 tests intitulés « rend un PDF sans erreur » passaient en 86 ms sans rendre aucun PDF et n'auraient jamais pu attraper ce bug. Tout module de rendu/sérialisation/parsing doit avoir **au moins un test qui exerce le vrai moteur**, avec une entrée valide **et** une entrée hostile construite pour passer la validation amont tout en cassant le moteur réel (pas un mock du moteur qui simule l'échec).
+
+**Références :** [ADR-047](../decisions/ADR-047-robustesse-rendu-pdf.md) | [pre-analysis-sprint-PX](../analysis/pre-analysis-sprint-PX.md) | [review-sprint-PX](../reviews/review-sprint-PX.md)
+
+---
+
 ### ERR-100 — ExportButton : `className="h-8"` écrase le touch target mobile interne
 **Sprint :** CP-3 | **Date :** 2026-05-11
 **Sévérité :** Moyenne

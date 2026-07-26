@@ -21,6 +21,7 @@ import {
 } from "@/lib/export/pdf-rapport-vague-helpers";
 import type { RawReleve, BacInfo } from "@/lib/export/pdf-rapport-vague-helpers";
 import { renderRapportVaguePDF } from "@/lib/export/pdf-rapport-vague";
+import { renderPdfSafely } from "@/lib/export/render-pdf-safely";
 import { Permission, TypeReleve, StatutVague, CauseMortalite, TypeMouvement } from "@/types";
 import type { CreateRapportVaguePDFDTO, ReleveRapportPDF, StockConsumptionPDFRow, LineagePDFSection } from "@/types/export";
 import { prisma } from "@/lib/db";
@@ -399,7 +400,13 @@ export async function GET(
     };
 
     // Générer le PDF (renderRapportVaguePDF utilise JSX natif dans le fichier .tsx)
-    const buffer = await renderRapportVaguePDF(dto);
+    const buffer = await renderPdfSafely(() => renderRapportVaguePDF(dto), {
+      context: {
+        route: "GET /api/export/vague/[id]",
+        documentType: "rapport-vague",
+        documentId: id,
+      },
+    });
     const uint8 = new Uint8Array(buffer);
 
     return new Response(uint8, {

@@ -11,6 +11,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import zlib from "node:zlib";
 import { Permission } from "@/types";
 
 const {
@@ -100,7 +101,50 @@ function makeCallerMember(perms: Permission[], isActive = true) {
   };
 }
 
-const VALID_IMAGE = `data:image/png;base64,${"A".repeat(100)}`;
+/**
+ * Construit un PNG RGBA 2x2 structurellement valide (signature + IHDR + IDAT
+ * décodable + IEND). Depuis le durcissement Sprint PX (ADR-047, D1), le
+ * schema `base64ImageSchema` decode reellement l'image via
+ * `isDecodableImage()` — une chaine base64 arbitraire (ex. "A".repeat(100))
+ * n'est plus acceptee comme "image valide".
+ */
+function buildValidPngDataUrl(): string {
+  const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  function pngChunk(type: string, data: Buffer): Buffer {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length, 0);
+    const typeBuf = Buffer.from(type, "ascii");
+    const crc = Buffer.alloc(4); // CRC non verifie par le decodeur (ADR-047 D1)
+    return Buffer.concat([length, typeBuf, data, crc]);
+  }
+
+  const width = 2;
+  const height = 2;
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // colorType RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+
+  const rowBytes = 1 + width * 4;
+  const raw = Buffer.alloc(rowBytes * height, 0);
+  const compressed = zlib.deflateSync(raw);
+
+  const png = Buffer.concat([
+    PNG_SIGNATURE,
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", compressed),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+const VALID_IMAGE = buildValidPngDataUrl();
 const TOO_LARGE_IMAGE = `data:image/png;base64,${"A".repeat(500_000)}`;
 
 function baseUpdatedSite(overrides: Record<string, unknown> = {}) {

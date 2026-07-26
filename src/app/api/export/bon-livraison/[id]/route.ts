@@ -14,6 +14,7 @@ import { requirePermission } from "@/lib/permissions";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { getBonLivraisonForPDF } from "@/lib/queries/bons-livraison";
 import { renderBonLivraisonPDF } from "@/lib/export/pdf-bon-livraison";
+import { renderPdfSafely } from "@/lib/export/render-pdf-safely";
 import { Permission, StatutBonLivraison } from "@/types";
 import type {
   CreateBonLivraisonPDFDTO,
@@ -144,7 +145,13 @@ export async function GET(
       dateGeneration: new Date().toISOString(),
     };
 
-    const buffer = await renderBonLivraisonPDF(dto);
+    const buffer = await renderPdfSafely(() => renderBonLivraisonPDF(dto), {
+      context: {
+        route: "GET /api/export/bon-livraison/[id]",
+        documentType: "bon-livraison",
+        documentId: id,
+      },
+    });
     // Convertir Buffer Node.js → Uint8Array pour la Web API Response
     const uint8 = new Uint8Array(buffer);
 

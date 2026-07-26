@@ -18,6 +18,7 @@ import {
   getCoutsDetailParMois,
 } from "@/lib/queries/finances";
 import { renderRapportFinancierPDF } from "@/lib/export/pdf-rapport-financier";
+import { renderPdfSafely } from "@/lib/export/render-pdf-safely";
 import { Permission } from "@/types";
 import type { CreateRapportFinancierPDFDTO } from "@/types/export";
 import { prisma } from "@/lib/db";
@@ -133,7 +134,12 @@ export async function GET(request: NextRequest) {
     };
 
     // Générer le PDF (renderRapportFinancierPDF utilise JSX natif dans le fichier .tsx)
-    const buffer = await renderRapportFinancierPDF(dto);
+    const buffer = await renderPdfSafely(() => renderRapportFinancierPDF(dto), {
+      context: {
+        route: "GET /api/export/finances",
+        documentType: "rapport-financier",
+      },
+    });
     const uint8 = new Uint8Array(buffer);
 
     const dateStr = new Date().toISOString().slice(0, 10);
