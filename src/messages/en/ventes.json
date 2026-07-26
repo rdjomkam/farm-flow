@@ -121,6 +121,7 @@
       "factureApresLivraison": "Invoice available after delivery is closed (delivered weight determines the amount).",
       "creePar": "Created by {name}",
       "back": "Sales",
+      "menuAria": "Actions",
       "modifier": "Edit",
       "modifierTitle": "Edit sale",
       "modifierDescription": "Edit the desired fields. A reason is required.",
@@ -326,6 +327,24 @@
       "share": "Share",
       "partageEnCours": "Sharing...",
       "shareError": "Error sharing the delivery note."
+    },
+    "rectifier": {
+      "menuItem": "Rectify delivery note",
+      "title": "Rectify the delivery note",
+      "description": "The current delivery note has already been signed. A correction requires creating a new note.",
+      "warning": "The original note remains available as a historical document. The new note will cancel and replace the previous one: it will need to be signed by the client again.",
+      "motifLabel": "Reason for rectification",
+      "motifPlaceholder": "E.g.: weight entry error at delivery, quantity corrected after a client complaint...",
+      "motifHint": "{count}/500 characters (5 minimum)",
+      "confirmer": "Create rectification",
+      "error": "Error creating the rectified delivery note."
+    },
+    "historique": {
+      "title": "Delivery note history",
+      "remplace": "Cancelled and replaced",
+      "remplacePar": "Replaced by {numero}",
+      "motif": "Reason: {motif}",
+      "pdf": "PDF"
     }
   },
   "errorSection": {

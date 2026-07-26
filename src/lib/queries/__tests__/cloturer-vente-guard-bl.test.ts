@@ -33,6 +33,7 @@ const mockAssignationBacUpdateMany = vi.fn();
 const mockFactureUpdate = vi.fn();
 const mockSiteAuditLogCreate = vi.fn();
 const mockTransfertGroupeFindManyTx = vi.fn();
+const mockLigneBonLivraisonUpdate = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
@@ -40,6 +41,9 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       findFirst: (...args: unknown[]) => mockBonLivraisonFindFirst(...args),
       updateMany: (...args: unknown[]) => mockBonLivraisonUpdateMany(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockBonLivraisonFindUniqueOrThrow(...args),
+    },
+    ligneBonLivraison: {
+      update: (...args: unknown[]) => mockLigneBonLivraisonUpdate(...args),
     },
     vente: {
       update: (...args: unknown[]) => mockVenteUpdate(...args),

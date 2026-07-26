@@ -9,6 +9,10 @@
  * 5. Renders without error — BL entièrement payé (resteAPayer = 0)
  * 6. Renders without error — ligne avec morts en transport + motif (mention rendue)
  * 7. Renders without error — ligne sans morts en transport (pas de mention)
+ * 8. Renders without error — bon normal (rectifieDe/rectifiePar null, aucune mention)
+ * 9. Renders without error — bon rectificatif (rectifieDe renseigné, mention + motif)
+ * 10. Renders without error — bon annulé (rectifiePar renseigné, filigrane)
+ * 11. Renders without error — bon au milieu d'une chaîne (rectifieDe + rectifiePar ensemble)
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -53,6 +57,8 @@ function buildFullDTO(
     statut: StatutBonLivraison.SIGNE,
     signeLe: new Date("2026-07-20T10:00:00Z"),
     venteNumero: "VTE-2026-005",
+    rectifieDe: null,
+    rectifiePar: null,
     client: { nom: "Jean Client", telephone: "+237600000000" },
     lignes: [
       {
@@ -218,6 +224,66 @@ describe("renderBonLivraisonPDF", () => {
         image: "data:image/png;base64,CCCC",
         nom: null,
         date: null,
+      },
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  // -------------------------------------------------------------------------
+  // BF.7c — Rectification / annulation
+  // -------------------------------------------------------------------------
+
+  it("rend un PDF sans erreur pour un bon normal (rectifieDe et rectifiePar null, aucune mention)", async () => {
+    const dto = buildFullDTO({ rectifieDe: null, rectifiePar: null });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur pour un bon rectificatif (mention + motif rendus)", async () => {
+    const dto = buildFullDTO({
+      numero: "BL-2026-002",
+      rectifieDe: {
+        bon: { numero: "BL-2026-001", signeLe: new Date("2026-07-18T10:00:00Z") },
+        motif: "Erreur de poids constatée après livraison",
+      },
+      rectifiePar: null,
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur pour un bon rectificatif sans motif renseigné", async () => {
+    const dto = buildFullDTO({
+      numero: "BL-2026-002",
+      rectifieDe: {
+        bon: { numero: "BL-2026-001", signeLe: null },
+        motif: null,
+      },
+      rectifiePar: null,
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur pour un bon annulé (filigrane rendu)", async () => {
+    const dto = buildFullDTO({
+      numero: "BL-2026-001",
+      rectifieDe: null,
+      rectifiePar: {
+        numero: "BL-2026-002",
+        signeLe: new Date("2026-07-22T10:00:00Z"),
+      },
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur pour un bon au milieu d'une chaîne (rectificatif ET annulé)", async () => {
+    const dto = buildFullDTO({
+      numero: "BL-2026-002",
+      rectifieDe: {
+        bon: { numero: "BL-2026-001", signeLe: new Date("2026-07-18T10:00:00Z") },
+        motif: "Poids révisé après contrôle",
+      },
+      rectifiePar: {
+        numero: "BL-2026-003",
+        signeLe: new Date("2026-07-25T10:00:00Z"),
       },
     });
     await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);

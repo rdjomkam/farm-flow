@@ -121,6 +121,7 @@
       "factureApresLivraison": "La facture sera disponible apres la cloture de livraison (le poids livre fait foi du montant).",
       "creePar": "Cree par {name}",
       "back": "Ventes",
+      "menuAria": "Actions",
       "modifier": "Modifier",
       "modifierTitle": "Modifier la vente",
       "modifierDescription": "Modifiez les champs souhaites. Un motif est obligatoire.",
@@ -326,6 +327,24 @@
       "share": "Partager",
       "partageEnCours": "Partage en cours...",
       "shareError": "Erreur lors du partage du bon de livraison."
+    },
+    "rectifier": {
+      "menuItem": "Rectifier le bon de livraison",
+      "title": "Rectifier le bon de livraison",
+      "description": "Le bon de livraison actuel a deja ete signe. Une correction necessite de creer un nouveau bon.",
+      "warning": "Le bon d'origine restera consultable comme document historique. Le nouveau bon annulera et remplacera le precedent : il devra etre a nouveau fait signer par le client.",
+      "motifLabel": "Motif de la rectification",
+      "motifPlaceholder": "Ex : erreur de poids saisie a la livraison, quantite corrigee apres reclamation du client...",
+      "motifHint": "{count}/500 caracteres (5 minimum)",
+      "confirmer": "Creer le rectificatif",
+      "error": "Erreur lors de la creation du bon de livraison rectificatif."
+    },
+    "historique": {
+      "title": "Historique des bons de livraison",
+      "remplace": "Annule et remplace",
+      "remplacePar": "Remplace par {numero}",
+      "motif": "Motif : {motif}",
+      "pdf": "PDF"
     }
   },
   "errorSection": {

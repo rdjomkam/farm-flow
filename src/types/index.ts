@@ -366,6 +366,7 @@ export type {
   EnregistrerQuantitesBonLivraisonDTO,
   BonLivraisonDetailResponse,
   BlocPaiementBonLivraison,
+  CreerBonLivraisonRectificatifDTO,
   CreateReproducteurDTO,
   UpdateReproducteurDTO,
   ReproducteurFilters,

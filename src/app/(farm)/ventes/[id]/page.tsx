@@ -5,6 +5,7 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getVenteById } from "@/lib/queries/ventes";
 import { getClients } from "@/lib/queries/clients";
+import { getHistoriqueBonsLivraison } from "@/lib/queries/bons-livraison";
 import { prisma } from "@/lib/db";
 import { Permission, StatutVague } from "@/types";
 
@@ -23,7 +24,7 @@ export default async function VenteDetailPage({
   const { id } = await params;
   const activeSiteId = session.activeSiteId;
 
-  const [vente, clients, vagues] = await Promise.all([
+  const [vente, clients, vagues, bonLivraisonHistorique] = await Promise.all([
     getVenteById(id, activeSiteId),
     getClients(activeSiteId),
     prisma.vague.findMany({
@@ -40,6 +41,10 @@ export default async function VenteDetailPage({
       },
       orderBy: { dateDebut: "desc" },
     }),
+    // BF.7b — historique des BL rectifies (non actifs) de cette vente, pour
+    // affichage dans VenteDetailClient. getVenteById (BF.6b/BF.7a) n'expose
+    // que le BL actif ; l'historique passe par son propre helper (R8).
+    getHistoriqueBonsLivraison(activeSiteId, id),
   ]);
 
   if (!vente) notFound();
@@ -59,7 +64,10 @@ export default async function VenteDetailPage({
       <Header title={vente.numero} />
       <div className="p-4">
         <VenteDetailClient
-          vente={JSON.parse(JSON.stringify(vente))}
+          vente={{
+            ...JSON.parse(JSON.stringify(vente)),
+            bonLivraisonHistorique: JSON.parse(JSON.stringify(bonLivraisonHistorique)),
+          }}
           permissions={permissions}
           clients={clientOptions}
           vagues={vagueOptions}

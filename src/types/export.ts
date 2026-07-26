@@ -865,6 +865,19 @@ export interface BlocPaiementBonLivraisonPDF {
 }
 
 /**
+ * Référence à un autre bon de livraison dans une chaîne de rectification
+ * (Sprint BF phase 2, Story BF.6/BF.7). Utilisé pour les deux sens de la
+ * relation `RectificationBL` : le bon annulé (`rectifie`) et le bon qui
+ * annule celui-ci (`rectifiePar`).
+ */
+export interface BonLivraisonRefPDF {
+  /** Numéro du bon de livraison référencé (ex: "BL-2026-001") */
+  numero: string;
+  /** Date de signature du bon référencé (nullable — un BL non signé n'a pas de PDF de toute façon, mais le champ reste nullable par cohérence avec le modèle) */
+  signeLe: Date | null;
+}
+
+/**
  * Zone de signature (image base64 data URL + métadonnées) du bon de livraison PDF.
  * L'image est nullable : la zone doit s'afficher avec le libellé même sans image
  * (ex. asset promoteur/cachet non configuré).
@@ -898,6 +911,16 @@ export interface SignatureBonLivraisonPDF {
  * - Mention discrète des morts en transport / avarie si constatés sur la ligne
  * - Bloc paiement : total vente / payé / reste à payer (mis en évidence)
  * - Bloc signatures : client, livreur, promoteur (+ cachet)
+ *
+ * Rectification (Sprint BF phase 2, Story BF.7c) : dans une chaîne A ← B ← C,
+ * un même bon peut être À LA FOIS un rectificatif (il en annule un autre) ET
+ * annulé (un bon plus récent le remplace) — c'est le cas de B. Les deux blocs
+ * ci-dessous sont donc indépendants et peuvent être renseignés simultanément :
+ * - `rectifieDe` : présent uniquement si CE bon est un rectificatif — il
+ *   annule et remplace le bon référencé (mention visible + motif dans le PDF).
+ * - `rectifiePar` : présent uniquement si CE bon a été annulé et remplacé par
+ *   un bon plus récent — rendu en filigrane (le PDF reste consultable comme
+ *   pièce historique, il n'est pas "caché").
  */
 export interface CreateBonLivraisonPDFDTO {
   /** Informations du site (ferme) pour l'en-tête */
@@ -914,6 +937,19 @@ export interface CreateBonLivraisonPDFDTO {
   // --- Vente liée ---
   /** Numéro unique de la vente liée */
   venteNumero: string;
+
+  // --- Rectification (Sprint BF phase 2, Story BF.7c) ---
+  /**
+   * Renseigné uniquement si CE bon est un rectificatif : le bon qu'il annule
+   * et remplace, plus le motif de la rectification. `null` pour un bon normal
+   * ou un bon d'origine (jamais rectifié).
+   */
+  rectifieDe: { bon: BonLivraisonRefPDF; motif: string | null } | null;
+  /**
+   * Renseigné uniquement si CE bon a été annulé et remplacé par un bon plus
+   * récent (rectificatif). `null` si ce bon est toujours actif.
+   */
+  rectifiePar: BonLivraisonRefPDF | null;
 
   // --- Client ---
   client: ClientBonLivraisonPDF;

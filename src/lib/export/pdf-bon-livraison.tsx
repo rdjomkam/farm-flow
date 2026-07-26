@@ -323,6 +323,41 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: colors.muted,
   },
+  // Mention rectificatif (BF.7c)
+  rectificatifBanner: {
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderStyle: "solid",
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 16,
+  },
+  rectificatifTitle: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: colors.warning,
+    marginBottom: 3,
+  },
+  rectificatifMotif: {
+    fontSize: 9,
+    color: colors.dark,
+  },
+  // Filigrane bon annulé (BF.7c)
+  watermark: {
+    position: "absolute",
+    top: 360,
+    left: -100,
+    width: 800,
+    transform: "rotate(-35deg)",
+    textAlign: "center",
+  },
+  watermarkText: {
+    fontSize: 46,
+    fontFamily: "Helvetica-Bold",
+    color: colors.danger,
+    opacity: 0.25,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -376,6 +411,15 @@ export function BonLivraisonPDF({ data }: { data: CreateBonLivraisonPDFDTO }) {
   return (
     <Document title={`Bon de livraison ${data.numero}`} author="FarmFlow">
       <Page size="A4" style={styles.page}>
+        {/* ===================== FILIGRANE — BON ANNULÉ (BF.7c) ===================== */}
+        {data.rectifiePar && (
+          <View style={styles.watermark} fixed>
+            <Text style={styles.watermarkText}>
+              ANNULÉ — REMPLACÉ PAR {data.rectifiePar.numero}
+            </Text>
+          </View>
+        )}
+
         {/* ===================== EN-TÊTE ===================== */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -396,6 +440,23 @@ export function BonLivraisonPDF({ data }: { data: CreateBonLivraisonPDFDTO }) {
             </View>
           </View>
         </View>
+
+        {/* ===================== MENTION RECTIFICATIF (BF.7c) ===================== */}
+        {data.rectifieDe && (
+          <View style={styles.rectificatifBanner}>
+            <Text style={styles.rectificatifTitle}>
+              Annule et remplace le {data.rectifieDe.bon.numero}
+              {data.rectifieDe.bon.signeLe
+                ? ` du ${formatDate(data.rectifieDe.bon.signeLe)}`
+                : ""}
+            </Text>
+            {data.rectifieDe.motif && (
+              <Text style={styles.rectificatifMotif}>
+                Motif : {data.rectifieDe.motif}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* ===================== CLIENT ===================== */}
         <View style={styles.clientSection}>

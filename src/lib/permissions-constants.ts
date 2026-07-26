@@ -105,6 +105,7 @@ export const PERMISSION_GROUPS = {
     Permission.VENTES_VOIR,
     Permission.VENTES_CREER,
     Permission.VENTES_MODIFIER,
+    Permission.BONS_LIVRAISON_RECTIFIER,
     Permission.FACTURES_VOIR,
     Permission.FACTURES_GERER,
     Permission.PAIEMENTS_CREER,

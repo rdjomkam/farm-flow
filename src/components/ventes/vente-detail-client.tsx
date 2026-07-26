@@ -22,6 +22,9 @@ import {
   Trash2,
   MoreVertical,
   FileSignature,
+  RefreshCw,
+  History,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +61,7 @@ import { effectiveMontantBrut, totalDepensesVente, montantNetVente } from "@/lib
 import { DepenseVenteDialog } from "@/components/ventes/depense-vente-dialog";
 import { DeleteDepenseConfirmDialog } from "@/components/ventes/delete-depense-confirm-dialog";
 import { BonLivraisonFlow } from "@/components/ventes/bon-livraison-flow";
+import { useToast } from "@/components/ui/toast";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -132,7 +136,20 @@ interface VenteData {
   lignes?: LigneVenteDisplay[];
   releves?: ReleveVenteDisplay[];
   depenses?: DepenseVenteDisplay[];
-  bonLivraison?: { id: string; numero: string; statut: string } | null;
+  /** BF.6b — BL actif de la vente (rectifiePar null), null si aucun. */
+  bonLivraisonActif?: { id: string; numero: string; statut: string } | null;
+  /**
+   * BF.7b — Historique des BL rectifies (rectifiePar non null) pour cette
+   * vente, du plus recent au plus ancien. Fourni par
+   * `getHistoriqueBonsLivraison` (src/lib/queries/bons-livraison.ts).
+   */
+  bonLivraisonHistorique?: {
+    id: string;
+    numero: string;
+    signeLe: string | null;
+    motifRectification: string | null;
+    rectifiePar: { numero: string } | null;
+  }[];
 }
 
 interface DepenseVenteDisplay {
@@ -191,6 +208,7 @@ export function VenteDetailClient({
   const queryClient = useQueryClient();
   const venteService = useVenteService();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -208,7 +226,18 @@ export function VenteDetailClient({
 
   // Bon de livraison (Sprint BL.4) — flux mobile signature
   const [bonLivraisonFlowOpen, setBonLivraisonFlowOpen] = useState(false);
-  const bonLivraisonSigne = vente.bonLivraison?.statut === StatutBonLivraison.SIGNE;
+  const bonLivraisonSigne = vente.bonLivraisonActif?.statut === StatutBonLivraison.SIGNE;
+
+  // Rectification du bon de livraison (Sprint BF phase 2, Story BF.7b)
+  const [rectifierOpen, setRectifierOpen] = useState(false);
+  const [rectifierMotif, setRectifierMotif] = useState("");
+  const [rectifierLoading, setRectifierLoading] = useState(false);
+  const motifRectificationValid =
+    rectifierMotif.trim().length >= 5 && rectifierMotif.trim().length <= 500;
+  const canRectifierBonLivraison =
+    vente.statut === StatutVente.LIVREE &&
+    bonLivraisonSigne &&
+    permissions.includes(Permission.BONS_LIVRAISON_RECTIFIER);
 
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
@@ -266,6 +295,36 @@ export function VenteDetailClient({
     }
   }
 
+  async function handleRectifierBonLivraison() {
+    if (!vente.bonLivraisonActif) return;
+    setRectifierLoading(true);
+    try {
+      const result = await venteService.creerBonLivraisonRectificatif(
+        vente.bonLivraisonActif.id,
+        {
+          bonLivraisonOrigineId: vente.bonLivraisonActif.id,
+          motifRectification: rectifierMotif.trim(),
+        }
+      );
+      if (result.ok) {
+        setRectifierOpen(false);
+        setRectifierMotif("");
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        router.refresh();
+        // Le flux BL existant recharge toujours le BL actif de la vente —
+        // il pointera donc automatiquement sur le rectificatif fraichement cree.
+        setBonLivraisonFlowOpen(true);
+      } else {
+        toast({
+          title: result.error ?? t("bonLivraison.rectifier.error"),
+          variant: "error",
+        });
+      }
+    } finally {
+      setRectifierLoading(false);
+    }
+  }
+
   async function handleDelete() {
     setDeleteLoading(true);
     try {
@@ -319,7 +378,12 @@ export function VenteDetailClient({
         {canEdit && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label={t("ventes.detail.menuAria")}
+              >
                 <MoreVertical className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -339,6 +403,19 @@ export function VenteDetailClient({
                   {bonLivraisonSigne
                     ? t("bonLivraison.menuItemVoir")
                     : t("bonLivraison.menuItem")}
+                </DropdownMenuItem>
+              )}
+
+              {/* Rectifier le bon de livraison (BF.7b) */}
+              {canRectifierBonLivraison && (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setRectifierMotif("");
+                    setRectifierOpen(true);
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {t("bonLivraison.rectifier.menuItem")}
                 </DropdownMenuItem>
               )}
 
@@ -400,6 +477,58 @@ export function VenteDetailClient({
               className="min-h-[44px]"
             >
               {deleteLoading ? "..." : t("ventes.detail.deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rectifier bon de livraison — dialog de motif (controlled, no trigger) */}
+      <Dialog
+        open={rectifierOpen}
+        onOpenChange={(open) => {
+          setRectifierOpen(open);
+          if (!open) setRectifierMotif("");
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("bonLivraison.rectifier.title")}</DialogTitle>
+            <DialogDescription>
+              {t("bonLivraison.rectifier.description")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg bg-warning/10 p-3 flex items-start gap-2 text-sm text-warning">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{t("bonLivraison.rectifier.warning")}</span>
+          </div>
+
+          <div className="flex flex-col gap-1.5 py-2">
+            <label className="text-sm font-medium">
+              {t("bonLivraison.rectifier.motifLabel")} <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              value={rectifierMotif}
+              onChange={(e) => setRectifierMotif(e.target.value)}
+              placeholder={t("bonLivraison.rectifier.motifPlaceholder")}
+              rows={3}
+              maxLength={500}
+              hint={t("bonLivraison.rectifier.motifHint", {
+                count: rectifierMotif.trim().length,
+              })}
+            />
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button
+              onClick={handleRectifierBonLivraison}
+              disabled={rectifierLoading || !motifRectificationValid}
+              className="min-h-[44px]"
+            >
+              {rectifierLoading ? "..." : t("bonLivraison.rectifier.confirmer")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -786,7 +915,7 @@ export function VenteDetailClient({
                 <div className="flex flex-col">
                   <span className="font-medium text-sm">{t("bonLivraison.linkTitle")}</span>
                   <span className="text-xs text-muted-foreground">
-                    {vente.bonLivraison?.numero}
+                    {vente.bonLivraisonActif?.numero}
                   </span>
                 </div>
               </div>
@@ -794,6 +923,58 @@ export function VenteDetailClient({
             </CardContent>
           </Card>
         )}
+
+      {/* Historique des bons de livraison rectifies (BF.7b) */}
+      {(vente.bonLivraisonHistorique ?? []).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="h-4 w-4" />
+              {t("bonLivraison.historique.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 flex flex-col gap-2">
+            {(vente.bonLivraisonHistorique ?? []).map((bl) => (
+              <div
+                key={bl.id}
+                className="rounded-lg bg-muted/30 p-3 flex items-center justify-between gap-2 text-sm"
+              >
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="font-medium truncate">{bl.numero}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {bl.signeLe
+                      ? new Date(bl.signeLe).toLocaleDateString(locale)
+                      : "-"}
+                  </span>
+                  <Badge variant="annulee" className="w-fit text-[10px] px-1.5 py-0">
+                    {bl.rectifiePar
+                      ? t("bonLivraison.historique.remplacePar", {
+                          numero: bl.rectifiePar.numero,
+                        })
+                      : t("bonLivraison.historique.remplace")}
+                  </Badge>
+                  {bl.motifRectification && (
+                    <span className="text-xs text-muted-foreground italic truncate">
+                      {t("bonLivraison.historique.motif", {
+                        motif: bl.motifRectification,
+                      })}
+                    </span>
+                  )}
+                </div>
+                <a
+                  href={`/api/export/bon-livraison/${bl.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary shrink-0 hover:underline"
+                >
+                  <FileDown className="h-3.5 w-3.5" />
+                  {t("bonLivraison.historique.pdf")}
+                </a>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Releves linked to this vente (VENTE + AVARIE) */}
       {(vente.releves ?? []).length > 0 && (

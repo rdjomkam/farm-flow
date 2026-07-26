@@ -1,9 +1,11 @@
 # Sprint BF — Fusion quantités livrées ↔ bon de livraison + BL rectificatif
 
-**Statut** : phase 1 ✅ CLÔTURÉE — APPROVED_WITH_NITS · phase 2 (rectificatif) À FAIRE
+**Statut** : ✅ CLÔTURÉ — phase 1 et phase 2 livrées (APPROVED)
 **Lancé le** : 2026-07-21
 **Phase 1 clôturée le** : 2026-07-26
-**Review** : [review-sprint-BF.md](../reviews/review-sprint-BF.md)
+**Review phase 1** : [review-sprint-BF.md](../reviews/review-sprint-BF.md)
+**Review phase 2** : [review-sprint-BF-phase2.md](../reviews/review-sprint-BF-phase2.md)
+**Phase 2 clôturée le** : 2026-07-26
 **Origine** : anomalie de conception détectée par l'utilisateur après le sprint BL
 
 ## Problème

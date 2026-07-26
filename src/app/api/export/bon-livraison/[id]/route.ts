@@ -67,16 +67,25 @@ export async function GET(
         const designation =
           ligne.lotAlevins?.code != null ? "Alevins silure" : "Silure";
 
-        // nombrePoissons : nombre effectivement livre. `signerBonLivraison`
-        // decremente deja LigneVente.nombrePoissons des morts en transport
-        // au moment de la signature (voir bons-livraison.ts) — comme le PDF
-        // n'est genere qu'apres signature (guard ci-dessus), la valeur
-        // courante de la ligne de vente est bien le nombre recu par le
-        // client, pas le nombre commande.
+        // nombrePoissons : nombre effectivement livre. Lu en PRIORITE depuis
+        // le snapshot LigneBonLivraison.nombrePoissonsLivres (fige a LA
+        // signature de CE bon — review Sprint BF phase 2, finding Haute).
+        // LigneVente.nombrePoissons est un champ d'etat MUTABLE, reecrit par
+        // chaque rectification ulterieure : regenerer le PDF d'un bon
+        // d'origine apres rectification y lisait a tort le nombre de
+        // poissons post-rectification, melangeant deux instantanes
+        // differents sur un document a valeur contractuelle.
+        // Fallback sur LigneVente.nombrePoissons uniquement pour les BL
+        // signes AVANT ce correctif (nombrePoissonsLivres alors null) : ces
+        // BL legacy peuvent encore afficher une valeur post-rectification
+        // s'ils sont regeneres apres une rectification — limitation acceptee,
+        // aucune donnee historique ne permet de la reconstituer.
+        const nombrePoissons = ligneBL?.nombrePoissonsLivres ?? ligne.nombrePoissons;
+
         return {
           designation,
           nomBac: ligne.bac?.nom ?? null,
-          nombrePoissons: ligne.nombrePoissons,
+          nombrePoissons,
           poidsCommandeKg,
           poidsLivreKg,
           ecartKg,
@@ -95,6 +104,21 @@ export async function GET(
       statut: bonLivraison.statut as StatutBonLivraison,
       signeLe: bonLivraison.signeLe,
       venteNumero: bonLivraison.vente.numero,
+      rectifieDe: bonLivraison.rectifie
+        ? {
+            bon: {
+              numero: bonLivraison.rectifie.numero,
+              signeLe: bonLivraison.rectifie.signeLe,
+            },
+            motif: bonLivraison.motifRectification ?? null,
+          }
+        : null,
+      rectifiePar: bonLivraison.rectifiePar
+        ? {
+            numero: bonLivraison.rectifiePar.numero,
+            signeLe: bonLivraison.rectifiePar.signeLe,
+          }
+        : null,
       client: {
         nom: bonLivraison.vente.client.nom,
         telephone: bonLivraison.vente.client.telephone ?? null,

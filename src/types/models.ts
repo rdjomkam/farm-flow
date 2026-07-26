@@ -135,6 +135,8 @@ export enum Permission {
   DEPENSES_VENTE_RETRO = "DEPENSES_VENTE_RETRO",
   // Besoins retroactifs (Sprint BR)
   BESOINS_MODIFIER_RETRO = "BESOINS_MODIFIER_RETRO",
+  // Bons de livraison rectificatifs (Sprint BF phase 2)
+  BONS_LIVRAISON_RECTIFIER = "BONS_LIVRAISON_RECTIFIER",
 }
 
 /**
@@ -1091,6 +1093,11 @@ export interface VenteWithRelations extends Vente {
   user: User;
   facture: Facture | null;
   lignes?: LigneVente[];
+  /**
+   * Tous les BL de la vente (rectificatifs inclus, Sprint BF phase 2) — le BL
+   * actif est celui dont `rectifiePar` est null.
+   */
+  bonsLivraison?: BonLivraison[];
 }
 
 /**
@@ -1178,6 +1185,18 @@ export interface BonLivraison {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /**
+   * BL rectifie par celui-ci (Sprint BF phase 2). L'original reste SIGNE ;
+   * "annule" se deduit de la presence de rectifiePar, sans statut supplementaire.
+   */
+  rectifieId: string | null;
+  rectifie?: BonLivraison | null;
+  rectifiePar?: BonLivraison | null;
+  /**
+   * Motif de la rectification (Sprint BF phase 2) — obligatoire uniquement
+   * sur un rectificatif (rectifieId non null), null sinon.
+   */
+  motifRectification: string | null;
   /** Quantites livrees par ligne de vente (Sprint BF) */
   lignes?: LigneBonLivraison[];
   createdAt: Date;
@@ -1208,6 +1227,15 @@ export interface LigneBonLivraison {
   /** Poissons morts pendant le transport (saisi explicitement — sprint AV, jamais deduit du poids) */
   nombreMortsTransport: number;
   motifAvarie: string | null;
+  /**
+   * Nombre de poissons effectivement livres pour cette ligne, fige au moment
+   * de LA signature de CE bon (snapshot immuable, review Sprint BF phase 2 —
+   * corrige le PDF d'un BL rectifie qui affichait le nombre de poissons
+   * courant de LigneVente au lieu du nombre constate a sa propre signature).
+   * Null tant que le BL n'est pas signe, et pour les lignes creees avant ce
+   * correctif (fallback sur LigneVente.nombrePoissons a la lecture PDF).
+   */
+  nombrePoissonsLivres: number | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;

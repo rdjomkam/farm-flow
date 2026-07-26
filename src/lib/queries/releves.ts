@@ -661,14 +661,19 @@ export async function deleteReleve(siteId: string, id: string) {
     }
 
     // Protection contre la suppression de releves lies a une operation metier parente (CG.3 — f6d7214).
-    // Deux mecanismes de check :
+    // Trois mecanismes de check :
     //   1. typeReleve ∈ {TRANSFERT, ARRIVAGE, VENTE} + FK parente non-null
     //      → ces types materialisent un evenement metier direct ; on refuse si le lien est encore actif
     //        (transfertGroupeId, arrivageId ou venteId non-null).
     //   2. calibrageId != null (independamment du typeReleve)
     //      → les releves auto-crees par un calibrage sont de type MORTALITE ou BIOMETRIE ;
     //        il n'existe pas de typeReleve CALIBRAGE. La presence de calibrageId suffit a les proteger.
-    // Dans les deux cas : la suppression du parent (Transfert/Vente/Arrivage/Calibrage) cascade
+    //   3. typeReleve === MORTALITE + causeMortalite === AVARIE + venteId non-null (Sprint BF phase 2)
+    //      → releve d'avarie transport cree par signerBonLivraison. Pas dans PROTECTED_RELEVE_TYPES
+    //        (son typeReleve reste MORTALITE, pas VENTE) : sans ce 3e mecanisme, on pouvait
+    //        supprimer la mortalite d'un BL signe et contourner l'immuabilite de la signature —
+    //        la correction doit passer par un bon de livraison rectificatif, jamais par suppression.
+    // Dans tous les cas : la suppression du parent (Transfert/Vente/Arrivage/Calibrage) cascade
     // via onDelete: SetNull qui decroche le releve — mais comme l'utilisateur ne peut pas supprimer
     // le parent depuis l'UI sans passer par une operation metier dediee, ce risque est theorique.
     // 1b. Garde-fou : refuser la suppression si le releve est lie a une operation parente
@@ -685,7 +690,12 @@ export async function deleteReleve(siteId: string, id: string) {
       arrivageId?: string | null;
       venteId?: string | null;
       calibrageId?: string | null;
+      causeMortalite?: CauseMortalite | null;
     };
+    const isAvarieLieeVente =
+      releve.typeReleve === TypeReleveEnum.MORTALITE &&
+      r.causeMortalite === CauseMortalite.AVARIE &&
+      !!r.venteId;
 
     if (isProtectedType) {
       if (r.transfertGroupeId) {
@@ -697,6 +707,12 @@ export async function deleteReleve(siteId: string, id: string) {
       if (r.venteId) {
         throw new Error("Ce releve est lie a une vente. Supprimez d'abord l'operation parente.");
       }
+    }
+    if (isAvarieLieeVente) {
+      throw new Error(
+        "Ce releve de mortalite (avarie) est lie a un bon de livraison signe. " +
+          "La correction passe par un bon de livraison rectificatif, pas par une suppression."
+      );
     }
     // Calibrage peut creer des releves MORTALITE ou BIOMETRIE avec calibrageId
     if (r.calibrageId) {

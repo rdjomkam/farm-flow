@@ -19,6 +19,7 @@ import type {
   BonLivraisonDetailResponse,
   SignerBonLivraisonDTO,
   EnregistrerQuantitesBonLivraisonDTO,
+  CreerBonLivraisonRectificatifDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -289,6 +290,25 @@ export function useVenteService() {
     [call]
   );
 
+  /**
+   * Cree un bon de livraison rectificatif a partir d'un BL SIGNE (Sprint BF
+   * phase 2, Story BF.7a). `bonLivraisonOrigineId` = id du BL a rectifier
+   * (correspond au segment de route).
+   */
+  const creerBonLivraisonRectificatif = useCallback(
+    (bonLivraisonOrigineId: string, dto: CreerBonLivraisonRectificatifDTO) =>
+      call<BonLivraisonWithRelations>(
+        `/api/bons-livraison/${bonLivraisonOrigineId}/rectifier`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Bon de livraison rectificatif créé." }
+      ),
+    [call]
+  );
+
   return {
     listVentes,
     getVente,
@@ -311,5 +331,6 @@ export function useVenteService() {
     getBonLivraison,
     enregistrerQuantitesBonLivraison,
     signerBonLivraison,
+    creerBonLivraisonRectificatif,
   };
 }

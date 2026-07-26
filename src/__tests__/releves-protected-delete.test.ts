@@ -9,13 +9,17 @@
  *  5. typeReleve=TRANSFERT, toutes FK null             → suppression OK (relevé orphelin)
  *  6. typeReleve=BIOMETRIE, toutes FK null             → suppression OK (inchangé)
  *  7. typeReleve=MORTALITE, toutes FK null             → suppression OK (inchangé)
+ *  8. typeReleve=MORTALITE, causeMortalite=AVARIE, venteId non-null → throw (Sprint BF phase 2 :
+ *     ferme le trou de sécurité qui permettait de supprimer la mortalité d'un BL signé)
+ *  9. typeReleve=MORTALITE, causeMortalite=MALADIE, venteId non-null → suppression OK (le lien
+ *     venteId seul, sans cause AVARIE, ne doit pas déclencher la protection)
  *
  * Stratégie : mock complet de Prisma ($transaction).
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { deleteReleve } from "@/lib/queries/releves";
-import { TypeReleve } from "@/types";
+import { TypeReleve, CauseMortalite } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mock Prisma
@@ -64,6 +68,7 @@ function makeReleve(overrides: {
   arrivageId?: string | null;
   venteId?: string | null;
   calibrageId?: string | null;
+  causeMortalite?: string | null;
 }) {
   return {
     id: "releve-1",
@@ -75,6 +80,7 @@ function makeReleve(overrides: {
     arrivageId: overrides.arrivageId ?? null,
     venteId: overrides.venteId ?? null,
     calibrageId: overrides.calibrageId ?? null,
+    causeMortalite: overrides.causeMortalite ?? null,
     consommations: [],
     activite: null,
   };
@@ -181,6 +187,37 @@ describe("deleteReleve — garde-fou relevés liés à une opération parente", 
   it("autorise la suppression si typeReleve=MORTALITE et toutes FK null", async () => {
     mockReleveFindFirst.mockResolvedValue(
       makeReleve({ typeReleve: TypeReleve.MORTALITE })
+    );
+
+    const result = await deleteReleve("site-1", "releve-1");
+    expect(result.vagueId).toBe("vague-1");
+    expect(mockReleveDelete).toHaveBeenCalledOnce();
+  });
+
+  // Test 8 — MORTALITE/AVARIE liée à une vente (BL signé) → refus (Sprint BF phase 2)
+  it("refuse la suppression si typeReleve=MORTALITE, causeMortalite=AVARIE et venteId non-null", async () => {
+    mockReleveFindFirst.mockResolvedValue(
+      makeReleve({
+        typeReleve: TypeReleve.MORTALITE,
+        causeMortalite: CauseMortalite.AVARIE,
+        venteId: "vente-1",
+      })
+    );
+
+    await expect(deleteReleve("site-1", "releve-1")).rejects.toThrow(
+      "bon de livraison rectificatif"
+    );
+    expect(mockReleveDelete).not.toHaveBeenCalled();
+  });
+
+  // Test 9 — MORTALITE liée à une vente mais cause ≠ AVARIE → suppression OK (pas de faux positif)
+  it("autorise la suppression si typeReleve=MORTALITE, venteId non-null mais causeMortalite≠AVARIE", async () => {
+    mockReleveFindFirst.mockResolvedValue(
+      makeReleve({
+        typeReleve: TypeReleve.MORTALITE,
+        causeMortalite: CauseMortalite.MALADIE,
+        venteId: "vente-1",
+      })
     );
 
     const result = await deleteReleve("site-1", "releve-1");

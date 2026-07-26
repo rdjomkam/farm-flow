@@ -305,6 +305,8 @@ enum Permission {
   DEPENSES_VENTE_RETRO
   // Besoins rétroactifs (Sprint BR)
   BESOINS_MODIFIER_RETRO
+  // Bons de livraison rectificatifs (Sprint BF phase 2)
+  BONS_LIVRAISON_RECTIFIER
 }
 
 // ──────────────────────────────────────────
@@ -1720,7 +1722,11 @@ model Vente {
   userId            String
   user              User             @relation("VenteUser", fields: [userId], references: [id])
   facture           Facture?
-  bonLivraison      BonLivraison?
+  /**
+   * Plusieurs BL par vente possibles (rectificatifs, Sprint BF phase 2) — le BL
+   * actif est celui dont `rectifiePar` est null.
+   */
+  bonsLivraison     BonLivraison[]
   releves           Releve[]         @relation("VenteReleves")
   lignes            LigneVente[]     @relation("VenteLignes")
   depenses          Depense[]        @relation("VenteDepenses")
@@ -1792,16 +1798,39 @@ model Facture {
 }
 
 /**
- * BonLivraison — Sprint BL. Un bon de livraison par vente (1:1), signé sur
- * place par le client et le livreur au moment de la livraison. Obligatoire
- * (statut SIGNE) pour passer une vente de EN_PREPARATION à LIVREE.
+ * BonLivraison — Sprint BL. Bon de livraison signé sur place par le client et
+ * le livreur au moment de la livraison. Obligatoire (statut SIGNE) pour passer
+ * une vente de EN_PREPARATION à LIVREE.
+ *
+ * Depuis Sprint BF phase 2 : une vente peut avoir plusieurs BL (rectificatifs),
+ * voir `rectifieId`/`rectifiePar`. Le BL actif est celui dont `rectifiePar` est
+ * null.
  */
 model BonLivraison {
   id                  String              @id @default(cuid())
   numero              String              @unique
-  venteId             String              @unique
+  /**
+   * Plusieurs BL peuvent exister pour une meme vente (rectificatifs, Sprint BF
+   * phase 2) — l'unicite a ete levee au profit d'un index simple. Un seul BL
+   * est "actif" a la fois : celui pour lequel `rectifiePar` est null.
+   */
+  venteId             String
   vente               Vente               @relation(fields: [venteId], references: [id])
   statut              StatutBonLivraison  @default(BROUILLON)
+  /**
+   * BL rectifie par celui-ci (chaine A ← B ← C possible). L'original reste
+   * SIGNE — le fait historique est immuable ; « annule » se deduit de la
+   * presence de rectifiePar, sans statut supplementaire (Sprint BF phase 2).
+   */
+  rectifieId          String?             @unique
+  rectifie            BonLivraison?       @relation("RectificationBL", fields: [rectifieId], references: [id])
+  rectifiePar         BonLivraison?       @relation("RectificationBL")
+  /**
+   * Motif de la rectification (Sprint BF phase 2, Story BF.7a) — obligatoire
+   * uniquement sur un rectificatif (rectifieId non null) ; null sur un BL
+   * normal. Nullable au niveau schema (R7) car un BL normal n'en porte jamais.
+   */
+  motifRectification  String?
   /**
    * Date de livraison saisie à l'écran 1 du flux (Sprint BF), avant signature.
    */
@@ -1833,6 +1862,7 @@ model BonLivraison {
 
   @@index([siteId])
   @@index([userId])
+  @@index([venteId])
 }
 
 // ──────────────────────────────────────────
@@ -1854,6 +1884,13 @@ model LigneBonLivraison {
    */
   nombreMortsTransport Int          @default(0)
   motifAvarie          String?
+  /**
+   * Nombre de poissons effectivement livrés pour cette ligne, figé au moment
+   * de LA signature de CE bon (snapshot immuable — review Sprint BF phase 2).
+   * Nullable : les lignes créées avant ce correctif n'ont pas cette valeur
+   * (fallback sur LigneVente.nombrePoissons à la lecture PDF).
+   */
+  nombrePoissonsLivres Int?
   siteId               String
   site                 Site         @relation(fields: [siteId], references: [id])
   createdAt            DateTime     @default(now())

@@ -67,7 +67,14 @@ const VENTE_DETAIL_INCLUDE = {
       paiements: { orderBy: { date: "desc" as const } },
     },
   },
-  bonLivraison: { select: { id: true, numero: true, statut: true } },
+  // BF.6b : une vente peut porter plusieurs BL (historique de rectifications),
+  // mais un seul est actif (rectifiePar null). On ne remonte que celui-ci ici
+  // et on l'expose au consommateur sous forme singuliere (bonLivraisonActif,
+  // cf. getVenteById) pour eviter le piege d'un tableau traite comme un objet.
+  bonsLivraison: {
+    where: { rectifiePar: { is: null } },
+    select: { id: true, numero: true, statut: true },
+  },
   lignes: {
     select: {
       id: true,
@@ -155,12 +162,26 @@ export async function getVentes(
   return { data, total };
 }
 
-/** Recupere une vente par ID avec ses relations completes */
+/**
+ * Recupere une vente par ID avec ses relations completes.
+ *
+ * BF.6b : `bonsLivraison` (relation, potentiellement plusieurs BL en cas de
+ * rectification) est reduit ici a une valeur singuliere `bonLivraisonActif`
+ * (le BL dont `rectifiePar` est null, ou `null` si aucun BL actif) pour que
+ * les consommateurs (UI) n'aient jamais a manipuler un tableau.
+ */
 export async function getVenteById(id: string, siteId: string) {
-  return prisma.vente.findFirst({
+  const vente = await prisma.vente.findFirst({
     where: { id, siteId },
     include: VENTE_DETAIL_INCLUDE,
   });
+  if (!vente) return null;
+
+  const { bonsLivraison, ...rest } = vente;
+  return {
+    ...rest,
+    bonLivraisonActif: bonsLivraison[0] ?? null,
+  };
 }
 
 // ---------------------------------------------------------------------------

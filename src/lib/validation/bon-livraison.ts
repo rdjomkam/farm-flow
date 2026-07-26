@@ -91,3 +91,30 @@ export const enregistrerQuantitesBonLivraisonSchema = z.object({
 export type EnregistrerQuantitesBonLivraisonInput = z.infer<
   typeof enregistrerQuantitesBonLivraisonSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Rectificatif (Sprint BF phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Motif de rectification — obligatoire. Un BL signe est un document immuable ;
+ * on exige de savoir *pourquoi* il est annule et remplace (pratique comptable
+ * de l'avoir sur facture).
+ */
+export const motifRectificationSchema = z
+  .string()
+  .trim()
+  .min(5, "Le motif de rectification doit contenir au moins 5 caracteres.")
+  .max(500, "Le motif de rectification ne peut pas depasser 500 caracteres.");
+
+/** Corps de la requete de creation d'un bon de livraison rectificatif */
+export const creerBonLivraisonRectificatifSchema = z.object({
+  bonLivraisonOrigineId: z
+    .string()
+    .min(1, "L'identifiant du bon de livraison a rectifier est obligatoire."),
+  motifRectification: motifRectificationSchema,
+});
+
+export type CreerBonLivraisonRectificatifInput = z.infer<
+  typeof creerBonLivraisonRectificatifSchema
+>;

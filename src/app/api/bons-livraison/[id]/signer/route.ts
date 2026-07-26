@@ -5,18 +5,40 @@ import { signerBonLivraison } from "@/lib/queries/bons-livraison";
 import { signerBonLivraisonSchema } from "@/lib/validation/bon-livraison";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { ConservationError } from "@/lib/errors";
+import { prisma } from "@/lib/db";
 
 type Params = { params: Promise<{ id: string }> };
 
 /**
  * POST /api/bons-livraison/[id]/signer
  * Signe un bon de livraison (signature client + livreur).
- * Permission : VENTES_MODIFIER
+ * Permission : VENTES_MODIFIER — SAUF pour un rectificatif (`rectifieId`
+ * non null, Sprint BF phase 2 review, durcissement 1), qui exige EN PLUS
+ * BONS_LIVRAISON_RECTIFIER : signer un rectificatif applique reellement les
+ * corrections de stock/mortalites/montants sur une vente deja livree — c'est
+ * cet acte, pas la saisie des quantites (`PUT .../quantites`, qui reste sous
+ * VENTES_MODIFIER seul), qui engage la correction. Un brouillon de
+ * rectificatif non signe n'a aucun effet, donc modifier ses quantites ne
+ * necessite pas le droit de rectifier.
  */
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_MODIFIER);
     const { id } = await params;
+
+    const blCheck = await prisma.bonLivraison.findFirst({
+      where: { id, siteId: auth.activeSiteId },
+      select: { rectifieId: true },
+    });
+    if (
+      blCheck?.rectifieId != null &&
+      !auth.permissions.includes(Permission.BONS_LIVRAISON_RECTIFIER)
+    ) {
+      return apiError(
+        403,
+        "Vous n'avez pas la permission de signer un bon de livraison rectificatif."
+      );
+    }
 
     const body = await request.json();
     const parseResult = signerBonLivraisonSchema.safeParse(body);

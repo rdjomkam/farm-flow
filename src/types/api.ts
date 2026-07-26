@@ -1110,6 +1110,17 @@ export interface BonLivraisonDetailResponse {
   blocPaiement: BlocPaiementBonLivraison;
 }
 
+/**
+ * DTO pour creer un bon de livraison rectificatif (Sprint BF phase 2, Story BF.7a).
+ * `bonLivraisonOrigineId` est redondant avec l'id de la route
+ * (POST /api/bons-livraison/[id]/rectifier) mais reste requis par coherence
+ * avec le schema Zod deja valide en Story BF.6.
+ */
+export interface CreerBonLivraisonRectificatifDTO {
+  bonLivraisonOrigineId: string;
+  motifRectification: string;
+}
+
 // ---------------------------------------------------------------------------
 // Reproducteurs
 // ---------------------------------------------------------------------------
