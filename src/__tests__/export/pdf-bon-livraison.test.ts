@@ -1,12 +1,14 @@
 /**
  * Tests unitaires — renderBonLivraisonPDF
  *
- * Cas couverts :
+ * Cas couverts (quantités venant du snapshot du BL — Sprint BF, story BF.4) :
  * 1. Renders without error — DTO complet (3 signatures + cachet) → Buffer
  * 2. Renders without error — assets promoteur absents (signaturePromoteur/cachet null)
  * 3. Renders without error — écarts de livraison (poids livré != poids commandé, positif/négatif)
- * 4. Renders without error — poidsLivreKg null (ligne pas encore renseignée)
+ * 4. Renders without error — poidsLivreKg null (ligne legacy pré-Sprint BF, pas de LigneBonLivraison)
  * 5. Renders without error — BL entièrement payé (resteAPayer = 0)
+ * 6. Renders without error — ligne avec morts en transport + motif (mention rendue)
+ * 7. Renders without error — ligne sans morts en transport (pas de mention)
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -60,6 +62,8 @@ function buildFullDTO(
         poidsCommandeKg: 150,
         poidsLivreKg: 148,
         ecartKg: -2,
+        nombreMortsTransport: 0,
+        motifAvarie: null,
       },
     ],
     blocPaiement: { totalVente: 750000, paye: 300000, resteAPayer: 450000 },
@@ -110,6 +114,8 @@ describe("renderBonLivraisonPDF", () => {
           poidsCommandeKg: 80,
           poidsLivreKg: 75,
           ecartKg: -5,
+          nombreMortsTransport: 0,
+          motifAvarie: null,
         },
         {
           designation: "Silure",
@@ -118,13 +124,15 @@ describe("renderBonLivraisonPDF", () => {
           poidsCommandeKg: 40,
           poidsLivreKg: 42,
           ecartKg: 2,
+          nombreMortsTransport: 0,
+          motifAvarie: null,
         },
       ],
     });
     await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
   });
 
-  it("rend un PDF sans erreur quand poidsLivreKg est null (ligne non renseignée)", async () => {
+  it("rend un PDF sans erreur quand poidsLivreKg est null (BL legacy pré-Sprint BF, sans LigneBonLivraison)", async () => {
     const dto = buildFullDTO({
       lignes: [
         {
@@ -134,6 +142,44 @@ describe("renderBonLivraisonPDF", () => {
           poidsCommandeKg: 10,
           poidsLivreKg: null,
           ecartKg: null,
+          nombreMortsTransport: 0,
+          motifAvarie: null,
+        },
+      ],
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur avec une ligne comportant des morts en transport et un motif (mention affichée)", async () => {
+    const dto = buildFullDTO({
+      lignes: [
+        {
+          designation: "Silure",
+          nomBac: "Bac A1",
+          nombrePoissons: 198,
+          poidsCommandeKg: 150,
+          poidsLivreKg: 148,
+          ecartKg: -2,
+          nombreMortsTransport: 2,
+          motifAvarie: "Coupure électricité pendant le transport",
+        },
+      ],
+    });
+    await expect(renderBonLivraisonPDF(dto)).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("rend un PDF sans erreur avec une ligne sans mort en transport (aucune mention)", async () => {
+    const dto = buildFullDTO({
+      lignes: [
+        {
+          designation: "Silure",
+          nomBac: "Bac A1",
+          nombrePoissons: 200,
+          poidsCommandeKg: 150,
+          poidsLivreKg: 150,
+          ecartKg: 0,
+          nombreMortsTransport: 0,
+          motifAvarie: null,
         },
       ],
     });

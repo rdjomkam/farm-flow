@@ -18,13 +18,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { SignaturePad, type SignaturePadHandle } from "@/components/ui/signature-pad";
+import { Textarea } from "@/components/ui/textarea";
 import { useVenteService } from "@/services";
 import { queryKeys } from "@/lib/query-keys";
 import { formatNumber } from "@/lib/format";
 import { shareBonLivraisonPDF } from "@/lib/share-bon-livraison";
 import { useToast } from "@/components/ui/toast";
 import { StatutBonLivraison } from "@/types";
-import type { BonLivraisonDetailResponse } from "@/types";
+import type {
+  BonLivraisonDetailResponse,
+  EnregistrerQuantiteLigneBonLivraisonDTO,
+} from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,10 +37,18 @@ import type { BonLivraisonDetailResponse } from "@/types";
 type FlowStep =
   | "loading"
   | "error"
+  | "quantites"
   | "recap"
   | "signature-client"
   | "signature-livreur"
   | "signed";
+
+/** Etat local de saisie des quantites livrees pour une ligne de vente */
+interface QuantiteLigneState {
+  poidsLivreKg: string;
+  nombreMortsTransport: string;
+  motifAvarie: string;
+}
 
 interface BonLivraisonFlowProps {
   open: boolean;
@@ -56,11 +68,17 @@ interface BonLivraisonFlowProps {
  * BonLivraisonFlow — flux mobile multi-etapes pour creer/consulter/signer un
  * bon de livraison.
  *
- * Etapes :
- * 1. Recap (numero, lignes livrees, bloc paiement)
- * 2. Signature client (canvas + nom du signataire)
- * 3. Signature livreur (canvas)
- * 4. Confirmation (telecharger PDF / partager — placeholders BL.5/BL.6)
+ * Etapes (Sprint BF — fusion quantites/signature) :
+ * 1. Quantites livrees par ligne (poids livre, morts transport, motif) —
+ *    ex-dialog "Confirmer la livraison" de vente-detail-client.tsx, desormais
+ *    integre ici, avant signature. Persiste sur le BL (BROUILLON -> EN_ATTENTE_SIGNATURE),
+ *    modifiable tant que non signe.
+ * 2. Recap : quantites REELLEMENT livrees (LigneBonLivraison) + ecarts vs
+ *    commande + bloc paiement recalcule sur le livre — plus jamais le poids commande.
+ * 3. Signature client (canvas + nom du signataire)
+ * 4. Signature livreur (canvas)
+ * 5. Confirmation (telecharger PDF / partager) — la signature applique les
+ *    quantites, passe le BL en SIGNE et la vente en LIVREE (une seule transaction).
  *
  * Si le BL est deja SIGNE a l'ouverture (consultation en lecture seule
  * depuis une vente LIVREE/CLOTUREE), le flux saute directement a l'etape
@@ -74,6 +92,9 @@ export function BonLivraisonFlow({
   onSigned,
 }: BonLivraisonFlowProps) {
   const t = useTranslations("ventes.bonLivraison");
+  // Etape quantites — reutilise le namespace i18n de l'ex-dialog "Confirmer
+  // la livraison" (Sprint AV), desormais integre a l'etape 1 du flux BL
+  const tQuantites = useTranslations("ventes.livraisonAvarie");
   const locale = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -93,6 +114,15 @@ export function BonLivraisonFlow({
   const [submitting, setSubmitting] = useState(false);
   const [sharing, setSharing] = useState(false);
 
+  // Etape quantites (Sprint BF — ex-dialog "Confirmer la livraison")
+  const [dateLivraison, setDateLivraison] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [quantitesLignes, setQuantitesLignes] = useState<
+    Record<string, QuantiteLigneState>
+  >({});
+  const [quantitesSubmitting, setQuantitesSubmitting] = useState(false);
+
   const clientPadRef = useRef<SignaturePadHandle>(null);
   const livreurPadRef = useRef<SignaturePadHandle>(null);
 
@@ -108,6 +138,8 @@ export function BonLivraisonFlow({
       setClientSignatureEmpty(true);
       setLivreurSignatureEmpty(true);
       setClientSignatureData(null);
+      setDateLivraison(new Date().toISOString().slice(0, 10));
+      setQuantitesLignes({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, venteId]);
@@ -134,10 +166,75 @@ export function BonLivraisonFlow({
     }
 
     setData(result.data);
+
     if (result.data.bonLivraison.statut === StatutBonLivraison.SIGNE) {
       setStep("signed");
-    } else {
-      setStep("recap");
+      return;
+    }
+
+    // Pre-remplit la saisie des quantites depuis les lignes du BL (deja
+    // prereplies au poids commande cote backend) — modifiable tant que non signe
+    const bl = result.data.bonLivraison;
+    setDateLivraison(
+      bl.dateLivraison
+        ? new Date(bl.dateLivraison).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10)
+    );
+    const map: Record<string, QuantiteLigneState> = {};
+    for (const ligne of result.data.vente.lignes ?? []) {
+      const ligneBL = bl.lignes?.find((l) => l.ligneVenteId === ligne.id);
+      map[ligne.id] = {
+        poidsLivreKg: String(ligneBL?.poidsLivreKg ?? ligne.poidsTotalKg),
+        nombreMortsTransport: String(ligneBL?.nombreMortsTransport ?? 0),
+        motifAvarie: ligneBL?.motifAvarie ?? "",
+      };
+    }
+    setQuantitesLignes(map);
+    setStep("quantites");
+  }
+
+  function updateQuantiteLigne(ligneId: string, patch: Partial<QuantiteLigneState>) {
+    setQuantitesLignes((prev) => ({
+      ...prev,
+      [ligneId]: { ...prev[ligneId], ...patch },
+    }));
+  }
+
+  async function handleSubmitQuantites() {
+    if (!data?.bonLivraison) return;
+    setQuantitesSubmitting(true);
+    try {
+      const lignesDTO: EnregistrerQuantiteLigneBonLivraisonDTO[] = (
+        data.vente.lignes ?? []
+      ).map((ligne) => {
+        const state = quantitesLignes[ligne.id];
+        const motif = state?.motifAvarie?.trim();
+        return {
+          ligneVenteId: ligne.id,
+          poidsLivreKg: parseFloat(state?.poidsLivreKg ?? String(ligne.poidsTotalKg)),
+          nombreMortsTransport: parseInt(state?.nombreMortsTransport ?? "0", 10) || 0,
+          ...(motif ? { motifAvarie: motif } : {}),
+        };
+      });
+
+      const result = await venteService.enregistrerQuantitesBonLivraison(
+        data.bonLivraison.id,
+        { dateLivraison, lignes: lignesDTO }
+      );
+      if (result.ok) {
+        const refreshed = await venteService.getBonLivraison(venteId);
+        if (refreshed.ok && refreshed.data) {
+          setData(refreshed.data);
+        }
+        setStep("recap");
+      } else {
+        toast({
+          title: result.error ?? t("errors.quantitesSaveFailed"),
+          variant: "error",
+        });
+      }
+    } finally {
+      setQuantitesSubmitting(false);
     }
   }
 
@@ -164,6 +261,11 @@ export function BonLivraisonFlow({
         queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
         router.refresh();
         onSigned?.();
+      } else {
+        toast({
+          title: result.error ?? t("errors.signatureFailed"),
+          variant: "error",
+        });
       }
     } finally {
       setSubmitting(false);
@@ -173,6 +275,47 @@ export function BonLivraisonFlow({
   const lignes = data?.vente.lignes ?? [];
   const bonLivraison = data?.bonLivraison;
   const blocPaiement = data?.blocPaiement;
+
+  // -- Etape quantites : validation + totaux derives --
+  let quantitesTotalLivreKg = 0;
+  let quantitesTotalMortsTransport = 0;
+  let quantitesTotalPoissonsLivres = 0;
+  let quantitesValid = lignes.length > 0;
+  for (const ligne of lignes) {
+    const state = quantitesLignes[ligne.id];
+    const poidsLivreNum = state ? parseFloat(state.poidsLivreKg) : NaN;
+    const mortsNum = state ? parseInt(state.nombreMortsTransport || "0", 10) : NaN;
+    if (
+      state === undefined ||
+      isNaN(poidsLivreNum) ||
+      poidsLivreNum < 0 ||
+      isNaN(mortsNum) ||
+      mortsNum < 0 ||
+      mortsNum > ligne.nombrePoissons
+    ) {
+      quantitesValid = false;
+    }
+    const safePoidsLivre = isNaN(poidsLivreNum) ? 0 : poidsLivreNum;
+    const safeMorts = isNaN(mortsNum) ? 0 : mortsNum;
+    quantitesTotalLivreKg += safePoidsLivre;
+    quantitesTotalMortsTransport += safeMorts;
+    quantitesTotalPoissonsLivres += Math.max(0, ligne.nombrePoissons - safeMorts);
+  }
+
+  // -- Etape recap : quantites reellement livrees (LigneBonLivraison), pas
+  // le poids commande (ligne.poidsTotalKg) — c'est la correction du bug BF.
+  const lignesBLparLigneVente = new Map(
+    (bonLivraison?.lignes ?? []).map((l) => [l.ligneVenteId, l])
+  );
+  let recapTotalLivreKg = 0;
+  for (const ligne of lignes) {
+    const ligneBL = lignesBLparLigneVente.get(ligne.id);
+    recapTotalLivreKg += ligneBL?.poidsLivreKg ?? ligne.poidsTotalKg;
+  }
+  const prixUnitaireKg = data?.vente.prixUnitaireKg ?? 0;
+  const recapMontantLivre = recapTotalLivreKg * prixUnitaireKg;
+  const recapPaye = blocPaiement?.paye ?? 0;
+  const recapResteAPayer = Math.max(0, recapMontantLivre - recapPaye);
 
   async function handleShare() {
     if (!data || !bonLivraison || !blocPaiement) return;
@@ -222,6 +365,124 @@ export function BonLivraisonFlow({
             </div>
           )}
 
+          {/* Etape : quantites livrees (Sprint BF — ex-dialog "Confirmer la livraison") */}
+          {step === "quantites" && bonLivraison && (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                {t("quantites.instructions")}
+              </p>
+
+              <Input
+                label={t("quantites.dateLivraisonLabel")}
+                type="date"
+                value={dateLivraison}
+                onChange={(e) => setDateLivraison(e.target.value)}
+              />
+
+              {lignes.map((ligne) => {
+                const state = quantitesLignes[ligne.id] ?? {
+                  poidsLivreKg: String(ligne.poidsTotalKg),
+                  nombreMortsTransport: "0",
+                  motifAvarie: "",
+                };
+                const poidsLivreNum = parseFloat(state.poidsLivreKg) || 0;
+                const pertePoids = ligne.poidsTotalKg - poidsLivreNum;
+
+                return (
+                  <div
+                    key={ligne.id}
+                    className="rounded-lg border border-border/50 p-3 flex flex-col gap-3"
+                  >
+                    <p className="font-medium text-sm">
+                      {ligne.vague?.code ?? "-"}
+                      {ligne.bac?.nom ? ` — ${ligne.bac.nom}` : ""}
+                      <span className="text-muted-foreground font-normal">
+                        {" "}
+                        · {ligne.nombrePoissons} {t("recap.poissons")} /{" "}
+                        {ligne.poidsTotalKg} kg
+                      </span>
+                    </p>
+
+                    <Input
+                      label={tQuantites("poidsLivreLabel")}
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={state.poidsLivreKg}
+                      onChange={(e) =>
+                        updateQuantiteLigne(ligne.id, { poidsLivreKg: e.target.value })
+                      }
+                    />
+
+                    <Input
+                      label={tQuantites("mortsTransportLabel")}
+                      type="number"
+                      step="1"
+                      min="0"
+                      max={ligne.nombrePoissons}
+                      value={state.nombreMortsTransport}
+                      onChange={(e) =>
+                        updateQuantiteLigne(ligne.id, {
+                          nombreMortsTransport: e.target.value,
+                        })
+                      }
+                    />
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium">
+                        {tQuantites("motifLabel")}
+                      </label>
+                      <Textarea
+                        value={state.motifAvarie}
+                        onChange={(e) =>
+                          updateQuantiteLigne(ligne.id, { motifAvarie: e.target.value })
+                        }
+                        placeholder={tQuantites("motifPlaceholder")}
+                        rows={2}
+                      />
+                    </div>
+
+                    {pertePoids > 0 && (
+                      <p className="text-xs text-warning flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        {tQuantites("pertePoidsLabel", { kg: pertePoids.toFixed(1) })}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {tQuantites("totalLivreLabel", {
+                      kgLivre: quantitesTotalLivreKg.toFixed(1),
+                      kgCommande: (data?.vente.poidsTotalKg ?? 0).toFixed(1),
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span
+                    className={
+                      quantitesTotalMortsTransport > 0
+                        ? "text-warning"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {tQuantites("totalMortsLabel", { nb: quantitesTotalMortsTransport })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {tQuantites("totalPoissonsLivreLabel", {
+                      nb: quantitesTotalPoissonsLivres,
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Etape : recap */}
           {step === "recap" && bonLivraison && (
             <div className="flex flex-col gap-4">
@@ -242,51 +503,62 @@ export function BonLivraisonFlow({
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                       {t("recap.lignesTitle")}
                     </p>
-                    {lignes.map((ligne) => (
-                      <div
-                        key={ligne.id}
-                        className="rounded-lg bg-muted/30 p-2.5 flex items-center justify-between text-sm"
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {ligne.vague?.code ?? "-"}
-                            {ligne.bac?.nom ? ` — ${ligne.bac.nom}` : ""}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {ligne.nombrePoissons} {t("recap.poissons")}
-                          </span>
+                    {lignes.map((ligne) => {
+                      const ligneBL = lignesBLparLigneVente.get(ligne.id);
+                      const poidsLivre = ligneBL?.poidsLivreKg ?? ligne.poidsTotalKg;
+                      const ecart = ligne.poidsTotalKg - poidsLivre;
+                      return (
+                        <div
+                          key={ligne.id}
+                          className="rounded-lg bg-muted/30 p-2.5 flex items-center justify-between text-sm"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {ligne.vague?.code ?? "-"}
+                              {ligne.bac?.nom ? ` — ${ligne.bac.nom}` : ""}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {ligne.nombrePoissons} {t("recap.poissons")}
+                            </span>
+                            {Math.abs(ecart) > 0.01 && (
+                              <span className="text-xs text-warning">
+                                {t("recap.ecartLabel", {
+                                  kgCommande: ligne.poidsTotalKg,
+                                  kg: ecart.toFixed(1),
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-semibold">{poidsLivre} kg</span>
                         </div>
-                        <span className="font-semibold">{ligne.poidsTotalKg} kg</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
               )}
 
-              {blocPaiement && (
-                <Card>
-                  <CardContent className="p-3 flex flex-col gap-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t("recap.totalVente")}</span>
-                      <span className="font-medium">
-                        {formatNumber(blocPaiement.totalVente)} FCFA
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t("recap.paye")}</span>
-                      <span className="font-medium text-success">
-                        {formatNumber(blocPaiement.paye)} FCFA
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-border/50 pt-1.5">
-                      <span className="font-semibold">{t("recap.resteAPayer")}</span>
-                      <span className="font-bold text-warning">
-                        {formatNumber(blocPaiement.resteAPayer)} FCFA
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <Card>
+                <CardContent className="p-3 flex flex-col gap-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("recap.totalVente")}</span>
+                    <span className="font-medium">
+                      {formatNumber(recapMontantLivre)} FCFA
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("recap.paye")}</span>
+                    <span className="font-medium text-success">
+                      {formatNumber(recapPaye)} FCFA
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-border/50 pt-1.5">
+                    <span className="font-semibold">{t("recap.resteAPayer")}</span>
+                    <span className="font-bold text-warning">
+                      {formatNumber(recapResteAPayer)} FCFA
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -381,6 +653,16 @@ export function BonLivraisonFlow({
         </DialogBody>
 
         <DialogFooter>
+          {step === "quantites" && (
+            <Button
+              onClick={handleSubmitQuantites}
+              disabled={!quantitesValid || quantitesSubmitting}
+              className="min-h-[44px]"
+            >
+              {quantitesSubmitting ? t("validating") : t("next")}
+            </Button>
+          )}
+
           {step === "recap" && (
             <Button
               onClick={() => {

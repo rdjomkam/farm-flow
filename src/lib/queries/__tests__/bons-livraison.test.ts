@@ -1,20 +1,26 @@
 /**
- * Tests — bons-livraison queries (Sprint BL, Story BL.3)
+ * Tests — bons-livraison queries (Sprint BL, Story BL.3 ; étendu Sprint BF, Story BF.2)
  *
  * Couvre :
  * 1. createBonLivraison : vente inexistante -> erreur
  * 2. createBonLivraison : vente pas EN_PREPARATION -> ValidationError
  * 3. createBonLivraison : BL deja existant -> retourne le meme (idempotent)
  * 4. createBonLivraison : numerotation BL-YYYY-NNN
- * 5. signerBonLivraison : BROUILLON -> SIGNE avec signatures persistees
- * 6. signerBonLivraison : deja SIGNE -> ValidationError
+ * 5. createBonLivraison : préremplissage des LigneBonLivraison à la création (Sprint BF)
+ * 6. createBonLivraison : rattrapage d'un BL legacy sans lignes (Sprint BF)
+ * 7. getBonLivraisonByVente : rattrapage défensif si le BL n'a aucune ligne (Sprint BF)
+ * 8. enregistrerQuantitesBonLivraison : upsert, refus si SIGNE, refus si vente pas EN_PREPARATION,
+ *    refus si morts > nombrePoissons (Sprint BF)
+ * 9. signerBonLivraison : BROUILLON/EN_ATTENTE_SIGNATURE -> SIGNE avec signatures persistees
+ * 10. signerBonLivraison : deja SIGNE -> ValidationError
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   createBonLivraison,
-  signerBonLivraison,
   getBonLivraisonByVente,
+  enregistrerQuantitesBonLivraison,
+  signerBonLivraison,
 } from "@/lib/queries/bons-livraison";
 import { ValidationError } from "@/lib/errors";
 import { StatutBonLivraison, StatutVente } from "@/types";
@@ -27,18 +33,58 @@ const mockVenteFindFirst = vi.fn();
 const mockBonLivraisonFindFirst = vi.fn();
 const mockBonLivraisonFindUniqueOrThrow = vi.fn();
 const mockBonLivraisonCreate = vi.fn();
+const mockBonLivraisonUpdate = vi.fn();
 const mockBonLivraisonUpdateMany = vi.fn();
+const mockLigneBonLivraisonCount = vi.fn();
+const mockLigneBonLivraisonCreateMany = vi.fn();
+const mockLigneBonLivraisonUpsert = vi.fn();
+const mockVenteUpdate = vi.fn();
+const mockLigneVenteUpdate = vi.fn();
+const mockReleveFindFirst = vi.fn();
+const mockReleveUpdate = vi.fn();
+const mockReleveCreate = vi.fn();
+const mockReleveModificationCreate = vi.fn();
+const mockFactureUpdate = vi.fn();
+const mockSiteAuditLogCreate = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
     vente: {
       findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
+      update: (...args: unknown[]) => mockVenteUpdate(...args),
     },
     bonLivraison: {
       findFirst: (...args: unknown[]) => mockBonLivraisonFindFirst(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockBonLivraisonFindUniqueOrThrow(...args),
       create: (...args: unknown[]) => mockBonLivraisonCreate(...args),
+      update: (...args: unknown[]) => mockBonLivraisonUpdate(...args),
       updateMany: (...args: unknown[]) => mockBonLivraisonUpdateMany(...args),
+    },
+    ligneBonLivraison: {
+      count: (...args: unknown[]) => mockLigneBonLivraisonCount(...args),
+      createMany: (...args: unknown[]) => mockLigneBonLivraisonCreateMany(...args),
+      upsert: (...args: unknown[]) => mockLigneBonLivraisonUpsert(...args),
+    },
+    ligneVente: {
+      update: (...args: unknown[]) => mockLigneVenteUpdate(...args),
+    },
+    releve: {
+      findFirst: (...args: unknown[]) => mockReleveFindFirst(...args),
+      update: (...args: unknown[]) => mockReleveUpdate(...args),
+      create: (...args: unknown[]) => mockReleveCreate(...args),
+    },
+    releveModification: {
+      create: (...args: unknown[]) => mockReleveModificationCreate(...args),
+    },
+    facture: {
+      update: (...args: unknown[]) => mockFactureUpdate(...args),
+    },
+    siteAuditLog: {
+      create: (...args: unknown[]) => mockSiteAuditLogCreate(...args),
+    },
+    assignationBac: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
   };
   return fn(tx);
@@ -51,6 +97,13 @@ vi.mock("@/lib/db", () => ({
     vente: {
       findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
     },
+    bonLivraison: {
+      findUniqueOrThrow: (...args: unknown[]) => mockBonLivraisonFindUniqueOrThrow(...args),
+    },
+    ligneBonLivraison: {
+      count: (...args: unknown[]) => mockLigneBonLivraisonCount(...args),
+      createMany: (...args: unknown[]) => mockLigneBonLivraisonCreateMany(...args),
+    },
   },
 }));
 
@@ -58,6 +111,9 @@ const SITE_ID = "site-1";
 const USER_ID = "user-1";
 const VENTE_ID = "vente-1";
 const BL_ID = "bl-1";
+const LIGNE_ID = "ligne-1";
+const BAC_ID = "bac-1";
+const VAGUE_ID = "vague-1";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -83,6 +139,7 @@ describe("createBonLivraison", () => {
       id: VENTE_ID,
       statut: StatutVente.LIVREE,
       bonLivraison: null,
+      lignes: [],
     });
 
     const err = await createBonLivraison(SITE_ID, USER_ID, VENTE_ID).catch(
@@ -93,12 +150,14 @@ describe("createBonLivraison", () => {
     expect(mockBonLivraisonCreate).not.toHaveBeenCalled();
   });
 
-  it("BL deja existant -> retourne le meme (idempotent)", async () => {
+  it("BL deja existant avec lignes -> retourne le meme (idempotent), pas de rattrapage", async () => {
     mockVenteFindFirst.mockResolvedValue({
       id: VENTE_ID,
       statut: StatutVente.EN_PREPARATION,
       bonLivraison: { id: BL_ID },
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 100 }],
     });
+    mockLigneBonLivraisonCount.mockResolvedValue(1);
     mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
       id: BL_ID,
       numero: "BL-2026-001",
@@ -113,22 +172,22 @@ describe("createBonLivraison", () => {
       statut: StatutBonLivraison.BROUILLON,
     });
     expect(mockBonLivraisonCreate).not.toHaveBeenCalled();
-    expect(mockBonLivraisonFindUniqueOrThrow).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: BL_ID } })
-    );
+    expect(mockLigneBonLivraisonCreateMany).not.toHaveBeenCalled();
   });
 
-  it("cree le BL avec numerotation BL-YYYY-NNN incrementale", async () => {
+  it("cree le BL avec numerotation BL-YYYY-NNN incrementale + préremplit les LigneBonLivraison", async () => {
     const year = new Date().getFullYear();
     mockVenteFindFirst.mockResolvedValue({
       id: VENTE_ID,
       statut: StatutVente.EN_PREPARATION,
       bonLivraison: null,
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 245.25 }],
     });
     mockBonLivraisonFindFirst.mockResolvedValue({
       numero: `BL-${year}-007`,
     });
     mockBonLivraisonCreate.mockResolvedValue({ id: BL_ID });
+    mockLigneBonLivraisonCount.mockResolvedValue(0);
     mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
       id: BL_ID,
       numero: `BL-${year}-008`,
@@ -148,75 +207,55 @@ describe("createBonLivraison", () => {
         }),
       })
     );
+    expect(mockLigneBonLivraisonCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            bonLivraisonId: BL_ID,
+            ligneVenteId: LIGNE_ID,
+            poidsLivreKg: 245.25,
+            nombreMortsTransport: 0,
+            siteId: SITE_ID,
+          }),
+        ],
+      })
+    );
     expect(result).toEqual({
       id: BL_ID,
       numero: `BL-${year}-008`,
       statut: StatutBonLivraison.BROUILLON,
     });
   });
-});
 
-// ---------------------------------------------------------------------------
-// signerBonLivraison
-// ---------------------------------------------------------------------------
-
-describe("signerBonLivraison", () => {
-  const dto = {
-    signatureClient: "data:image/png;base64,AAA",
-    signataireClientNom: "Jean Dupont",
-    signatureLivreur: "data:image/png;base64,BBB",
-  };
-
-  it("BROUILLON -> SIGNE avec signatures persistees", async () => {
-    mockBonLivraisonFindFirst.mockResolvedValue({
-      id: BL_ID,
-      statut: StatutBonLivraison.BROUILLON,
+  it("BL legacy existant sans lignes -> rattrapage (créé les LigneBonLivraison manquantes)", async () => {
+    mockVenteFindFirst.mockResolvedValue({
+      id: VENTE_ID,
+      statut: StatutVente.EN_PREPARATION,
+      bonLivraison: { id: BL_ID },
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 349 }],
     });
-    mockBonLivraisonUpdateMany.mockResolvedValue({ count: 1 });
+    mockLigneBonLivraisonCount.mockResolvedValue(0);
     mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
       id: BL_ID,
-      statut: StatutBonLivraison.SIGNE,
-      ...dto,
+      numero: "BL-2026-001",
+      statut: StatutBonLivraison.BROUILLON,
     });
 
-    const result = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto);
+    await createBonLivraison(SITE_ID, USER_ID, VENTE_ID);
 
-    expect(mockBonLivraisonUpdateMany).toHaveBeenCalledWith(
+    expect(mockLigneBonLivraisonCreateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: BL_ID, siteId: SITE_ID }),
-        data: expect.objectContaining({
-          statut: StatutBonLivraison.SIGNE,
-          signatureClient: dto.signatureClient,
-          signataireClientNom: dto.signataireClientNom,
-          signatureLivreur: dto.signatureLivreur,
-        }),
+        data: [
+          expect.objectContaining({
+            bonLivraisonId: BL_ID,
+            ligneVenteId: LIGNE_ID,
+            poidsLivreKg: 349,
+            nombreMortsTransport: 0,
+            siteId: SITE_ID,
+          }),
+        ],
       })
     );
-    expect(result.statut).toBe(StatutBonLivraison.SIGNE);
-  });
-
-  it("BL introuvable -> erreur", async () => {
-    mockBonLivraisonFindFirst.mockResolvedValue(null);
-
-    await expect(
-      signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto)
-    ).rejects.toThrow("Bon de livraison introuvable");
-
-    expect(mockBonLivraisonUpdateMany).not.toHaveBeenCalled();
-  });
-
-  it("deja SIGNE -> ValidationError, aucune ecriture", async () => {
-    mockBonLivraisonFindFirst.mockResolvedValue({
-      id: BL_ID,
-      statut: StatutBonLivraison.SIGNE,
-    });
-
-    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto).catch(
-      (e) => e
-    );
-
-    expect(err).toBeInstanceOf(ValidationError);
-    expect(mockBonLivraisonUpdateMany).not.toHaveBeenCalled();
   });
 });
 
@@ -231,7 +270,8 @@ describe("getBonLivraisonByVente", () => {
       montantTotal: 100000,
       client: { id: "client-1", nom: "Client A" },
       facture: { id: "fac-1", montantPaye: 40000 },
-      bonLivraison: { id: BL_ID, statut: StatutBonLivraison.BROUILLON },
+      bonLivraison: { id: BL_ID, statut: StatutBonLivraison.BROUILLON, lignes: [{ id: "lbl-1" }] },
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 100 }],
     });
 
     const result = await getBonLivraisonByVente(SITE_ID, VENTE_ID);
@@ -241,6 +281,7 @@ describe("getBonLivraisonByVente", () => {
       paye: 40000,
       resteAPayer: 60000,
     });
+    expect(mockLigneBonLivraisonCreateMany).not.toHaveBeenCalled();
   });
 
   it("sans facture liee -> paye=0, resteAPayer=totalVente", async () => {
@@ -249,7 +290,8 @@ describe("getBonLivraisonByVente", () => {
       montantTotal: 50000,
       client: { id: "client-1", nom: "Client A" },
       facture: null,
-      bonLivraison: { id: BL_ID, statut: StatutBonLivraison.BROUILLON },
+      bonLivraison: { id: BL_ID, statut: StatutBonLivraison.BROUILLON, lignes: [{ id: "lbl-1" }] },
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 50 }],
     });
 
     const result = await getBonLivraisonByVente(SITE_ID, VENTE_ID);
@@ -268,10 +310,269 @@ describe("getBonLivraisonByVente", () => {
       client: { id: "client-1", nom: "Client A" },
       facture: null,
       bonLivraison: null,
+      lignes: [],
     });
 
     const result = await getBonLivraisonByVente(SITE_ID, VENTE_ID);
 
     expect(result).toBeNull();
+  });
+
+  it("BL legacy sans lignes -> rattrapage défensif avant de retourner le résultat", async () => {
+    mockVenteFindFirst.mockResolvedValue({
+      id: VENTE_ID,
+      montantTotal: 82625,
+      client: { id: "client-1", nom: "Client A" },
+      facture: null,
+      bonLivraison: { id: BL_ID, statut: StatutBonLivraison.BROUILLON, lignes: [] },
+      lignes: [{ id: LIGNE_ID, poidsTotalKg: 826.25 }],
+    });
+    mockLigneBonLivraisonCount.mockResolvedValue(0);
+    mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
+      id: BL_ID,
+      statut: StatutBonLivraison.BROUILLON,
+      lignes: [{ id: "lbl-1", ligneVenteId: LIGNE_ID, poidsLivreKg: 826.25, nombreMortsTransport: 0 }],
+    });
+
+    const result = await getBonLivraisonByVente(SITE_ID, VENTE_ID);
+
+    expect(mockLigneBonLivraisonCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            bonLivraisonId: BL_ID,
+            ligneVenteId: LIGNE_ID,
+            poidsLivreKg: 826.25,
+          }),
+        ],
+      })
+    );
+    expect(result?.bonLivraison.lignes.length).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// enregistrerQuantitesBonLivraison
+// ---------------------------------------------------------------------------
+
+describe("enregistrerQuantitesBonLivraison", () => {
+  function makeBL(overrides: { statut?: StatutBonLivraison; venteStatut?: StatutVente } = {}) {
+    return {
+      id: BL_ID,
+      statut: overrides.statut ?? StatutBonLivraison.BROUILLON,
+      vente: {
+        id: VENTE_ID,
+        statut: overrides.venteStatut ?? StatutVente.EN_PREPARATION,
+        lignes: [{ id: LIGNE_ID, nombrePoissons: 100 }],
+      },
+    };
+  }
+
+  it("BL introuvable -> erreur", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(null);
+
+    await expect(
+      enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+        lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
+      })
+    ).rejects.toThrow("Bon de livraison introuvable");
+  });
+
+  it("BL deja SIGNE -> ValidationError, aucune ecriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBL({ statut: StatutBonLivraison.SIGNE }));
+
+    const err = await enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(mockLigneBonLivraisonUpsert).not.toHaveBeenCalled();
+  });
+
+  it("vente pas EN_PREPARATION -> ValidationError", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBL({ venteStatut: StatutVente.LIVREE }));
+
+    const err = await enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(mockLigneBonLivraisonUpsert).not.toHaveBeenCalled();
+  });
+
+  it("nombreMortsTransport > nombrePoissons -> ValidationError, aucune ecriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBL());
+
+    const err = await enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 150 }],
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(mockLigneBonLivraisonUpsert).not.toHaveBeenCalled();
+  });
+
+  it("ligneVenteId hors vente -> ValidationError", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBL());
+
+    const err = await enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+      lignes: [{ ligneVenteId: "autre-ligne", poidsLivreKg: 100, nombreMortsTransport: 0 }],
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+  });
+
+  it("upsert les LigneBonLivraison + passe le BL en EN_ATTENTE_SIGNATURE", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBL());
+    mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
+      id: BL_ID,
+      statut: StatutBonLivraison.EN_ATTENTE_SIGNATURE,
+    });
+
+    await enregistrerQuantitesBonLivraison(SITE_ID, USER_ID, BL_ID, {
+      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 95, nombreMortsTransport: 2, motifAvarie: "chaleur" }],
+    });
+
+    expect(mockLigneBonLivraisonUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          bonLivraisonId_ligneVenteId: { bonLivraisonId: BL_ID, ligneVenteId: LIGNE_ID },
+        },
+        create: expect.objectContaining({
+          bonLivraisonId: BL_ID,
+          ligneVenteId: LIGNE_ID,
+          poidsLivreKg: 95,
+          nombreMortsTransport: 2,
+          motifAvarie: "chaleur",
+          siteId: SITE_ID,
+        }),
+        update: expect.objectContaining({
+          poidsLivreKg: 95,
+          nombreMortsTransport: 2,
+          motifAvarie: "chaleur",
+        }),
+      })
+    );
+    expect(mockBonLivraisonUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: BL_ID },
+        data: expect.objectContaining({ statut: StatutBonLivraison.EN_ATTENTE_SIGNATURE }),
+      })
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// signerBonLivraison
+// ---------------------------------------------------------------------------
+
+describe("signerBonLivraison", () => {
+  const dto = {
+    signatureClient: "data:image/png;base64,AAA",
+    signataireClientNom: "Jean Dupont",
+    signatureLivreur: "data:image/png;base64,BBB",
+  };
+
+  function makeSignableBL() {
+    return {
+      id: BL_ID,
+      numero: "BL-2026-001",
+      statut: StatutBonLivraison.EN_ATTENTE_SIGNATURE,
+      dateLivraison: new Date("2026-07-20"),
+      lignes: [
+        { ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0, motifAvarie: null },
+      ],
+      vente: {
+        id: VENTE_ID,
+        numero: "VTE-2026-001",
+        statut: StatutVente.EN_PREPARATION,
+        quantitePoissons: 100,
+        poidsTotalKg: 100,
+        prixUnitaireKg: 1000,
+        montantTotal: 100000,
+        facture: null,
+        vague: { id: VAGUE_ID, code: "V1", nombreInitial: 100 },
+        client: { id: "client-1", nom: "Client A" },
+        lignes: [
+          {
+            id: LIGNE_ID,
+            bacId: BAC_ID,
+            vagueId: VAGUE_ID,
+            nombrePoissons: 100,
+            poidsTotalKg: 100,
+            poidsMoyenG: 1000,
+            poidsLivreKg: null,
+          },
+        ],
+      },
+    };
+  }
+
+  it("BROUILLON/EN_ATTENTE_SIGNATURE avec lignes -> SIGNE avec signatures persistees, vente LIVREE", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeSignableBL());
+    mockBonLivraisonUpdateMany.mockResolvedValue({ count: 1 });
+    mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
+      id: BL_ID,
+      statut: StatutBonLivraison.SIGNE,
+      ...dto,
+    });
+    mockVenteUpdate.mockResolvedValue({});
+    mockLigneVenteUpdate.mockResolvedValue({});
+    mockSiteAuditLogCreate.mockResolvedValue({});
+
+    const result = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto);
+
+    expect(mockBonLivraisonUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: BL_ID, siteId: SITE_ID }),
+        data: expect.objectContaining({
+          statut: StatutBonLivraison.SIGNE,
+          signatureClient: dto.signatureClient,
+          signataireClientNom: dto.signataireClientNom,
+          signatureLivreur: dto.signatureLivreur,
+        }),
+      })
+    );
+    expect(mockVenteUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ statut: StatutVente.LIVREE }),
+      })
+    );
+    expect(mockSiteAuditLogCreate).toHaveBeenCalled();
+    expect(result.statut).toBe(StatutBonLivraison.SIGNE);
+  });
+
+  it("BL introuvable -> erreur", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(null);
+
+    await expect(
+      signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto)
+    ).rejects.toThrow("Bon de livraison introuvable");
+
+    expect(mockBonLivraisonUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("deja SIGNE -> ValidationError, aucune ecriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue({
+      ...makeSignableBL(),
+      statut: StatutBonLivraison.SIGNE,
+    });
+
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(mockBonLivraisonUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("BL sans lignes -> ValidationError, aucune ecriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue({ ...makeSignableBL(), lignes: [] });
+
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, dto).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(mockVenteUpdate).not.toHaveBeenCalled();
   });
 });

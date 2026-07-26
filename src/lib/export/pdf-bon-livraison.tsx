@@ -188,6 +188,11 @@ const styles = StyleSheet.create({
   colPoidsLivre: { flex: 1.4, textAlign: "right" },
   colEcart: { flex: 1.2, textAlign: "right" },
   tableCell: { fontSize: 9 },
+  avarieMention: {
+    color: colors.warning,
+    fontSize: 7.5,
+    marginTop: 2,
+  },
   // Bloc paiement
   totauxSection: {
     alignItems: "flex-end",
@@ -439,6 +444,13 @@ export function BonLivraisonPDF({ data }: { data: CreateBonLivraisonPDFDTO }) {
                   {ligne.nomBac && (
                     <Text style={[styles.tableCell, { color: colors.muted, fontSize: 8 }]}>
                       Bac : {ligne.nomBac}
+                    </Text>
+                  )}
+                  {ligne.nombreMortsTransport > 0 && (
+                    <Text style={[styles.tableCell, styles.avarieMention]}>
+                      dont {ligne.nombreMortsTransport} mort
+                      {ligne.nombreMortsTransport > 1 ? "s" : ""} en transport
+                      {ligne.motifAvarie ? ` — ${ligne.motifAvarie}` : ""}
                     </Text>
                   )}
                 </View>

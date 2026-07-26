@@ -263,8 +263,6 @@
     }
   },
   "livraisonAvarie": {
-    "dialogTitle": "Confirmer la livraison — {numero}",
-    "dialogDescription": "Saisissez les poids reellement livres et le nombre de morts pendant le transport.",
     "poidsLivreLabel": "Poids livre (kg)",
     "mortsTransportLabel": "Poissons morts en transport",
     "motifLabel": "Motif d'avarie (optionnel)",
@@ -272,15 +270,7 @@
     "pertePoidsLabel": "Perte poids : {kg} kg",
     "totalLivreLabel": "Total livre : {kgLivre} / {kgCommande} kg",
     "totalMortsLabel": "Morts transport : {nb}",
-    "totalPoissonsLivreLabel": "Poissons livres : {nb}",
-    "confirmButton": "Confirmer livraison",
-    "cancelButton": "Annuler",
-    "success": "Livraison enregistree.",
-    "errors": {
-      "mortsExcede": "Nombre de morts superieur a la quantite commandee.",
-      "poidsInvalide": "Poids invalide.",
-      "generic": "Erreur lors de la livraison."
-    }
+    "totalPoissonsLivreLabel": "Poissons livres : {nb}"
   },
   "bonLivraison": {
     "title": "Bon de livraison",
@@ -297,17 +287,24 @@
     "openFlow": "Ouvrir le bon de livraison",
     "errors": {
       "creationFailed": "Erreur lors de la creation du bon de livraison.",
-      "loadFailed": "Erreur lors du chargement du bon de livraison."
+      "loadFailed": "Erreur lors du chargement du bon de livraison.",
+      "quantitesSaveFailed": "Erreur lors de l'enregistrement des quantites livrees.",
+      "signatureFailed": "Erreur lors de la validation de la signature."
+    },
+    "quantites": {
+      "instructions": "Saisissez les quantites reellement livrees avant de faire signer le client.",
+      "dateLivraisonLabel": "Date de livraison"
     },
     "recap": {
       "client": "Client",
       "date": "Date",
-      "lignesTitle": "Lignes a livrer",
+      "lignesTitle": "Lignes livrees",
       "poissons": "poissons",
       "totalVente": "Total vente",
       "paye": "Paye a ce jour",
       "resteAPayer": "Reste a payer",
-      "fairesigner": "Faire signer"
+      "fairesigner": "Faire signer",
+      "ecartLabel": "Commande : {kgCommande} kg (ecart {kg} kg)"
     },
     "signatureClient": {
       "instructions": "Faites signer le client sur l'ecran ci-dessous.",

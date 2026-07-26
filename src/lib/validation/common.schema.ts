@@ -49,6 +49,25 @@ export const updateDateSchema = z
   )
   .optional();
 
+/**
+ * Schema pour une date optionnelle acceptant les deux formats produits par
+ * un `<input type="date">` ("2026-07-26") et un ISO datetime complet
+ * ("2026-07-26T12:00:00.000Z"). Contrairement a `releveDateSchema` /
+ * `updateDateSchema`, aucune contrainte "pas dans le futur" n'est appliquee :
+ * une date/heure de livraison saisie le jour meme peut techniquement tomber
+ * quelques heures apres l'instant de la requete cote serveur (BUG-BF-1).
+ */
+export const flexibleDateSchema = z
+  .string()
+  .refine(
+    (val) => {
+      const d = new Date(val);
+      return !isNaN(d.getTime());
+    },
+    { message: "Date invalide (format ISO 8601 attendu)." }
+  )
+  .optional();
+
 // ---------------------------------------------------------------------------
 // Consommations
 // ---------------------------------------------------------------------------

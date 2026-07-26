@@ -1,14 +1,17 @@
 /**
- * Tests — guard « bon de livraison signé » dans cloturerVente (Sprint BL, Story BL.3)
+ * Tests — guard « bon de livraison » dans signerBonLivraison (Sprint BL,
+ * Story BL.3 ; adapté Sprint BF, Story BF.2).
  *
- * Couvre :
- * 1. Vente sans bon de livraison -> ValidationError, aucune écriture
- * 2. Bon de livraison BROUILLON (pas signé) -> ValidationError, aucune écriture
- * 3. Bon de livraison SIGNE -> passe, vente LIVREE
+ * Le guard « signer sans quantités saisies » remplace l'ancien guard « BL
+ * signé avant livraison » : depuis la fusion, c'est la signature elle-même
+ * qui livre la vente. Il n'y a donc plus de scénario « vente livrée sans BL
+ * signé » à tester — mais deux nouveaux invariants :
+ * 1. BL sans LigneBonLivraison (quantités non saisies) -> refus de signer
+ * 2. BL déjà SIGNE -> refus de signer
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cloturerVente } from "@/lib/queries/ventes";
+import { signerBonLivraison } from "@/lib/queries/bons-livraison";
 import { ValidationError } from "@/lib/errors";
 import { StatutVente, StatutBonLivraison, TypeReleve } from "@/types";
 
@@ -16,9 +19,10 @@ import { StatutVente, StatutBonLivraison, TypeReleve } from "@/types";
 // Mocks Prisma (meme pattern que cloture-vente-avarie.test.ts)
 // ---------------------------------------------------------------------------
 
-const mockVenteFindFirst = vi.fn();
+const mockBonLivraisonFindFirst = vi.fn();
+const mockBonLivraisonUpdateMany = vi.fn();
+const mockBonLivraisonFindUniqueOrThrow = vi.fn();
 const mockVenteUpdate = vi.fn();
-const mockVenteFindUniqueOrThrow = vi.fn();
 const mockLigneVenteUpdate = vi.fn();
 const mockReleveFindFirst = vi.fn();
 const mockReleveUpdate = vi.fn();
@@ -32,10 +36,13 @@ const mockTransfertGroupeFindManyTx = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
+    bonLivraison: {
+      findFirst: (...args: unknown[]) => mockBonLivraisonFindFirst(...args),
+      updateMany: (...args: unknown[]) => mockBonLivraisonUpdateMany(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockBonLivraisonFindUniqueOrThrow(...args),
+    },
     vente: {
-      findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
       update: (...args: unknown[]) => mockVenteUpdate(...args),
-      findUniqueOrThrow: (...args: unknown[]) => mockVenteFindUniqueOrThrow(...args),
     },
     ligneVente: {
       update: (...args: unknown[]) => mockLigneVenteUpdate(...args),
@@ -75,42 +82,66 @@ vi.mock("@/lib/db", () => ({
 
 const SITE_ID = "site-1";
 const USER_ID = "user-1";
+const BL_ID = "bl-1";
 const VENTE_ID = "vente-1";
 const LIGNE_ID = "ligne-1";
 const BAC_ID = "bac-1";
 const VAGUE_ID = "vague-1";
 
-function makeVente(bonLivraison: { statut: StatutBonLivraison } | null) {
+const SIGNATURE_DTO = {
+  signatureClient: "data:image/png;base64,AAA",
+  signataireClientNom: "Jean Dupont",
+  signatureLivreur: "data:image/png;base64,BBB",
+};
+
+function makeBonLivraison(overrides: {
+  statut?: StatutBonLivraison;
+  lignes?: Array<{ ligneVenteId: string; poidsLivreKg: number; nombreMortsTransport: number; motifAvarie: string | null }>;
+} = {}) {
   return {
-    id: VENTE_ID,
-    numero: "VTE-2026-001",
-    statut: StatutVente.EN_PREPARATION,
-    quantitePoissons: 100,
-    poidsTotalKg: 100,
-    prixUnitaireKg: 1000,
-    dateCommande: new Date("2026-07-15"),
-    factureId: null,
-    siteId: SITE_ID,
-    client: { nom: "Test Client" },
-    bonLivraison,
-    lignes: [
-      {
-        id: LIGNE_ID,
-        bacId: BAC_ID,
-        vagueId: VAGUE_ID,
-        nombrePoissons: 100,
-        poidsTotalKg: 100,
-        poidsMoyenG: 1000,
-        poidsLivreKg: null,
-      },
-    ],
+    id: BL_ID,
+    numero: "BL-2026-001",
+    statut: overrides.statut ?? StatutBonLivraison.EN_ATTENTE_SIGNATURE,
+    dateLivraison: new Date("2026-07-20"),
+    lignes:
+      overrides.lignes ?? [
+        { ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0, motifAvarie: null },
+      ],
+    vente: {
+      id: VENTE_ID,
+      numero: "VTE-2026-001",
+      statut: StatutVente.EN_PREPARATION,
+      quantitePoissons: 100,
+      poidsTotalKg: 100,
+      prixUnitaireKg: 1000,
+      montantTotal: 100000,
+      dateCommande: new Date("2026-07-15"),
+      facture: null,
+      vague: { id: VAGUE_ID, code: "V1", nombreInitial: 100 },
+      client: { id: "client-1", nom: "Test Client" },
+      lignes: [
+        {
+          id: LIGNE_ID,
+          bacId: BAC_ID,
+          vagueId: VAGUE_ID,
+          nombrePoissons: 100,
+          poidsTotalKg: 100,
+          poidsMoyenG: 1000,
+          poidsLivreKg: null,
+        },
+      ],
+    },
   };
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mockVenteUpdate.mockResolvedValue({});
-  mockVenteFindUniqueOrThrow.mockResolvedValue({ id: VENTE_ID, statut: StatutVente.LIVREE, lignes: [] });
+  mockBonLivraisonUpdateMany.mockResolvedValue({ count: 1 });
+  mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
+    id: BL_ID,
+    statut: StatutBonLivraison.SIGNE,
+  });
   mockLigneVenteUpdate.mockResolvedValue({});
   mockReleveUpdate.mockResolvedValue({});
   mockReleveCreate.mockResolvedValue({});
@@ -130,40 +161,30 @@ beforeEach(() => {
   mockTransfertGroupeFindManyTx.mockResolvedValue([]);
 });
 
-describe("cloturerVente — guard bon de livraison signé", () => {
-  it("aucun bon de livraison -> ValidationError, aucune écriture", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente(null));
+describe("signerBonLivraison — guard quantités saisies avant signature", () => {
+  it("BL sans lignes (quantités non saisies) -> ValidationError, aucune écriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBonLivraison({ lignes: [] }));
 
-    const err = await cloturerVente(VENTE_ID, SITE_ID, USER_ID, {
-      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
-    }).catch((e) => e);
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO).catch((e) => e);
 
     expect(err).toBeInstanceOf(ValidationError);
-    expect(err.message).toMatch(/bon de livraison doit être signé/i);
+    expect(err.message).toMatch(/quantités livrées/i);
     expect(mockVenteUpdate).not.toHaveBeenCalled();
   });
 
-  it("bon de livraison BROUILLON (pas signé) -> ValidationError, aucune écriture", async () => {
-    mockVenteFindFirst.mockResolvedValue(
-      makeVente({ statut: StatutBonLivraison.BROUILLON })
-    );
+  it("BL déjà SIGNE -> ValidationError, aucune écriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBonLivraison({ statut: StatutBonLivraison.SIGNE }));
 
-    const err = await cloturerVente(VENTE_ID, SITE_ID, USER_ID, {
-      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
-    }).catch((e) => e);
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO).catch((e) => e);
 
     expect(err).toBeInstanceOf(ValidationError);
     expect(mockVenteUpdate).not.toHaveBeenCalled();
   });
 
-  it("bon de livraison SIGNE -> passe, vente LIVREE", async () => {
-    mockVenteFindFirst.mockResolvedValue(
-      makeVente({ statut: StatutBonLivraison.SIGNE })
-    );
+  it("BL EN_ATTENTE_SIGNATURE avec lignes saisies -> passe, vente LIVREE", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBonLivraison());
 
-    await cloturerVente(VENTE_ID, SITE_ID, USER_ID, {
-      lignes: [{ ligneVenteId: LIGNE_ID, poidsLivreKg: 100, nombreMortsTransport: 0 }],
-    });
+    await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO);
 
     expect(mockVenteUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -825,6 +825,12 @@ export interface ClientBonLivraisonPDF {
 /**
  * Ligne livrée (une par LigneVente) dans le tableau du bon de livraison.
  * Le poids livré peut différer du poids commandé (écart de livraison).
+ *
+ * Les quantités (`poidsLivreKg`, `nombreMortsTransport`, `motifAvarie`)
+ * proviennent du snapshot du BL (`LigneBonLivraison`, Sprint BF) — pas de
+ * `LigneVente`, qui ne porte que l'état courant de la vente. `poidsLivreKg`
+ * reste nullable ici uniquement pour les BL signés avant Sprint BF (legacy,
+ * sans `LigneBonLivraison`, fallback sur `LigneVente.poidsLivreKg`).
  */
 export interface LigneBonLivraisonPDF {
   /**
@@ -835,14 +841,18 @@ export interface LigneBonLivraisonPDF {
   designation: string;
   /** Nom du bac d'origine (nullable) */
   nomBac: string | null;
-  /** Nombre de poissons de la ligne */
+  /** Nombre de poissons de la ligne (effectivement livrés, morts en transport déjà déduits) */
   nombrePoissons: number;
   /** Poids commandé/attendu en kilogrammes */
   poidsCommandeKg: number;
-  /** Poids réellement livré en kilogrammes (nullable si non renseigné) */
+  /** Poids réellement livré en kilogrammes (nullable seulement pour un BL legacy pré-Sprint BF) */
   poidsLivreKg: number | null;
   /** Écart = poidsLivreKg - poidsCommandeKg (nullable si poidsLivreKg absent) */
   ecartKg: number | null;
+  /** Nombre de poissons morts en transport constatés à la livraison (0 si aucun) */
+  nombreMortsTransport: number;
+  /** Motif de l'avarie constatée (nullable — renseigné seulement si morts en transport) */
+  motifAvarie: string | null;
 }
 
 /**
@@ -875,10 +885,17 @@ export interface SignatureBonLivraisonPDF {
  * /api/export/bon-livraison/[id]. Le PDF n'est généré que pour un BL au
  * statut SIGNE (guard côté route).
  *
+ * Les quantités (`lignes`) sont un rendu fidèle du **snapshot du BL**
+ * (`LigneBonLivraison`, Sprint BF) — pas de l'état courant de la vente. Ceci
+ * prépare le BL rectificatif (Sprint BF phase 2) : chaque BL, y compris un
+ * ancien remplacé par un rectificatif, doit pouvoir être régénéré avec SES
+ * propres quantités.
+ *
  * Structure du PDF :
  * - En-tête : nom/adresse ferme + N° BL + date de livraison + N° vente
  * - Section client : nom + téléphone
  * - Tableau des lignes livrées : produit, poissons, poids commandé/livré, écart
+ * - Mention discrète des morts en transport / avarie si constatés sur la ligne
  * - Bloc paiement : total vente / payé / reste à payer (mis en évidence)
  * - Bloc signatures : client, livreur, promoteur (+ cachet)
  */

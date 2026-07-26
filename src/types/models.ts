@@ -1166,6 +1166,8 @@ export interface BonLivraison {
   /** ID de la vente associee (relation 1:1) */
   venteId: string;
   statut: StatutBonLivraison;
+  /** Date de livraison saisie a l'ecran 1 du flux (Sprint BF), avant signature */
+  dateLivraison: Date | null;
   /** Signature du client — image PNG encodee en base64 (data URL) */
   signatureClient: string | null;
   signataireClientNom: string | null;
@@ -1176,6 +1178,8 @@ export interface BonLivraison {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** Quantites livrees par ligne de vente (Sprint BF) */
+  lignes?: LigneBonLivraison[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1184,6 +1188,35 @@ export interface BonLivraison {
 export interface BonLivraisonWithRelations extends BonLivraison {
   vente: Vente & { client: Client };
   user: User;
+  lignes: LigneBonLivraison[];
+}
+
+/**
+ * LigneBonLivraison — quantites reellement livrees pour une ligne de vente,
+ * portees par le bon de livraison (Sprint BF).
+ *
+ * Prerempli a la creation du BL avec le poids commande, modifiable tant que
+ * le BL n'est pas signe. Snapshot par BL — sert de base au futur rectificatif.
+ * Distinct de LigneVente.poidsLivreKg, qui n'est ecrit qu'a la signature.
+ */
+export interface LigneBonLivraison {
+  id: string;
+  bonLivraisonId: string;
+  ligneVenteId: string;
+  /** Poids reellement livre (kg). Prerempli = poids commande, ajustable avant signature. */
+  poidsLivreKg: number;
+  /** Poissons morts pendant le transport (saisi explicitement — sprint AV, jamais deduit du poids) */
+  nombreMortsTransport: number;
+  motifAvarie: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** LigneBonLivraison avec ses relations chargees */
+export interface LigneBonLivraisonWithRelations extends LigneBonLivraison {
+  ligneVente: LigneVente;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVenteById, updateVente, cloturerVente, cloturerDefinitivement, deleteVente } from "@/lib/queries/ventes";
+import { getVenteById, updateVente, cloturerDefinitivement, deleteVente } from "@/lib/queries/ventes";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
+import type { UpdateVenteDTO } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
@@ -93,6 +93,17 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 }
 
+/**
+ * PATCH /api/ventes/[id]
+ *
+ * Sprint BF — la clôture de livraison (action implicite, sans `action`) a
+ * ete retiree : les quantites livrees sont desormais saisies sur le bon de
+ * livraison (`PUT /api/bons-livraison/[id]/quantites`) et appliquees a la
+ * vente par la signature (`POST /api/bons-livraison/[id]/signer`), qui
+ * absorbe l'ancienne logique de `cloturerVente`.
+ *
+ * Seule action supportee ici : `cloturer_definitivement` (LIVREE -> CLOTUREE).
+ */
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_MODIFIER);
@@ -104,36 +115,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return NextResponse.json(result);
     }
 
-    const dto = body as ClotureVenteDTO;
-
-    // Sprint AV — Option E : plus d'obligation sur poidsLivreKg agrege.
-    // Au moins un moyen de determiner le poids livre doit etre fourni :
-    // soit `lignes[]`, soit l'ancien `poidsLivreKg` agrege (retrocompat).
-    if (!dto.lignes && dto.poidsLivreKg === undefined) {
-      // Aucune info de livraison fournie : comportement par defaut =
-      // aucune perte, aucun mort (cloturerVente gere ce cas), on laisse passer.
-    } else if (dto.lignes) {
-      for (let i = 0; i < dto.lignes.length; i++) {
-        const l = dto.lignes[i];
-        if (!l.ligneVenteId || typeof l.ligneVenteId !== "string") {
-          return apiError(400, `lignes[${i}].ligneVenteId est obligatoire.`);
-        }
-        if (l.poidsLivreKg !== undefined && l.poidsLivreKg < 0) {
-          return apiError(400, `lignes[${i}].poidsLivreKg ne peut pas etre negatif.`);
-        }
-        if (
-          l.nombreMortsTransport !== undefined &&
-          (typeof l.nombreMortsTransport !== "number" || l.nombreMortsTransport < 0)
-        ) {
-          return apiError(400, `lignes[${i}].nombreMortsTransport ne peut pas etre negatif.`);
-        }
-      }
-    } else if (dto.poidsLivreKg !== undefined && dto.poidsLivreKg <= 0) {
-      return apiError(400, "Le poids livre doit etre superieur a 0.");
-    }
-
-    const result = await cloturerVente(id, auth.activeSiteId, auth.userId, dto);
-    return NextResponse.json(result);
+    return apiError(400, "Action inconnue.");
   } catch (error) {
     return handleApiError("PATCH /api/ventes/[id]", error, "Erreur serveur.", {
       statusMap: [

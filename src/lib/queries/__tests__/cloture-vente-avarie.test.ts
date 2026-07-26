@@ -1,5 +1,9 @@
 /**
- * Tests — cloturerVente avec avaries (Sprint AV, Story AV.7)
+ * Tests — signerBonLivraison avec avaries (Sprint AV, Story AV.7 ; porté sur
+ * signerBonLivraison par Sprint BF, Story BF.2 — la logique avaries est
+ * strictement préservée, seule la source des quantités change : elle vient
+ * désormais de `LigneBonLivraison` (saisie avant signature) au lieu du DTO
+ * de `cloturerVente`, qui a été démonté.)
  *
  * Couvre :
  * 1. Régression bug racine : poidsLivré < commandé + nombreMortsTransport=0 → AUCUN MORTALITE
@@ -7,21 +11,22 @@
  * 3. Cas mixte : morts + perte poids → 1 seul MORTALITE, pas de mort fictif
  * 4. Dépassement (morts > commandé) → ValidationError
  * 5. Stock bac inchangé
- * 6. Rétrocompat : DTO sans lignes → 0 morts
+ * 6. BL sans lignes → ValidationError (remplace l'ancien cas "DTO legacy")
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cloturerVente } from "@/lib/queries/ventes";
+import { signerBonLivraison } from "@/lib/queries/bons-livraison";
 import { ValidationError } from "@/lib/errors";
-import { StatutVente, TypeReleve, CauseMortalite, StatutBonLivraison } from "@/types";
+import { StatutVente, StatutBonLivraison, TypeReleve, CauseMortalite } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks Prisma
 // ---------------------------------------------------------------------------
 
-const mockVenteFindFirst = vi.fn();
+const mockBonLivraisonFindFirst = vi.fn();
+const mockBonLivraisonUpdateMany = vi.fn();
+const mockBonLivraisonFindUniqueOrThrow = vi.fn();
 const mockVenteUpdate = vi.fn();
-const mockVenteFindUniqueOrThrow = vi.fn();
 const mockLigneVenteUpdate = vi.fn();
 const mockReleveFindFirst = vi.fn();
 const mockReleveUpdate = vi.fn();
@@ -35,10 +40,13 @@ const mockTransfertGroupeFindManyTx = vi.fn();
 
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
   const tx = {
+    bonLivraison: {
+      findFirst: (...args: unknown[]) => mockBonLivraisonFindFirst(...args),
+      updateMany: (...args: unknown[]) => mockBonLivraisonUpdateMany(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockBonLivraisonFindUniqueOrThrow(...args),
+    },
     vente: {
-      findFirst: (...args: unknown[]) => mockVenteFindFirst(...args),
       update: (...args: unknown[]) => mockVenteUpdate(...args),
-      findUniqueOrThrow: (...args: unknown[]) => mockVenteFindUniqueOrThrow(...args),
     },
     ligneVente: {
       update: (...args: unknown[]) => mockLigneVenteUpdate(...args),
@@ -82,48 +90,79 @@ vi.mock("@/lib/db", () => ({
 
 const SITE_ID = "site-1";
 const USER_ID = "user-1";
+const BL_ID = "bl-1";
 const VENTE_ID = "vente-1";
 const LIGNE_ID = "ligne-1";
 const BAC_ID = "bac-1";
 const VAGUE_ID = "vague-1";
 
-function makeVente(overrides: Partial<{
-  statut: StatutVente;
-  quantitePoissons: number;
-  poidsTotalKg: number;
-  prixUnitaireKg: number;
+const SIGNATURE_DTO = {
+  signatureClient: "data:image/png;base64,AAA",
+  signataireClientNom: "Jean Dupont",
+  signatureLivreur: "data:image/png;base64,BBB",
+};
+
+function makeLigneBonLivraison(overrides: Partial<{
+  poidsLivreKg: number;
+  nombreMortsTransport: number;
+  motifAvarie: string | null;
 }> = {}) {
   return {
-    id: VENTE_ID,
-    numero: "VTE-2026-001",
-    statut: StatutVente.EN_PREPARATION,
-    quantitePoissons: 100,
-    poidsTotalKg: 100,
-    prixUnitaireKg: 1000,
-    dateCommande: new Date("2026-07-15"),
-    factureId: null,
-    siteId: SITE_ID,
-    client: { nom: "Test Client" },
-    bonLivraison: { statut: StatutBonLivraison.SIGNE },
-    lignes: [
-      {
-        id: LIGNE_ID,
-        bacId: BAC_ID,
-        vagueId: VAGUE_ID,
-        nombrePoissons: 100,
-        poidsTotalKg: 100,
-        poidsMoyenG: 1000,
-        poidsLivreKg: null,
-      },
-    ],
+    id: "lbl-1",
+    bonLivraisonId: BL_ID,
+    ligneVenteId: LIGNE_ID,
+    poidsLivreKg: 100,
+    nombreMortsTransport: 0,
+    motifAvarie: null,
     ...overrides,
+  };
+}
+
+function makeBonLivraison(overrides: {
+  lignes?: ReturnType<typeof makeLigneBonLivraison>[];
+  statut?: StatutBonLivraison;
+} = {}) {
+  return {
+    id: BL_ID,
+    numero: "BL-2026-001",
+    statut: overrides.statut ?? StatutBonLivraison.EN_ATTENTE_SIGNATURE,
+    dateLivraison: new Date("2026-07-20"),
+    lignes: overrides.lignes ?? [makeLigneBonLivraison()],
+    vente: {
+      id: VENTE_ID,
+      numero: "VTE-2026-001",
+      statut: StatutVente.EN_PREPARATION,
+      quantitePoissons: 100,
+      poidsTotalKg: 100,
+      prixUnitaireKg: 1000,
+      montantTotal: 100000,
+      dateCommande: new Date("2026-07-15"),
+      facture: null,
+      vague: { id: VAGUE_ID, code: "V1", nombreInitial: 100 },
+      client: { id: "client-1", nom: "Test Client" },
+      lignes: [
+        {
+          id: LIGNE_ID,
+          bacId: BAC_ID,
+          vagueId: VAGUE_ID,
+          nombrePoissons: 100,
+          poidsTotalKg: 100,
+          poidsMoyenG: 1000,
+          poidsLivreKg: null,
+        },
+      ],
+    },
   };
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
   mockVenteUpdate.mockResolvedValue({});
-  mockVenteFindUniqueOrThrow.mockResolvedValue({ id: VENTE_ID, statut: StatutVente.LIVREE, lignes: [] });
+  mockBonLivraisonUpdateMany.mockResolvedValue({ count: 1 });
+  mockBonLivraisonFindUniqueOrThrow.mockResolvedValue({
+    id: BL_ID,
+    statut: StatutBonLivraison.SIGNE,
+  });
   mockLigneVenteUpdate.mockResolvedValue({});
   mockReleveUpdate.mockResolvedValue({});
   mockReleveCreate.mockResolvedValue({});
@@ -147,27 +186,21 @@ beforeEach(() => {
 // Cas 1 — Régression bug racine
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — régression bug conversion kg→morts", () => {
+describe("signerBonLivraison — régression bug conversion kg→morts", () => {
   it("perte poids sans morts saisis → AUCUN MORTALITE créé", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
+    mockBonLivraisonFindFirst.mockResolvedValue(
+      makeBonLivraison({
+        lignes: [makeLigneBonLivraison({ poidsLivreKg: 95, nombreMortsTransport: 0 })],
+      })
+    );
 
-    await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      lignes: [
-        {
-          ligneVenteId: LIGNE_ID,
-          poidsLivreKg: 95, // 5 kg perdus déshydratation, aucune mort
-          nombreMortsTransport: 0,
-        },
-      ],
-    });
+    await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO);
 
-    // Aucun relevé MORTALITE créé pour la perte de poids
     const mortaliteCalls = mockReleveCreate.mock.calls.filter(
       (call) => call[0]?.data?.typeReleve === TypeReleve.MORTALITE
     );
     expect(mortaliteCalls.length).toBe(0);
 
-    // LigneVente.nombrePoissons pas modifié (pas de mort saisi)
     const ligneUpdateCalls = mockLigneVenteUpdate.mock.calls;
     for (const call of ligneUpdateCalls) {
       expect(call[0].data.nombrePoissons).toBeUndefined();
@@ -179,20 +212,21 @@ describe("cloturerVente — régression bug conversion kg→morts", () => {
 // Cas 2 — Morts explicites
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — morts transport explicites", () => {
+describe("signerBonLivraison — morts transport explicites", () => {
   it("nombreMortsTransport=5 → MORTALITE(5) créé + LigneVente/VENTE décrémentés", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
+    mockBonLivraisonFindFirst.mockResolvedValue(
+      makeBonLivraison({
+        lignes: [
+          makeLigneBonLivraison({
+            poidsLivreKg: 100,
+            nombreMortsTransport: 5,
+            motifAvarie: "chaleur excessive",
+          }),
+        ],
+      })
+    );
 
-    await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      lignes: [
-        {
-          ligneVenteId: LIGNE_ID,
-          poidsLivreKg: 100,
-          nombreMortsTransport: 5,
-          motifAvarie: "chaleur excessive",
-        },
-      ],
-    });
+    await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO);
 
     const mortaliteCalls = mockReleveCreate.mock.calls.filter(
       (call) => call[0]?.data?.typeReleve === TypeReleve.MORTALITE
@@ -204,16 +238,13 @@ describe("cloturerVente — morts transport explicites", () => {
     expect(mortaliteData.venteId).toBeDefined();
     expect(mortaliteData.bacId).toBeDefined();
 
-    // LigneVente.nombrePoissons décrémenté de 5
     const ligneUpdateWithNombre = mockLigneVenteUpdate.mock.calls.find(
       (call) => call[0].data.nombrePoissons !== undefined
     );
     expect(ligneUpdateWithNombre).toBeDefined();
     expect(ligneUpdateWithNombre![0].data.nombrePoissons).toBe(95);
 
-    // Relevé VENTE décrémenté
     expect(mockReleveUpdate).toHaveBeenCalled();
-    // ReleveModification créée
     expect(mockReleveModificationCreate).toHaveBeenCalled();
   });
 });
@@ -222,24 +253,19 @@ describe("cloturerVente — morts transport explicites", () => {
 // Cas 3 — Cas mixte
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — cas mixte (morts + perte poids)", () => {
+describe("signerBonLivraison — cas mixte (morts + perte poids)", () => {
   it("5 morts + poidsLivré=95 → 1 seul MORTALITE(5), pas de mort fictif", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
+    mockBonLivraisonFindFirst.mockResolvedValue(
+      makeBonLivraison({
+        lignes: [makeLigneBonLivraison({ poidsLivreKg: 95, nombreMortsTransport: 5 })],
+      })
+    );
 
-    await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      lignes: [
-        {
-          ligneVenteId: LIGNE_ID,
-          poidsLivreKg: 95,
-          nombreMortsTransport: 5,
-        },
-      ],
-    });
+    await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO);
 
     const mortaliteCalls = mockReleveCreate.mock.calls.filter(
       (call) => call[0]?.data?.typeReleve === TypeReleve.MORTALITE
     );
-    // Exactement 1 MORTALITE (les 5 saisis, pas de fictifs pour les 5 kg perdus)
     expect(mortaliteCalls.length).toBe(1);
     expect(mortaliteCalls[0][0].data.nombreMorts).toBe(5);
   });
@@ -249,19 +275,15 @@ describe("cloturerVente — cas mixte (morts + perte poids)", () => {
 // Cas 4 — Dépassement
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — dépassement morts", () => {
+describe("signerBonLivraison — dépassement morts", () => {
   it("nombreMortsTransport > nombrePoissons → ValidationError, aucune écriture", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
+    mockBonLivraisonFindFirst.mockResolvedValue(
+      makeBonLivraison({
+        lignes: [makeLigneBonLivraison({ poidsLivreKg: 100, nombreMortsTransport: 150 })],
+      })
+    );
 
-    const err = await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      lignes: [
-        {
-          ligneVenteId: LIGNE_ID,
-          poidsLivreKg: 100,
-          nombreMortsTransport: 150, // > 100 commandés
-        },
-      ],
-    }).catch((e) => e);
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO).catch((e) => e);
 
     expect(err).toBeInstanceOf(ValidationError);
     expect(mockVenteUpdate).not.toHaveBeenCalled();
@@ -273,44 +295,34 @@ describe("cloturerVente — dépassement morts", () => {
 // Cas 5 — Stock bac inchangé
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — invariant stock bac", () => {
-  it("assignationBac.nombreActuel n'est JAMAIS retouché lors de la clôture", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
+describe("signerBonLivraison — invariant stock bac", () => {
+  it("assignationBac.nombreActuel n'est JAMAIS retouché lors de la signature", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(
+      makeBonLivraison({
+        lignes: [makeLigneBonLivraison({ poidsLivreKg: 100, nombreMortsTransport: 5 })],
+      })
+    );
 
-    await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      lignes: [
-        {
-          ligneVenteId: LIGNE_ID,
-          poidsLivreKg: 100,
-          nombreMortsTransport: 5,
-        },
-      ],
-    });
+    await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO);
 
-    // Aucun updateMany sur AssignationBac (le stock est immuable à la clôture)
     const stockUpdates = mockAssignationBacUpdateMany.mock.calls;
     expect(stockUpdates.length).toBe(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Cas 6 — Rétrocompatibilité
+// Cas 6 — BL sans lignes (remplace l'ancien "DTO legacy sans lignes")
 // ---------------------------------------------------------------------------
 
-describe("cloturerVente — rétrocompat DTO sans lignes", () => {
-  it("DTO sans lignes → 0 morts partout, aucun MORTALITE créé", async () => {
-    mockVenteFindFirst.mockResolvedValue(makeVente());
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+describe("signerBonLivraison — BL sans lignes", () => {
+  it("BL sans LigneBonLivraison → ValidationError, aucune écriture", async () => {
+    mockBonLivraisonFindFirst.mockResolvedValue(makeBonLivraison({ lignes: [] }));
 
-    await cloturerVente(SITE_ID, USER_ID, VENTE_ID, {
-      poidsLivreKg: 100, // legacy DTO
-    });
+    const err = await signerBonLivraison(SITE_ID, USER_ID, BL_ID, SIGNATURE_DTO).catch((e) => e);
 
-    const mortaliteCalls = mockReleveCreate.mock.calls.filter(
-      (call) => call[0]?.data?.typeReleve === TypeReleve.MORTALITE
-    );
-    expect(mortaliteCalls.length).toBe(0);
-
-    warnSpy.mockRestore();
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(err.message).toMatch(/quantités livrées/i);
+    expect(mockVenteUpdate).not.toHaveBeenCalled();
+    expect(mockReleveCreate).not.toHaveBeenCalled();
   });
 });

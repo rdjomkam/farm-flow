@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { base64ImageSchema } from "./common.schema";
+import { base64ImageSchema, flexibleDateSchema } from "./common.schema";
 
 // ---------------------------------------------------------------------------
 // Creation
@@ -38,3 +38,56 @@ export const signerBonLivraisonSchema = z.object({
 });
 
 export type SignerBonLivraisonInput = z.infer<typeof signerBonLivraisonSchema>;
+
+// ---------------------------------------------------------------------------
+// Quantites livrees (Sprint BF)
+// ---------------------------------------------------------------------------
+
+/** Une ligne de quantite livree saisie sur le bon de livraison, avant signature */
+export const enregistrerQuantiteLigneBonLivraisonSchema = z.object({
+  ligneVenteId: z.string().min(1, "L'identifiant de la ligne de vente est obligatoire."),
+  /**
+   * Poids reellement livre (kg). 0 permis — un client peut refuser toute une
+   * ligne a la livraison.
+   */
+  poidsLivreKg: z.number().min(0, "Le poids livre ne peut pas etre negatif."),
+  nombreMortsTransport: z
+    .number()
+    .int("Le nombre de morts en transport doit etre un entier.")
+    .min(0, "Le nombre de morts en transport ne peut pas etre negatif.")
+    .optional()
+    .default(0),
+  motifAvarie: z
+    .string()
+    .trim()
+    .max(500, "Le motif de l'avarie ne peut pas depasser 500 caracteres.")
+    .nullable()
+    .optional(),
+});
+
+export type EnregistrerQuantiteLigneBonLivraisonInput = z.infer<
+  typeof enregistrerQuantiteLigneBonLivraisonSchema
+>;
+
+/**
+ * Corps de la requete pour enregistrer les quantites livrees d'un bon de
+ * livraison, avant signature (ecran 1 du flux — Sprint BF).
+ */
+export const enregistrerQuantitesBonLivraisonSchema = z.object({
+  /**
+   * Accepte les deux formats produits par l'UI : date simple issue d'un
+   * `<input type="date">` ("2026-07-26") et ISO datetime complet. Reutilise
+   * le pattern commun (voir common.schema.ts) plutot qu'une contrainte
+   * `.datetime()` stricte qui rejette le format simple (BUG-BF-1). Pas de
+   * contrainte "futur" ici (contrairement a updateDateSchema) : voir
+   * flexibleDateSchema.
+   */
+  dateLivraison: flexibleDateSchema,
+  lignes: z
+    .array(enregistrerQuantiteLigneBonLivraisonSchema)
+    .min(1, "Au moins une ligne de quantite livree est requise."),
+});
+
+export type EnregistrerQuantitesBonLivraisonInput = z.infer<
+  typeof enregistrerQuantitesBonLivraisonSchema
+>;

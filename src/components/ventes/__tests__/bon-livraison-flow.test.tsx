@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 /**
- * Tests (legers) — BonLivraisonFlow (Story BL.4)
+ * Tests (legers) — BonLivraisonFlow (Story BL.4, etendus Sprint BF — Story BF.3)
  *
  * Composant : src/components/ventes/bon-livraison-flow.tsx
- * Flux mobile multi-etapes : recap -> signature client -> signature livreur -> signe.
+ * Flux mobile multi-etapes : quantites -> recap -> signature client -> signature livreur -> signe.
  *
- * Couverture (legere, conforme au perimetre BL.4) :
- * 1. Etape recap affichee apres chargement (numero, lignes, bloc paiement)
- * 2. Navigation recap -> signature client (bouton "Faire signer")
- * 3. Etat "deja signe" -> saute directement a l'etape finale avec signatures
+ * Couverture :
+ * 1. Etape quantites affichee en premier, prereplie depuis les lignes du BL
+ * 2. Appel de enregistrerQuantitesBonLivraison au clic "Suivant"
+ * 3. Etape recap affichee apres, avec le poids LIVRE saisi (pas le commande)
+ * 4. Navigation recap -> signature client (bouton "Faire signer")
+ * 5. Etat "deja signe" -> saute directement a l'etape finale avec signatures
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -35,21 +37,24 @@ vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
-const translations: Record<string, string> = {
+const bonLivraisonTranslations: Record<string, string> = {
   title: "Bon de livraison",
   loading: "Chargement du bon de livraison...",
   back: "Retour",
   next: "Suivant",
   validating: "Validation...",
   close: "Fermer",
+  "quantites.instructions": "Saisissez les quantites reellement livrees.",
+  "quantites.dateLivraisonLabel": "Date de livraison",
   "recap.client": "Client",
   "recap.date": "Date",
-  "recap.lignesTitle": "Lignes a livrer",
+  "recap.lignesTitle": "Lignes livrees",
   "recap.poissons": "poissons",
   "recap.totalVente": "Total vente",
   "recap.paye": "Paye a ce jour",
   "recap.resteAPayer": "Reste a payer",
   "recap.fairesigner": "Faire signer",
+  "recap.ecartLabel": "Commande : {kgCommande} kg (ecart {kg} kg)",
   "signatureClient.instructions": "Faites signer le client.",
   "signatureClient.nomLabel": "Nom du signataire",
   "signatureClient.nomPlaceholder": "Ex: Jean Mballa",
@@ -71,15 +76,34 @@ const translations: Record<string, string> = {
   "signaturePad.clear": "Effacer",
 };
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-    let template = translations[key] ?? key;
-    if (values) {
-      for (const [k, v] of Object.entries(values)) {
-        template = template.replace(`{${k}}`, String(v));
-      }
+const livraisonAvarieTranslations: Record<string, string> = {
+  poidsLivreLabel: "Poids livre (kg)",
+  mortsTransportLabel: "Poissons morts en transport",
+  motifLabel: "Motif d'avarie (optionnel)",
+  motifPlaceholder: "Ex : chaleur, temps trajet, oxygene",
+  pertePoidsLabel: "Perte poids : {kg} kg",
+  totalLivreLabel: "Total livre : {kgLivre} / {kgCommande} kg",
+  totalMortsLabel: "Morts transport : {nb}",
+  totalPoissonsLivreLabel: "Poissons livres : {nb}",
+};
+
+function interpolate(template: string, values?: Record<string, unknown>) {
+  let result = template;
+  if (values) {
+    for (const [k, v] of Object.entries(values)) {
+      result = result.replace(`{${k}}`, String(v));
     }
-    return template;
+  }
+  return result;
+}
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string, values?: Record<string, unknown>) => {
+    const dict =
+      namespace === "ventes.livraisonAvarie"
+        ? livraisonAvarieTranslations
+        : bonLivraisonTranslations;
+    return interpolate(dict[key] ?? key, values);
   },
   useLocale: () => "fr",
 }));
@@ -87,12 +111,14 @@ vi.mock("next-intl", () => ({
 const mockGetBonLivraison = vi.fn();
 const mockCreateBonLivraison = vi.fn();
 const mockSignerBonLivraison = vi.fn();
+const mockEnregistrerQuantitesBonLivraison = vi.fn();
 
 vi.mock("@/services", () => ({
   useVenteService: () => ({
     getBonLivraison: mockGetBonLivraison,
     createBonLivraison: mockCreateBonLivraison,
     signerBonLivraison: mockSignerBonLivraison,
+    enregistrerQuantitesBonLivraison: mockEnregistrerQuantitesBonLivraison,
   }),
 }));
 
@@ -105,6 +131,7 @@ const baseBonLivraison = {
   numero: "BL-2026-001",
   venteId: "vente-1",
   statut: StatutBonLivraison.BROUILLON,
+  dateLivraison: null,
   signatureClient: null,
   signataireClientNom: null,
   signatureLivreur: null,
@@ -113,10 +140,25 @@ const baseBonLivraison = {
   siteId: "site-1",
   createdAt: new Date("2026-07-01").toISOString(),
   updatedAt: new Date("2026-07-01").toISOString(),
+  lignes: [
+    {
+      id: "ligne-bl-1",
+      bonLivraisonId: "bl-1",
+      ligneVenteId: "ligne-1",
+      poidsLivreKg: 40,
+      nombreMortsTransport: 0,
+      motifAvarie: null,
+      siteId: "site-1",
+      createdAt: new Date("2026-07-01").toISOString(),
+      updatedAt: new Date("2026-07-01").toISOString(),
+    },
+  ],
 };
 
 const baseVente = {
   client: { id: "client-1", nom: "Restaurant Le Mboa" },
+  prixUnitaireKg: 2500,
+  poidsTotalKg: 40,
   lignes: [
     {
       id: "ligne-1",
@@ -136,11 +178,11 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Suite 1 — Etape recap
+// Suite 1 — Etape quantites (premiere etape du flux)
 // ---------------------------------------------------------------------------
 
-describe("BonLivraisonFlow — Etape recap", () => {
-  it("affiche le numero, les lignes et le bloc paiement apres chargement", async () => {
+describe("BonLivraisonFlow — Etape quantites", () => {
+  it("affiche l'etape quantites en premier, prereplie depuis les lignes du BL", async () => {
     mockGetBonLivraison.mockResolvedValue({
       ok: true,
       data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
@@ -156,22 +198,22 @@ describe("BonLivraisonFlow — Etape recap", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("BL-2026-001")).toBeInTheDocument();
+      expect(screen.getByText("Date de livraison")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Restaurant Le Mboa/)).toBeInTheDocument();
-    expect(screen.getByText(/VAG-001/)).toBeInTheDocument();
-    expect(screen.getByText("Faire signer")).toBeInTheDocument();
+    expect(screen.getByLabelText("Poids livre (kg)")).toHaveValue(40);
+    expect(screen.getByLabelText("Poissons morts en transport")).toHaveValue(0);
   });
 
-  it("cree le BL (idempotent) si aucun n'existe encore pour la vente", async () => {
-    mockGetBonLivraison
-      .mockResolvedValueOnce({ ok: false, error: "Aucun bon de livraison pour cette vente." })
-      .mockResolvedValueOnce({
-        ok: true,
-        data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
-      });
-    mockCreateBonLivraison.mockResolvedValue({ ok: true, data: baseBonLivraison });
+  it("appelle enregistrerQuantitesBonLivraison au clic sur Suivant, puis affiche le recap", async () => {
+    mockGetBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
+    });
+    mockEnregistrerQuantitesBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { ...baseBonLivraison, statut: "EN_ATTENTE_SIGNATURE" },
+    });
 
     render(
       <BonLivraisonFlow
@@ -182,13 +224,82 @@ describe("BonLivraisonFlow — Etape recap", () => {
       />
     );
 
+    await waitFor(() => screen.getByText("Suivant"));
+    fireEvent.click(screen.getByText("Suivant"));
+
     await waitFor(() => {
-      expect(mockCreateBonLivraison).toHaveBeenCalledWith("vente-1");
+      expect(mockEnregistrerQuantitesBonLivraison).toHaveBeenCalledWith(
+        "bl-1",
+        expect.objectContaining({
+          lignes: [
+            expect.objectContaining({
+              ligneVenteId: "ligne-1",
+              poidsLivreKg: 40,
+              nombreMortsTransport: 0,
+            }),
+          ],
+        })
+      );
     });
 
     await waitFor(() => {
       expect(screen.getByText("BL-2026-001")).toBeInTheDocument();
     });
+  });
+
+  it("affiche le recap avec le poids reellement livre (pas le poids commande)", async () => {
+    // 1er appel (chargement initial) : BL brouillon, poids commande = 40 kg
+    // 2e appel (rechargement post-quantites) : ligne mise a jour a 35 kg livres
+    mockGetBonLivraison
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          bonLivraison: {
+            ...baseBonLivraison,
+            lignes: [{ ...baseBonLivraison.lignes[0], poidsLivreKg: 35 }],
+          },
+          vente: baseVente,
+          blocPaiement,
+        },
+      });
+    mockEnregistrerQuantitesBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { ...baseBonLivraison, statut: "EN_ATTENTE_SIGNATURE" },
+    });
+
+    render(
+      <BonLivraisonFlow
+        open
+        onOpenChange={() => {}}
+        venteId="vente-1"
+        currentUserName="Livreur Test"
+      />
+    );
+
+    await waitFor(() => screen.getByLabelText("Poids livre (kg)"));
+    fireEvent.change(screen.getByLabelText("Poids livre (kg)"), {
+      target: { value: "35" },
+    });
+
+    fireEvent.click(screen.getByText("Suivant"));
+
+    await waitFor(() => {
+      expect(mockEnregistrerQuantitesBonLivraison).toHaveBeenCalledWith(
+        "bl-1",
+        expect.objectContaining({
+          lignes: [expect.objectContaining({ poidsLivreKg: 35 })],
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("35 kg")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("40 kg")).not.toBeInTheDocument();
   });
 });
 
@@ -197,10 +308,14 @@ describe("BonLivraisonFlow — Etape recap", () => {
 // ---------------------------------------------------------------------------
 
 describe("BonLivraisonFlow — Navigation signature", () => {
-  it("passe a l'etape signature client au clic sur 'Faire signer'", async () => {
+  async function goToRecap() {
     mockGetBonLivraison.mockResolvedValue({
       ok: true,
       data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
+    });
+    mockEnregistrerQuantitesBonLivraison.mockResolvedValue({
+      ok: true,
+      data: { ...baseBonLivraison, statut: "EN_ATTENTE_SIGNATURE" },
     });
 
     render(
@@ -212,7 +327,14 @@ describe("BonLivraisonFlow — Navigation signature", () => {
       />
     );
 
+    await waitFor(() => screen.getByText("Suivant"));
+    fireEvent.click(screen.getByText("Suivant"));
     await waitFor(() => screen.getByText("Faire signer"));
+  }
+
+  it("passe a l'etape signature client au clic sur 'Faire signer'", async () => {
+    await goToRecap();
+
     fireEvent.click(screen.getByText("Faire signer"));
 
     await waitFor(() => {
@@ -221,21 +343,8 @@ describe("BonLivraisonFlow — Navigation signature", () => {
   });
 
   it("pre-remplit le nom du signataire avec le nom du client", async () => {
-    mockGetBonLivraison.mockResolvedValue({
-      ok: true,
-      data: { bonLivraison: baseBonLivraison, vente: baseVente, blocPaiement },
-    });
+    await goToRecap();
 
-    render(
-      <BonLivraisonFlow
-        open
-        onOpenChange={() => {}}
-        venteId="vente-1"
-        currentUserName="Livreur Test"
-      />
-    );
-
-    await waitFor(() => screen.getByText("Faire signer"));
     fireEvent.click(screen.getByText("Faire signer"));
 
     await waitFor(() => {
@@ -251,7 +360,7 @@ describe("BonLivraisonFlow — Navigation signature", () => {
 // ---------------------------------------------------------------------------
 
 describe("BonLivraisonFlow — BL deja signe", () => {
-  it("affiche directement l'etape finale avec les signatures", async () => {
+  it("affiche directement l'etape finale avec les signatures (saute quantites/recap)", async () => {
     mockGetBonLivraison.mockResolvedValue({
       ok: true,
       data: {
@@ -283,5 +392,6 @@ describe("BonLivraisonFlow — BL deja signe", () => {
 
     expect(screen.getByText("Telecharger le PDF")).toBeInTheDocument();
     expect(screen.getByText("Partager").closest("button")).not.toBeDisabled();
+    expect(mockEnregistrerQuantitesBonLivraison).not.toHaveBeenCalled();
   });
 });

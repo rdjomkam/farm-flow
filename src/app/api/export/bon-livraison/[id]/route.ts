@@ -47,16 +47,32 @@ export async function GET(
       );
     }
 
+    // Les quantites reelles viennent du snapshot du BL (LigneBonLivraison,
+    // Sprint BF) et non plus de LigneVente : LigneVente ne porte que l'etat
+    // courant, alors qu'un BL rectificatif (BF.6/BF.7) devra pouvoir rendre
+    // un ancien BL avec SES propres quantites. Fallback defensif sur
+    // LigneVente.poidsLivreKg pour les BL signes avant Sprint BF (legacy,
+    // sans LigneBonLivraison).
     const lignes: LigneBonLivraisonPDF[] = bonLivraison.vente.lignes.map(
       (ligne) => {
+        const ligneBL = bonLivraison.lignes.find(
+          (l) => l.ligneVenteId === ligne.id
+        );
+
         const poidsCommandeKg = ligne.poidsTotalKg;
-        const poidsLivreKg = ligne.poidsLivreKg ?? null;
+        const poidsLivreKg = ligneBL ? ligneBL.poidsLivreKg : ligne.poidsLivreKg ?? null;
         const ecartKg =
           poidsLivreKg === null ? null : poidsLivreKg - poidsCommandeKg;
 
         const designation =
           ligne.lotAlevins?.code != null ? "Alevins silure" : "Silure";
 
+        // nombrePoissons : nombre effectivement livre. `signerBonLivraison`
+        // decremente deja LigneVente.nombrePoissons des morts en transport
+        // au moment de la signature (voir bons-livraison.ts) — comme le PDF
+        // n'est genere qu'apres signature (guard ci-dessus), la valeur
+        // courante de la ligne de vente est bien le nombre recu par le
+        // client, pas le nombre commande.
         return {
           designation,
           nomBac: ligne.bac?.nom ?? null,
@@ -64,6 +80,8 @@ export async function GET(
           poidsCommandeKg,
           poidsLivreKg,
           ecartKg,
+          nombreMortsTransport: ligneBL?.nombreMortsTransport ?? 0,
+          motifAvarie: ligneBL?.motifAvarie ?? null,
         };
       }
     );

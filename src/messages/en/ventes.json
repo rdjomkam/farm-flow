@@ -263,8 +263,6 @@
     }
   },
   "livraisonAvarie": {
-    "dialogTitle": "Confirm delivery — {numero}",
-    "dialogDescription": "Enter the actual delivered weights and the number of fish lost during transport.",
     "poidsLivreLabel": "Delivered weight (kg)",
     "mortsTransportLabel": "Fish dead in transport",
     "motifLabel": "Loss reason (optional)",
@@ -272,15 +270,7 @@
     "pertePoidsLabel": "Weight loss: {kg} kg",
     "totalLivreLabel": "Total delivered: {kgLivre} / {kgCommande} kg",
     "totalMortsLabel": "Transport losses: {nb}",
-    "totalPoissonsLivreLabel": "Fish delivered: {nb}",
-    "confirmButton": "Confirm delivery",
-    "cancelButton": "Cancel",
-    "success": "Delivery recorded.",
-    "errors": {
-      "mortsExcede": "Number of losses exceeds the ordered quantity.",
-      "poidsInvalide": "Invalid weight.",
-      "generic": "Error during delivery."
-    }
+    "totalPoissonsLivreLabel": "Fish delivered: {nb}"
   },
   "bonLivraison": {
     "title": "Delivery note",
@@ -297,17 +287,24 @@
     "openFlow": "Open delivery note",
     "errors": {
       "creationFailed": "Error creating the delivery note.",
-      "loadFailed": "Error loading the delivery note."
+      "loadFailed": "Error loading the delivery note.",
+      "quantitesSaveFailed": "Error saving delivered quantities.",
+      "signatureFailed": "Error validating the signature."
+    },
+    "quantites": {
+      "instructions": "Enter the actual delivered quantities before having the client sign.",
+      "dateLivraisonLabel": "Delivery date"
     },
     "recap": {
       "client": "Client",
       "date": "Date",
-      "lignesTitle": "Items to deliver",
+      "lignesTitle": "Items delivered",
       "poissons": "fish",
       "totalVente": "Sale total",
       "paye": "Paid so far",
       "resteAPayer": "Remaining balance",
-      "fairesigner": "Get signatures"
+      "fairesigner": "Get signatures",
+      "ecartLabel": "Ordered: {kgCommande} kg (gap {kg} kg)"
     },
     "signatureClient": {
       "instructions": "Have the client sign on the screen below.",

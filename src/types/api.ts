@@ -149,6 +149,7 @@ import type {
   ConfigElevageWithRelations,
   AjustementDepense,
   BonLivraison,
+  LigneBonLivraison,
   Depense,
   DowngradeRessourcesAGarder,
   FraisPaiementDepense,
@@ -986,39 +987,6 @@ export interface CreateVenteAlevinsDepuisVagueDTO {
 /** Reponse liste des ventes */
 export type VenteListResponse = PaginatedResponse<Vente>;
 
-/** Detail de livraison par ligne de vente (Sprint AV) */
-export interface ClotureVenteLigneDTO {
-  ligneVenteId: string;
-  /** Poids reellement livre pour cette ligne (kg). Defaut = LigneVente.poidsTotalKg (aucune perte). */
-  poidsLivreKg?: number;
-  /** Nombre de poissons morts en transport, saisi manuellement. Defaut 0. */
-  nombreMortsTransport?: number;
-  /** Motif libre de l'avarie (ex: "chaleur excessive"). */
-  motifAvarie?: string;
-}
-
-/**
- * DTO pour cloturer la livraison d'une vente (Sprint AV — Option E).
- *
- * La conversion automatique kg->morts a ete supprimee : le nombre de
- * poissons morts en transport doit etre saisi explicitement par ligne
- * via `lignes[].nombreMortsTransport`. La perte de poids (deshydratation,
- * purge) est purement comptable et ne cree jamais de MORTALITE.
- */
-export interface ClotureVenteDTO {
-  /** Date de livraison (ISO 8601). Defaut: maintenant. */
-  dateLivraison?: string;
-  /** Detail de livraison par ligne. Recommande — permet la saisie explicite des morts transport. */
-  lignes?: ClotureVenteLigneDTO[];
-  /**
-   * Poids livre agrege (kg), retrocompatibilite avec l'ancien DTO (avant Sprint AV).
-   * Si `lignes` est fourni, doit correspondre a la somme de `lignes[].poidsLivreKg`
-   * (tolerance 0.01 kg). Si `lignes` est absent, distribue au prorata sur toutes
-   * les lignes de la vente avec 0 mort transport (log warning — integration a migrer).
-   */
-  poidsLivreKg?: number;
-}
-
 /** Filtres pour lister les ventes */
 export interface VenteFilters {
   clientId?: string;
@@ -1098,6 +1066,30 @@ export interface SignerBonLivraisonDTO {
   signatureLivreur: string;
 }
 
+/**
+ * Ligne de quantite livree saisie sur un bon de livraison (Sprint BF).
+ */
+export interface EnregistrerQuantiteLigneBonLivraisonDTO {
+  ligneVenteId: string;
+  /** Poids reellement livre pour cette ligne (kg). 0 accepte (ligne refusee integralement). */
+  poidsLivreKg: number;
+  /** Nombre de poissons morts en transport, saisi manuellement. Defaut 0. */
+  nombreMortsTransport?: number;
+  /** Motif libre de l'avarie (ex: "chaleur excessive"). */
+  motifAvarie?: string | null;
+}
+
+/**
+ * DTO pour enregistrer les quantites livrees d'un bon de livraison, avant
+ * signature (Sprint BF — ecran 1 du flux). Passe le BL de BROUILLON a
+ * EN_ATTENTE_SIGNATURE ; re-editable tant que non signe.
+ */
+export interface EnregistrerQuantitesBonLivraisonDTO {
+  /** Date de livraison (ISO 8601). Defaut: maintenant. */
+  dateLivraison?: string;
+  lignes: EnregistrerQuantiteLigneBonLivraisonDTO[];
+}
+
 /** Bloc paiement affiche sur le bon de livraison — Sprint BL */
 export interface BlocPaiementBonLivraison {
   totalVente: number;
@@ -1107,7 +1099,7 @@ export interface BlocPaiementBonLivraison {
 
 /** Reponse detaillee d'un bon de livraison — GET /api/ventes/[id]/bon-livraison */
 export interface BonLivraisonDetailResponse {
-  bonLivraison: BonLivraison;
+  bonLivraison: BonLivraison & { lignes?: LigneBonLivraison[] };
   vente: Vente & {
     client: Client;
     lignes?: (LigneVente & {

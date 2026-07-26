@@ -5,7 +5,6 @@ import { useApi } from "@/hooks/use-api";
 import type {
   CreateVenteDTO,
   UpdateVenteDTO,
-  ClotureVenteDTO,
   VenteListResponse,
   FactureListResponse,
   FactureDetailResponse,
@@ -19,6 +18,7 @@ import type {
   BonLivraisonWithRelations,
   BonLivraisonDetailResponse,
   SignerBonLivraisonDTO,
+  EnregistrerQuantitesBonLivraisonDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -87,20 +87,6 @@ export function useVenteService() {
           body: JSON.stringify(dto),
         },
         { successMessage: "Vente modifiée." }
-      ),
-    [call]
-  );
-
-  const cloturerVente = useCallback(
-    (id: string, dto: ClotureVenteDTO) =>
-      call<VenteWithRelations>(
-        `/api/ventes/${id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dto),
-        },
-        { successMessage: "Livraison clôturée." }
       ),
     [call]
   );
@@ -270,7 +256,25 @@ export function useVenteService() {
     [call]
   );
 
-  /** Signe un bon de livraison (client + livreur) */
+  /**
+   * Enregistre les quantites reellement livrees d'un bon de livraison, avant
+   * signature (ecran 1 du flux — Sprint BF). Re-editable tant que non signe.
+   */
+  const enregistrerQuantitesBonLivraison = useCallback(
+    (bonLivraisonId: string, dto: EnregistrerQuantitesBonLivraisonDTO) =>
+      call<BonLivraisonWithRelations>(
+        `/api/bons-livraison/${bonLivraisonId}/quantites`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Quantités livrées enregistrées." }
+      ),
+    [call]
+  );
+
+  /** Signe un bon de livraison (client + livreur) — applique les quantites et livre la vente */
   const signerBonLivraison = useCallback(
     (bonLivraisonId: string, dto: SignerBonLivraisonDTO) =>
       call<BonLivraisonWithRelations>(
@@ -291,7 +295,6 @@ export function useVenteService() {
     createVente,
     createVenteRaw,
     updateVente,
-    cloturerVente,
     cloturerDefinitivement,
     deleteVente,
     listFactures,
@@ -306,6 +309,7 @@ export function useVenteService() {
     createFacture,
     createBonLivraison,
     getBonLivraison,
+    enregistrerQuantitesBonLivraison,
     signerBonLivraison,
   };
 }

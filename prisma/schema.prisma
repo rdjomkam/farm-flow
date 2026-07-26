@@ -731,6 +731,7 @@ model Site {
   factures               Facture[]
   paiements              Paiement[]
   bonsLivraison          BonLivraison[]
+  lignesBonLivraison     LigneBonLivraison[]
   reproducteurs          Reproducteur[]
   pontes                 Ponte[]
   lotsAlevins            LotAlevins[]
@@ -1753,6 +1754,10 @@ model LigneVente {
   poidsLivreKg   Float?
   siteId         String
   site           Site        @relation("SiteLignesVente", fields: [siteId], references: [id])
+  /**
+   * Quantités saisies par BL pour cette ligne (Sprint BF) — un BL brouillon/en cours + éventuels rectificatifs futurs.
+   */
+  lignesBonLivraison LigneBonLivraison[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -1792,11 +1797,15 @@ model Facture {
  * (statut SIGNE) pour passer une vente de EN_PREPARATION à LIVREE.
  */
 model BonLivraison {
-  id                  String             @id @default(cuid())
-  numero              String             @unique
-  venteId             String             @unique
-  vente               Vente              @relation(fields: [venteId], references: [id])
-  statut              StatutBonLivraison @default(BROUILLON)
+  id                  String              @id @default(cuid())
+  numero              String              @unique
+  venteId             String              @unique
+  vente               Vente               @relation(fields: [venteId], references: [id])
+  statut              StatutBonLivraison  @default(BROUILLON)
+  /**
+   * Date de livraison saisie à l'écran 1 du flux (Sprint BF), avant signature.
+   */
+  dateLivraison       DateTime?
   /**
    * Signature du client — image PNG encodée en base64 (data URL)
    */
@@ -1811,14 +1820,48 @@ model BonLivraison {
    * Utilisateur livreur ayant créé/signé le bon de livraison
    */
   userId              String
-  user                User               @relation(fields: [userId], references: [id])
+  user                User                @relation(fields: [userId], references: [id])
   siteId              String
-  site                Site               @relation(fields: [siteId], references: [id])
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  site                Site                @relation(fields: [siteId], references: [id])
+  /**
+   * Quantités livrées par ligne de vente (Sprint BF) — saisies avant signature,
+   * snapshot du BL, base du rectificatif futur.
+   */
+  lignes              LigneBonLivraison[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   @@index([siteId])
   @@index([userId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — Quantités livrées par ligne de BL (Sprint BF)
+// ──────────────────────────────────────────
+
+model LigneBonLivraison {
+  id                   String       @id @default(cuid())
+  bonLivraisonId       String
+  bonLivraison         BonLivraison @relation(fields: [bonLivraisonId], references: [id], onDelete: Cascade)
+  ligneVenteId         String
+  ligneVente           LigneVente   @relation(fields: [ligneVenteId], references: [id])
+  /**
+   * Poids réellement livré (kg). Prérempli = poids commandé, ajustable avant signature.
+   */
+  poidsLivreKg         Float
+  /**
+   * Poissons morts pendant le transport (saisi explicitement — sprint AV, jamais déduit du poids).
+   */
+  nombreMortsTransport Int          @default(0)
+  motifAvarie          String?
+  siteId               String
+  site                 Site         @relation(fields: [siteId], references: [id])
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([bonLivraisonId, ligneVenteId])
+  @@index([siteId])
+  @@index([ligneVenteId])
 }
 
 model Paiement {
