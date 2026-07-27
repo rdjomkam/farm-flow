@@ -64,3 +64,12 @@ export function RecentActivitySkeleton() {
     </div>
   );
 }
+
+export function BacsEnDeriveSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="h-3 w-48 rounded bg-muted animate-pulse" />
+      <div className="rounded-xl bg-muted animate-pulse h-[120px]" />
+    </div>
+  );
+}

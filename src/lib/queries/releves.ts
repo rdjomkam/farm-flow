@@ -9,12 +9,14 @@ import {
   MethodeComptage,
   StatutActivite,
   TypeActivite,
+  ContexteDetectionEcart,
 } from "@/types";
 import { ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
 import type { CreateReleveDTO, UpdateReleveDTO, ReleveFilters, TypeReleve } from "@/types";
 import type { ReleveWithModifications, ReleveModificationWithUser } from "@/types";
 import { findMatchingActivite } from "@/lib/queries/activites";
 import { getTransfertGroupesByVague } from "@/lib/queries/transferts";
+import { calculerEcartsParBac, persisterEcartConstate } from "@/lib/guards/assignation-invariant";
 
 /** Liste les releves d'un site avec filtres optionnels et pagination */
 export async function getReleves(
@@ -348,6 +350,85 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
           where: { id: activeAssignation.id },
           data: { nombreActuel: { decrement: data.nombreMorts } },
         });
+      }
+    }
+
+    // ADR-048 (Sprint BD, story BD.0) — MORTALITE (décrémente nombreActuel
+    // ci-dessus) et COMPTAGE (déplace la base de rejeu `expected` utilisée par
+    // calculerEcartsParBac) modifient tous deux l'état de conservation d'un
+    // bac SANS jamais passer par un call site guardé (verifyAssignationInvariant
+    // n'a que 6 call sites : arrivage, transfert, calibrage, vente, vente
+    // d'alevins, bon de livraison — createReleve n'en fait pas partie). Un
+    // COMPTAGE correctif est en particulier le SEUL geste qui peut faire
+    // repasser une dérive à 0 (`resoluLe`) — sans ce recalcul, `resoluLe` ne
+    // se remplirait jamais pour un bac qui ne subit plus d'opération guardée
+    // par la suite (risque n°1, pré-analyse sprint BD).
+    //
+    // On appelle ICI uniquement `calculerEcartsParBac` + `persisterEcartConstate`
+    // — JAMAIS `verifyAssignationInvariant` (qui peut lever `ConservationError`
+    // et ferait échouer la création du relevé : la saisie terrain doit
+    // toujours passer en premier, contrainte non négociable du sprint BD).
+    //
+    // ISOLATION (rapport tester BD.0, verdict FAIL initial) : un simple
+    // try/catch JS autour de ce bloc NE SUFFIT PAS. Une vraie erreur SQL
+    // (pas un rejet JS) empoisonne toute la transaction Postgres en cours
+    // (25P02 current transaction is aborted) même si elle est attrapée en
+    // JS — la requête suivante dans la même transaction (ici la liaison
+    // Planning, `findMatchingActivite`, qui exécute un vrai
+    // `tx.activite.findFirst` pour tout COMPTAGE en mode vague) échouerait
+    // alors à son tour, non catchée, et ferait échouer `createReleve()` en
+    // entier — exactement l'impasse interdite. Un simple réordonnancement
+    // (bloc déplacé en fin de transaction) ne corrige pas non plus le
+    // problème : Postgres dégraderait alors silencieusement le COMMIT final
+    // en ROLLBACK (le relevé serait perdu sans que `createReleve()` ne lève
+    // d'erreur — pire qu'un échec explicite).
+    //
+    // On isole donc ce bloc avec un SAVEPOINT Postgres explicite : si une
+    // erreur SQL réelle survient à l'intérieur, `ROLLBACK TO SAVEPOINT`
+    // désavorte la transaction (contrairement à un simple catch JS) et les
+    // opérations suivantes (dont la liaison Planning) ainsi que le COMMIT
+    // final redeviennent exécutables normalement. Vérifié empiriquement
+    // contre silures-db (Docker) avec le même client Prisma + adapter-pg
+    // que src/lib/db.ts avant d'être retenu.
+    if (
+      (data.typeReleve === TypeReleveEnum.MORTALITE || data.typeReleve === TypeReleveEnum.COMPTAGE) &&
+      data.bacId &&
+      data.vagueId
+    ) {
+      await tx.$executeRawUnsafe("SAVEPOINT ecart_constate_sp");
+      try {
+        const ecarts = await calculerEcartsParBac(tx, siteId, data.vagueId, [data.bacId]);
+        const ecartBac = ecarts.get(data.bacId);
+        if (ecartBac) {
+          await persisterEcartConstate(tx, siteId, data.vagueId, data.bacId, ecartBac.ecart, {
+            userId,
+            contexte: ContexteDetectionEcart.INDETERMINE,
+          });
+        }
+        // Canary : `persisterEcartConstate` avale déjà ses PROPRES erreurs SQL
+        // en interne (son propre try/catch, ADR-048 section 6) sans jamais les
+        // relancer ni les désavorter — une vraie erreur SQL survenant DANS
+        // cette fonction ne remonterait donc jamais jusqu'ici et ne
+        // déclencherait pas le `catch` ci-dessous, laissant la transaction
+        // empoisonnée sans qu'on le sache. Cette requête sonde (pas de
+        // side-effect) échoue avec 25P02 si la transaction est déjà avortée,
+        // ce qui permet de détecter et désavorter même une poisoning
+        // "silencieuse" par le catch interne de `persisterEcartConstate`.
+        // Vérifié empiriquement contre silures-db avant d'être retenu.
+        await tx.$queryRawUnsafe("SELECT 1");
+      } catch (err) {
+        // Ne jamais transformer un échec de recalcul/persistance de l'écart
+        // de conservation en échec de la création du relevé (BD.0). Le
+        // ROLLBACK TO SAVEPOINT désavorte la transaction Postgres — sans
+        // lui, une vraie erreur SQL catchée ici laisserait la transaction
+        // "aborted" et ferait échouer toute requête suivante (voir
+        // commentaire ci-dessus).
+        await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT ecart_constate_sp");
+        console.error(
+          "[createReleve] Échec du recalcul d'écart de conservation (non bloquant)",
+          JSON.stringify({ siteId, vagueId: data.vagueId, bacId: data.bacId, typeReleve: data.typeReleve }),
+          err,
+        );
       }
     }
 

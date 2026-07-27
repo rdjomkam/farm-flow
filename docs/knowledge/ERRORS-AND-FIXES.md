@@ -264,6 +264,230 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-117 — Un défaut de call site ne se voit pas dans un ADR : vérifier par grep que chaque transition d'un cycle de vie documenté a un point d'appel réel
+**Sprint :** BD (story BD.0) | **Date :** 2026-07-27
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/releves.ts`, `src/lib/guards/assignation-invariant.ts`, `docs/decisions/ADR-048-persistance-ecarts-conservation.md`
+
+**Symptôme :**
+Le sprint BD a découvert que le geste censé résoudre une dérive de conservation (un relevé
+COMPTAGE correctif) ne déclenchait aucun recalcul d'écart, alors qu'ADR-048 décrivait le cycle
+détection → résolution comme fonctionnel de bout en bout. `verifyAssignationInvariant` n'avait
+que 6 call sites, et `createReleve` n'en faisait pas partie. Pire : MORTALITE, réputé « le faire
+déjà » (parce qu'il décrémente bien `AssignationBac.nombreActuel`), ne déclenchait pas non plus
+le recalcul d'écart pour autant.
+
+**Cause racine :**
+Un ADR qui documente un cycle de vie (état A → événement → état B) décrit une intention, pas une
+garantie vérifiée par le compilateur ou un test. Rien ne force chaque transition métier décrite à
+avoir un call site réel dans le code — l'absence d'un call site est invisible à la lecture de
+l'ADR lui-même, elle ne se découvre qu'en auditant le code appelant.
+
+**Fix :**
+Ajout du call site manquant dans `createReleve` (voir ERR-113/ERR-114 pour le détail
+d'implémentation SAVEPOINT), avec une story dédiée (BD.0) et des tests explicites vérifiant que
+le recalcul a bien lieu pour MORTALITE et COMPTAGE.
+
+**Leçon / Règle :**
+Quand un ADR décrit un cycle de vie (détection → résolution, ouverture → fermeture, création →
+validation), vérifier par `grep` que **chaque** transition documentée a un call site réel dans le
+code, avant de construire une fonctionnalité (UI, rapport, alerte) qui présuppose que ce cycle
+est complet. Ne jamais présumer qu'une transition « doit déjà fonctionner » parce qu'un
+comportement voisin (ici, le décrément de `nombreActuel` par MORTALITE) donne cette impression —
+deux effets différents du même événement métier peuvent être câblés indépendamment, et l'un peut
+manquer sans que l'autre le signale.
+
+**Références :** [ADR-048](../decisions/ADR-048-persistance-ecarts-conservation.md), [ADR-051](../decisions/ADR-051-formulation-limite-detection-bacs-en-derive.md), [review-sprint-BD](../reviews/review-sprint-BD.md), [rapport-story-BD.0](../tests/rapport-story-BD.0.md)
+
+---
+
+### ERR-116 — Tests DB-gated invisibles : `describe.runIf(!!DATABASE_URL)` skippe silencieusement une garantie centrale
+**Sprint :** BD (stories BD.0, BD.3) | **Date :** 2026-07-27
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts`, `bd0-savepoint-integration-persister-origin.test.ts`, `src/__tests__/bd0-comptage-recalcule-ecart.test.ts`
+
+**Symptôme :**
+Les 3 tests qui prouvent réellement la résilience de BD.0 à une vraie erreur SQL (pas un mock)
+sont dans des fichiers `describe.runIf(!!DATABASE_URL)`. Sans `DATABASE_URL` exportée dans
+l'environnement, `npx vitest run` les **skippe silencieusement** — aucun échec, aucun
+avertissement visible dans un résumé de run standard, juste un compteur de skip qui augmente.
+Aucun fichier `.github/workflows/*.yml` n'existe dans ce dépôt à la date du sprint BD : rien ne
+garantit que ces tests s'exécutent réellement en continu.
+
+**Cause racine :**
+`runIf` est le bon outil pour éviter un échec dur quand une ressource externe (ici, une vraie
+base Postgres) n'est pas disponible — mais son coût est de rendre la garantie qu'il protège
+optionnelle et silencieuse par défaut. Rien dans la sortie standard de `npx vitest run` n'attire
+l'attention sur le fait qu'une preuve centrale n'a pas été rejouée.
+
+**Fix :**
+Aucun fix de code requis pour ce sprint (limitation acceptée, signalée au PM). Documenté comme
+point d'attention transverse : à chaque sprint qui introduit un test `runIf(!!DATABASE_URL)`
+prouvant une garantie non négociable, vérifier explicitement (1) que la machine locale
+d'exécution du tester exporte bien la variable avant le run final documenté dans le rapport, et
+(2) que le pipeline CI/CD du projet (une fois qu'il existe) exporte la même variable.
+
+**Leçon / Règle :**
+Avant de considérer qu'une preuve obtenue via un test `runIf`/gated est acquise **en continu**
+(pas seulement lors d'une vérification ponctuelle par un agent), vérifier explicitement la
+condition qui déclenche son exécution et si un pipeline CI la garantit. Un test gated qui passe
+une fois n'est pas un filet de sécurité pérenne tant que la condition de déclenchement n'est pas
+elle-même garantie à chaque run.
+
+**Références :** [rapport-story-BD.3](../tests/rapport-story-BD.3.md), [review-sprint-BD](../reviews/review-sprint-BD.md)
+
+---
+
+### ERR-115 — Un test mocké ne peut pas prouver la résilience à une vraie erreur SQL (variante ERR-103 appliquée aux transactions Prisma/Postgres)
+**Sprint :** BD (story BD.0) | **Date :** 2026-07-27
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/releves.ts`, `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts`, `bd0-savepoint-integration-persister-origin.test.ts`
+
+**Symptôme :**
+Les premiers tests de BD.0 utilisaient `mockRejectedValue(new Error(...))` pour simuler l'échec
+de la persistance d'un écart de conservation, et concluaient « la création du relevé n'échoue
+jamais ». En réalité, `mockRejectedValue` simule un rejet JS pur — pas une transaction Postgres
+avortée. Une vérification contre une vraie base (`silures-db`, Docker) a montré que le
+comportement réel diverge radicalement du comportement mocké (voir ERR-113 et ERR-114).
+
+**Cause racine :**
+Un mock de fonction ne peut reproduire que ce qu'on lui dit de reproduire : un rejet de promesse.
+Il ne peut pas reproduire un effet de bord au niveau du protocole SQL sous-jacent (transaction
+empoisonnée, `25P02`, dégradation silencieuse d'un `COMMIT` en `ROLLBACK`). Deux mécanismes
+d'échec structurellement différents (rejet JS vs transaction Postgres avortée) produisent des
+conséquences différentes en aval, qu'un mock ne peut pas distinguer.
+
+**Fix :**
+Toute garantie « best-effort, non bloquant » enveloppant une opération SQL réelle à l'intérieur
+d'une transaction Prisma doit être prouvée par un test contre une **vraie base** (pas un mock du
+client Prisma), avec une vraie requête SQL invalide comme déclencheur. La vérification du
+résultat final doit lire la ligne persistée via une **connexion indépendante** (`pg` séparée) du
+client utilisé par l'opération testée — sinon impossible de distinguer un vrai commit d'un COMMIT
+dégradé en ROLLBACK (Prisma ne détecte pas cette dégradation, la promesse résout normalement dans
+les deux cas).
+
+**Leçon / Règle :**
+Variante d'ERR-103 (« un test qui mocke le moteur ne teste pas le moteur ») appliquée
+spécifiquement aux transactions Prisma/Postgres : un `mockRejectedValue` prouve la résilience à un
+rejet JS, jamais à une vraie erreur SQL. Pour toute opération enveloppée dans une transaction
+Prisma dont la robustesse SQL est un critère non négociable, exiger un test d'intégration contre
+une vraie base en plus des tests mockés — les deux ne sont pas substituables l'un à l'autre.
+
+**Références :** ERR-103, [rapport-story-BD.0](../tests/rapport-story-BD.0.md), [rapport-story-BD.3](../tests/rapport-story-BD.3.md)
+
+---
+
+### ERR-113 — `try/catch` JS ne protège pas contre une vraie erreur SQL dans une transaction Prisma : SAVEPOINT + sonde canary requis
+**Sprint :** BD (story BD.0) | **Date :** 2026-07-27
+**Sévérité :** Critique
+**Fichier(s) :** `src/lib/queries/releves.ts` (~L.393-433)
+
+**Symptôme :**
+Un bloc de recalcul « best-effort, non bloquant » (recalcul et persistance d'un écart de
+conservation lors d'un relevé MORTALITE ou COMPTAGE) était protégé par un simple `try/catch` JS.
+Contre une vraie base Postgres, une erreur SQL réelle survenant dans ce bloc laisse la
+transaction en état `25P02 current transaction is aborted, commands ignored until end of
+transaction block` : la **commande suivante** dans la même transaction (ici, la liaison
+Planning) échoue à son tour, hors du `catch` d'origine, et fait échouer toute l'opération
+(`createReleve()` rejette) — exactement le résultat que le `try/catch` était censé empêcher.
+
+Réordonner le bloc en toute fin de transaction (pour qu'aucune commande ne le suive) ne corrige
+rien et introduit un défaut **pire** : Postgres dégrade alors silencieusement le `COMMIT` final
+en `ROLLBACK` (`COMMIT command result: ROLLBACK`), Prisma ne détecte pas cette dégradation, et
+l'opération entière (y compris le relevé d'origine) est **silencieusement perdue alors que la
+promesse `$transaction` résout avec succès**.
+
+**Cause racine :**
+Un `try/catch` JS n'a aucune prise sur l'état interne d'une transaction Postgres. Catcher
+l'exception en JS empêche seulement la propagation de *cette* erreur — cela ne « désavorte » pas
+la transaction côté serveur. Toute requête réelle suivante sur cette même transaction continue
+d'être rejetée par Postgres tant que la transaction reste dans l'état aborted, quel que soit le
+code JS qui l'entoure.
+
+**Fix :**
+`SAVEPOINT` explicite avant le bloc à risque (`tx.$executeRawUnsafe("SAVEPOINT ecart_constate_sp")`),
+`ROLLBACK TO SAVEPOINT` dans le `catch` (`tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT
+ecart_constate_sp")`). Un `ROLLBACK TO SAVEPOINT` désavorte spécifiquement la transaction et
+rend les commandes suivantes (et le `COMMIT` final) à nouveau exécutables normalement, sans
+annuler ce qui précède le savepoint. Voir ERR-114 pour la complémentaire sur la sonde canary
+nécessaire pour que ce mécanisme se déclenche réellement dans tous les cas.
+
+```ts
+await tx.$executeRawUnsafe("SAVEPOINT ecart_constate_sp");
+try {
+  // ... bloc à risque (recalcul + persistance) ...
+} catch (err) {
+  await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT ecart_constate_sp");
+  console.error("[createReleve] Échec du recalcul (non bloquant)", ..., err);
+}
+```
+
+**Leçon / Règle :**
+Dans une transaction Prisma, un `try/catch` JS autour d'un bloc SQL best-effort ne suffit **pas**
+si une commande réelle s'exécute après ce bloc dans la même transaction — une vraie erreur SQL
+laisse la transaction Postgres avortée, indépendamment du catch JS. Ne jamais réordonner un bloc
+à risque en fin de transaction pour « éviter » ce problème : cela remplace un échec explicite par
+une perte de données silencieuse (COMMIT dégradé en ROLLBACK, non détecté par Prisma). La
+solution correcte est un `SAVEPOINT` explicite avant le bloc et un `ROLLBACK TO SAVEPOINT` dans
+le `catch`. Voir ERR-114 pour un piège complémentaire qui peut rendre ce mécanisme inopérant.
+
+**Références :** [ADR-048](../decisions/ADR-048-persistance-ecarts-conservation.md), [rapport-story-BD.0](../tests/rapport-story-BD.0.md), [rapport-story-BD.3](../tests/rapport-story-BD.3.md), [review-sprint-BD](../reviews/review-sprint-BD.md)
+
+---
+
+### ERR-114 — Piège complémentaire au SAVEPOINT : une fonction interne qui avale ses propres erreurs SQL rend le SAVEPOINT inopérant sans sonde canary
+**Sprint :** BD (story BD.0) | **Date :** 2026-07-27
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/releves.ts` (~L.393-433), `src/lib/queries/__tests__/bd0-savepoint-integration-persister-origin.test.ts`
+
+**Symptôme :**
+Même avec un `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` correctement posé (ERR-113), le mécanisme
+restait inopérant pour une origine d'erreur précise : quand l'erreur SQL survient **à l'intérieur**
+de `persisterEcartConstate`, celle-ci a son propre `try/catch` interne (par design, ADR-048 §6 —
+« ne doit jamais faire échouer l'opération métier appelante ») qui avale l'erreur sans jamais la
+relancer. Le `catch` englobant dans `createReleve` ne se déclenche donc jamais pour ce cas
+précis, le `ROLLBACK TO SAVEPOINT` n'est jamais émis, et la transaction reste empoisonnée
+silencieusement malgré la présence du SAVEPOINT.
+
+**Cause racine :**
+Un SAVEPOINT ne protège que ce qui est effectivement rattrapé par le `catch` qui l'entoure. Si
+une fonction appelée à l'intérieur du bloc a elle-même un `try/catch` qui absorbe l'erreur sans la
+relancer (souvent un choix délibéré et documenté pour une autre raison, ici la non-blocance de
+l'opération métier appelante), l'exception n'atteint jamais le `catch` englobant — le mécanisme de
+protection en amont ne se déclenche donc jamais pour cette origine d'erreur, même s'il est
+correctement écrit.
+
+**Fix :**
+Ajouter une **requête sonde (« canary »)** — `SELECT 1` via `tx.$queryRawUnsafe`, sans effet de
+bord — juste après le bloc à risque, à l'intérieur du même `try`. Cette sonde échoue avec `25P02`
+si la transaction est empoisonnée, quelle que soit l'origine de l'empoisonnement (erreur relancée
+normalement ou avalée silencieusement en interne par une fonction appelée) — ce qui déclenche
+alors le `catch` englobant et le `ROLLBACK TO SAVEPOINT`, même dans ce cas silencieux.
+
+```ts
+await tx.$executeRawUnsafe("SAVEPOINT ecart_constate_sp");
+try {
+  await persisterEcartConstate(tx, ...); // peut avaler sa propre erreur SQL en interne
+  await tx.$queryRawUnsafe("SELECT 1"); // sonde canary : détecte l'empoisonnement silencieux
+} catch (err) {
+  await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT ecart_constate_sp");
+  console.error("[createReleve] Échec du recalcul (non bloquant)", ..., err);
+}
+```
+
+**Leçon / Règle :**
+Un `SAVEPOINT` + `catch` englobant ne suffit pas si une fonction appelée à l'intérieur du bloc a
+son propre `try/catch` qui avale ses erreurs sans les relancer — un cas fréquent quand cette
+fonction est elle-même conçue pour être non-bloquante (best-effort) pour une autre raison
+légitime. Avant de considérer un mécanisme SAVEPOINT comme complet, vérifier explicitement si
+chaque fonction appelée à l'intérieur du bloc protégé peut avaler ses propres erreurs SQL en
+interne — si oui, ajouter une requête sonde sans effet de bord après le bloc, dans le même `try`,
+pour détecter l'empoisonnement même quand aucune exception JS n'a traversé l'appelant.
+
+**Références :** [ADR-048](../decisions/ADR-048-persistance-ecarts-conservation.md), [rapport-story-BD.3](../tests/rapport-story-BD.3.md), [review-sprint-BD](../reviews/review-sprint-BD.md)
+
+---
+
 ### ERR-108 — Race condition de génération de numéro : forme de transaction et périmètre du retry
 **Sprint :** SU (story SU.3) | **Date :** 2026-07-26
 **Sévérité :** Haute

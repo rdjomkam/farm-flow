@@ -7523,3 +7523,76 @@ Voir : [SPRINT-MG.md](sprints/SPRINT-MG.md)
 - **9 correctifs de données orphelins historiques non convertis**, tolérés par une liste d'exclusion datée et justifiée dans le test de garde : `prisma/fix-vague-26-01.sql`, `scripts/fix-missing-mouvements.sql`, `scripts/fix-depense-mouvement-link.sql`, `scripts/repair-bug041.sql`, et sous `prisma/data-fixes/` : `CG2-bacdest-null.sql`, `CG4-assignation-dates.sql`, `CS1-init-fields-prod.sql`, `CS2-mirror-transfert-releves.sql`, `GP3-cleanup-nan-gompertz.sql`. Leur état d'application en production est **inconnu**, ils n'ont donc pas été convertis à l'aveugle. À solder par un sprint dédié.
 - `Vague.code` et `Reproducteur.code` restent en `@unique` **global** au lieu de `@@unique([siteId, code])` : à trancher (scoper par site, ou assumer et documenter). Constat **M1** de la review.
 - Enrichir le `RAISE NOTICE` de `20260727090001` d'un renvoi à **ADR-043** (constat **B1**, cosmétique).
+
+---
+
+## Sprint BD — Rendre visibles les bacs en dérive
+Voir : [SPRINT-BD.md](sprints/SPRINT-BD.md)
+
+**Statut :** `TERMINÉ (validé avec réserves)` (**5 stories**)
+**Objectif :** Rendre **visible** la donnée persistée par SU.2. Le sprint SU (story SU.2, tranchée par l'ADR-048) a livré la persistance des écarts de conservation tolérés — table `EcartAssignationConstate`, `persisterEcartConstate` dans `src/lib/guards/assignation-invariant.ts`, query `getBacsEnDerive(siteId)` dans `src/lib/queries/ecarts-assignation.ts`, type `BacEnDerive` — mais **aucune UI**, par décision explicite. Tant que la dérive n'est lisible que par requête SQL ou dans les logs serveur, elle n'a aucune valeur opérationnelle.
+**Origine :** suivi laissé explicitement ouvert à la clôture du Sprint SU (« vue UI Bacs en dérive »).
+**Incident fondateur :** Bac 11 / Vague-26-03-Prep — dérive invisible jusqu'à ce qu'elle gèle une opération devant un client.
+**Références :** [ADR-048-persistance-ecarts-conservation.md](decisions/ADR-048-persistance-ecarts-conservation.md) section 9, `docs/analysis/pre-analysis-sprint-BD.md`
+
+**Arbitrages utilisateur actés :** permission `DASHBOARD_VOIR` (**aucune nouvelle permission**) ; **lien simple** vers la fiche du bac (pas de comptage pré-rempli) ; **pas de balayage périodique** dans ce sprint (remonté en recommandation).
+
+| Story | Type | Sujet | Dépend de | Statut |
+|-------|------|-------|-----------|--------|
+| BD.0 | BUGFIX | Un COMPTAGE correctif doit marquer la dérive résolue | — | `FAIT` |
+| BD.1 | ADR/TYPES (design) | Formulation honnête de la limite de détection paresseuse | — | `FAIT` |
+| BD.2 | UI | Carte « Bacs en dérive » sur le dashboard site | BD.0, BD.1 | `FAIT` |
+| BD.3 | TEST | Tests UI de la carte | BD.2 | `FAIT` |
+| BD.4 | REVIEW | Review du sprint BD (R1-R9) | BD.0, BD.2, BD.3 | `FAIT` |
+
+**Review :** `docs/reviews/review-sprint-BD.md` — verdict **VALIDÉ AVEC RÉSERVES**, aucun problème Critique ni Haute.
+
+**BD.0 — défaut trouvé en pré-analyse.** `verifyAssignationInvariant` n'a que **6 call sites** (arrivage, transfert ×2, calibrage, vente, vente d'alevins, bon de livraison) : **COMPTAGE n'en est pas un**, `createReleve` (`src/lib/queries/releves.ts`) n'appelle jamais le guard. Un comptage correctif — précisément le geste qui répare la dérive — ne fait donc **jamais** passer `resoluLe` à une date ; il faut attendre une autre opération guardée sur le même bac. La carte de BD.2 accuserait un bac **déjà réparé**. Contraintes non négociables : un relevé COMPTAGE ne doit **jamais** échouer à cause de cet ajout (recalcul de l'écart + `persisterEcartConstate`, **sans** invoquer le garde bloquant, et un échec de la persistance ne doit pas faire échouer le relevé) ; tests de non-régression **dans les deux sens** (COMPTAGE ramenant l'écart à zéro → entrée résolue ; COMPTAGE aggravant l'écart → relevé accepté quand même, dérive enregistrée au lieu d'un refus) ; vérifier les autres types de relevé qui devraient recalculer l'écart pour la même raison (`MORTALITE` le fait déjà, `releves.ts` ~L.341-352) et les traiter de la même façon plutôt que de laisser une asymétrie.
+
+**BD.1 — limite de détection.** La détection est **paresseuse** : aucun cron, seules les 6 opérations guardées détectent. « Aucun bac en dérive » ne vaut donc que « rien de détecté lors des dernières opérations ». Le libellé de la carte ne doit promettre aucune garantie que le mécanisme n'offre pas, **sans** transformer le dashboard en avertissement permanent : la carte n'apparaissant que s'il y a au moins un bac concerné, la nuance se joue **dans le texte de la carte**, pas dans un bandeau sur un dashboard sain.
+
+**BD.2 — carte dashboard.** Visible **uniquement** si `getBacsEnDerive(siteId)` retourne ≥ 1 résultat. Liste : bac, vague, écart **signé**, `premiereDetectionLe`. Permission `DASHBOARD_VOIR`. Lien direct vers la fiche du bac pour mener au geste de résolution. Mobile-first 360px, cartes empilées, **pas de tableau sur mobile**. **R8** : aucun accès Prisma direct dans un composant de page, tout passe par la couche queries. Fichiers : nouveau `src/components/dashboard/bacs-en-derive-section.tsx`, `src/app/(farm)/page.tsx`.
+
+**BD.3 — tests UI.** Rendu avec 0 résultat (carte **absente**), avec N résultats, mobile 360px, lien vers la fiche bac, formulation de la limite présente.
+
+**BD.0 — ce qui a réellement été livré (différent de la spec initiale).**
+- Le défaut était **plus large que prévu** : non seulement `COMPTAGE` ne recalculait pas l'écart, mais **`MORTALITE` non plus** — la spec ci-dessus affirmait à tort que `MORTALITE` « le fait déjà ». Les **deux** types sont désormais traités.
+- La **première implémentation a été rejetée en vérification** : un simple `try/catch` JS ne protège pas contre une vraie erreur SQL, qui **empoisonne la transaction Postgres** (`25P02`) et faisait échouer la création du relevé — exactement l'impasse interdite par la contrainte de non-blocance. Reproduit contre la vraie base par le @tester.
+- **Implémentation retenue :** `SAVEPOINT ecart_constate_sp` + requête sonde « canary » `SELECT 1` + `ROLLBACK TO SAVEPOINT` dans le `catch`. La sonde est **indispensable** car `persisterEcartConstate` avale ses propres erreurs SQL sans les relancer, ce qui empêchait le `catch` de se déclencher.
+- **Non-blocance prouvée contre une vraie base Postgres** pour les **deux** origines d'erreur (dans `calculerEcartsParBac` et dans `persisterEcartConstate`), avec vérification de la présence réelle du relevé après commit via une **connexion `pg` indépendante** (pour exclure le piège du COMMIT dégradé en ROLLBACK).
+- **Compromis assumé :** `ContexteDetectionEcart.INDETERMINE` est utilisé pour ces deux nouveaux appels (aucune valeur d'enum `COMPTAGE`/`MORTALITE` ajoutée, pour éviter une migration et le risque ERR-001/ERR-049). À arbitrer si une distinction fine du contexte devient utile côté UI.
+
+**Fichiers livrés par le sprint :**
+- `src/lib/queries/releves.ts` (BD.0)
+- `src/__tests__/bd0-comptage-recalcule-ecart.test.ts` (9 cas, fusion de deux fichiers doublons)
+- `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts` (2 cas, DB-gated)
+- `src/lib/queries/__tests__/bd0-savepoint-integration-persister-origin.test.ts` (1 cas, DB-gated)
+- `docs/decisions/ADR-051-formulation-limite-detection-bacs-en-derive.md` (BD.1)
+- `src/lib/bacs-en-derive-constants.ts` (BD.1)
+- `src/components/dashboard/bacs-en-derive-section.tsx` (BD.2, nouveau)
+- `src/components/dashboard/section-skeletons.tsx` (BD.2, ajout `BacsEnDeriveSkeleton`)
+- `src/app/(farm)/page.tsx` (BD.2, branchement)
+- `src/components/dashboard/__tests__/bacs-en-derive-section.test.tsx` (BD.3, 18 cas)
+- `docs/analysis/pre-analysis-sprint-BD.md`, `docs/tests/rapport-story-BD.0.md`, `docs/tests/rapport-story-BD.3.md`, `docs/reviews/review-sprint-BD.md`
+
+**Critères de clôture du sprint :**
+- [x] `FAIT` Checklist R1-R9
+- [x] `FAIT` `npx vitest run` verte
+- [x] `FAIT` `npm run build` OK
+- [x] `FAIT` Mobile-first 360px vérifié pour BD.2
+- [x] `FAIT` Migrations Prisma en non-interactif si nécessaire (ERR-002) — **aucune migration requise** par ce sprint
+- [x] `FAIT` `docs/reviews/review-sprint-BD.md` produit
+- [x] `FAIT` `docs/TASKS.md` mis à jour
+
+**Vérification finale (R9) :**
+- `npx vitest run` **sans** `DATABASE_URL` : **5736 passés**, 17 skipped, 26 todo, **0 échec**
+- `npx vitest run` **avec** `DATABASE_URL` exportée : **5753 passés**, 0 skipped, 26 todo, **0 échec** (227 fichiers)
+- `npm run build` : **exit 0**
+- Baseline avant sprint : **5709 verts / 0 échec** — **aucune régression**
+
+**Réserves et suites (PAS des stories de ce sprint) :**
+1. **Moyenne — tests DB-gated non rejoués en continu.** Les 3 tests qui prouvent la non-blocance de BD.0 utilisent `describe.runIf(!!DATABASE_URL)` et **skippent silencieusement**. Aucun `.github/workflows` n'existe dans le dépôt. À arbitrer : mise en place d'une CI avec base éphémère, ou confirmation qu'un pipeline exporte déjà `DATABASE_URL`.
+2. **Basse — cast `as ContexteDetectionEcart`** dans `src/lib/queries/ecarts-assignation.ts:39`, dette **préexistante** de SU.2 (pattern ERR-087).
+3. **Basse — limitation résiduelle** (ADR-051 §7) : un bac réparé par un COMPTAGE isolé sans opération guardée ultérieure est désormais **couvert par BD.0** ; en revanche un bac réparé **hors application** reste affiché.
+4. **Recommandation reconduite — balayage périodique de détection** (cron / job planifié). La détection reste **paresseuse** : aucun cron, seules les opérations guardées (**+ désormais `COMPTAGE` et `MORTALITE` via `createReleve`**) détectent. Un bac sans aucune opération peut dériver sans jamais apparaître. Seul un balayage périodique transformerait « rien détecté » en garantie. Exclu du périmètre BD par arbitrage utilisateur — cf. ADR-048 §9 et ADR-051 §6.
+5. **Process — deux collisions d'agents** ont eu lieu pendant ce sprint (édition concurrente ayant produit un fichier de test doublon, depuis fusionné, et un fichier scratch temporairement laissé à la racine, depuis nettoyé). **Plafond de 2 agents en écriture simultanée à maintenir.**

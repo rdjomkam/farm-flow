@@ -10,11 +10,13 @@ import { DashboardHeroSection } from "@/components/dashboard/dashboard-hero-sect
 import { IndicateursSection } from "@/components/dashboard/indicateurs-section";
 import { ProjectionsSection } from "@/components/dashboard/projections-section";
 import { RecentActivitySection } from "@/components/dashboard/recent-activity-section";
+import { BacsEnDeriveSection } from "@/components/dashboard/bacs-en-derive-section";
 import {
   HeroSectionSkeleton,
   IndicateursSkeleton,
   ProjectionsSkeleton,
   RecentActivitySkeleton,
+  BacsEnDeriveSkeleton,
 } from "@/components/dashboard/section-skeletons";
 import { IngenieurDashboardMultiFarm } from "@/components/ingenieur/ingenieur-dashboard-multi-farm";
 import { IngenieurDashboardSingleFarm } from "@/components/ingenieur/ingenieur-dashboard-single-farm";
@@ -25,6 +27,7 @@ import {
   getProjectionsDashboard,
   getRecentActivity,
 } from "@/lib/queries/dashboard";
+import { getBacsEnDerive } from "@/lib/queries/ecarts-assignation";
 
 /**
  * Unified dashboard page — entry point for both (farm) and (ingenieur) route groups.
@@ -163,11 +166,12 @@ export default async function FarmDashboardPage() {
   // Fetch all dashboard data in parallel. The heavy vague+releves query is
   // deduplicated by React.cache() in getVaguesWithReleves, so the DB is only
   // hit once even though four functions share the same data source.
-  const [dashboardData, indicateurs, projections, recentReleves] = await Promise.all([
+  const [dashboardData, indicateurs, projections, recentReleves, bacsEnDerive] = await Promise.all([
     getDashboardData(siteId),
     getDashboardIndicateurs(siteId),
     getProjectionsDashboard(siteId),
     getRecentActivity(siteId),
+    getBacsEnDerive(siteId),
   ]);
 
   return (
@@ -190,6 +194,10 @@ export default async function FarmDashboardPage() {
 
         <Suspense fallback={<RecentActivitySkeleton />}>
           <RecentActivitySection releves={recentReleves} />
+        </Suspense>
+
+        <Suspense fallback={<BacsEnDeriveSkeleton />}>
+          <BacsEnDeriveSection bacsEnDerive={bacsEnDerive} />
         </Suspense>
       </div>
     </>
