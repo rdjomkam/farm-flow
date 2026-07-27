@@ -16,8 +16,8 @@
  * Pattern réutilisé de SU.12
  * (scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts) :
  * connexion `pg.Pool` directe pour le setup/la vérification/le nettoyage,
- * `describe.runIf(!!DATABASE_URL)` pour ne jamais bloquer `npx vitest run`
- * sur une machine sans Docker.
+ * `describe.runIf(requireDatabaseUrl())` (helper ADR-052 §3.2) pour ne jamais
+ * bloquer `npx vitest run` sur une machine sans Docker.
  *
  * DIFFÉRENCE IMPORTANTE avec SU.12 : SU.12 encapsule tout dans
  * BEGIN/ROLLBACK sur une seule connexion `pg`. Ici, ce n'est PAS possible :
@@ -60,6 +60,7 @@ import { Pool, type PoolClient } from "pg";
 import { signerBonLivraison } from "@/lib/queries/bons-livraison";
 import { persisterEcartConstate } from "@/lib/guards/assignation-invariant";
 import { ContexteDetectionEcart } from "@/types";
+import { requireDatabaseUrl } from "@/test/require-database-url";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -226,7 +227,7 @@ async function cleanup(c: PoolClient, ids: SeedIds): Promise<void> {
   await c.query(`DELETE FROM "User" WHERE id = $1`, [ids.userId]);
 }
 
-describe.runIf(!!DATABASE_URL)(
+describe.runIf(requireDatabaseUrl())(
   "SU.4 — robustesse transactionnelle de signerBonLivraison — comportement DB réel",
   () => {
     it(

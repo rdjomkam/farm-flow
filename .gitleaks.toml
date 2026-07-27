@@ -1,0 +1,49 @@
+# Configuration gitleaks — Sprint CI (story CI.3 / R11)
+#
+# Objectif : détecter tout identifiant réel (URL de connexion avec mot de
+# passe en clair, clé API, jeton) présent dans le working tree, à chaque
+# push/pull_request. Étend le jeu de règles par défaut de gitleaks (ne le
+# remplace pas) : la règle générique pour les URL de connexion avec
+# `user:password@host` (le motif exact qui a échappé dans
+# `scripts/data-fixes/gd3-apply.sh`, cf. ADR-052 §5.3 et
+# docs/security/REMEDIATION-SECRET-HISTORIQUE.md) reste active.
+#
+# Le scan ne restreint aucune extension de fichier : gitleaks scanne par
+# défaut tous les fichiers texte du dépôt, y compris les .sh.
+
+[extend]
+useDefault = true
+
+# Règle explicite pour une URL de connexion avec identifiants en clair
+# (scheme://utilisateur:motdepasse@hôte) — c'est le motif exact qui a
+# échappé dans `scripts/data-fixes/gd3-apply.sh`. Ajoutée en complément du
+# jeu de règles par défaut (vérifié localement : le jeu par défaut seul ne
+# suffit pas à garantir la détection de ce motif précis sur ce binaire
+# gitleaks — voir la note de vérification dans la réponse de la story CI.1/
+# CI.3). Couvre les schémas de base de données usuels (postgres, mysql,
+# mongodb, redis, amqp) ainsi qu'un filet générique pour tout schéma URI
+# portant des identifiants (`scheme://user:pass@host`), sans restriction
+# d'extension de fichier (attrape aussi les .sh, comme le cas gd3-apply.sh).
+[[rules]]
+id = "connection-string-with-credentials"
+description = "URL de connexion avec identifiants en clair (scheme://user:pass@host)"
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]{2,}://[^\s:@/'"]+:[^\s@'"]+@[^\s/'"]+'''
+tags = ["connection-string", "credentials"]
+
+# Allowlist par CHEMIN précis, jamais un blanket-allow de tout `docs/` — pour
+# ne pas neutraliser la détection sur un vrai secret qui atterrirait un jour
+# dans `docs/` par erreur.
+[[allowlists]]
+description = "Identifiants Docker de dev local (port 8432, jamais joignable hors de la machine de dev), documentés publiquement dans les rapports de sprint et l'audit dev"
+paths = [
+  '''docs/tests/rapport-sprint-CR\.md''',
+  '''docs/tests/rapport-sprint-45\.md''',
+  '''docs/RELEASE-v2\.md''',
+  '''docs/analysis/audit-px-signatures-dev\.md''',
+]
+
+[[allowlists]]
+description = "Chaînes de test négatif littérales (jetons volontairement invalides utilisés pour prouver un rejet d'authentification), pas de vrais secrets"
+paths = [
+  '''src/__tests__/api/cron-subscription-lifecycle\.test\.ts''',
+]

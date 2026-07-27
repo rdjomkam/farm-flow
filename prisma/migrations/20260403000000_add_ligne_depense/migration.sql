@@ -3,7 +3,13 @@
 -- Les dépenses existantes restent sans lignes (compatibilité ascendante).
 
 -- AlterTable: FeatureFlag — suppression du DEFAULT résiduel
-ALTER TABLE "FeatureFlag" ALTER COLUMN "updatedAt" DROP DEFAULT;
+-- Tolérant à l'ordre : sur une base vierge, "FeatureFlag" n'existe pas
+-- encore à ce stade (elle est créée par 20260409000000_add_feature_flags,
+-- postérieure dans la chaîne réelle mais lexicographiquement après
+-- celle-ci). No-op silencieux dans ce cas — la CREATE TABLE "FeatureFlag"
+-- de 20260409000000_add_feature_flags définit déjà "updatedAt" sans
+-- DEFAULT. Voir docs/bugs/BUG-CI-migration-order.md.
+ALTER TABLE IF EXISTS "FeatureFlag" ALTER COLUMN "updatedAt" DROP DEFAULT;
 
 -- CreateTable: LigneDepense
 CREATE TABLE "LigneDepense" (

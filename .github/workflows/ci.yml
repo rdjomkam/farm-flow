@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Permissions minimales : le job ne lit que le contenu du dépôt, n'écrit rien
+# sur GitHub (pas de commentaires de PR, pas de statuts custom).
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Migrate + Build + Test
+    runs-on: ubuntu-latest
+
+    # Service Postgres éphémère — jamais la base de dev/prod. Identifiants
+    # factices, valables uniquement pour ce conteneur jetable local au runner.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: farm_flow_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Identifiant factice local au runner — jamais un secret de production,
+      # jamais tiré d'un secret GitHub (R11).
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/farm_flow_ci"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Postgres to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              echo "Postgres est prêt."
+              exit 0
+            fi
+            echo "En attente de Postgres... ($i/30)"
+            sleep 2
+          done
+          echo "Postgres n'a jamais répondu." >&2
+          exit 1
+
+      # Migrations appliquées explicitement sur une base VIERGE (le service
+      # postgres:16-alpine démarre sans aucune donnée) — c'est la seule
+      # vérification continue que les migrations Prisma s'appliquent
+      # réellement de bout en bout (sprint MG).
+      - name: Prisma migrate deploy
+        run: npx prisma migrate deploy
+
+      # Découplé de `npm run build` (qui inclut lui-même `prisma migrate
+      # deploy`) pour ne jamais dépendre implicitement de l'ordre des étapes
+      # internes du script npm — même pattern que le Dockerfile de production
+      # ("NOT npm run build which includes prisma migrate deploy").
+      - name: Build (Next.js)
+        run: npx next build --webpack
+
+      # DATABASE_URL est déjà exportée au niveau du job (voir `env:`
+      # ci-dessus) — les 17 tests d'intégration DB-gated (ADR-052) et le
+      # garde global (src/test/ci-db-guard.setup.ts) s'exécutent réellement.
+      - name: Run tests
+        run: npx vitest run
+
+  # Deux jobs gitleaks distincts (sprint CI, suite story CI.3/CI.4) :
+  #
+  # 1. `gitleaks-diff` (BLOQUANT) — ne scanne que les commits/fichiers
+  #    ajoutés ou modifiés par ce push/cette PR. C'est lui qui empêche la
+  #    récidive : un secret introduit dans un nouveau commit fait échouer le
+  #    pipeline immédiatement. gitleaks-action restreint nativement son
+  #    périmètre au diff pour les événements `push`/`pull_request` (plage
+  #    before..after fournie par GitHub) — `fetch-depth: 0` est nécessaire
+  #    pour que ces commits de référence soient disponibles localement.
+  #
+  # 2. `gitleaks-history` (INFORMATIF, non bloquant) — scanne tout
+  #    l'historique du dépôt, y compris les commits antérieurs à ce sprint.
+  #    Un secret de production (`.claude/settings.local.json`, tracké depuis
+  #    le commit initial `169c559` ; voir aussi l'ancien
+  #    `scripts/data-fixes/gd3-apply.sh`) est déjà présent dans l'historique
+  #    poussé sur GitHub. Le détrackage empêche la récidive mais n'efface
+  #    rien de l'historique déjà public — seule une rotation côté production
+  #    invalide ces identifiants (voir
+  #    docs/security/REMEDIATION-SECRET-HISTORIQUE.md). Bloquer CHAQUE push
+  #    sur cette dette déjà connue rendrait la CI durablement rouge, donc
+  #    ignorée à terme : ce job reste volontairement non bloquant
+  #    (`continue-on-error: true` au niveau du job) jusqu'à ce que
+  #    l'utilisateur décide d'assainir l'historique (rotation, et
+  #    éventuellement réécriture — décision qui lui appartient, jamais prise
+  #    par un agent). Non bloquant ne veut pas dire invisible : la sortie
+  #    complète de `gitleaks detect` reste affichée dans les logs du job, et
+  #    le job apparaît comme "failed (continue-on-error)" dans l'UI GitHub
+  #    Actions tant que l'historique n'est pas assaini — jamais masqué par un
+  #    `|| true` ou une redirection vers /dev/null.
+  gitleaks-diff:
+    name: "Détection de secrets — fichiers modifiés (bloquant)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 requis pour que gitleaks-action dispose des SHA
+          # before/after (push) ou base/head (pull_request) nécessaires pour
+          # restreindre le scan au diff introduit par cet événement.
+          fetch-depth: 0
+
+      - name: Scan du diff avec gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  gitleaks-history:
+    name: "Détection de secrets — historique complet (informatif)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Non bloquant : dette de sécurité déjà connue et documentée (voir
+    # commentaire au-dessus du job `gitleaks-diff`). Ce job redeviendra
+    # propre — et pourra alors repasser bloquant s'il le faut — une fois que
+    # l'utilisateur aura assaini l'historique. `continue-on-error` ici ne
+    # masque rien : la sortie de gitleaks reste entièrement visible dans les
+    # logs du job, seul le statut du *workflow* n'est pas impacté par un
+    # échec de ce job précis.
+    continue-on-error: true
+    steps:
+      - name: Checkout (historique complet)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Installer gitleaks
+        run: |
+          set -euo pipefail
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scanner tout l'historique git (informatif, sortie non masquée)
+        run: gitleaks detect --source . --config .gitleaks.toml -v --redact --exit-code 1

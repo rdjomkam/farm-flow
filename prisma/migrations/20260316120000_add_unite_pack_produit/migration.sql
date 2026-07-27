@@ -1,2 +1,11 @@
 -- AlterTable
-ALTER TABLE "PackProduit" ADD COLUMN     "unite" "UniteStock";
+-- Tolérant à l'ordre : sur une base vierge, cette migration s'exécute
+-- (ordre lexicographique des dossiers) AVANT 20260320110000_add_packs, qui
+-- crée réellement la table "PackProduit". "IF EXISTS"/"IF NOT EXISTS" rend
+-- cette instruction un no-op silencieux dans ce cas — la colonne "unite"
+-- est alors définie directement dans la CREATE TABLE de 20260320110000.
+-- Sur un environnement où "PackProduit" existe déjà (ordre réel historique
+-- d'application, différent de l'ordre lexicographique), comportement
+-- inchangé : la colonne est ajoutée normalement.
+-- Voir docs/bugs/BUG-CI-migration-order.md.
+ALTER TABLE IF EXISTS "PackProduit" ADD COLUMN IF NOT EXISTS "unite" "UniteStock";

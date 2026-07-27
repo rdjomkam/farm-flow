@@ -36,6 +36,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Claude Code local settings — machine/user-specific, may contain local
+# permission rules and locally-configured connection strings. Never track.
+# (Sprint CI — voir docs/security/REMEDIATION-SECRET-HISTORIQUE.md)
+.claude/settings.local.json
+
 # vercel
 .vercel
 

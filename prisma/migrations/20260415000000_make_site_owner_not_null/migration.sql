@@ -19,5 +19,17 @@ UPDATE "Site" SET "ownerId" = (
   LIMIT 1
 ) WHERE "ownerId" IS NULL;
 
+-- Nettoyage : sur une base neuve, le site "default-site" (créé par le seed
+-- de 20260309092300_add_multi_tenancy) peut n'avoir strictement aucun
+-- membre, faute de "User" existant au moment de ce bootstrap sur une base
+-- vierge. Un Site sans aucun membre est de toute façon inaccessible depuis
+-- l'application (aucune autorisation possible) — il est supprimé plutôt que
+-- de bloquer la contrainte NOT NULL. Idempotent et sans effet sur tout
+-- environnement où au moins un membre existe déjà pour chaque site (le cas
+-- de tout environnement réel). Voir docs/bugs/BUG-CI-migration-order.md.
+DELETE FROM "Site"
+WHERE "ownerId" IS NULL
+  AND NOT EXISTS (SELECT 1 FROM "SiteMember" sm WHERE sm."siteId" = "Site".id);
+
 -- Make NOT NULL
 ALTER TABLE "Site" ALTER COLUMN "ownerId" SET NOT NULL;

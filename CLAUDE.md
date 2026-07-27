@@ -78,7 +78,7 @@ Le projet est organisé en **12 sprints** (Phase 1 : 1-5, Phase 2 : 6-12). Chaqu
 
 ---
 
-## Phase 2 — Règles obligatoires (R1-R10)
+## Phase 2 — Règles obligatoires (R1-R11)
 
 Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour tous les agents.
 
@@ -94,6 +94,7 @@ Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour 
 | R8 | **siteId PARTOUT** | Chaque nouveau modèle DOIT avoir un `siteId` (FK Site) |
 | R9 | **Tests avant review** | Toujours exécuter `npx vitest run` + `npm run build` avant chaque review |
 | R10 | **Tout correctif de données est une migration** | Jamais un `.sql` à la racine de `prisma/migrations/`, jamais appliqué à la main en prod |
+| R11 | **Aucun secret en dur dans le dépôt** | Toute URL de connexion, clé API, token ou mot de passe vient de `process.env.<VAR>` — jamais écrit en dur, dans **aucun fichier du dépôt, quel qu'il soit**, y compris la configuration d'outillage/IDE/agent (`.claude/`, `.vscode/`, `.idea/`, `*.local.*`) |
 
 ### R10 — Détail
 
@@ -102,6 +103,21 @@ Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour 
 - **Audit en lecture seule** (zéro écriture) = script dans `scripts/audits/`, nommé `*-audit-*`.
 - **Garde-fou de précondition** (doit bloquer la migration si les données ne satisfont pas une contrainte) = dans la migration elle-même, jamais dans un script préalable qu'un humain doit penser à lancer.
 - Détail complet, taxonomie et exemples : [ADR-049](docs/decisions/ADR-049-correctifs-donnees-migrations.md), [ADR-050](docs/decisions/ADR-050-sort-des-scripts-audit.md).
+
+### R11 — Détail
+
+- **Origine du besoin** : un secret réel (URL Postgres de production avec mot de passe en clair) a été committé dans `scripts/data-fixes/gd3-apply.sh` puis supprimé du working tree — le secret reste dans l'historique git, invalidable uniquement par rotation (voir `docs/security/REMEDIATION-SECRET-HISTORIQUE.md`). La cause racine méthodologique : un script écrit avec son URL de connexion en dur, plutôt que lue depuis l'environnement.
+- **Ce besoin a en principe disparu depuis R10** : tout correctif de données passe désormais par `prisma migrate deploy`, qui lit `DATABASE_URL` depuis l'environnement (`prisma.config.ts`) — plus aucun script de correctif n'a de raison d'exister, donc plus aucun script de ce type n'a de raison de porter une URL en dur. Les scripts d'audit en lecture seule restants (`scripts/audits/*.ts`, catégorie légitime selon R10/ADR-049 §3.1) lisent déjà tous `process.env.DATABASE_URL` — la discipline est déjà respectée dans le code actuel du dépôt ; R11 la rend explicite et vérifiable pour tout ce qui sera écrit après ce sprint.
+- **Périmètre exhaustif par principe, pas par énumération** : R11 s'applique à **tout fichier du dépôt, sans exception de nature ni d'extension** — code applicatif, script, migration, test, documentation, **et configuration d'outillage, d'IDE ou d'agent** (`.claude/`, `.vscode/`, `.idea/`, tout fichier `*.local.*`). Une liste fermée de catégories est précisément ce qui a créé la faille de lecture initiale (une énumération invite à conclure, par contraste, que ce qui n'y figure pas est hors périmètre) : le critère est « ce fichier est-il tracké par git dans ce dépôt ? », jamais « ce fichier appartient-il à une catégorie déjà citée ? ». Le mécanisme technique (scanner gitleaks, section CI ci-dessous) n'a lui-même aucune restriction d'extension ; c'est la formulation de la règle qui doit désormais refléter cette même absence de restriction.
+- **Configuration locale vs configuration partagée — la distinction qui tranche** :
+  - **Configuration locale** (spécifique à une machine ou un agent, ex. `.claude/settings.local.json`, `.env`, tout fichier `*.local.*`) : ne doit **jamais être trackée** par git — elle va dans `.gitignore`. Si un tel fichier existe déjà dans l'index, il doit en être retiré (`git rm --cached`) et ajouté à `.gitignore`, indépendamment de la question de savoir s'il contient un secret au moment de la vérification — le risque est qu'il en contienne un plus tard, sans que personne ne pense à revérifier avant de committer.
+  - **Configuration partagée et légitimement versionnée** (ex. `.claude/settings.json`, `.vscode/settings.json` non-`.local`, `.gitleaks.toml`, `docker-compose.yml`) : peut être trackée, mais ne doit **jamais** contenir d'identifiant réel — elle lit l'environnement (`process.env.<VAR>` côté Node, ou l'équivalent de l'outil) ou pointe vers un fichier `.env` non tracké, exactement comme le reste du dépôt.
+  - Un agent ou un humain qui hésite applique donc la question dans l'ordre : (1) ce fichier est-il local à une machine/un agent, ou partagé par toute l'équipe ? Si local → non tracké, point final, la question du contenu ne se pose même pas. (2) S'il est partagé et tracké → aucun identifiant réel dedans, jamais.
+- **Exemple vécu qui a motivé cet élargissement** : `.claude/settings.local.json`, tracké par git **depuis le commit initial du dépôt**, contenait un identifiant de production — découvert pendant le sprint CI, en dehors de toute catégorie listée dans la version précédente de R11 (script, migration, test, doc). Le scanner gitleaks l'a correctement détecté (il n'a aucune restriction d'extension), ce qui confirme que la lacune était dans la formulation de la règle, pas dans l'outillage. Aucune valeur de cet identifiant n'est reproduite ici ; voir `docs/security/REMEDIATION-SECRET-HISTORIQUE.md` pour la remédiation.
+- **Ce qu'il faut faire à la place** : lire l'identifiant depuis `process.env.<VAR>` (jamais une valeur littérale) ; le stocker localement dans un `.env` (ou équivalent `*.local.*`) **non tracké** par git ; documenter les variables attendues dans un `.env.example` **tracké**, avec des valeurs placeholder explicites (`"your-api-key"`, `"change-me-in-production"`), jamais des valeurs qui ressemblent à de vrais identifiants.
+- **Exemple de motif interdit, illustré uniquement avec un identifiant factice** : `postgres://user:motdepasse@hote:5432/base` écrit en dur dans un fichier `.sh`, `.ts`, `.sql`, un fichier de configuration d'outillage (`.json`, `.toml`, `.yml`), ou toute documentation — quels que soient l'extension et le rôle du fichier.
+- **Mécanisme de vérification** : un scanner de secrets (gitleaks) tourne en CI sur chaque `push`/`pull_request` et bloque le pipeline s'il détecte un motif de ce type dans le dépôt, sans restriction d'extension ni de type de fichier — R11 n'a de valeur qu'accompagnée de ce mécanisme d'application automatique, pas comme seule discipline documentaire (cf. ADR-052, section 5.3, pour la configuration exacte du scanner).
+- Détail complet du sprint qui introduit R11 et son outillage : [ADR-052](docs/decisions/ADR-052-ci-anti-invisibilite-tests-db-gated.md) (section 5.3 pour le scanner de secrets ; le mécanisme lui-même, pas la règle R11, qui est définie ici).
 
 ## Phase 2 — Descriptions des agents
 
@@ -112,7 +128,7 @@ Ces règles sont issues des leçons de la Phase 1 et sont **obligatoires** pour 
 | @db-specialist | 19 nouveaux modèles Prisma, 16 enums, migrations, queries, transactions critiques, agrégation financière |
 | @developer | ~50 API routes, ~30 pages UI, mobile-first, formulaires multi-étapes, graphiques Recharts |
 | @tester | Tests unitaires, API, UI, non-régression, vérification build, rapports dans docs/tests/ |
-| @code-reviewer | Review par sprint selon checklist R1-R10, auth/permissions, accessibilité, mobile-first |
+| @code-reviewer | Review par sprint selon checklist R1-R11, auth/permissions, accessibilité, mobile-first |
 
 ## Phase 2 — Processus de bugfixing
 
@@ -173,7 +189,7 @@ Pour chaque sprint, vérifier :
 3. `npx vitest run` — Tous les tests passent (anciens + nouveaux)
 4. `npm run build` — Build production OK
 5. Test manuel mobile (360px) + desktop
-6. Checklist review (R1-R10 respectées)
+6. Checklist review (R1-R11 respectées)
 7. `docs/reviews/review-sprint-X.md` produit
 
 ## Phase 2 — Fichiers critiques

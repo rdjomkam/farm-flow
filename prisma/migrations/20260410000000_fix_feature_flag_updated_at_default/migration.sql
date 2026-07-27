@@ -1,6 +1,26 @@
 -- Migration: fix_feature_flag_updated_at_default
--- H2: FeatureFlag.updatedAt was created NOT NULL without a DEFAULT.
--- Add DEFAULT CURRENT_TIMESTAMP so Prisma's @updatedAt behaviour is consistent
--- and INSERT statements that omit the column don't fail.
-
-ALTER TABLE "FeatureFlag" ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP;
+-- H2 (historique) : FeatureFlag.updatedAt avait été créée NOT NULL sans DEFAULT.
+-- Cette migration ajoutait à l'origine DEFAULT CURRENT_TIMESTAMP pour sécuriser
+-- d'anciens INSERT qui omettaient la colonne.
+--
+-- Correctif (BUG-CI-migration-order) : schema.prisma définit ce champ comme
+-- `updatedAt DateTime @updatedAt` SANS `@default` — le DEFAULT SQL ajouté par la
+-- version originale de ce fichier contredisait donc l'état cible du schéma et
+-- provoquait une dérive détectée par `prisma migrate diff` sur toute base
+-- fraîchement bootstrapée (`migrate deploy` applique les migrations dans l'ordre
+-- lexicographique des dossiers : 20260403000000 → 20260409000000_add_feature_flags
+-- (CREATE TABLE sans DEFAULT, correct) → ce fichier, qui remettait un DEFAULT en
+-- dernier). Prisma Client fournit toujours "updatedAt" explicitement à l'écriture
+-- (comportement `@updatedAt`), et prisma/seed.sql fournit également la colonne
+-- explicitement — aucun INSERT connu du dépôt ne dépend d'un DEFAULT SQL sur cette
+-- colonne.
+--
+-- Sur toute base où cette migration est déjà enregistrée comme appliquée (déjà en
+-- production), cette modification de fichier est inerte : `prisma migrate deploy`
+-- ignore une migration déjà marquée appliquée en se basant uniquement sur son NOM
+-- dans `_prisma_migrations`, jamais sur le contenu/checksum du fichier — vérifié
+-- empiriquement (voir docs/bugs/BUG-CI-migration-order.md). Ce fichier ne remet
+-- donc plus le DEFAULT ; il le retire explicitement (idempotent via IF EXISTS,
+-- no-op si déjà absent) pour garantir un état final conforme au schéma sur toute
+-- base fraîchement bootstrapée.
+ALTER TABLE IF EXISTS "FeatureFlag" ALTER COLUMN "updatedAt" DROP DEFAULT;

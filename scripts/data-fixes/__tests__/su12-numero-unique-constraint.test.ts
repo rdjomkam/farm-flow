@@ -14,31 +14,39 @@
  * par ROLLBACK (jamais COMMIT) — aucune donnée de test ne persiste, quel que
  * soit le résultat du test (succès ou échec).
  *
- * Si la base de dev n'est pas joignable (DATABASE_URL absent, Docker arrêté),
- * les tests sont marqués `skip` dynamiquement plutôt que de faire échouer la
- * suite complète — ce fichier documente un comportement DB réel, il ne doit
- * pas bloquer un `npx vitest run` sur une machine sans Docker.
+ * Si `DATABASE_URL` est absent, ce fichier est entièrement skippé via
+ * `describe.runIf(requireDatabaseUrl())` (voir `@/test/require-database-url`,
+ * ADR-052) — ce fichier documente un comportement DB réel, il ne doit pas
+ * bloquer un `npx vitest run` sur une machine sans Docker. En revanche, si
+ * `DATABASE_URL` est défini mais que la base est injoignable au moment de la
+ * connexion, le `beforeAll` lève une exception qui fait échouer bruyamment
+ * tous les tests de ce fichier (ADR-052 §3.3) — ce n'est plus un skip, c'est
+ * une panne d'infrastructure à signaler, jamais un `console.warn` suivi d'un
+ * retour silencieux qui rendrait un test "passed" sans avoir rien vérifié.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool, type PoolClient } from "pg";
+import { requireDatabaseUrl } from "@/test/require-database-url";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
-let dbAvailable = false;
 
+// ADR-052 §3.3 — correction du double-gating : une base injoignable alors que
+// DATABASE_URL est défini (donc que requireDatabaseUrl() a décidé que ce
+// fichier doit tourner) est une panne d'infrastructure du run, pas une
+// condition de skip. Le beforeAll lève désormais l'exception au lieu de la
+// capturer silencieusement dans un flag `dbAvailable` — un échec de connexion
+// fait échouer bruyamment tous les tests de ce fichier, avec un message
+// d'erreur explicite, plutôt que de les laisser passer en "passed" sans
+// avoir vérifié quoi que ce soit.
 beforeAll(async () => {
   if (!DATABASE_URL) return;
-  try {
-    pool = new Pool({ connectionString: DATABASE_URL });
-    client = await pool.connect();
-    await client.query("SELECT 1");
-    dbAvailable = true;
-  } catch {
-    dbAvailable = false;
-  }
+  pool = new Pool({ connectionString: DATABASE_URL });
+  client = await pool.connect();
+  await client.query("SELECT 1");
 });
 
 afterAll(async () => {
@@ -81,58 +89,52 @@ async function insertDepense(
   );
 }
 
-describe.runIf(!!DATABASE_URL)(
+describe.runIf(requireDatabaseUrl())(
   "SU.12 — contrainte @@unique([siteId, numero]) — comportement DB réel (rollback systématique)",
   () => {
     it("accepte le même numero pour deux sites distincts (collision multi-tenant corrigée)", async () => {
-      if (!dbAvailable || !client) {
-        console.warn("[SU.12] DB de dev injoignable — test ignoré (dbAvailable=false).");
-        return;
-      }
-
-      await client.query("BEGIN");
+      // Pas de garde `if (!dbAvailable || !client) return;` ici (ADR-052 §3.3) :
+      // le beforeAll a soit levé une exception (base injoignable → échec
+      // bruyant du fichier entier), soit garanti que `client` est utilisable.
+      await client!.query("BEGIN");
       try {
-        const siteA = await seedSiteAndUser(client, "a-samesite-numero");
-        const siteB = await seedSiteAndUser(client, "b-samesite-numero");
+        const siteA = await seedSiteAndUser(client!, "a-samesite-numero");
+        const siteB = await seedSiteAndUser(client!, "b-samesite-numero");
 
         const numero = "DEP-2026-999";
 
         // Même numero, deux sites différents : les deux INSERT doivent réussir.
-        await insertDepense(client, {
+        await insertDepense(client!, {
           id: "su12-test-dep-a",
           numero,
           siteId: siteA.siteId,
           userId: siteA.userId,
         });
-        await insertDepense(client, {
+        await insertDepense(client!, {
           id: "su12-test-dep-b",
           numero,
           siteId: siteB.siteId,
           userId: siteB.userId,
         });
 
-        const { rows } = await client.query(
+        const { rows } = await client!.query(
           `SELECT "siteId", numero FROM "Depense" WHERE numero = $1 ORDER BY "siteId"`,
           [numero]
         );
         expect(rows).toHaveLength(2);
       } finally {
-        await client.query("ROLLBACK");
+        await client!.query("ROLLBACK");
       }
     });
 
     it("rejette un doublon (siteId, numero) au sein du même site", async () => {
-      if (!dbAvailable || !client) {
-        console.warn("[SU.12] DB de dev injoignable — test ignoré (dbAvailable=false).");
-        return;
-      }
-
-      await client.query("BEGIN");
+      // Idem — pas de garde interne (ADR-052 §3.3).
+      await client!.query("BEGIN");
       try {
-        const site = await seedSiteAndUser(client, "same-site-doublon");
+        const site = await seedSiteAndUser(client!, "same-site-doublon");
         const numero = "DEP-2026-998";
 
-        await insertDepense(client, {
+        await insertDepense(client!, {
           id: "su12-test-dep-c1",
           numero,
           siteId: site.siteId,
@@ -148,13 +150,13 @@ describe.runIf(!!DATABASE_URL)(
           })
         ).rejects.toMatchObject({ code: "23505" }); // unique_violation Postgres
       } finally {
-        await client.query("ROLLBACK");
+        await client!.query("ROLLBACK");
       }
     });
   }
 );
 
-describe.runIf(!!DATABASE_URL)(
+describe.runIf(requireDatabaseUrl())(
   "SU.12/SU.13 — les 10 tables migrées exposent bien un index composite (siteId, numero|code), plus aucun index global",
   () => {
     // Les 9 tables SU.12 + LotAlevins (SU.13, migration
@@ -175,12 +177,9 @@ describe.runIf(!!DATABASE_URL)(
     it.each(TABLES.map((t) => [t.table, t.field] as const))(
       "%s a un index unique composite (siteId, %s) et aucun index unique global seul",
       async (table, field) => {
-        if (!dbAvailable || !client) {
-          console.warn("[SU.12] DB de dev injoignable — test ignoré (dbAvailable=false).");
-          return;
-        }
-
-        const { rows } = await client.query<{ indexdef: string }>(
+        // Pas de garde interne (ADR-052 §3.3) : le beforeAll a déjà garanti
+        // que `client` est utilisable, sinon il aurait levé une exception.
+        const { rows } = await client!.query<{ indexdef: string }>(
           `SELECT indexdef FROM pg_indexes WHERE tablename = $1`,
           [table]
         );

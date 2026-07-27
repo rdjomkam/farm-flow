@@ -8,6 +8,116 @@
 
 ## Catégorie : Schema
 
+### ERR-121 — Un `migrate deploy` vert sur base vierge ne prouve pas l'absence de dérive de schéma : toujours enchaîner `migrate diff`
+**Sprint :** hors-sprint (bugfix transverse, découvert par le Sprint CI) | **Date :** 2026-07-27
+**Sévérité :** Moyenne
+**Fichier(s) :** `prisma/migrations/20260403000000_add_ligne_depense/migration.sql`, `prisma/migrations/20260410000000_fix_feature_flag_updated_at_default/migration.sql`
+
+**Symptôme :**
+Après le premier correctif de `BUG-CI-migration-order` (voir ERR-120), les 158 migrations
+s'appliquaient intégralement sur une base vierge (`migrate deploy` → « All migrations have been
+successfully applied. »). Ce vert semblait suffisant. Pourtant `npx prisma migrate diff
+--from-config-datasource --to-schema prisma/schema.prisma --script`, exécuté immédiatement après
+sur cette même base fraîchement bootstrapée, produisait un diff **non vide** :
+`ALTER TABLE "FeatureFlag" ALTER COLUMN "updatedAt" DROP DEFAULT;` — une dérive entre le schéma
+réellement obtenu et `schema.prisma`, invisible à `migrate deploy` puisqu'un `DEFAULT` SQL résiduel
+sur une colonne gérée par `@updatedAt` ne fait échouer aucune requête, il ne fait que diverger
+silencieusement de ce que le code applicatif présuppose.
+
+**Cause racine :**
+Trois migrations touchaient la même colonne (`FeatureFlag.updatedAt`) sans jamais avoir été rejouées
+ensemble dans l'ordre chronologique réel avant ce sprint : un premier `DROP DEFAULT` tolérant
+(no-op sur base vierge, la table n'existant pas encore à ce stade), un `CREATE TABLE` sans
+`DEFAULT` (correct), puis une **troisième** migration plus tardive qui **remettait** le `DEFAULT`
+(fix historique pour sécuriser d'anciens `INSERT`). Une analyse par grep des objets référencés
+(`ALTER TABLE`, `CREATE TABLE`, `REFERENCES`) — méthode qui avait servi à détecter et corriger 15
+des 16 fichiers fautifs — ne voit que si un objet existe au moment où une instruction s'exécute, pas
+si l'**état final** obtenu contredit le schéma cible. Deux migrations aux intentions contraires,
+toutes deux syntaxiquement valides et toutes deux « guardées », peuvent laisser un résultat net
+incohérent que seule la comparaison de schéma révèle.
+
+**Fix :**
+Réécriture de `20260410000000_fix_feature_flag_updated_at_default/migration.sql` pour retirer
+explicitement le `DEFAULT` (`ALTER TABLE IF EXISTS ... DROP DEFAULT`, idempotent) au lieu de le
+remettre, après confirmation qu'aucun `INSERT` connu du dépôt ne dépend d'un `DEFAULT` SQL sur cette
+colonne (Prisma Client écrit toujours la valeur via `@updatedAt`). Re-vérification sur conteneur
+jetable : `migrate deploy` (158/158) **puis** `migrate diff` → vide.
+
+**Leçon / Règle :**
+Un `migrate deploy` qui réussit sur base vierge prouve seulement qu'aucune instruction SQL n'a
+échoué — pas que le schéma final obtenu correspond à `schema.prisma`. Toute vérification de
+bootstrap complet (nouvel environnement, CI, disaster recovery) doit systématiquement enchaîner les
+deux commandes : `npx prisma migrate deploy` (aucune erreur) **puis**
+`npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` (doit
+produire `-- This is an empty migration.`) — ou l'équivalent `--exit-code` pour un contrôle
+automatisable. Une analyse statique par grep des dépendances entre migrations (utile et nécessaire,
+voir ERR-120) ne remplace pas cette comparaison de schéma : elle peut manquer une contradiction
+nette entre deux migrations correctement écrites individuellement.
+
+**Références :** [BUG-CI-migration-order](../bugs/BUG-CI-migration-order.md), [rapport-sprint-CI](../tests/rapport-sprint-CI.md), R10, [ADR-049](../decisions/ADR-049-correctifs-donnees-migrations.md)
+
+---
+
+### ERR-120 — L'ordre lexicographique des dossiers de migration n'est pas garanti être l'ordre historique d'application : toute base neuve, staging ou restauration était cassée, invisible pendant des mois
+**Sprint :** hors-sprint (bugfix transverse, découvert par le Sprint CI) | **Date :** 2026-07-27
+**Sévérité :** Critique
+**Fichier(s) :** `prisma/migrations/**` (16 fichiers corrigés, voir `docs/bugs/BUG-CI-migration-order.md` pour la liste complète)
+
+**Symptôme :**
+`npx prisma migrate deploy` sur un conteneur Postgres **vierge** échouait. Exemple :
+`20260316120000_add_unite_pack_produit` exécute `ALTER TABLE "PackProduit" ...` alors que la table
+`PackProduit` n'est créée que par `20260320110000_add_packs`, treize migrations plus loin dans
+l'ordre lexicographique. La production fonctionnait sans aucun symptôme parce que ses migrations
+avaient été appliquées, historiquement, dans un ordre réel différent de celui que suggèrent
+aujourd'hui les noms de dossier (preuve empirique : le `checksum` stocké dans
+`_prisma_migrations` pour ces fichiers reste identique au checksum du fichier actuel, jamais
+modifié depuis sa création — la seule explication est que ces migrations ont réellement été
+appliquées à un moment où leurs dépendances existaient déjà). Six familles de cas ont été
+identifiées : `ALTER TABLE` avant `CREATE TABLE`, `FOREIGN KEY` vers une table pas encore créée,
+backfill référençant une table pas encore créée, `RECREATE` d'enum oubliant une colonne ajoutée par
+une migration mal datée, fonctionnalité ajoutée puis retirée mais nommée dans le désordre, et
+backfill `NOT NULL` sans repli pour un site sans membre.
+
+**Cause racine :**
+`prisma migrate deploy` trie et applique les migrations dans l'ordre **lexicographique** des noms
+de dossier (le timestamp du nom), pas selon un ordre de dépendance réel entre objets SQL. Un
+horodatage de dossier mal choisi au moment de la création de la migration (par exemple un timestamp
+fixé arbitrairement dans le futur, ou une migration committée après coup avec une date de dossier
+antérieure à sa dépendance réelle) n'est révélé que lorsque **toute** la chaîne est rejouée d'un
+coup sur une base vierge — un scénario qui n'arrive jamais en déploiement incrémental normal
+(chaque `migrate deploy` en production ne voit que les migrations déjà commitées à ce moment-là),
+seulement en CI, disaster recovery, ou provisionnement d'un nouvel environnement (nouveau site
+multi-tenant). C'est précisément la mise en place de la CI de ce sprint qui a révélé un défaut
+invisible depuis des mois.
+
+**Fix :**
+Rendre chaque instruction fautive tolérante (`ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`,
+bloc `DO $$ ... IF EXISTS(...) THEN ... END IF; END $$;`) et garantir le résultat final par ailleurs
+(colonne intégrée directement dans le `CREATE TABLE` qui suit, ou logique rejouée dans la migration
+qui crée réellement la dépendance, gardée par une vérification d'idempotence). **Ne jamais renommer
+les dossiers déjà appliqués en production** : le nom de dossier est la clé de correspondance
+utilisée par Prisma (voir vérification empirique dans ERR-121/`BUG-CI-migration-order` : Prisma
+7.4.2 ne valide le contenu d'une migration déjà enregistrée que par correspondance de **nom**,
+jamais par checksum, lors de `migrate deploy`/`migrate status`) — renommer casserait le
+déploiement en production en faisant apparaître une « nouvelle » migration en attente qui
+retenterait un SQL déjà appliqué.
+
+**Leçon / Règle :**
+Un `migrate deploy` vert en production incrémentale ne prouve **rien** sur la validité d'un
+bootstrap complet depuis zéro — la seule preuve qu'un dépôt de migrations est réellement
+déployable sur un nouvel environnement (CI, staging, disaster recovery, nouveau site
+multi-tenant) est un `migrate deploy` intégral sur une base **vierge**, régulièrement rejoué. C'est
+exactement ce que la mise en place d'une CI (Sprint CI) a révélé, après des mois d'invisibilité
+totale. Toute migration qui référence un objet (table, colonne, type, contrainte) créé par une
+migration ultérieure dans l'ordre lexicographique doit être rendue tolérante (`IF EXISTS`/
+`IF NOT EXISTS`) et son effet final garanti dans la migration qui crée réellement la dépendance —
+jamais corrigée en renommant le dossier d'une migration déjà appliquée en production. Voir ERR-121
+pour la limite de cette vérification (elle ne suffit pas seule, il faut aussi `migrate diff`).
+
+**Références :** [BUG-CI-migration-order](../bugs/BUG-CI-migration-order.md), [rapport-sprint-CI](../tests/rapport-sprint-CI.md), R10, ERR-109, ERR-121
+
+---
+
 ### ERR-112 — `docker-entrypoint.sh` avale un échec de `prisma migrate deploy` : le conteneur démarre sur un schéma non migré, silencieusement
 **Sprint :** MG (story MG.7) | **Date :** 2026-07-26
 **Sévérité :** Critique
@@ -264,6 +374,115 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-119 — Un `return` silencieux à l'intérieur d'un test vaut moins qu'un skip : « passed » sans aucune assertion évaluée
+**Sprint :** CI (story CI.2) | **Date :** 2026-07-27
+**Sévérité :** Haute
+**Fichier(s) :** `scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts`
+
+**Symptôme :**
+Deux blocs `describe.runIf(!!DATABASE_URL)` de ce fichier (12 tests au total, dont un `it.each` sur
+10 tables) contenaient chacun un garde interne redondant : `if (!dbAvailable || !client) { … ;
+return; }`, exécuté au début de chaque `it`. Quand `DATABASE_URL` était défini mais pointait vers
+une base injoignable au moment de la connexion, le `beforeAll` capturait silencieusement l'échec
+(`dbAvailable = false`) au lieu de le laisser remonter, et chaque `it` se terminait alors par ce
+`return` précoce — statut **« passed »** dans le résumé Vitest, alors qu'**aucune assertion n'a
+jamais été évaluée**. Aucun sprint précédent, y compris celui qui a introduit ce fichier, ne l'avait
+détecté.
+
+**Cause racine :**
+Un `describe.runIf(...)` skippe *le bloc entier* de façon visible (statut « skipped », compteur
+dédié dans le résumé). Un `return` précoce *à l'intérieur* d'un `it` déjà collecté, lui, ne change
+pas le statut du test — Vitest le compte comme « passed » puisque aucune assertion n'a échoué, ce
+qui est vrai au sens strict (aucune assertion n'a échoué parce qu'aucune n'a été exécutée). Le garde
+de connexion avait été écrit une fois de plus « au cas où DATABASE_URL serait présent mais la base
+indisponible » (un scénario réel, ex. service Postgres pas encore prêt), mais la manière de le
+traiter — avaler l'échec plutôt que le remonter — transforme un problème d'infrastructure en faux
+positif silencieux.
+
+**Fix :**
+Le `beforeAll` doit désormais **lever une exception** si la connexion échoue
+(`await client.query("SELECT 1")` sans `try/catch` qui avale le rejet), au lieu de positionner
+`dbAvailable = false`. Une exception dans `beforeAll` fait échouer bruyamment tous les tests du
+fichier avec un message explicite. Les gardes `if (!dbAvailable || !client) { return; }` à
+l'intérieur de chaque `it` (3 occurrences : 2 `it` du premier bloc, l'`it.each` du second) sont
+supprimés — ils n'ont plus de raison d'exister une fois que le `beforeAll` garantit que si les tests
+s'exécutent, `client` est forcément utilisable.
+
+**Leçon / Règle :**
+Un `return` précoce à l'intérieur d'un `it`/`test` (par opposition à un `describe.skip`/`it.skip`
+explicite ou un `describe.runIf` au niveau du bloc) est **pire qu'un skip** : il produit un statut «
+passed » trompeur, invisible dans tout résumé de run standard, sans qu'aucune assertion n'ait été
+évaluée. Une fois qu'une ressource externe (base, service) est déterminée comme *devant* être
+disponible pour ce fichier (`requireDatabaseUrl()` a répondu vrai, voir ERR-118), toute panne
+ultérieure de cette ressource (connexion refusée, timeout) doit faire échouer bruyamment le
+`beforeAll` — jamais être absorbée par un garde qui transforme l'absence d'exécution en un faux
+succès. Ne jamais écrire `if (!ressourceDisponible) { return; }` à l'intérieur d'un corps de test
+individuel ; ce type de garde n'a de place légitime qu'au niveau `describe.runIf`/`skipIf`, où le
+statut résultant reste visible.
+
+**Références :** [ADR-052](../decisions/ADR-052-ci-anti-invisibilite-tests-db-gated.md), [rapport-sprint-CI](../tests/rapport-sprint-CI.md)
+
+---
+
+### ERR-118 — Un test d'intégration conditionné à une variable d'environnement skippe silencieusement, sans garde-fou structurel : 17 tests, 4 fichiers, invisibles deux sprints d'affilée
+**Sprint :** CI (stories CI.2) | **Date :** 2026-07-27
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts`, `bd0-savepoint-integration-persister-origin.test.ts`, `bons-livraison-transaction-integration.test.ts`, `scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts`, `src/test/ci-db-guard.setup.ts` (nouveau), `src/test/require-database-url.ts` (nouveau), `src/test/db-gated-allowlist.ts` (nouveau), `src/__tests__/meta/db-gated-tests-registry.test.ts` (nouveau)
+
+**Symptôme :**
+Deux sprints d'affilée (SU, BD — voir ERR-116) ont produit des tests prouvant des garanties
+critiques du projet contre une vraie base Postgres, pas des mocks : atomicité de la signature d'un
+bon de livraison (rollback réel, verrouillage de lignes contre double signature concurrente) ;
+SAVEPOINT/canary de `createReleve` garantissant qu'un relevé de terrain ne peut jamais échouer à
+cause du recalcul d'écart de conservation (ERR-113/ERR-114) ; unicité composite
+`(siteId, numero|code)` réellement appliquée par le moteur Postgres sur 10 tables. **17 tests, 4
+fichiers**, tous conditionnés par `describe.runIf(!!DATABASE_URL)`. Sans `DATABASE_URL` exportée,
+`npx vitest run` les skippait silencieusement — aucune CI n'existait avant ce sprint pour garantir
+que cette variable soit jamais exportée en continu.
+
+**Cause racine :**
+`runIf` est le bon outil pour éviter un échec dur quand une ressource externe n'est pas disponible,
+mais son coût est de rendre la garantie qu'il protège optionnelle et silencieuse par défaut — rien
+dans la sortie standard de `npx vitest run` n'attire l'attention sur le fait qu'une preuve centrale
+n'a pas été rejouée. Documenté une première fois par ERR-116 comme un point d'attention transverse,
+sans fix de code à ce moment-là.
+
+**Fix (ADR-052, défense à trois niveaux) :**
+1. **Garde global** (`src/test/ci-db-guard.setup.ts`, déclaré dans `vitest.config.ts` via
+   `test.setupFiles`) : au chargement du module (avant toute collecte de test), si `process.env.CI`
+   est défini et `DATABASE_URL` absent → `throw` immédiat, message explicite. Rend « CI sans base »
+   structurellement impossible, quel que soit le fichier de test concerné, y compris un fichier qui
+   n'existe pas encore.
+2. **Helper obligatoire** `requireDatabaseUrl()` (`src/test/require-database-url.ts`) : centralise
+   la décision « ce test doit-il tourner ? ». Tout fichier gated l'appelle
+   (`describe.runIf(requireDatabaseUrl())`) au lieu d'écrire son propre
+   `!!process.env.DATABASE_URL`.
+3. **Allowlist + test méta** (`src/test/db-gated-allowlist.ts`, `src/__tests__/meta/db-gated-tests-registry.test.ts`) :
+   grep bidirectionnel du dépôt — une occurrence de `runIf`/`skip` non allowlistée échoue (empêche
+   l'ajout non déclaré d'un nouveau gate) ; une entrée allowlistée mais introuvable échoue aussi
+   (empêche l'allowlist de pourrir). Chaque entrée exige une justification substantielle (ressource
+   externe réelle, pas « test lent »).
+Les 5 occurrences `describe.runIf` des 4 fichiers ont été migrées vers `requireDatabaseUrl()`.
+
+**Leçon / Règle :**
+Un test `runIf`/gated qui passe une fois n'est pas un filet de sécurité pérenne tant que (1) la
+condition de déclenchement n'est pas elle-même garantie par un mécanisme structurel indépendant de
+la discipline de chaque fichier de test, et (2) qu'aucun test méta ne vérifie que tout gate présent
+dans le dépôt est déclaré et justifié. Avant de merger un nouveau test d'intégration DB-gated,
+vérifier qu'il passe par `requireDatabaseUrl()` et qu'il est enregistré dans
+`db-gated-allowlist.ts` — c'est désormais vérifié automatiquement par le test méta, mais rester
+vigilant : ce mécanisme protège la famille `DATABASE_URL` et les gates syntaxiquement détectables
+(`runIf`/`skip`/`skipIf`), pas un test rendu inopérant par une autre voie non syntaxique (voir
+ERR-119, cas du `return` silencieux).
+
+**Note de correction associée :** cette entrée corrige et remplace, pour le périmètre CI, la
+recommandation d'ERR-116 (« vérifier explicitement à chaque sprint » — remplacée par un mécanisme
+structurel, plus une vérification manuelle ponctuelle).
+
+**Références :** [ADR-052](../decisions/ADR-052-ci-anti-invisibilite-tests-db-gated.md), ERR-116, ERR-119, [rapport-sprint-CI](../tests/rapport-sprint-CI.md)
+
+---
+
 ### ERR-117 — Un défaut de call site ne se voit pas dans un ADR : vérifier par grep que chaque transition d'un cycle de vie documenté a un point d'appel réel
 **Sprint :** BD (story BD.0) | **Date :** 2026-07-27
 **Sévérité :** Haute
@@ -335,6 +554,20 @@ une fois n'est pas un filet de sécurité pérenne tant que la condition de déc
 elle-même garantie à chaque run.
 
 **Références :** [rapport-story-BD.3](../tests/rapport-story-BD.3.md), [review-sprint-BD](../reviews/review-sprint-BD.md)
+
+**Mise à jour (Sprint CI, 2026-07-27) — [RÉSOLU pour les 3 fichiers cités] :** le Sprint CI a
+traité structurellement ce point (ADR-052) : `describe.runIf(!!DATABASE_URL)` a été remplacé par
+`describe.runIf(requireDatabaseUrl())` dans `bd0-savepoint-integration.test.ts` et
+`bd0-savepoint-integration-persister-origin.test.ts`, plus un garde global (`ci-db-guard.setup.ts`)
+qui fait échouer bruyamment tout `npx vitest run` en CI sans `DATABASE_URL`, et un test méta qui
+grep le dépôt dans les deux sens pour empêcher qu'un futur `runIf` reste non déclaré (voir
+ERR-118). **Correction factuelle :** la référence de cette entrée à
+`src/__tests__/bd0-comptage-recalcule-ecart.test.ts` comme fichier DB-gated est **obsolète** — la
+pré-analyse du sprint CI a constaté que ce fichier est aujourd'hui **entièrement mocké**, sans
+aucun `runIf` (confirmé par ADR-052 §6, « Suivi hors du périmètre de cet ADR »). Le périmètre réel
+migré par le sprint CI est donc les 4 fichiers listés dans ERR-118 (`bd0-savepoint-integration`,
+`bd0-savepoint-integration-persister-origin`, `bons-livraison-transaction-integration`,
+`su12-numero-unique-constraint`), pas ce troisième fichier.
 
 ---
 
@@ -530,6 +763,16 @@ Ne jamais conclure à une régression uniquement sur la base d'un run global bru
 La baseline de référence pour "la suite est verte" doit être obtenue **machine libre de tout agent concurrent**. Un échec en timeout pur (aucune assertion cassée), non reproductible en isolation, et dispersé sur des fichiers sans rapport thématique est un signal de contention, pas de bug — ne jamais lancer une investigation de régression ou un rollback sur cette seule base. Documenter ce contexte dans le rapport de test si un sprint a été fortement parallélisé (cf. constat de process, `review-sprint-SU.md`).
 
 **Références :** [review-sprint-SU](../reviews/review-sprint-SU.md), [rapport-sprint-SU](../tests/rapport-sprint-SU.md)
+
+**Mise à jour (Sprint CI, 2026-07-27) :** confirmé à nouveau, deux fois, dans des conditions bien
+pires (load average jusqu'à 480 sur 12 CPU, utilisateurs/process tiers sans lien avec le projet) :
+43 échecs en un run, puis 5, puis 3, **tous** `Test timed out in 5000ms`, tous infirmés par
+ré-exécution isolée des fichiers concernés (0 échec à chaque fois). Règle de méthode ajoutée par ce
+sprint, à appliquer systématiquement désormais : **ne jamais déclarer une régression sans
+ré-exécution isolée du fichier concerné**, et **ne jamais lancer deux suites de tests en
+parallèle** sur la même machine (voir ERR-118 pour le cas de contention inter-agents sur les
+fichiers, distinct mais lié). Voir [rapport-sprint-CI](../tests/rapport-sprint-CI.md) section 0 et
+partie H.4 pour le détail des trois occurrences de ce sprint.
 
 ---
 
@@ -1954,6 +2197,102 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-123 — Fichier de test doublon créé parce que le lancement d'un agent a été déduit au lieu d'être attendu
+**Sprint :** BD (contexte), confirmé et généralisé au Sprint CI | **Date :** 2026-07-27
+**Sévérité :** Moyenne
+**Fichier(s) :** transverse — tout fichier créé/modifié en parallèle par plusieurs agents sur le même dépôt
+
+**Symptôme :**
+Le sprint BD a produit un **fichier de test doublon** parce que le lancement d'un second agent en
+écriture a été supposé terminé (« il a dû rendre la main ») au lieu d'être réellement vérifié. Le
+sprint CI a reproduit un cas structurellement identique lors de la vérification finale : `git
+status` lu au tout début de la mission du tester ne montrait que 2 fichiers modifiés
+(`CLAUDE.md`, `package.json`) ; en cours de run, une deuxième vérification a révélé l'apparition en
+temps réel (horodatée pendant l'exécution même de `npx vitest run`) de 6 fichiers `src/test/*`
+supplémentaires, d'un test méta, d'un `.gitleaks.toml`, et de la modification de 5 autres fichiers —
+un `ps aux` a confirmé qu'un second process `vitest` d'un autre agent tournait en parallèle. Le
+premier run de test a dû être invalidé et refait, une fois le dépôt confirmé stable.
+
+**Cause racine :**
+Un agent en écriture (implementer, developer) n'a aucune obligation de signaler explicitement et de
+façon fiable qu'il a fini d'écrire — un agent orchestrateur ou un agent en aval (tester,
+reviewer) qui *déduit* la fin d'un travail (silence, temps écoulé, apparente disponibilité d'un
+fichier) plutôt que de la *vérifier* (retour de contrôle explicite de l'outil de lancement d'agent,
+`git status` stable dans le temps, absence de process actif) s'expose à lire/tester un état
+transitoire du dépôt — soit un fichier partiellement écrit, soit une collision d'écriture entre deux
+agents sur la même zone.
+
+**Fix :**
+Aucun fix de code — discipline de processus. Le tester du sprint CI a appliqué la bonne pratique en
+réaction : `find -newer` sans nouveau fichier pendant 15s + absence de process `vitest`/`npm` actif
+(`ps aux`) comme critère de stabilité avant de considérer le dépôt exploitable, et invalidation
+explicite (pas de dissimulation) du premier run contaminé plutôt que de rapporter des chiffres
+douteux comme s'ils étaient fiables.
+
+**Leçon / Règle :**
+Un agent en écriture doit avoir **réellement rendu la main** — pas être *supposé* avoir terminé —
+avant qu'un autre agent touche les mêmes fichiers ou lance une vérification qui en dépend
+(exécution de tests, review, build). Avant de conclure qu'un dépôt est dans un état stable pour
+vérification : croiser au minimum deux signaux indépendants (état `git status` inchangé sur une
+fenêtre de temps + absence de process actif lié au projet), jamais un seul coup d'œil ponctuel.
+Toute anomalie constatée en cours de vérification (apparition de fichiers non prévus, changement
+inattendu de `git status`) doit invalider le run en cours plutôt que d'être ignorée — un rapport
+produit sur un dépôt en mouvement n'a aucune valeur, même si les chiffres semblent cohérents après
+coup.
+
+**Références :** [rapport-sprint-CI](../tests/rapport-sprint-CI.md) section 0
+
+---
+
+### ERR-122 — Un secret peut être tracké depuis le commit initial sans que personne ne le voie : un fichier de configuration d'outillage n'est audité par personne, par défaut
+**Sprint :** CI (stories CI.3, CI.4) | **Date :** 2026-07-27
+**Sévérité :** Critique
+**Fichier(s) :** `.claude/settings.local.json` (jamais son contenu — voir consigne de sécurité), `CLAUDE.md` (R11), `.gitleaks.toml`, `.gitignore`
+
+**Symptôme :**
+`.claude/settings.local.json` — un fichier de **configuration d'outillage/agent**, catégorie que
+personne ne pense à auditer parce qu'elle semble hors du périmètre naturel d'une revue de code
+applicative — était tracké par git **depuis le commit initial** du dépôt (`169c559`), et contenait
+un identifiant de connexion Postgres de production en clair (compte, hôte externe, mot de passe à
+haute entropie). Il n'a été trouvé ni par une revue humaine, ni par aucun sprint antérieur, mais par
+le **scan de secrets construit par ce sprint (gitleaks), dès sa toute première exécution** — la
+faille a donc existé, invisible, sur toute la durée de vie publique du dépôt.
+
+**Cause racine :**
+La première version de R11 (avant ce sprint) énumérait un périmètre fermé de catégories de fichiers
+concernées par l'interdiction des secrets en dur : « script, migration, test, doc ». Cette
+énumération, en apparence prudente, produisait l'effet inverse de celui recherché : elle invitait à
+conclure, par contraste, que tout ce qui n'y figurait pas explicitement (en particulier la
+configuration d'outillage/IDE/agent — `.claude/`, `.vscode/`, `.idea/`, `*.local.*`) était hors
+périmètre. Le mécanisme technique (le scanner gitleaks lui-même) n'avait, lui, aucune restriction
+d'extension ni de catégorie — c'est la formulation de la règle qui portait la faille, pas
+l'outillage.
+
+**Fix :**
+Détrackage du fichier (`git rm --cached .claude/settings.local.json` — opération d'index
+uniquement, le fichier reste présent et inchangé sur le disque local, intentionnellement, pour ne
+pas casser la configuration locale de l'agent), ajout à `.gitignore`. R11 reformulée dans
+`CLAUDE.md` : le périmètre est désormais défini par principe (« ce fichier est-il tracké par git
+dans ce dépôt ? ») et non par une liste fermée de catégories — toute exception explicite
+(`.claude/`, `.vscode/`, `.idea/`, `*.local.*`) est citée comme **exemple non exhaustif**, jamais
+comme périmètre limitatif. Voir `docs/security/REMEDIATION-SECRET-HISTORIQUE.md` pour la
+remédiation complète (rotation requise côté production, hors périmètre agent — le détrackage
+n'efface rien de l'historique déjà poussé sur GitHub).
+
+**Leçon / Règle :**
+Le périmètre d'une règle anti-secret doit être **exhaustif par principe** (« tout fichier tracké par
+git, sans exception de nature ni d'extension »), jamais défini par une énumération fermée de
+catégories — une énumération, aussi bien intentionnée soit-elle, crée par contraste une zone
+présumée hors périmètre, exactement la zone où un secret réel a fini par se cacher. Avant de
+formuler ou de réviser toute règle de sécurité par liste de catégories, se demander explicitement :
+« quel type de fichier n'apparaît dans aucune de ces catégories, et pourquoi supposerait-on qu'il
+est sans risque ? » — la configuration d'outillage/agent (fichiers `*local*`, censés rester privés
+par leur nom même) est un candidat systématique à vérifier, pas une exception implicite.
+
+**Références :** [ADR-052](../decisions/ADR-052-ci-anti-invisibilite-tests-db-gated.md) section 6, R11 (`CLAUDE.md`), [REMEDIATION-SECRET-HISTORIQUE](../security/REMEDIATION-SECRET-HISTORIQUE.md), [rapport-sprint-CI](../tests/rapport-sprint-CI.md) section 4
+
+---
 
 ### ERR-101 — Guard `verifyAssignationInvariant` : `isEntrant` calculé par bac au lieu de par relevé (bacs source+dest dans la même vague)
 **Sprint :** GD (BUG-049) | **Date :** 2026-07-15

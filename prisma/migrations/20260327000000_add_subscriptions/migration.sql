@@ -41,6 +41,12 @@ ALTER TABLE "Calibrage" ALTER COLUMN "sourceBacIds" DROP DEFAULT,
 ALTER COLUMN "updatedAt" DROP DEFAULT;
 
 -- CreateTable
+-- "modulesInclus" est normalement ajoutée par
+-- 20260321000000_add_modules_inclus_plan (postérieure dans la chaîne réelle
+-- mais lexicographiquement AVANT cette migration qui crée la table). Elle
+-- est donc définie ici dès la création, pour qu'une base vierge (qui
+-- applique 20260321000000 avant que "PlanAbonnement" existe, en no-op)
+-- obtienne malgré tout la colonne. Voir docs/bugs/BUG-CI-migration-order.md.
 CREATE TABLE "PlanAbonnement" (
     "id" TEXT NOT NULL,
     "nom" TEXT NOT NULL,
@@ -55,6 +61,7 @@ CREATE TABLE "PlanAbonnement" (
     "limitesIngFermes" INTEGER,
     "isActif" BOOLEAN NOT NULL DEFAULT true,
     "isPublic" BOOLEAN NOT NULL DEFAULT true,
+    "modulesInclus" "SiteModule"[] NOT NULL DEFAULT ARRAY[]::"SiteModule"[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -332,4 +339,66 @@ ALTER TABLE "RetraitPortefeuille" ADD CONSTRAINT "RetraitPortefeuille_traitePar_
 
 -- AddForeignKey
 ALTER TABLE "RetraitPortefeuille" ADD CONSTRAINT "RetraitPortefeuille_siteId_fkey" FOREIGN KEY ("siteId") REFERENCES "Site"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- ──────────────────────────────────────────
+-- Rattrapage Pack.planId (Story 44.1)
+-- ──────────────────────────────────────────
+-- 20260321100000_pack_plan_id_remove_enabled_modules a sauté son backfill
+-- Pack.planId et les contraintes associées sur une base vierge, car
+-- "PlanAbonnement" n'existait pas encore à ce stade (lexicographiquement
+-- avant cette migration, qui crée "PlanAbonnement"). "PlanAbonnement" étant
+-- désormais disponible, on rejoue ici la même logique — no-op silencieux
+-- sur tout environnement où elle a déjà été appliquée dans l'ordre réel.
+-- Voir docs/bugs/BUG-CI-migration-order.md.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Pack')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Pack' AND column_name = 'planId')
+  THEN
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'DECOUVERTE')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%d%couverte%' OR LOWER("nom") LIKE '%decouverte%' OR LOWER("nom") LIKE '%starter 100%' OR LOWER("nom") LIKE '%100%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'ELEVEUR')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%l%veur%' OR LOWER("nom") LIKE '%eleveur%' OR LOWER("nom") LIKE '%starter 300%' OR LOWER("nom") LIKE '%300%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'PROFESSIONNEL')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%professionnel%' OR LOWER("nom") LIKE '%pro 500%' OR LOWER("nom") LIKE '%500%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'ENTREPRISE')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%entreprise%' OR LOWER("nom") LIKE '%enterprise%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'INGENIEUR_STARTER')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%ing%nieur starter%' OR LOWER("nom") LIKE '%ingenieur starter%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'INGENIEUR_PRO')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%ing%nieur pro%' OR LOWER("nom") LIKE '%ingenieur pro%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'INGENIEUR_EXPERT')
+    WHERE "planId" IS NULL AND (LOWER("nom") LIKE '%ing%nieur expert%' OR LOWER("nom") LIKE '%ingenieur expert%');
+
+    UPDATE "Pack" SET "planId" = (SELECT id FROM "PlanAbonnement" WHERE "typePlan" = 'DECOUVERTE')
+    WHERE "planId" IS NULL;
+
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'Pack'
+        AND column_name = 'planId' AND is_nullable = 'YES'
+    ) THEN
+      ALTER TABLE "Pack" ALTER COLUMN "planId" SET NOT NULL;
+    END IF;
+
+    ALTER TABLE "Pack" DROP COLUMN IF EXISTS "enabledModules";
+
+    BEGIN
+      ALTER TABLE "Pack" ADD CONSTRAINT "Pack_planId_fkey"
+        FOREIGN KEY ("planId") REFERENCES "PlanAbonnement"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'Pack_planId_idx') THEN
+      CREATE INDEX "Pack_planId_idx" ON "Pack"("planId");
+    END IF;
+
+  END IF;
+END $$;
 

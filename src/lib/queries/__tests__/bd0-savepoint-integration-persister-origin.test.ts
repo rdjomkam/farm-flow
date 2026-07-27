@@ -29,6 +29,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { Pool, type PoolClient } from "pg";
 import { createReleve } from "@/lib/queries/releves";
+import { requireDatabaseUrl } from "@/test/require-database-url";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -144,7 +145,7 @@ afterEach(() => {
   poisonState.active = false;
 });
 
-describe.runIf(!!DATABASE_URL)(
+describe.runIf(requireDatabaseUrl())(
   "BD.0 v2 — canary détecte une transaction empoisonnée depuis L'INTÉRIEUR de persisterEcartConstate (erreur avalée en interne, jamais relancée)",
   () => {
     it(

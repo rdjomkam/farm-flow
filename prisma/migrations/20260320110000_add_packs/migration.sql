@@ -20,6 +20,12 @@ ALTER TABLE "Vague" ADD COLUMN "packActivationId" TEXT;
 -- ──────────────────────────────────────────
 -- 4. Create table Pack
 -- ──────────────────────────────────────────
+-- "enabledModules" est normalement ajoutée par 20260317120000_add_site_modules
+-- (postérieure dans la chaîne réelle mais lexicographiquement AVANT cette
+-- migration qui crée la table). Elle est donc définie ici dès la création,
+-- pour qu'une base vierge (qui applique 20260317120000 avant que "Pack"
+-- existe, en no-op) obtienne malgré tout la colonne. Voir
+-- docs/bugs/BUG-CI-migration-order.md.
 CREATE TABLE "Pack" (
     "id" TEXT NOT NULL,
     "nom" TEXT NOT NULL,
@@ -31,6 +37,7 @@ CREATE TABLE "Pack" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "userId" TEXT NOT NULL,
     "siteId" TEXT NOT NULL,
+    "enabledModules" "SiteModule"[] DEFAULT ARRAY[]::"SiteModule"[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -40,11 +47,18 @@ CREATE TABLE "Pack" (
 -- ──────────────────────────────────────────
 -- 5. Create table PackProduit
 -- ──────────────────────────────────────────
+-- "unite" est normalement ajoutée par 20260316120000_add_unite_pack_produit
+-- (postérieure dans la chaîne réelle mais lexicographiquement AVANT cette
+-- migration qui crée la table). Elle est donc définie ici dès la création,
+-- pour qu'une base vierge (qui applique 20260316120000 avant que
+-- "PackProduit" existe, en no-op) obtienne malgré tout la colonne. Voir
+-- docs/bugs/BUG-CI-migration-order.md.
 CREATE TABLE "PackProduit" (
     "id" TEXT NOT NULL,
     "packId" TEXT NOT NULL,
     "produitId" TEXT NOT NULL,
     "quantite" DOUBLE PRECISION NOT NULL,
+    "unite" "UniteStock",
 
     CONSTRAINT "PackProduit_pkey" PRIMARY KEY ("id")
 );
@@ -126,3 +140,19 @@ ALTER TABLE "PackActivation" ADD CONSTRAINT "PackActivation_siteId_fkey"
 
 ALTER TABLE "PackActivation" ADD CONSTRAINT "PackActivation_clientSiteId_fkey"
     FOREIGN KEY ("clientSiteId") REFERENCES "Site"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- "PackBac_packId_fkey" est normalement ajoutée par
+-- 20260317200000_add_pack_bacs (postérieure dans la chaîne réelle mais
+-- lexicographiquement AVANT cette migration qui crée "Pack"). Sur une base
+-- vierge, cette contrainte n'a pas pu être ajoutée là-bas (skip silencieux,
+-- "Pack" n'existait pas encore) — elle est donc ajoutée ici, une fois
+-- "Pack" créée. Le bloc DO protège contre le cas où elle existe déjà (ordre
+-- réel historique où "PackBac" a été créée après "Pack").
+-- Voir docs/bugs/BUG-CI-migration-order.md.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'PackBac') THEN
+    ALTER TABLE "PackBac" ADD CONSTRAINT "PackBac_packId_fkey"
+      FOREIGN KEY ("packId") REFERENCES "Pack"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

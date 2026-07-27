@@ -7596,3 +7596,41 @@ Voir : [SPRINT-BD.md](sprints/SPRINT-BD.md)
 3. **Basse — limitation résiduelle** (ADR-051 §7) : un bac réparé par un COMPTAGE isolé sans opération guardée ultérieure est désormais **couvert par BD.0** ; en revanche un bac réparé **hors application** reste affiché.
 4. **Recommandation reconduite — balayage périodique de détection** (cron / job planifié). La détection reste **paresseuse** : aucun cron, seules les opérations guardées (**+ désormais `COMPTAGE` et `MORTALITE` via `createReleve`**) détectent. Un bac sans aucune opération peut dériver sans jamais apparaître. Seul un balayage périodique transformerait « rien détecté » en garantie. Exclu du périmètre BD par arbitrage utilisateur — cf. ADR-048 §9 et ADR-051 §6.
 5. **Process — deux collisions d'agents** ont eu lieu pendant ce sprint (édition concurrente ayant produit un fichier de test doublon, depuis fusionné, et un fichier scratch temporairement laissé à la racine, depuis nettoyé). **Plafond de 2 agents en écriture simultanée à maintenir.**
+
+---
+
+## Sprint CI — Intégration continue avec base éphémère + hygiène des secrets
+
+**Statut :** `TERMINÉ (validé avec réserves)` (**5 stories** + 1 correctif hors périmètre)
+**Objectif :** rendre **impossible** qu'un test d'intégration prouvant une garantie critique ne s'exécute jamais, et empêcher qu'un identifiant entre à nouveau dans le dépôt.
+**Origine :** réserve n°1 de clôture du Sprint BD (« tests DB-gated non rejoués en continu ») + fuite d'identifiant de production constatée dans `scripts/data-fixes/gd3-apply.sh` (commit `33ef046`).
+**Références :** [ADR-052](decisions/ADR-052-ci-anti-invisibilite-tests-db-gated.md), [note de remédiation](security/REMEDIATION-SECRET-HISTORIQUE.md), `docs/analysis/pre-analysis-sprint-CI.md`, `docs/reviews/review-sprint-CI.md`
+
+| Story | Type | Sujet | Statut |
+|-------|------|-------|--------|
+| CI.1 | INFRA | Pipeline GitHub Actions + service `postgres:16-alpine` éphémère | `FAIT` |
+| CI.2 | INFRA/TEST | Garde rendant l'invisibilité impossible (`CI` sans `DATABASE_URL` → échec) | `FAIT` |
+| CI.3 | INFRA | Détection de secrets (gitleaks), scan bloquant + scan historique informatif | `FAIT` |
+| CI.4 | DOC | R11 — les identifiants viennent de l'environnement, jamais du code | `FAIT` |
+| CI.5 | DOC | Note de remédiation, rédigée **sans** exécuter la rotation | `FAIT` |
+| — | BUGFIX | `migrate deploy` inapplicable sur base vierge (hors périmètre initial) | `CORRIGÉ` |
+
+**CI.2 — la livraison centrale.** Deux sprints d'affilée (SU, BD) ont produit des tests d'intégration prouvant des garanties critiques — atomicité de la signature d'un bon de livraison, non-blocance du recalcul d'écart de conservation (SAVEPOINT, BD.0) — qui **skippaient silencieusement** sans `DATABASE_URL` (ERR-116). Le garde est déclaré dans `test.setupFiles` et s'exécute au chargement du module, donc **avant toute collecte** : aucun fichier de test ne peut l'oublier. Preuve exécutée dans les deux sens (un garde qui échoue toujours ne vaudrait rien) : `CI=1` sans `DATABASE_URL` → exit 1, tous les fichiers en échec avant collecte ; `CI=1` avec `DATABASE_URL` → exit 0, les 17 tests DB-gated exécutés. Un test de non-régression couvre les 4 combinaisons et assertionne le contenu du message.
+
+**Correctif hors périmètre — `migrate deploy` sur base vierge.** Découvert par la CI naissante avant son premier push : `20260316120000_add_unite_pack_produit` fait `ALTER TABLE "PackProduit"` alors que la table n'est créée que par `20260320110000_add_packs`, treize dossiers plus loin. La production tourne parce que ses migrations ont été appliquées dans un ordre historique que les noms de dossiers ne reflètent pas — mais **tout nouvel environnement, tout staging et toute restauration après sinistre** échouaient. **6 inversions** du même mal ont été trouvées, pas la seule paire signalée. Voir `docs/bugs/BUG-CI-migration-order.md`.
+
+Fait porteur, établi empiriquement plutôt que supposé, et **revérifié indépendamment** : Prisma 7 apparie les migrations par **`migration_name`**, jamais par empreinte — éditer le SQL d'une migration déjà enregistrée est un no-op strict là où elle est appliquée. Contrôle : sur la base de dev, les empreintes stockées **diffèrent** de celles des fichiers édités, et `migrate status` comme `migrate deploy` répondent « up to date ». C'est ce qui a fait **écarter** le renommage des dossiers (changer `migration_name` aurait transformé la prod en migration en attente, à rejouer sur des objets existants) et l'ajout d'une migration de rattrapage en fin de liste (`migrate deploy` s'arrête au premier échec, un correctif final ne peut pas prévenir une erreur antérieure). **Aucune action manuelle requise en production.**
+
+**Vérification finale :**
+- `npx vitest run` **avec** `DATABASE_URL` : **5764 passés**, 0 échec (229 fichiers)
+- `npx vitest run` **sans** `DATABASE_URL` : **5747 passés**, 17 skippés, 0 échec
+- `CI=1` **sans** `DATABASE_URL` : **exit 1** (comportement attendu du garde)
+- `npm run build` : **exit 0**
+- `migrate deploy` sur conteneur `postgres:16-alpine` **vierge** : **158/158 appliquées**, puis `migrate diff` → migration vide
+
+**Hygiène des secrets.** `.claude/settings.local.json` était **tracké depuis le commit initial `169c559`** et contenait l'URL de production avec mot de passe — l'exposition est donc bien plus ancienne que l'incident `gd3-apply.sh` qui a motivé ce sprint. Retiré du suivi (`git rm --cached`), ajouté au `.gitignore`, **contenu intact sur le disque**. `.gitleaks.toml` n'exclut ni ce chemin ni le motif d'URL Postgres : le scanner reste capable de détecter exactement ce qui a échappé. Scan **bloquant** sur les fichiers modifiés, **informatif** sur l'historique — une CI durablement rouge à cause de la dette passée finirait ignorée, donc contournée.
+
+**Réserves et suites (PAS des stories de ce sprint) :**
+1. **La rotation du mot de passe de production reste à faire, et n'est pas automatisable.** Ce sprint rend la récidive impossible ; il ne désarme pas le secret déjà public. La réécriture d'historique **n'est pas un substitut** : les commits ont été poussés, donc potentiellement clonés, mis en cache ou forkés — seule la rotation invalide le secret, et réécrire casserait les clones existants sans rien garantir.
+2. **Non vérifiable avant le premier push réel** : comportement du service Postgres et de `gitleaks-action` sur un runner GitHub, résolution de Node 22 depuis `.nvmrc`, blocage effectif selon les protections de branche, rendu du job informatif. Le garde, le service Postgres local et l'application des migrations sur base vierge ont, eux, été prouvés localement.
+3. **Basse** — deux valeurs `HETZNER_S3_*` d'un `.env.example` local non tracké n'ont pas l'apparence de placeholders. À contrôler avant qu'un template de ce fichier ne soit un jour versionné.

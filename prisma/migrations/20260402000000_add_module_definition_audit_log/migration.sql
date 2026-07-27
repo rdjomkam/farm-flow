@@ -26,6 +26,14 @@ CREATE INDEX IF NOT EXISTS "Site_suspendedAt_idx" ON "Site"("suspendedAt");
 -- 3. ModuleDefinition — Registre global des modules
 -- ──────────────────────────────────────────
 
+-- "updatedAt" est définie ici SANS DEFAULT : sur l'ordre réel historique,
+-- 20260328130000_sync_schema_drift (postérieure) faisait un DROP DEFAULT
+-- après coup pour aligner la colonne sur schema.prisma (@updatedAt, géré
+-- côté application, pas de DEFAULT en base). Comme cette migration
+-- (20260328130000) est lexicographiquement AVANT celle-ci sur une base
+-- vierge, son ALTER TABLE IF EXISTS y est un no-op — la colonne doit donc
+-- déjà être correcte (sans DEFAULT) dès cette création.
+-- Voir docs/bugs/BUG-CI-migration-order.md.
 CREATE TABLE IF NOT EXISTS "ModuleDefinition" (
     "id"          TEXT NOT NULL,
     "key"         TEXT NOT NULL,
@@ -39,7 +47,7 @@ CREATE TABLE IF NOT EXISTS "ModuleDefinition" (
     "isActive"    BOOLEAN NOT NULL DEFAULT true,
     "category"    TEXT,
     "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt"   TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ModuleDefinition_pkey" PRIMARY KEY ("id")
 );
