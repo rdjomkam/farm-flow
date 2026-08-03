@@ -197,6 +197,13 @@ export const PERMISSION_GROUPS = {
     Permission.PORTEFEUILLE_VOIR,
     Permission.PORTEFEUILLE_GERER,
   ],
+  // Sprint PR1 — Module Prévisions
+  previsions: [
+    Permission.PREVISIONS_VOIR,
+    Permission.PREVISIONS_GERER,
+    Permission.PREVISIONS_PARAMETRER,
+    Permission.PREVISIONS_CLOTURER,
+  ],
 } as const;
 
 // ---------------------------------------------------------------------------

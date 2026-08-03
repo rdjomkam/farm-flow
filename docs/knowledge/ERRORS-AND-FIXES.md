@@ -8,6 +8,145 @@
 
 ## Catégorie : Schema
 
+### ERR-132 — Convention de nommage des contraintes CHECK SQL : `<Table>_<champ>_check` a déjà un précédent, ne pas supposer son absence
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Basse
+**Fichier(s) :** `prisma/migrations/20260803140000_alimentparvagueprevue_sacs_int/migration.sql`, `prisma/migrations/20260318100000_add_depenses_recurrentes/migration.sql`
+
+**Symptôme :**
+La pré-analyse de la story avait conclu « le dépôt n'utilise pas de contrainte CHECK SQL » et
+recommandé, sur cette base, de ne pas ajouter de garde-fou CHECK isolé pour rester cohérent avec
+l'existant. Vérification faite par le @db-specialist avant d'écrire la migration : un précédent réel
+existe déjà, `DepenseRecurrente_jourDuMois_check`, introduit par la migration
+`20260318100000_add_depenses_recurrentes`.
+
+**Cause racine :**
+Une pré-analyse qui conclut à l'absence d'un pattern dans le dépôt sans grep exhaustif
+(`grep -rn "ADD CONSTRAINT.*CHECK" prisma/migrations/`) énonce une hypothèse, pas un fait vérifié —
+même erreur de méthode que ERR-125/ERR-121 : « je n'ai pas vu X » est silencieusement devenu « X
+n'existe pas ».
+
+**Fix :**
+La nouvelle contrainte de la migration `20260803140000` a suivi la convention déjà en place,
+`<Table>_<champ>_check`, plutôt que d'inventer un nommage isolé.
+
+**Leçon / Règle :**
+Avant d'affirmer qu'un pattern SQL (CHECK, TRIGGER, INDEX partiel, etc.) est absent du dépôt et
+d'en tirer une recommandation de conception, faire un grep exhaustif sur `prisma/migrations/*/migration.sql`
+plutôt que de se fier à une impression. Si une contrainte CHECK doit être ajoutée, nommer selon la
+convention déjà établie : `<Table>_<champ>_check`.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-053
+
+---
+
+### ERR-131 — « Aucune route API n'écrit dans cette table » ne veut pas dire « cette table est vide » : le seed est un producteur de données qu'une analyse de changement de type doit vérifier
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/seed.sql`, `prisma/migrations/20260803140000_alimentparvagueprevue_sacs_int/migration.sql`
+
+**Symptôme :**
+La réserve du @code-reviewer supposait la table `AlimentParVaguePrevue` vide, sur la base
+qu'aucune route API du dépôt n'y écrit. La pré-analyse a trouvé 3 lignes réelles en base, injectées
+par `prisma/seed.sql`. Sans conséquence dans ce cas précis (les 3 valeurs étaient déjà entières),
+mais le changement de type `numeric → integer` (voir ERR-130) aurait pu échouer ou arrondir
+silencieusement sur des données que personne n'avait recensées comme existantes.
+
+**Cause racine :**
+`prisma/seed.sql` est un producteur de données à part entière (voir aussi ERR-125), distinct des
+routes API applicatives. Une analyse d'impact d'un changement de schéma (type, contrainte,
+suppression de colonne) qui ne considère que le code applicatif (routes API, services) comme
+source de données ignore une source réelle et déjà exécutée en dev/CI : le seed.
+
+**Fix :**
+Aucun fix nécessaire ici (données déjà conformes) — mais la pré-analyse a explicitement vérifié le
+contenu de `prisma/seed.sql` pour la table concernée avant d'écrire la migration de changement de
+type.
+
+**Leçon / Règle :**
+Avant toute migration qui change le type, resserre une contrainte ou modifie la nullabilité d'une
+colonne, vérifier systématiquement `prisma/seed.sql` en plus des routes API et des tests — le seed
+est un chemin d'écriture réel, exécuté en dev et potentiellement en CI, indépendant de toute route
+applicative. « Aucun code applicatif n'écrit ici » n'établit jamais « cette table est vide en
+pratique ».
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ERR-125, ADR-053
+
+---
+
+### ERR-130 — `ALTER COLUMN ... TYPE integer` depuis `numeric` sans `USING` arrondit silencieusement au lieu d'échouer : garde-fou de précondition obligatoire
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/20260803140000_alimentparvagueprevue_sacs_int/migration.sql`
+
+**Symptôme :**
+`ALTER TABLE ... ALTER COLUMN "sacsCalcules" TYPE integer` depuis une colonne `numeric(65,30)`
+s'exécute sans erreur même sans clause `USING`, grâce au cast d'assignment implicite de
+PostgreSQL — mais ce cast **arrondit silencieusement** toute valeur fractionnaire au lieu de
+rejeter la migration : `10.5 → 11`, `10.4 → 10`. Une perte de précision qui ne se voit dans aucun
+message d'erreur ni log.
+
+**Cause racine :**
+PostgreSQL autorise le cast d'assignment `numeric → integer` par arrondi (`round-half-to-even`)
+sans lever d'exception, contrairement à l'intuition qu'un changement de type qui ferait perdre de
+l'information devrait échouer. Une migration qui se contente de `ALTER COLUMN ... TYPE integer`
+sans vérification préalable ni `USING` explicite laisse PostgreSQL décider silencieusement du sort
+des valeurs fractionnaires existantes.
+
+**Fix :**
+Garde-fou de précondition ajouté **dans la migration elle-même** (jamais dans un script préalable —
+voir R10/ADR-049) : un bloc `DO $$ ... IF EXISTS (SELECT 1 FROM "AlimentParVaguePrevue" WHERE
+"sacsCalcules" <> TRUNC("sacsCalcules")) THEN RAISE EXCEPTION ... END IF; END $$;` placé avant tout
+`ALTER TABLE`, suivi d'un cast explicite `USING "sacsCalcules"::INTEGER`. Pattern de garde-fou repris
+de `prisma/migrations/20260727090006_unicite_numero_par_site_autosuffisante/migration.sql`.
+
+**Leçon / Règle :**
+Tout changement de type `numeric`/`decimal` → `integer` (ou plus généralement tout changement de
+type qui peut perdre de l'information) doit être précédé, dans la migration elle-même, d'un
+garde-fou `RAISE EXCEPTION` qui bloque si des valeurs existantes violeraient la précondition
+attendue (ici : `col <> TRUNC(col)`), puis utiliser un cast explicite `USING col::TYPE` — ne jamais
+compter sur `ALTER COLUMN ... TYPE` seul pour révéler une perte de précision : PostgreSQL arrondit
+silencieusement plutôt que d'échouer.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), R10, ADR-049, ERR-131
+
+---
+
+### ERR-125 — Une modification de schéma qui supprime une colonne peut laisser le seed inexécutable, invisible faute d'exécution en CI
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `prisma/seed.sql`, `prisma/migrations/20260521200000_adr043_phase3_remove_bac_production_fields/migration.sql`
+
+**Symptôme :**
+`prisma/seed.sql` référençait dans son `INSERT INTO "Bac"` les colonnes `nombrePoissons`/`vagueId`,
+supprimées de la table `Bac` par la migration `20260521200000_adr043_phase3_remove_bac_production_fields`.
+`npm run db:seed` était donc cassé depuis ce sprint-là (ADR-043 Phase 3), sans que personne ne s'en
+aperçoive, découvert seulement pendant la review du sprint PR1, plusieurs sprints plus tard.
+
+**Cause racine :**
+Rien n'exécute `npm run db:seed` en CI (aucune CI ne bootstrape une base puis ne seed avant ce
+sprint) — la même classe de problème que les migrations révélées par ERR-120/ERR-121 : un défaut
+qui ne se manifeste qu'à l'exécution complète d'un chemin jamais rejoué automatiquement reste
+invisible indéfiniment. `prisma/seed.sql` est du SQL brut (voir ERR-003), donc aucune vérification
+de type (`tsc`) ne peut le détecter — seule une exécution réelle contre une base migrée le révèle.
+
+**Fix :**
+Aucun fix de code appliqué par ce sprint (hors périmètre PR1, signalé pour correction ultérieure).
+Documenté comme dette à traiter : mettre à jour `prisma/seed.sql` pour retirer
+`nombrePoissons`/`vagueId` de l'`INSERT INTO "Bac"` et refléter le modèle `AssignationBac` actuel
+(voir `feedback_assignationbac_source_of_truth` dans la mémoire du dépôt).
+
+**Leçon / Règle :**
+Toute migration qui supprime ou renomme une colonne doit s'accompagner d'une relecture de
+`prisma/seed.sql` pour les tables concernées — le seed étant du SQL brut, aucune erreur de
+compilation ne le signalera. L'exécution du seed sur une base vierge fraîchement migrée devrait
+être vérifiée régulièrement (au minimum à chaque sprint qui touche `prisma/schema.prisma`), pas
+seulement supposée fonctionnelle parce qu'elle l'était au sprint où elle a été écrite.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-043, ERR-003, ERR-120, ERR-121
+
+---
+
 ### ERR-121 — Un `migrate deploy` vert sur base vierge ne prouve pas l'absence de dérive de schéma : toujours enchaîner `migrate diff`
 **Sprint :** hors-sprint (bugfix transverse, découvert par le Sprint CI) | **Date :** 2026-07-27
 **Sévérité :** Moyenne
@@ -373,6 +512,118 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 ---
 
 ## Catégorie : Code
+
+### ERR-134 — Une fonction de mapping enum → clé i18n peut référencer une clé absente des fichiers de traduction sans qu'aucun outil ne le détecte
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Basse (dette préexistante, non corrigée — hors périmètre de la story qui l'a révélée)
+**Fichier(s) :** `src/components/abonnements/plan-form-dialog.tsx` (fonction `getModuleNavKey`, l.182-183)
+
+**Symptôme :**
+`getModuleNavKey()` référence les clés `modules.adminCommissions` et `modules.adminRemises`, qui
+n'existent dans aucun des fichiers `navigation.json` du dépôt. Ni `tsc --noEmit` ni `npm run build`
+ne le détectent : une clé i18n est une chaîne de caractères ordinaire, pas un identifiant vérifié
+par le compilateur. Bug préexistant, découvert par ricochet pendant l'investigation d'une réserve
+sans rapport (exhaustivité de `SiteModule`, voir ERR-124) — jamais rendu à l'exécution car les
+modules concernés sont `platform-only` et le chemin de code correspondant n'a jamais été exercé.
+
+**Cause racine :**
+Contrairement à `Record<Enum, T>` (vérifié par le compilateur, voir ERR-124), un mapping enum → clé
+de traduction n'a aucun filet de sécurité statique dans ce dépôt : une clé absente du JSON de
+traduction ne casse ni le build ni les tests, elle échoue seulement au rendu (fallback silencieux ou
+clé brute affichée), et seulement si le chemin de code est effectivement exercé.
+
+**Fix :**
+Aucun — hors périmètre de la story qui l'a révélée. Consigné comme dette connue pour un sprint
+ultérieur (ajout des clés `adminCommissions`/`adminRemises` aux `navigation.json`, ou audit
+systématique des clés référencées par `getModuleNavKey` contre les fichiers de traduction).
+
+**Leçon / Règle :**
+`tsc --noEmit` et `npm run build` ne détectent PAS une clé i18n manquante — seul un test dédié qui
+compare les clés référencées dans le code aux clés présentes dans les fichiers `navigation.json` (ou
+un lint i18n dédié) peut le faire. Ne pas supposer qu'un mapping enum → chaîne littérale bénéficie
+du même filet de sécurité qu'un `Record<Enum, T>` typé.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ERR-124
+
+---
+
+### ERR-133 — Un même nom de champ peut porter des sémantiques différentes entre la colonne DB et le type en mémoire qui la précède dans le calcul
+**Sprint :** PR1 (story PR1.3) | **Date :** 2026-08-03
+**Sévérité :** Moyenne (dette signalée par le @code-reviewer, non bloquante)
+**Fichier(s) :** `src/lib/previsions/aliments.ts` (type `AlimentParVagueCalcInput`), colonne `AlimentParVaguePrevue.sacsCalcules`
+
+**Symptôme :**
+`sacsCalcules` désigne trois choses distinctes sous le même nom : la colonne DB (`Int`, entière par
+construction, voir ERR-130), le champ du type en mémoire `AlimentParVagueCalcInput` dans
+`src/lib/previsions/aliments.ts` (qui peut recevoir une valeur fractionnaire en cours de calcul,
+utilisée comme proxy d'échelle pour décider d'un palier de remise), et l'usage propre aux fixtures
+du test de recette. Une lecture rapide du code peut faire supposer, à tort, que le champ est entier
+partout parce que la colonne DB l'est.
+
+**Cause racine :**
+Réutiliser le même identifiant pour une valeur intermédiaire de calcul (potentiellement
+fractionnaire) et pour la colonne persistée qui en dérive (entière) crée une homonymie qui n'est
+détectable ni par le compilateur (deux types distincts, même nom de champ, aucun conflit
+TypeScript) ni par une lecture superficielle.
+
+**Fix :**
+Jugé non bloquant : une écriture Prisma d'une valeur fractionnaire dans `sacsCalcules` échouerait
+bruyamment contre la colonne `Int` (voir ERR-130) — c'est un filet de sécurité qui empêche la
+corruption silencieuse, pas une garantie de lisibilité. Aucun renommage effectué dans ce sprint ;
+signalé comme dette pour le développeur de la prochaine story qui touchera ce fichier.
+
+**Leçon / Règle :**
+Quand un type en mémoire porte un champ de même nom qu'une colonne DB dont il dérive, mais avec une
+sémantique différente (fractionnaire vs entier, valeur intermédiaire vs valeur finale), envisager un
+nom distinct (ex. `sacsCalculesRaw` vs `sacsCalcules`) plutôt que de compter sur le contexte pour
+lever l'ambiguïté — surtout si le champ intermédiaire sert de proxy à une décision métier (ici : un
+palier de remise) qui pourrait un jour être sensible à cette valeur non arrondie.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ERR-130, ADR-053
+
+---
+
+### ERR-124 — Ajouter une valeur à un enum applicatif miroir casse des exhaustivités à distance, loin du fichier modifié
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (enums `Permission`, `SiteModule`), `src/lib/permissions-constants.ts`, `src/__tests__/permissions.test.ts`, `src/lib/permissions-orphan-guard.ts` (ou test équivalent), `src/components/abonnements/plan-form-dialog.tsx`
+
+**Symptôme :**
+L'ajout de 4 valeurs à l'enum `Permission` et d'1 valeur à `SiteModule` (module Prévisions) a cassé
+trois choses distinctes, aucune dans le fichier de migration lui-même : le test de garde-fou
+`permissions-orphan-guard`, le test `permissions.test.ts` (`PERMISSION_GROUPS` incomplet, 17 groupes
+attendus), et **le build TypeScript** (`Record<SiteModule, string>` incomplet dans
+`src/components/abonnements/plan-form-dialog.tsx`, un composant sans rapport fonctionnel avec le
+module Prévisions).
+
+**Cause racine :**
+Un enum Prisma miroir (`Permission`, `SiteModule`) est consommé ailleurs dans le dépôt par des
+structures qui présupposent l'exhaustivité de toutes ses valeurs : `Record<Enum, T>`, `switch`
+exhaustifs, tests qui figent un décompte de groupes. Ajouter une seule valeur à l'enum source ne
+signale rien automatiquement à ces consommateurs — ils ne cassent qu'au moment où quelque chose les
+exerce (compilation stricte pour un `Record` non couvert, exécution du test qui recompte). Le
+symptôme apparaît systématiquement loin du fichier modifié, dans un composant ou un test qui n'a
+aucun lien fonctionnel apparent avec la valeur ajoutée.
+
+**Fix :**
+Groupe `previsions` ajouté dans `src/lib/permissions-constants.ts` ; entrée `PREVISIONS` ajoutée au
+`Record<SiteModule, string>` de `plan-form-dialog.tsx` (jamais rendue à l'exécution puisque
+`PREVISIONS` n'est pas encore dans `SITE_MODULES_CONFIG`, mais requise par l'exhaustivité
+TypeScript pour que le build passe).
+
+**Leçon / Règle :**
+Après tout ajout de valeur à un enum Prisma qui a un miroir applicatif (`Permission`, `SiteModule`,
+et plus généralement tout enum utilisé dans des `Record<Enum, ...>` ou des `switch` exhaustifs) :
+lancer `npx tsc --noEmit` sur tout le projet ET la suite de tests complète, et chercher activement
+(`grep -rn "Record<NomEnum"` , `grep -rn "NomEnum\."`) tous les `Record<Enum, ...>`, `switch`
+exhaustifs et tests qui figent un décompte de valeurs/groupes. Ne jamais supposer qu'un ajout de
+valeur d'enum est un changement localisé au seul fichier de schéma/migration — le compilateur
+TypeScript et les tests d'exhaustivité sont le seul filet fiable, et ils réagissent parfois dans un
+fichier sans aucun rapport fonctionnel avec la valeur ajoutée.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), R1, R2, ADR-053
+
+---
 
 ### ERR-119 — Un `return` silencieux à l'intérieur d'un test vaut moins qu'un skip : « passed » sans aucune assertion évaluée
 **Sprint :** CI (story CI.2) | **Date :** 2026-07-27
@@ -2197,6 +2448,159 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-129 — Une remise de volume mal calée sur le grain de décision produit un résultat faux si elle est recalculée à un grain plus fin
+**Sprint :** PR1 (story PR1.3) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/aliments.ts`, `src/lib/previsions/logistique.ts`
+
+**Symptôme (préventif, vérifié pendant la review, pas un bug corrigé) :**
+Le moteur de prévisions calcule une remise de volume sur l'achat d'aliment pour une vague. Si cette
+remise était recalculée mois par mois (au grain de la ventilation temporelle plutôt qu'au grain du
+cycle complet de la vague), un mois donné pourrait agréger un tonnage sous le seuil de remise —
+produisant un montant remisé incorrect, silencieusement, dès qu'un mois n'agrège pas la totalité du
+tonnage d'une vague ou agrège plusieurs vagues à des taux de remise différents.
+
+**Cause racine potentielle :**
+Une remise de volume est une décision qui porte sur un agrégat précis (ici : le tonnage total du
+cycle complet d'une vague), pas sur n'importe quelle subdivision temporelle ou comptable de cet
+agrégat. Recalculer une remise à un grain plus fin que celui où elle a réellement été décidée
+(commercialement : le fournisseur remise sur le volume total commandé pour une vague, pas sur le
+volume livré un mois donné) donne un résultat qui dépend arbitrairement du découpage choisi pour la
+présentation, alors que la remise elle-même est indépendante de ce découpage.
+
+**Fix / vérification faite :**
+Le moteur décide la remise **une seule fois** sur le tonnage propre à chaque vague, puis ventile le
+**montant déjà remisé** par pourcentages mensuels — jamais recalculée mois par mois. Vérifié
+explicitement sur la vague V7 (15 t, remise 6 %) : le montant remisé total correspond, et sa
+ventilation mensuelle ne fait que répartir ce montant déjà figé.
+
+**Leçon / Règle :**
+Avant d'implémenter tout calcul qui combine un seuil/une remise/un palier avec une ventilation
+temporelle ou comptable, identifier explicitement le grain auquel la décision (seuil franchi ou
+non) se prend réellement dans le métier, et ne jamais la recalculer à un grain plus fin dans le
+code — seul le résultat déjà décidé doit être ventilé. Un mois peut agréger des vagues à taux de
+remise différents : la remise doit rester attachée à la vague, jamais recalculée au niveau du mois.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-053
+
+---
+
+### ERR-128 — `ceil` appliqué sur un agrégat de commodité au lieu du grain où la décision physique se prend produit un écart systématique et silencieux
+**Sprint :** PR1 (story PR1.3) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/aliments.ts`, tests de recette (jeu d'or, `src/lib/previsions/__tests__/recette/`)
+
+**Symptôme (préventif, vérifié pendant la review et la recette, pas un bug corrigé) :**
+Le nombre de sacs d'aliment à acheter se calcule par granulométrie (chaque granulométrie a son
+propre besoin en kg, arrondi séparément au sac supérieur), puis les décomptes de sacs par
+granulométrie se somment : `26 + 15 + 0 = 41` sacs. Une implémentation naïve qui arrondirait le
+besoin total agrégé toutes granulométries confondues donnerait un résultat différent et trop bas :
+`ceil(600 / 15) = 40` sacs — un écart d'un sac, systématique, silencieux, qui ne se voit pas sans
+un jeu de test qui distingue explicitement les deux méthodes de calcul.
+
+**Cause racine potentielle :**
+`ceil` sur une somme d'agrégats n'est mathématiquement pas égal à la somme de `ceil` sur chaque
+terme (`ceil(a+b) ≠ ceil(a) + ceil(b)` en général). Un sac d'aliment s'achète par granulométrie
+(on ne peut pas acheter « 0,7 sac de granulométrie A + 0,3 sac de granulométrie B » comme un seul
+sac mixte) — c'est donc au grain de la granulométrie que la décision physique d'achat se prend, et
+c'est à ce grain que l'arrondi doit être appliqué, jamais sur le total agrégé en aval par commodité
+de calcul.
+
+**Fix / vérification faite :**
+Le moteur calcule et arrondit par granulométrie puis somme les décomptes déjà arrondis. La recette
+du jeu d'or vérifie ce piège précis en rappelant le moteur une seconde fois pour comparer les deux
+méthodes, plutôt qu'en codant un `Math.ceil()` de référence dans le test (qui aurait simplement
+reproduit silencieusement la même erreur potentielle si elle avait existé dans le moteur).
+
+**Leçon / Règle :**
+Tout arrondi (`ceil`, `floor`, `round`) dans un calcul métier doit être appliqué au grain où la
+décision physique/commerciale réelle se prend (ici : un sac s'achète par granulométrie), jamais sur
+un agrégat de commodité calculé en aval. Quand on écrit un test pour vérifier ce genre de piège,
+préférer rappeler l'implémentation réelle avec des entrées qui isolent le cas (plusieurs
+granulométries à restes fractionnaires différents) plutôt que de coder une formule de référence
+séparée dans le test — cette dernière approche peut reproduire silencieusement le même bug que le
+code testé si l'auteur du test partage la même intuition erronée.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-053
+
+---
+
+### ERR-127 — Un jeu d'or peut être structurellement incapable de discriminer deux implémentations concurrentes si une variable clé y est constante à zéro
+**Sprint :** PR1 (story PR1.4) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/__tests__/recette/*.json` (fixtures jeu d'or), `src/lib/previsions/dashboard.ts` (ou équivalent moteur de répartition des charges)
+
+**Symptôme :**
+Dans les deux fixtures du jeu d'or, `baseRepartition == chargesOperationnelles` sur les 21 mois du
+jeu de données, parce que le journal de dépenses affecté (`vaguePrevueId` non nul) est nul partout
+dans ces fixtures. La recette officielle contre le jeu d'or passait donc **aussi bien avec
+l'implémentation correcte** (base de répartition excluant les charges déjà affectées) **qu'avec le
+bug documenté au §5.7 des exigences** (base de répartition incluant, à tort, les charges déjà
+affectées) — les deux formules produisent exactement le même résultat numérique quand la variable
+qui les distingue (charges affectées) vaut zéro partout.
+
+**Cause racine :**
+Un jeu d'or extrait d'une source externe (classeur Excel de référence) hérite des données réellement
+présentes dans cette source — rien ne garantit que ces données exercent tous les chemins de calcul
+distincts que le moteur doit implémenter. Une décision d'architecture qui corrige une ambiguïté ou
+un bug documenté dans une spécification (ici : l'exclusion des charges déjà affectées de la base de
+répartition) n'est vérifiée par un jeu d'or que si ce jeu d'or contient au moins un cas où
+l'ancienne et la nouvelle formule divergent réellement.
+
+**Fix :**
+Recommandation actée : écrire un test dédié, **hors jeu d'or**, avec une ligne de journal de type
+`OPERATIONNEL` portant un `vaguePrevueId` non nul, pour discriminer explicitement les deux
+implémentations et prouver que le moteur retient la formule correcte (celle qui exclut les charges
+déjà affectées de la base de répartition).
+
+**Leçon / Règle :**
+Quand une décision d'architecture (ADR) corrige une spécification ambiguë ou buguée, ne jamais se
+fier uniquement à un jeu d'or existant pour valider le correctif — vérifier explicitement, en
+inspectant les données du jeu d'or, que la variable qui distingue l'ancienne formule de la nouvelle
+y prend réellement des valeurs non triviales sur au moins un cas. Si ce n'est pas le cas, écrire un
+test unitaire dédié, séparé du jeu d'or, qui isole cette variable et discrimine sans ambiguïté les
+deux implémentations concurrentes.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-053 §5.7
+
+---
+
+### ERR-126 — Un jeu d'or extrait d'une source externe qui ne contient que les sorties ne permet pas de faire une recette : il faut extraire aussi les entrées
+**Sprint :** PR1 (story PR1.4) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `scripts/previsions/extract-golden.py` (ou équivalent), `src/lib/previsions/__tests__/recette/*.json`
+
+**Symptôme :**
+Les fixtures du jeu d'or contenaient 30 séries de sortie mensuelles (résultats attendus du moteur)
+mais aucun bloc de paramètres d'entrée. Le moteur ne pouvait donc pas être alimenté pour produire ces
+sorties — la recette était structurellement impossible à écrire tant que ce manque n'était pas
+corrigé. Les données d'entrée existaient pourtant bien dans le classeur Excel source ; le script
+d'extraction ne lisait initialement que 3 des 10 feuilles du classeur, toutes des feuilles de
+sortie.
+
+**Cause racine :**
+Un script d'extraction écrit en se concentrant sur « ce qu'il faut vérifier » (les résultats
+attendus) peut omettre « ce qu'il faut fournir en entrée pour produire ces résultats » si les deux
+catégories de données vivent dans des feuilles séparées du classeur source, et que seules les
+feuilles de sortie sont identifiées comme pertinentes lors de la première passe d'extraction.
+
+**Fix :**
+`extract-golden.py` étendu pour lire les 10 feuilles du classeur (dont les feuilles de paramètres
+d'entrée), avec un seul patch en dur documenté et acté (`PATCH_B10 = 30000`, ADR-053 §7).
+
+**Leçon / Règle :**
+Quand on extrait un jeu d'or (golden dataset) depuis une source externe (classeur, export, dump),
+toujours extraire les ENTRÉES en même temps que les SORTIES attendues — un jeu d'or qui ne contient
+que des sorties est structurellement impossible à utiliser pour une recette, et ce défaut ne se
+découvre souvent qu'au moment où l'on tente réellement d'écrire le test, pas en relisant les
+fixtures produites. Avant de considérer une extraction terminée, vérifier explicitement que chaque
+feuille/section de la source a été considérée pour classification entrée/sortie, pas seulement les
+feuilles qui semblaient pertinentes au premier regard.
+
+**Références :** [review-sprint-PR1](../reviews/review-sprint-PR1.md), ADR-053 §7
+
+---
 
 ### ERR-123 — Fichier de test doublon créé parce que le lancement d'un agent a été déduit au lieu d'être attendu
 **Sprint :** BD (contexte), confirmé et généralisé au Sprint CI | **Date :** 2026-07-27

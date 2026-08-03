@@ -1,0 +1,76 @@
+/**
+ * src/lib/previsions/index.ts
+ *
+ * Barrel export — moteur de calcul pur du module Previsions.
+ *
+ * ADR-053, Sprint PR1, story PR1.3. Zero I/O (pas de `prisma.*`, pas de
+ * `fs`, pas d'appel reseau) dans aucun fichier de ce dossier.
+ */
+
+export { Decimal } from "./decimal-config";
+
+export type {
+  RepartitionMoisInput,
+  AlimentPrevisionCalcInput,
+  PalierRemiseInput,
+} from "./types";
+
+export { genererPlanEmpoissonnement } from "./plan";
+export type { ParametresPlanInput, VaguePrevueGeneree } from "./plan";
+
+export {
+  calculerBesoinAlimentMensuel,
+  appliquerPalierRemise,
+  calculerCoutAlimentVague,
+  apportionnerCoutAlimentMensuel,
+  calculerCoutAlimentGranulometrieParMois,
+} from "./aliments";
+export type {
+  BesoinAlimentMensuelResult,
+  RemiseAppliqueeResult,
+  AlimentParVagueCalcInput,
+  CoutAlimentMoisResult,
+  AlimentParVagueMensuelCalcInput,
+  CoutAlimentGranulometrieMoisResult,
+} from "./aliments";
+
+export {
+  calculerVoyages,
+  calculerCoutTransport,
+  calculerLogistiqueMensuelle,
+} from "./logistique";
+export type {
+  ParametresTransportInput,
+  LogistiqueMensuelleInput,
+  LogistiqueMensuelleResult,
+} from "./logistique";
+
+export {
+  calculerChargesMensuelles,
+  calculerBaseRepartition,
+  calculerQuotePartVague,
+} from "./charges";
+export type {
+  ChargeMensuelleInput,
+  ChargesMensuellesResult,
+  ChargePourBaseInput,
+  JournalEntryInput,
+} from "./charges";
+
+export { calculerCoutProductionVague, calculerRevenuPrevu } from "./vague";
+export type { RevenuPrevuResult } from "./vague";
+
+export {
+  calculerTresorerieMensuelle,
+  genererSerieTresorerie,
+  calculerPointBasTresorerie,
+} from "./tresorerie";
+export type { TresorerieMoisResult, PointBasTresorerieResult } from "./tresorerie";
+
+export { calculerBudgetTotalPlan } from "./budget";
+export type { BudgetTotalPlanInput, BudgetTotalPlanResult } from "./budget";
+
+export {
+  validerSommeRepartitionMoisAliment,
+  validerPaliersRemiseCroissants,
+} from "./validation";

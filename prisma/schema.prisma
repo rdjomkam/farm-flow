@@ -191,6 +191,8 @@ enum SiteModule {
   ABONNEMENTS
   COMMISSIONS
   REMISES
+  // Sprint PR1 — Prévisions
+  PREVISIONS
 }
 
 enum Permission {
@@ -307,6 +309,11 @@ enum Permission {
   BESOINS_MODIFIER_RETRO
   // Bons de livraison rectificatifs (Sprint BF phase 2)
   BONS_LIVRAISON_RECTIFIER
+  // Sprint PR1 — Prévisions
+  PREVISIONS_VOIR
+  PREVISIONS_GERER
+  PREVISIONS_PARAMETRER
+  PREVISIONS_CLOTURER
 }
 
 // ──────────────────────────────────────────
@@ -710,132 +717,148 @@ enum DestinationLot {
 // ──────────────────────────────────────────
 
 model Site {
-  id                     String                   @id @default(cuid())
-  name                   String
-  address                String?
-  isActive               Boolean                  @default(true)
-  supervised             Boolean                  @default(false)
-  enabledModules         SiteModule[]             @default([])
-  members                SiteMember[]
-  roles                  SiteRole[]
-  bacs                   Bac[]
-  vagues                 Vague[]
-  releves                Releve[]
-  sessions               Session[]
-  fournisseurs           Fournisseur[]
-  produits               Produit[]
-  mouvements             MouvementStock[]
-  commandes              Commande[]
-  releveConsommations    ReleveConsommation[]
-  clients                Client[]
-  ventes                 Vente[]
-  lignesVente            LigneVente[]             @relation("SiteLignesVente")
-  factures               Facture[]
-  paiements              Paiement[]
-  bonsLivraison          BonLivraison[]
-  lignesBonLivraison     LigneBonLivraison[]
-  reproducteurs          Reproducteur[]
-  pontes                 Ponte[]
-  lotsAlevins            LotAlevins[]
-  configAlertes          ConfigAlerte[]
-  notifications          Notification[]
-  activites              Activite[]
-  depenses               Depense[]
-  paiementsDepense       PaiementDepense[]
-  fraisPaiementDepense   FraisPaiementDepense[]
-  ajustementsDepense     AjustementDepense[]
-  depensesRecurrentes    DepenseRecurrente[]
-  listesBesoins          ListeBesoins[]
-  lignesDepense          LigneDepense[]
-  configsElevage         ConfigElevage[]
+  id                       String                     @id @default(cuid())
+  name                     String
+  address                  String?
+  isActive                 Boolean                    @default(true)
+  supervised               Boolean                    @default(false)
+  enabledModules           SiteModule[]               @default([])
+  members                  SiteMember[]
+  roles                    SiteRole[]
+  bacs                     Bac[]
+  vagues                   Vague[]
+  releves                  Releve[]
+  sessions                 Session[]
+  fournisseurs             Fournisseur[]
+  produits                 Produit[]
+  mouvements               MouvementStock[]
+  commandes                Commande[]
+  releveConsommations      ReleveConsommation[]
+  clients                  Client[]
+  ventes                   Vente[]
+  lignesVente              LigneVente[]               @relation("SiteLignesVente")
+  factures                 Facture[]
+  paiements                Paiement[]
+  bonsLivraison            BonLivraison[]
+  lignesBonLivraison       LigneBonLivraison[]
+  reproducteurs            Reproducteur[]
+  pontes                   Ponte[]
+  lotsAlevins              LotAlevins[]
+  configAlertes            ConfigAlerte[]
+  notifications            Notification[]
+  activites                Activite[]
+  depenses                 Depense[]
+  paiementsDepense         PaiementDepense[]
+  fraisPaiementDepense     FraisPaiementDepense[]
+  ajustementsDepense       AjustementDepense[]
+  depensesRecurrentes      DepenseRecurrente[]
+  listesBesoins            ListeBesoins[]
+  lignesDepense            LigneDepense[]
+  configsElevage           ConfigElevage[]
   // Sprint 20 — Packs & Provisioning
-  packs                  Pack[]
-  packActivationsVendeur PackActivation[]         @relation("PackActivationsVendeur")
-  packActivationsClient  PackActivation[]         @relation("PackActivationsClient")
+  packs                    Pack[]
+  packActivationsVendeur   PackActivation[]           @relation("PackActivationsVendeur")
+  packActivationsClient    PackActivation[]           @relation("PackActivationsClient")
   // Sprint 21 — Moteur d'activités
-  reglesActivite         RegleActivite[]
+  reglesActivite           RegleActivite[]
   // Sprint 23 — Monitoring Ingénieur
-  notesRecues            NoteIngenieur[]          @relation("NotesRecues")
-  notes                  NoteIngenieur[]          @relation("NotesDKFarm")
+  notesRecues              NoteIngenieur[]            @relation("NotesRecues")
+  notes                    NoteIngenieur[]            @relation("NotesDKFarm")
   // Sprint 24 — Calibrage
-  calibrages             Calibrage[]
+  calibrages               Calibrage[]
   // AR.1 — Arrivages
-  arrivages              Arrivage[]
-  arrivageModifications  ArrivageModification[]
+  arrivages                Arrivage[]
+  arrivageModifications    ArrivageModification[]
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
-  releveModifications    ReleveModification[]
-  calibrageModifications CalibrageModification[]
+  releveModifications      ReleveModification[]
+  calibrageModifications   CalibrageModification[]
   // Sprint FD — Feed Analytics
-  historiqueNutritionnel HistoriqueNutritionnel[]
+  historiqueNutritionnel   HistoriqueNutritionnel[]
   // Sprint Gompertz
-  gompertzVagues         GompertzVague[]
+  gompertzVagues           GompertzVague[]
   // Sprint 30 — Abonnements
-  abonnements            Abonnement[]             @relation("AbonnementsSite")
-  paiementsAbo           PaiementAbonnement[]     @relation("PaiementsAboSite")
-  remises                Remise[]                 @relation("RemisesSite")
-  commissions            CommissionIngenieur[]    @relation("CommissionsDKFarm")
-  commissionsClient      CommissionIngenieur[]    @relation("CommissionsSiteClient")
-  portefeuilles          PortefeuilleIngenieur[]  @relation("PortefeuillesSite")
-  retraits               RetraitPortefeuille[]    @relation("RetraitsSite")
+  abonnements              Abonnement[]               @relation("AbonnementsSite")
+  paiementsAbo             PaiementAbonnement[]       @relation("PaiementsAboSite")
+  remises                  Remise[]                   @relation("RemisesSite")
+  commissions              CommissionIngenieur[]      @relation("CommissionsDKFarm")
+  commissionsClient        CommissionIngenieur[]      @relation("CommissionsSiteClient")
+  portefeuilles            PortefeuilleIngenieur[]    @relation("PortefeuillesSite")
+  retraits                 RetraitPortefeuille[]      @relation("RetraitsSite")
   // Sprint 30.4 — Idempotency
-  idempotencyRecords     IdempotencyRecord[]
+  idempotencyRecords       IdempotencyRecord[]
   // ADR-043 — Historique des assignations (Phase 2)
-  assignationsBac        AssignationBac[]
-  savedFilters           SavedFilter[]
+  assignationsBac          AssignationBac[]
+  savedFilters             SavedFilter[]
   // Unités de production & transferts internes
-  unitesProduction       UniteProduction[]
-  transfertsInternes     TransfertInterne[]
+  unitesProduction         UniteProduction[]
+  transfertsInternes       TransfertInterne[]
   // PG.2 — Transferts pré-grossissement
-  transferts             Transfert[]
-  transfertModifications TransfertModification[]
+  transferts               Transfert[]
+  transfertModifications   TransfertModification[]
   // R1-S3 — Module Reproduction : lots géniteurs, incubations, traitements
-  lotGeniteurs           LotGeniteurs[]
-  incubations            Incubation[]
-  traitementsIncubation  TraitementIncubation[]
+  lotGeniteurs             LotGeniteurs[]
+  incubations              Incubation[]
+  traitementsIncubation    TraitementIncubation[]
   // ADR-020 — Subscription refactoring
   /**
    * /**
+   * /**
    * Propriétaire du site — administrateur principal responsable de l'abonnement.
    */
-  ownerId                String
-  owner                  User                     @relation("SiteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  ownerId                  String
+  owner                    User                       @relation("SiteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   /**
    * Site bloqué (accès entièrement restreint, ex: impayé critique).
    */
-  isBlocked              Boolean                  @default(false)
+  isBlocked                Boolean                    @default(false)
   // Sprint BL — Bon de livraison signé : assets promoteur pour le PDF
   /**
+   * /**
    * Signature du promoteur du site — image PNG encodée en base64 (data URL),
    * apposée sur chaque bon de livraison généré.
    */
-  signaturePromoteur     String?
+  signaturePromoteur       String?
   /**
    * Cachet/tampon du site — image PNG encodée en base64 (data URL).
    */
-  cachet                 String?
+  cachet                   String?
   /**
    * Nom du promoteur affiché sous la signature dans le PDF du bon de livraison.
    */
-  nomPromoteur           String?
+  nomPromoteur             String?
   // ADR-021 — Cycle de vie & audit
   /**
    * /**
+   * /**
    * /** Null si non suspendu. Non-null = site suspendu (accès restreint).
    */
-  suspendedAt            DateTime?
+  suspendedAt              DateTime?
   /**
    * Raison de la suspension — obligatoire lors de la suspension.
    */
-  suspendedReason        String?
+  suspendedReason          String?
   /**
    * Soft delete — null = actif, non-null = archivé (lecture seule).
    */
-  deletedAt              DateTime?
-  auditLogs              SiteAuditLog[]
+  deletedAt                DateTime?
+  auditLogs                SiteAuditLog[]
   // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
-  ecartsAssignation      EcartAssignationConstate[]
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  ecartsAssignation        EcartAssignationConstate[]
+  // Sprint PR1 — Prévisions
+  scenariosPrevision       ScenarioPrevision[]
+  paliersRemisePrevision   PalierRemise[]
+  alimentsPrevision        AlimentPrevision[]
+  repartitionsMoisAliment  RepartitionMoisAliment[]
+  vaguesPrevues            VaguePrevue[]
+  alimentsParVaguePrevue   AlimentParVaguePrevue[]
+  postesPrevision          PostePrevision[]
+  chargesMensuellesPrevues ChargeMensuellePrevue[]
+  journalDepensesPrevues   JournalDepensePrevue[]
+  apportsCapital           ApportCapital[]
+  mappingsRapprochement    MappingRapprochement[]
+  cloturesMois             ClotureMois[]
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
 
   @@index([deletedAt])
   @@index([suspendedAt])
@@ -862,6 +885,7 @@ model ConfigElevage {
   // ── Objectif de production ──────────────────────
   /**
    * /**
+   * /**
    * /** Poids cible par poisson a la recolte (g) — ex: 800
    */
   poidsObjectif      Float
@@ -876,6 +900,7 @@ model ConfigElevage {
 
   // ── Phases de croissance (seuils de poids en g) ─
   /**
+   * /**
    * /**
    * /** 0 → seuilAcclimatation g
    */
@@ -900,6 +925,7 @@ model ConfigElevage {
 
   // ── Alimentation : taille de granule par poids ──
   /**
+   * /**
    * /**
    * /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}]
    */
@@ -963,6 +989,7 @@ model ConfigElevage {
   // ── Mortalite : seuils d'alerte quotidiens ──────
   /**
    * /**
+   * /**
    * /** % morts/jour → investigation
    */
   mortaliteQuotidienneAlerte   Float @default(1.0)
@@ -973,6 +1000,7 @@ model ConfigElevage {
 
   // ── Alimentation : seuils d'alerte ──────────────
   /**
+   * /**
    * /**
    * /** FCR au-dela de ce seuil → reduire dose
    */
@@ -1003,6 +1031,7 @@ model ConfigElevage {
   // ── Seuils de densité par type de système (kg/m3) — utilisés par le UI badge ─
   /**
    * /**
+   * /**
    * /** Bac béton / plastique — seuil alerte orange
    */
   densiteBacBetonAlerte   Float @default(150)
@@ -1030,6 +1059,7 @@ model ConfigElevage {
   // ── Renouvellement ───────────────────────────────
   /**
    * /**
+   * /**
    * /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours)
    */
   fenetreRenouvellementJours Int @default(7)
@@ -1040,6 +1070,7 @@ model ConfigElevage {
 
   // ── Cout de production ──────────────────────────
   /**
+   * /**
    * Poids d'un sac d'aliment en kg pour ce profil (ex. 15 pour Skretting).
    * Prioritaire sur Produit.contenance dans le calcul du nombre de sacs
    * du cout de production. Null = fallback sur le produit.
@@ -1048,6 +1079,7 @@ model ConfigElevage {
 
   // ── Calibrage Gompertz : parametres initiaux par defaut ─────────────────
   /**
+   * /**
    * /**
    * /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200
    */
@@ -1067,6 +1099,7 @@ model ConfigElevage {
 
   // ── Metadonnees ─────────────────────────────────
   /**
+   * /**
    * /**
    * /** Profil par defaut du site (un seul isDefault=true par site)
    */
@@ -1135,63 +1168,63 @@ model SiteMember {
 // ──────────────────────────────────────────
 
 model User {
-  id                     String                  @id @default(cuid())
-  email                  String?                 @unique
-  phone                  String?                 @unique
+  id                     String                     @id @default(cuid())
+  email                  String?                    @unique
+  phone                  String?                    @unique
   name                   String
   passwordHash           String
-  role                   Role                    @default(PISCICULTEUR)
-  isActive               Boolean                 @default(true)
+  role                   Role                       @default(PISCICULTEUR)
+  isActive               Boolean                    @default(true)
   sessions               Session[]
   memberships            SiteMember[]
   mouvements             MouvementStock[]
   commandes              Commande[]
-  ventes                 Vente[]                 @relation("VenteUser")
-  factures               Facture[]               @relation("FactureUser")
-  paiements              Paiement[]              @relation("PaiementUser")
+  ventes                 Vente[]                    @relation("VenteUser")
+  factures               Facture[]                  @relation("FactureUser")
+  paiements              Paiement[]                 @relation("PaiementUser")
   bonsLivraison          BonLivraison[]
   configAlertes          ConfigAlerte[]
   notifications          Notification[]
-  activitesCreees        Activite[]              @relation("ActivitesCreees")
-  activitesAssignees     Activite[]              @relation("ActivitesAssignees")
+  activitesCreees        Activite[]                 @relation("ActivitesCreees")
+  activitesAssignees     Activite[]                 @relation("ActivitesAssignees")
   depenses               Depense[]
   paiementsDepense       PaiementDepense[]
   ajustementsDepense     AjustementDepense[]
   depensesRecurrentes    DepenseRecurrente[]
-  listesBesoinsCreees    ListeBesoins[]          @relation("ListeBesoinsCreees")
-  listesBesoinsValidees  ListeBesoins[]          @relation("ListeBesoinsValidees")
+  listesBesoinsCreees    ListeBesoins[]             @relation("ListeBesoinsCreees")
+  listesBesoinsValidees  ListeBesoins[]             @relation("ListeBesoinsValidees")
   // Sprint 20 — Packs & Provisioning
   packsCreated           Pack[]
   packActivationsCreees  PackActivation[]
   // Sprint 21 — Moteur d'activités
   reglesActivite         RegleActivite[]
   // Sprint 23 — Monitoring Ingénieur
-  notesEnvoyees          NoteIngenieur[]         @relation("NotesEnvoyees")
+  notesEnvoyees          NoteIngenieur[]            @relation("NotesEnvoyees")
   // Sprint 24 — Calibrage
-  calibrages             Calibrage[]             @relation("CalibrageUser")
-  releves                Releve[]                @relation("ReleveUser")
+  calibrages             Calibrage[]                @relation("CalibrageUser")
+  releves                Releve[]                   @relation("ReleveUser")
   // AR.1 — Arrivages
-  arrivages              Arrivage[]              @relation("ArrivageUser")
-  arrivageModifications  ArrivageModification[]  @relation("ArrivageModificationUser")
+  arrivages              Arrivage[]                 @relation("ArrivageUser")
+  arrivageModifications  ArrivageModification[]     @relation("ArrivageModificationUser")
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
-  isSystem               Boolean                 @default(false)
+  isSystem               Boolean                    @default(false)
   // ADR-022 — Backoffice separation
-  isSuperAdmin           Boolean                 @default(false)
+  isSuperAdmin           Boolean                    @default(false)
   // Sprint — Impersonation
-  originalSessions       Session[]               @relation("OriginalUser")
+  originalSessions       Session[]                  @relation("OriginalUser")
   // Sprint 30 — Abonnements
-  abonnementsUser        Abonnement[]            @relation("AbonnementsUser")
-  paiementsAboInities    PaiementAbonnement[]    @relation("PaiementsAboUser")
-  commissionsIngenieur   CommissionIngenieur[]   @relation("CommissionsIngenieur")
-  remisesCreees          Remise[]                @relation("RemisesUser")
-  remisesApplications    RemiseApplication[]     @relation("RemisesApplicationsUser")
-  portefeuille           PortefeuilleIngenieur?  @relation("PortefeuilleIngenieur")
-  retraitsDemandes       RetraitPortefeuille[]   @relation("RetraitDemandeur")
-  retraitsTraites        RetraitPortefeuille[]   @relation("RetraitTraiteur")
+  abonnementsUser        Abonnement[]               @relation("AbonnementsUser")
+  paiementsAboInities    PaiementAbonnement[]       @relation("PaiementsAboUser")
+  commissionsIngenieur   CommissionIngenieur[]      @relation("CommissionsIngenieur")
+  remisesCreees          Remise[]                   @relation("RemisesUser")
+  remisesApplications    RemiseApplication[]        @relation("RemisesApplicationsUser")
+  portefeuille           PortefeuilleIngenieur?     @relation("PortefeuilleIngenieur")
+  retraitsDemandes       RetraitPortefeuille[]      @relation("RetraitDemandeur")
+  retraitsTraites        RetraitPortefeuille[]      @relation("RetraitTraiteur")
   // ADR-021 — Audit log des actions admin
-  auditLogsActed         SiteAuditLog[]          @relation("AuditLogActor")
+  auditLogsActed         SiteAuditLog[]             @relation("AuditLogActor")
   // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
   ecartsAssignationActes EcartAssignationConstate[] @relation("EcartAssignationActor")
   // ADR-maintenance-mode — FeatureFlags modifies par ce super-admin
@@ -1201,20 +1234,24 @@ model User {
   // ADR-020 — Subscription refactoring
   /**
    * /**
+   * /**
    * Solde de crédit prépayé (FCFA) — utilisé pour les plans EXONERATION ou crédits offerts.
    */
-  soldeCredit            Decimal                 @default(0)
-  ownedSites             Site[]                  @relation("SiteOwner")
-  essaisUtilises         EssaiUtilise[]          @relation("EssaisUtilises")
-  auditsAbonnement       AbonnementAudit[]       @relation("AuditsAbonnement")
-  savedFilters           SavedFilter[]           @relation("SavedFilters")
+  soldeCredit            Decimal                    @default(0)
+  ownedSites             Site[]                     @relation("SiteOwner")
+  essaisUtilises         EssaiUtilise[]             @relation("EssaisUtilises")
+  auditsAbonnement       AbonnementAudit[]          @relation("AuditsAbonnement")
+  savedFilters           SavedFilter[]              @relation("SavedFilters")
   transfertsInternes     TransfertInterne[]
   // PG.2 — Transferts pré-grossissement
-  transferts             Transfert[]             @relation("TransfertUser")
-  transfertModifications TransfertModification[] @relation("TransfertModificationUser")
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  transferts             Transfert[]                @relation("TransfertUser")
+  transfertModifications TransfertModification[]    @relation("TransfertModificationUser")
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
   fraisPaiementDepenses  FraisPaiementDepense[]
+  // Sprint PR1 — Prévisions
+  scenariosPrevision     ScenarioPrevision[]
+  cloturesMois           ClotureMois[]
 }
 
 model Session {
@@ -1241,7 +1278,7 @@ model Session {
 // ──────────────────────────────────────────
 
 model Bac {
-  id                  String            @id @default(cuid())
+  id                  String                     @id @default(cuid())
   nom                 String
   volume              Float?
   /**
@@ -1252,18 +1289,18 @@ model Bac {
   /**
    * Bac bloqué — ADR-020.
    */
-  isBlocked           Boolean           @default(false)
+  isBlocked           Boolean                    @default(false)
   siteId              String
-  site                Site              @relation(fields: [siteId], references: [id])
+  site                Site                       @relation(fields: [siteId], references: [id])
   releves             Releve[]
   lotsAlevins         LotAlevins[]
   activites           Activite[]
-  calibrageGroupesDst  CalibrageGroupe[]  @relation("GroupeDestBac")
-  arrivagesGroupesDst  ArrivageGroupe[]   @relation("ArrivageGroupeBac")
-  lignesVente         LigneVente[]      @relation("BacLignesVente")
+  calibrageGroupesDst CalibrageGroupe[]          @relation("GroupeDestBac")
+  arrivagesGroupesDst ArrivageGroupe[]           @relation("ArrivageGroupeBac")
+  lignesVente         LigneVente[]               @relation("BacLignesVente")
   // PG.2 — Transferts pré-grossissement
-  transfertsBacSource TransfertGroupe[] @relation("TransfertsBacSource")
-  transfertsBacDest   TransfertGroupe[] @relation("TransfertsBacDest")
+  transfertsBacSource TransfertGroupe[]          @relation("TransfertsBacSource")
+  transfertsBacDest   TransfertGroupe[]          @relation("TransfertsBacDest")
   // ADR-043 Phase 3 — AssignationBac is the single source of truth for wave assignment & fish counts
   assignations        AssignationBac[]
   // R1-S3 — Lots géniteurs hébergés dans ce bac
@@ -1272,51 +1309,51 @@ model Bac {
   reproducteurs       Reproducteur[]
   // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
   ecartsAssignation   EcartAssignationConstate[]
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
 
   @@index([siteId])
 }
 
 model Vague {
-  id                     String                   @id @default(cuid())
-  code                   String                   @unique
+  id                     String                     @id @default(cuid())
+  code                   String                     @unique
   dateDebut              DateTime
   dateFin                DateTime?
   nombreInitial          Int
   poidsMoyenInitial      Float
   origineAlevins         String?
-  statut                 StatutVague              @default(EN_COURS)
+  statut                 StatutVague                @default(EN_COURS)
   /**
    * Type de vague : pré-grossissement ou grossissement standard
    */
-  type                   TypeVague                @default(GROSSISSEMENT)
+  type                   TypeVague                  @default(GROSSISSEMENT)
   /**
    * Vague bloquée — ADR-020.
    */
-  isBlocked              Boolean                  @default(false)
+  isBlocked              Boolean                    @default(false)
   poidsObjectifKg        Float?
   /**
    * Unité de production à laquelle cette vague est rattachée (REPRODUCTION ou GROSSISSEMENT)
    */
   uniteProductionId      String?
-  uniteProduction        UniteProduction?         @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
+  uniteProduction        UniteProduction?           @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
   siteId                 String
-  site                   Site                     @relation(fields: [siteId], references: [id])
+  site                   Site                       @relation(fields: [siteId], references: [id])
   /**
    * Config d'elevage associee (nullable — liee lors du provisioning Pack ou manuellement)
    */
   configElevageId        String?
-  configElevage          ConfigElevage?           @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
+  configElevage          ConfigElevage?             @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
   /**
    * PackActivation source (nullable — renseigné si vague créée via provisioning)
    */
   packActivationId       String?
-  packActivation         PackActivation?          @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
+  packActivation         PackActivation?            @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
   releves                Releve[]
   mouvements             MouvementStock[]
   ventes                 Vente[]
-  lignesVente            LigneVente[]             @relation("VagueLignesVente")
+  lignesVente            LigneVente[]               @relation("VagueLignesVente")
   lotsAlevinsTransferes  LotAlevins[]
   activites              Activite[]
   depenses               Depense[]
@@ -1326,7 +1363,7 @@ model Vague {
   // Sprint 24 — Calibrage
   calibrages             Calibrage[]
   // AR.1 — Arrivages
-  arrivages              Arrivage[]             @relation("VagueArrivages")
+  arrivages              Arrivage[]                 @relation("VagueArrivages")
   // Sprint FD — Feed Analytics
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
@@ -1334,14 +1371,17 @@ model Vague {
   // ADR-043 — Historique des assignations (Phase 2)
   assignations           AssignationBac[]
   // Transferts internes entrants depuis une unité de production
-  transfertsEntrants     TransfertInterne[]       @relation("TransfertEntrant")
+  transfertsEntrants     TransfertInterne[]         @relation("TransfertEntrant")
   // PG.2 — Transferts pré-grossissement
-  transfertsSource       TransfertGroupe[]        @relation("TransfertsSource")
-  transfertsDestination  TransfertGroupe[]        @relation("TransfertsDestination")
+  transfertsSource       TransfertGroupe[]          @relation("TransfertsSource")
+  transfertsDestination  TransfertGroupe[]          @relation("TransfertsDestination")
   // ADR-048 — Persistance des ecarts de conservation toleres (Sprint SU, story SU.2)
   ecartsAssignation      EcartAssignationConstate[]
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  // Sprint PR1 — Prévisions (ADR-053 §3.7)
+  vaguePrevueId          String?                    @unique
+  vaguePrevue            VaguePrevue?               @relation(fields: [vaguePrevueId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
 
   @@index([siteId])
   @@index([configElevageId])
@@ -1561,6 +1601,8 @@ model Produit {
   packProduits          PackProduit[]
   // Sprint 21 — Moteur d'activités
   activitesRecommandees Activite[]           @relation("ActiviteProduitRecommande")
+  // Sprint PR1 — Prévisions
+  alimentsPrevision     AlimentPrevision[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
@@ -1751,31 +1793,31 @@ model Vente {
 }
 
 model LigneVente {
-  id             String      @id @default(cuid())
-  venteId        String
-  vente          Vente       @relation("VenteLignes", fields: [venteId], references: [id], onDelete: Cascade)
-  vagueId        String?
-  vague          Vague?      @relation("VagueLignesVente", fields: [vagueId], references: [id])
-  bacId          String?
-  bac            Bac?        @relation("BacLignesVente", fields: [bacId], references: [id])
-  lotAlevinsId   String?
-  lotAlevins     LotAlevins? @relation("LotAlevinsLignesVente", fields: [lotAlevinsId], references: [id])
-  poidsTotalKg   Float
-  poidsMoyenG    Float
-  nombrePoissons Int
+  id                 String              @id @default(cuid())
+  venteId            String
+  vente              Vente               @relation("VenteLignes", fields: [venteId], references: [id], onDelete: Cascade)
+  vagueId            String?
+  vague              Vague?              @relation("VagueLignesVente", fields: [vagueId], references: [id])
+  bacId              String?
+  bac                Bac?                @relation("BacLignesVente", fields: [bacId], references: [id])
+  lotAlevinsId       String?
+  lotAlevins         LotAlevins?         @relation("LotAlevinsLignesVente", fields: [lotAlevinsId], references: [id])
+  poidsTotalKg       Float
+  poidsMoyenG        Float
+  nombrePoissons     Int
   /**
    * Poids reellement livre pour cette ligne (Sprint AV). Nullable avant
    * livraison. Purement comptable — ne sert jamais a calculer des morts.
    */
-  poidsLivreKg   Float?
-  siteId         String
-  site           Site        @relation("SiteLignesVente", fields: [siteId], references: [id])
+  poidsLivreKg       Float?
+  siteId             String
+  site               Site                @relation("SiteLignesVente", fields: [siteId], references: [id])
   /**
    * Quantités saisies par BL pour cette ligne (Sprint BF) — un BL brouillon/en cours + éventuels rectificatifs futurs.
    */
   lignesBonLivraison LigneBonLivraison[]
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([venteId])
   @@index([vagueId])
@@ -1812,7 +1854,6 @@ model Facture {
  * BonLivraison — Sprint BL. Bon de livraison signé sur place par le client et
  * le livreur au moment de la livraison. Obligatoire (statut SIGNE) pour passer
  * une vente de EN_PREPARATION à LIVREE.
- *
  * Depuis Sprint BF phase 2 : une vente peut avoir plusieurs BL (rectificatifs),
  * voir `rectifieId`/`rectifiePar`. Le BL actif est celui dont `rectifiePar` est
  * null.
@@ -2472,10 +2513,10 @@ model Depense {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
+  @@unique([siteId, numero])
   @@index([siteId])
   @@index([siteId, categorieDepense])
   @@index([siteId, statut])
-  @@unique([siteId, numero])
   @@index([commandeId])
   @@index([vagueId])
   @@index([venteId])
@@ -3347,6 +3388,7 @@ model Abonnement {
   // ADR-020 — Subscription refactoring fields
   /**
    * /**
+   * /**
    * Motif de l'exonération (obligatoire si typePlan = EXONERATION).
    */
   motifExoneration           String?
@@ -3773,6 +3815,7 @@ model HistoriqueNutritionnel {
   // Métriques agrégées pour cette phase
   /**
    * /**
+   * /**
    * /** FCR moyen sur la phase (kg aliment / kg gain)
    */
   fcrMoyen          Float?
@@ -4125,9 +4168,9 @@ model TransfertGroupe {
   bacSource     Bac?    @relation("TransfertsBacSource", fields: [bacSourceId], references: [id])
 
   vagueDestId String
-  vagueDest   Vague   @relation("TransfertsDestination", fields: [vagueDestId], references: [id], onDelete: Restrict)
+  vagueDest   Vague  @relation("TransfertsDestination", fields: [vagueDestId], references: [id], onDelete: Restrict)
   bacDestId   String
-  bacDest     Bac     @relation("TransfertsBacDest", fields: [bacDestId], references: [id])
+  bacDest     Bac    @relation("TransfertsBacDest", fields: [bacDestId], references: [id])
 
   nombrePoissons     Int
   poidsMoyenG        Float
@@ -4203,7 +4246,7 @@ model Arrivage {
   releves Releve[] @relation("ArrivageReleves")
 
   /// Flag rapide : true si cet arrivage a été modifié après création
-  modifie       Boolean               @default(false)
+  modifie       Boolean                @default(false)
   modifications ArrivageModification[]
 
   /// Snapshot de l'état vague+bacs avant création de l'arrivage
@@ -4221,7 +4264,6 @@ model Arrivage {
 
 /**
  * ArrivageGroupe — un groupe de poissons arrivant dans un bac de destination.
- *
  * Chaque groupe correspond à un bac destinataire avec un nombre de poissons et un poids moyen.
  * Cascade DELETE avec Arrivage.
  * Pas de siteId (cohérent avec CalibrageGroupe — le siteId est porté par Arrivage).
@@ -4243,25 +4285,383 @@ model ArrivageGroupe {
 
 /**
  * ArrivageModification — trace d'une modification d'arrivage avec raison d'audit.
- *
  * Stocke les snapshots avant/après complets (JSON) pour permettre l'annulation.
  * Cascade DELETE avec Arrivage.
  * R8 : siteId obligatoire (pattern CalibrageModification).
  */
 model ArrivageModification {
-  id         String   @id @default(cuid())
-  arrivageId String
-  arrivage   Arrivage @relation(fields: [arrivageId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation("ArrivageModificationUser", fields: [userId], references: [id])
+  id            String   @id @default(cuid())
+  arrivageId    String
+  arrivage      Arrivage @relation(fields: [arrivageId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation("ArrivageModificationUser", fields: [userId], references: [id])
   raison        String
   snapshotAvant Json
   snapshotApres Json
-  siteId     String
-  site       Site     @relation(fields: [siteId], references: [id])
-  createdAt  DateTime @default(now())
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id])
+  createdAt     DateTime @default(now())
 
   @@index([arrivageId])
   @@index([userId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Prévisions (Sprint PR1, ADR-053)
+// ──────────────────────────────────────────
+
+enum StatutScenarioPrevision {
+  BROUILLON // en cours de paramétrage, éditable sans restriction
+  ACTIF // publié, sert de référence pour le rapprochement — édition restreinte (ADR-053 §4.3)
+  ARCHIVE // remplacé par un scénario plus récent, conservé en lecture seule
+}
+
+enum StatutVaguePrevue {
+  PLANIFIEE // pas encore de vague réelle liée
+  EN_COURS // vagueId renseigné, vague réelle non clôturée
+  REALISEE // vagueId renseigné, vague réelle clôturée
+  NON_REALISEE // le plan est passé, aucune vague réelle n'a jamais été liée
+  ANNULEE // scission ou abandon explicite — jamais une suppression physique
+}
+
+enum TypePostePrevision {
+  LOGISTIQUE // ex. transport des alevins, transport aliments — entre dans base_repartition
+  CHARGE_EXPLOITATION // ex. électricité, salaires — entre dans base_repartition
+}
+
+enum CategorieJournalPrevu {
+  OPERATIONNEL // dépense récurrente/ponctuelle d'exploitation — entre dans base_repartition SI non affectée
+  INVESTISSEMENT // hors base_repartition, jamais quote-partée (ADR-053 décision 6)
+}
+
+enum TypeApportCapital {
+  CAPITAL // apport propre
+  CREDIT // emprunt encaissé — un crédit reçu est un apport de trésorerie, son remboursement
+  // futur est une sortie (ADR-053 point ouvert 9.3), jamais un investissement
+}
+
+enum SourceRapprochement {
+  DEPENSE_CATEGORIE // CategorieDepense réelle
+  PRODUIT_CATEGORIE // CategorieProduit réelle
+  VENTE // Vente réelle (agrégat mensuel)
+  MOUVEMENT_STOCK // MouvementStock réel (agrégat mensuel)
+}
+
+enum CibleRapprochement {
+  POSTE_PREVISION // vers PostePrevision
+  ALIMENT_PREVISION // vers AlimentPrevision
+  VENTE_PREVUE // vers le revenu prévu (ParametresPrevision.prixVenteKgFCFA)
+  NON_RAPPROCHE // bac explicite — jamais un silence (ADR-053 section 5)
+}
+
+model ScenarioPrevision {
+  id             String                  @id @default(cuid())
+  code           String // ex. "PLAN-2026-08" — numéroté, PAS unique global
+  nom            String
+  description    String? // nullable : libre
+  dureeCycleMois Int                     @default(3)
+  dateDebutPlan  DateTime // premier mois du plan (mois 0 de tous les calculs relatifs)
+  statut         StatutScenarioPrevision @default(BROUILLON)
+  userId         String // créateur — NOT NULL, jamais anonyme
+  user           User                    @relation(fields: [userId], references: [id])
+  siteId         String
+  site           Site                    @relation(fields: [siteId], references: [id])
+
+  parametres        ParametresPrevision?
+  paliersRemise     PalierRemise[]
+  aliments          AlimentPrevision[]
+  vaguesPrevues     VaguePrevue[]
+  postes            PostePrevision[]
+  chargesMensuelles ChargeMensuellePrevue[]
+  journal           JournalDepensePrevue[]
+  apports           ApportCapital[]
+  clotures          ClotureMois[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, code])
+  @@index([siteId])
+  @@index([siteId, statut])
+}
+
+model ParametresPrevision {
+  id         String            @id @default(cuid())
+  scenarioId String            @unique
+  scenario   ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  effectifAlevinsParVague   Int // nombre d'alevins stockés par vague planifiée
+  margeSecuriteAlevinsPct   Decimal // absorbe la mortalité — ADR-053 décision 4
+  poidsMoyenInitialG        Decimal
+  poidsObjectifG            Decimal
+  prixAlevinUnitaireFCFA    Decimal
+  /**
+   * Prix de vente au kg prévisionnel — comble le gap dashboard.ts:218
+   * (ADR-053 section 8.1). NOT NULL : jamais de calcul de revenu
+   * prévisionnel silencieusement basé sur un null.
+   */
+  prixVenteKgFCFA           Decimal
+  nombreBacsSimultanesCible Int // capacité de rotation ciblée, purement paramétrique —
+  // ne référence AUCUN Bac réel (ADR-053 section 4, note découplage)
+  frequenceStockageMois     Decimal // espacement entre deux stockages successifs (peut être < 1 mois)
+
+  /**
+   * Paramètres de transport (ex-GAP DE MODELE signalé par l'en-tête de
+   * src/lib/previsions/logistique.ts, jeu d'or "Paramètres!B25:B30").
+   * NOT NULL avec @default reprenant les valeurs du jeu d'or : ces
+   * paramètres entrent dans base_repartition via logistique.sousTotal ;
+   * les rendre nullables imposerait un COALESCE implicite chez l'appelant
+   * ou bloquerait le calcul (review-sprint-PR1.md, réserve 3).
+   * NB : le moteur (logistique.ts) reste à signature explicite — ces
+   * champs sont la SOURCE des valeurs passées en argument par l'appelant,
+   * jamais lus directement par le moteur (ADR-053 décision 1).
+   */
+  capaciteTransportAlimentsSacs Int     @default(60) // Paramètres!B25
+  coutTransportAlimentsFCFA     Decimal @default(15000) // Paramètres!B26 — CHECK >= 0 (migration)
+  capaciteTransportPoissonsKg   Int     @default(1500) // Paramètres!B27
+  coutTransportPoissonsFCFA     Decimal @default(25000) // Paramètres!B28 — CHECK >= 0 (migration)
+  capaciteTransportAlevinsNb    Int     @default(20000) // Paramètres!B29
+  coutTransportAlevinsFCFA      Decimal @default(30000) // Paramètres!B30 — CHECK >= 0 (migration)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PalierRemise {
+  id                String            @id @default(cuid())
+  scenarioId        String
+  scenario          ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  seuilSacs         Decimal // quantité de sacs à partir de laquelle le palier s'applique
+  pourcentageRemise Decimal
+  ordre             Int // ordre d'évaluation explicite — jamais déduit d'un tri implicite sur seuilSacs
+  siteId            String
+  site              Site              @relation(fields: [siteId], references: [id])
+
+  @@index([scenarioId])
+  @@index([siteId])
+}
+
+model AlimentPrevision {
+  id            String            @id @default(cuid())
+  scenarioId    String
+  scenario      ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  /**
+   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053 décision 1).
+   * Nullable : un aliment prévisionnel peut ne correspondre à aucun produit
+   * réel du catalogue (ex. produit pas encore créé, ou scénario prospectif).
+   */
+  produitId     String?
+  produit       Produit?          @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  libelle       String // copié depuis Produit.nom à la création, puis libre
+  tailleGranule TailleGranule? // copié depuis Produit.tailleGranule à la création
+  poidsSacKg    Decimal // copié depuis Produit.contenance à la création
+  prixSacFCFA   Decimal // copié depuis Produit.prixUnitaire à la création
+  sacsParTonne  Decimal // dérivable de poidsSacKg, mais stocké et gelé (ADR-053 décision 1 :
+  // aucun recalcul depuis une formule qui lirait le catalogue)
+  ordre         Int // ordre d'affichage / d'application dans le cycle
+  siteId        String
+  site          Site              @relation(fields: [siteId], references: [id])
+
+  repartitions  RepartitionMoisAliment[]
+  vaguesPrevues AlimentParVaguePrevue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scenarioId])
+  @@index([siteId])
+  @@index([produitId])
+}
+
+model RepartitionMoisAliment {
+  id                 String           @id @default(cuid())
+  alimentPrevisionId String
+  alimentPrevision   AlimentPrevision @relation(fields: [alimentPrevisionId], references: [id], onDelete: Cascade)
+  moisCycle          Int // 1..scenario.dureeCycleMois — jamais un index 0-based, pour lisibilité UI
+  pourcentage        Decimal // somme des pourcentages sur toutes les lignes d'un AlimentPrevision = 100,
+  // vérifiée par l'application à l'enregistrement (ADR-053 section 3.5)
+  siteId             String
+  site               Site             @relation(fields: [siteId], references: [id])
+
+  @@unique([alimentPrevisionId, moisCycle])
+  @@index([siteId])
+}
+
+model VaguePrevue {
+  id                   String            @id @default(cuid())
+  scenarioId           String
+  scenario             ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  code                 String // ex. "V7", "V7a" — numéroté au sein du scénario
+  dateStockagePrevue   DateTime
+  effectifAlevinsPrevu Int // copié depuis ParametresPrevision à la création, éditable ensuite
+  // (une VaguePrevue individuelle peut diverger du paramètre par défaut)
+  poidsMoyenInitialG   Decimal
+  dureeCycleMoisFigee  Int // copie gelée de scenario.dureeCycleMois au moment de la création —
+  // un changement ultérieur de la durée de cycle du scénario n'affecte
+  // JAMAIS une VaguePrevue déjà créée (ADR-053 décision 1, §4.1 des exigences)
+  statut               StatutVaguePrevue @default(PLANIFIEE)
+  /**
+   * Auto-relation — matérialise une scission (ADR-053 décision 2). Null pour une
+   * VaguePrevue d'origine, renseigné pour V7a/V7b issues d'une scission de V7.
+   */
+  vaguePrevueParentId  String?
+  vaguePrevueParent    VaguePrevue?      @relation("ScissionVaguePrevue", fields: [vaguePrevueParentId], references: [id], onDelete: SetNull)
+  enfantsScission      VaguePrevue[]     @relation("ScissionVaguePrevue")
+  siteId               String
+  site                 Site              @relation(fields: [siteId], references: [id])
+
+  vague           Vague? // relation inverse du champ Vague.vaguePrevueId
+  alimentsParMois AlimentParVaguePrevue[]
+  journal         JournalDepensePrevue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scenarioId, code])
+  @@index([siteId])
+  @@index([scenarioId, statut])
+}
+
+model AlimentParVaguePrevue {
+  id                 String           @id @default(cuid())
+  vaguePrevueId      String
+  vaguePrevue        VaguePrevue      @relation(fields: [vaguePrevueId], references: [id], onDelete: Cascade)
+  alimentPrevisionId String
+  alimentPrevision   AlimentPrevision @relation(fields: [alimentPrevisionId], references: [id], onDelete: Restrict)
+  moisCycle          Int // 1..dureeCycleMoisFigee de la VaguePrevue parente
+  sacsCalcules       Int // sortie pure du moteur (ADR-053 section 4) — jamais éditée directement — nombre de sacs, par construction un entier (ceil)
+  /**
+   * Surcharge manuelle. Null = utiliser sacsCalcules. Non-null = l'utilisateur
+   * a ajusté le besoin réel constaté sur le terrain sans passer par un
+   * recalcul complet du scénario. Tous les calculs downstream (coût, budget,
+   * trésorerie) utilisent COALESCE(sacsSaisis, sacsCalcules) — jamais
+   * sacsCalcules seul une fois qu'une surcharge existe.
+   */
+  sacsSaisis         Int?
+  quantiteKgCalculee Decimal
+  coutCalculeFCFA    Decimal // après application des PalierRemise
+  siteId             String
+  site               Site             @relation(fields: [siteId], references: [id])
+
+  @@unique([vaguePrevueId, alimentPrevisionId, moisCycle])
+  @@index([siteId])
+  @@index([vaguePrevueId])
+}
+
+model PostePrevision {
+  id                    String             @id @default(cuid())
+  scenarioId            String
+  scenario              ScenarioPrevision  @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  libelle               String // référentiel paramétrable — PAS un enum codé en dur
+  // (le classeur Excel a fait évoluer ses lignes de dépenses
+  // d'une version à l'autre ; coder les postes en enum aurait
+  // exigé une migration de schéma à chaque ligne ajoutée)
+  type                  TypePostePrevision // LOGISTIQUE | CHARGE_EXPLOITATION
+  /**
+   * Inclus dans base_repartition (ADR-053 décision 6) — vrai pour la quasi-totalité
+   * des postes de logistique/exploitation. Un poste peut être exclu
+   * explicitement (ex. un poste exceptionnel qu'on veut suivre sans qu'il
+   * dilue la quote-part de toutes les vagues).
+   */
+  inclusBaseRepartition Boolean            @default(true)
+  ordre                 Int
+  siteId                String
+  site                  Site               @relation(fields: [siteId], references: [id])
+
+  chargesMensuelles ChargeMensuellePrevue[]
+
+  @@unique([scenarioId, libelle])
+  @@index([siteId])
+}
+
+model ChargeMensuellePrevue {
+  id          String            @id @default(cuid())
+  scenarioId  String
+  scenario    ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  posteId     String
+  poste       PostePrevision    @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  moisAbsolu  Int // 0-based depuis scenario.dateDebutPlan (mois 0 = dateDebutPlan)
+  montantFCFA Decimal
+  siteId      String
+  site        Site              @relation(fields: [siteId], references: [id])
+
+  @@unique([posteId, moisAbsolu])
+  @@index([siteId])
+  @@index([scenarioId, moisAbsolu])
+}
+
+model JournalDepensePrevue {
+  id            String                @id @default(cuid())
+  scenarioId    String
+  scenario      ScenarioPrevision     @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  date          DateTime
+  libelle       String
+  categorie     CategorieJournalPrevu // OPERATIONNEL | INVESTISSEMENT
+  montantFCFA   Decimal
+  /**
+   * Affectation nominative à une vague planifiée précise. Null = dépense
+   * générale du plan (entre dans base_repartition si categorie=OPERATIONNEL
+   * et poste associé inclusBaseRepartition=true — ADR-053 décision 6). Non-null =
+   * déjà affectée à cette vague, EXCLUE de base_repartition pour éviter le
+   * double comptage (ADR-053 décision 6).
+   */
+  vaguePrevueId String?
+  vaguePrevue   VaguePrevue?          @relation(fields: [vaguePrevueId], references: [id], onDelete: SetNull)
+  siteId        String
+  site          Site                  @relation(fields: [siteId], references: [id])
+
+  @@index([siteId])
+  @@index([scenarioId, date])
+  @@index([vaguePrevueId])
+}
+
+model ApportCapital {
+  id          String            @id @default(cuid())
+  scenarioId  String
+  scenario    ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  date        DateTime
+  libelle     String
+  montantFCFA Decimal
+  type        TypeApportCapital // CAPITAL | CREDIT — un crédit encaissé est un apport de
+  // trésorerie, jamais un investissement (ADR-053 §7)
+  siteId      String
+  site        Site              @relation(fields: [siteId], references: [id])
+
+  @@index([siteId])
+  @@index([scenarioId, date])
+}
+
+model MappingRapprochement {
+  id         String              @id @default(cuid())
+  siteId     String // rapprochement scopé au site, PAS au scénario — un mapping
+  // sert potentiellement plusieurs scénarios successifs du même site
+  site       Site                @relation(fields: [siteId], references: [id])
+  version    Int // incrémenté à chaque changement de mapping — jamais un UPDATE
+  // en place d'une ligne active, pour préserver l'auditabilité d'un
+  // rapprochement passé même si le mapping change ensuite
+  sourceType SourceRapprochement
+  sourceCle  String // valeur littérale de l'enum réel (ex. "ALIMENT" pour CategorieDepense)
+  cibleType  CibleRapprochement
+  cibleId    String? // nullable : NON_RAPPROCHE n'a pas de cible (ADR-053 section 5)
+  actif      Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+
+  @@unique([siteId, version, sourceType, sourceCle])
+  @@index([siteId, actif])
+}
+
+model ClotureMois {
+  id            String            @id @default(cuid())
+  scenarioId    String
+  scenario      ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  moisAbsolu    Int // même référentiel que ChargeMensuellePrevue.moisAbsolu
+  clotureeParId String
+  clotureePar   User              @relation(fields: [clotureeParId], references: [id])
+  dateCloture   DateTime          @default(now())
+  siteId        String
+  site          Site              @relation(fields: [siteId], references: [id])
+
+  @@unique([scenarioId, moisAbsolu])
   @@index([siteId])
 }

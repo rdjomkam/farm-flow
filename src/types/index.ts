@@ -99,6 +99,14 @@ export {
   TypeUniteProduction,
   // ADR-048 — Persistance des ecarts de conservation
   ContexteDetectionEcart,
+  // Sprint PR1 — Module Previsions (ADR-053)
+  StatutScenarioPrevision,
+  StatutVaguePrevue,
+  TypePostePrevision,
+  CategorieJournalPrevu,
+  TypeApportCapital,
+  SourceRapprochement,
+  CibleRapprochement,
 } from "./models";
 export type {
   Site,
@@ -256,6 +264,20 @@ export type {
   // ADR-048 — Persistance des ecarts de conservation
   EcartAssignationConstate,
   BacEnDerive,
+  // Sprint PR1 — Module Previsions (ADR-053)
+  ScenarioPrevision,
+  ParametresPrevision,
+  PalierRemise,
+  AlimentPrevision,
+  RepartitionMoisAliment,
+  VaguePrevue,
+  AlimentParVaguePrevue,
+  PostePrevision,
+  ChargeMensuellePrevue,
+  JournalDepensePrevue,
+  ApportCapital,
+  MappingRapprochement,
+  ClotureMois,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)

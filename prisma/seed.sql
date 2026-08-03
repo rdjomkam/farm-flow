@@ -60,6 +60,20 @@ DELETE FROM "EssaiUtilise";
 DELETE FROM "Abonnement";
 DELETE FROM "Remise";
 DELETE FROM "PlanAbonnement";
+-- Sprint PR1 — Prévisions (ADR-053) — du plus dependant au moins dependant
+DELETE FROM "ClotureMois";
+DELETE FROM "ApportCapital";
+DELETE FROM "JournalDepensePrevue";
+DELETE FROM "AlimentParVaguePrevue";
+DELETE FROM "ChargeMensuellePrevue";
+DELETE FROM "PostePrevision";
+DELETE FROM "RepartitionMoisAliment";
+DELETE FROM "AlimentPrevision";
+DELETE FROM "PalierRemise";
+DELETE FROM "ParametresPrevision";
+DELETE FROM "VaguePrevue";
+DELETE FROM "MappingRapprochement";
+DELETE FROM "ScenarioPrevision";
 -- ADR-021 — SiteAuditLog avant Site (FK siteId)
 DELETE FROM "SiteAuditLog";
 DELETE FROM "Site";
@@ -198,7 +212,13 @@ VALUES
       -- uniquement (rectifier un BL signe engage une correction de stock et
       -- de montants). Rien n'empeche un Administrateur de l'accorder ensuite
       -- a un Gerant via l'UI de gestion des roles.
-      'BONS_LIVRAISON_RECTIFIER'
+      'BONS_LIVRAISON_RECTIFIER',
+      -- Module Previsions (ADR-053 §6, story PR1.1/PR1.2) — profil
+      -- "Administrateur" de l'ADR : les 4 permissions Previsions.
+      'PREVISIONS_VOIR',
+      'PREVISIONS_GERER',
+      'PREVISIONS_PARAMETRER',
+      'PREVISIONS_CLOTURER'
       -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021, admin plateforme)
       -- volontairement absentes : reservees au Role.ADMIN global (bypass getServerPermissions),
       -- pas des permissions de SiteRole.
@@ -287,12 +307,21 @@ VALUES
       'COMMISSIONS_GERER',
       'COMMISSION_PREMIUM',
       'PORTEFEUILLE_VOIR',
-      'PORTEFEUILLE_GERER'
+      'PORTEFEUILLE_GERER',
+      -- Module Previsions (ADR-053 §6, story PR1.1/PR1.2) — profil
+      -- "Gestionnaire" de l'ADR : Gerant a acces operationnel complet mais
+      -- pas de gestion site/membres, correspond au profil intermediaire de
+      -- l'ADR (creer/editer scenarios, vagues prevues, saisir le journal),
+      -- pas au parametrage ni a la cloture reserves a l'Administrateur.
+      'PREVISIONS_VOIR',
+      'PREVISIONS_GERER'
       -- NB: pas de UTILISATEURS_*, SITES_*, ANALYTICS_PLATEFORME (reserve Administrateur/plateforme)
       -- BONS_LIVRAISON_RECTIFIER volontairement absente (arbitrage story SU.8
       -- — reservee a l'Administrateur de site par defaut). Un Administrateur
       -- peut l'accorder a ce role via l'UI de gestion des roles si le
       -- fonctionnement de la ferme le justifie.
+      -- PREVISIONS_PARAMETRER / PREVISIONS_CLOTURER volontairement absentes
+      -- (reservees a l'Administrateur, ADR-053 §6).
     ]::"Permission"[],
     true,
     'site_01',
@@ -303,6 +332,12 @@ VALUES
     'sr_pisci_site_01',
     'Pisciculteur',
     'Acces terrain — lecture vagues, saisie releves — non supprimable',
+    -- Module Previsions (ADR-053 §6, story PR1.1/PR1.2) : Pisciculteur ne
+    -- correspond a aucun profil ADR (ni "Lecteur" ni "Gestionnaire") —
+    -- c'est un role terrain sans visibilite financiere (pas de FINANCES_VOIR
+    -- ni DEPENSES_VOIR ci-dessous), alors que Previsions expose budget et
+    -- tresorerie previsionnelle. Aucune permission PREVISIONS_* ajoutee
+    -- volontairement ; signale au PM/architecte pour confirmation.
     ARRAY[
       'VAGUES_VOIR',
       'RELEVES_VOIR',
@@ -410,7 +445,13 @@ VALUES
       'COMMISSION_PREMIUM',
       'PORTEFEUILLE_VOIR',
       'PORTEFEUILLE_GERER',
-      'BONS_LIVRAISON_RECTIFIER'
+      'BONS_LIVRAISON_RECTIFIER',
+      -- Module Previsions (ADR-053 §6, story PR1.1/PR1.2) — profil
+      -- "Administrateur" de l'ADR : les 4 permissions Previsions.
+      'PREVISIONS_VOIR',
+      'PREVISIONS_GERER',
+      'PREVISIONS_PARAMETRER',
+      'PREVISIONS_CLOTURER'
       -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021) volontairement absentes
       -- (reserve Role.ADMIN global) — cf. story SU.10.
     ]::"Permission"[],
@@ -423,6 +464,9 @@ VALUES
     'sr_pisci_client_01',
     'Pisciculteur',
     'Acces terrain — lecture vagues, saisie releves — non supprimable',
+    -- Module Previsions : meme raisonnement que sr_pisci_site_01 (aucun
+    -- profil ADR-053 §6 correspondant) — aucune permission PREVISIONS_*
+    -- ajoutee.
     ARRAY[
       'VAGUES_VOIR',
       'RELEVES_VOIR',
@@ -474,12 +518,15 @@ VALUES
 -- Bacs (3 pour vague en cours, 1 pour vague terminee)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Bac" (id, nom, volume, "nombrePoissons", "vagueId", "siteId", "createdAt", "updatedAt")
+-- Bac.nombrePoissons et Bac.vagueId ont ete supprimes par ADR-043 Phase 3
+-- (migration 20260521200000_adr043_phase3_remove_bac_production_fields) — AssignationBac
+-- (INSERT plus bas) est desormais l'unique source de verite pour ces valeurs.
+INSERT INTO "Bac" (id, nom, volume, "siteId", "createdAt", "updatedAt")
 VALUES
-  ('bac_01', 'Bac 1', 2000, 170, 'vague_01', 'site_01', NOW(), NOW()),
-  ('bac_02', 'Bac 2', 2000, 165, 'vague_01', 'site_01', NOW(), NOW()),
-  ('bac_03', 'Bac 3', 1500, 155, 'vague_01', 'site_01', NOW(), NOW()),
-  ('bac_04', 'Etang A', 5000, NULL, 'vague_02', 'site_01', NOW(), NOW());
+  ('bac_01', 'Bac 1', 2000, 'site_01', NOW(), NOW()),
+  ('bac_02', 'Bac 2', 2000, 'site_01', NOW(), NOW()),
+  ('bac_03', 'Bac 3', 1500, 'site_01', NOW(), NOW()),
+  ('bac_04', 'Etang A', 5000, 'site_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- AssignationBac — ADR-043 (Phase 2)

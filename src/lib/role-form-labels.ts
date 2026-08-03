@@ -120,6 +120,11 @@ export const permissionLabels: Record<string, string> = {
   [Permission.DEPENSES_VENTE_RETRO]: "Ajouter depense a vente cloturee (retroactif)",
   // Besoins retroactifs (Sprint BR)
   [Permission.BESOINS_MODIFIER_RETRO]: "Modifier liste de besoins apres soumission (retroactif)",
+  // Module Previsions (Sprint PR1, ADR-053 section 6)
+  [Permission.PREVISIONS_VOIR]: "Consulter les previsions",
+  [Permission.PREVISIONS_GERER]: "Gerer les previsions",
+  [Permission.PREVISIONS_PARAMETRER]: "Parametrer les previsions",
+  [Permission.PREVISIONS_CLOTURER]: "Cloturer un mois de prevision",
 };
 
 // ---------------------------------------------------------------------------

@@ -176,6 +176,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
       [SiteModule.CONFIGURATION]: "modules.configuration",
       [SiteModule.INGENIEUR]: "modules.ingenieur",
       [SiteModule.NOTES]: "modules.notes",
+      [SiteModule.PREVISIONS]: "modules.previsions",
       // platform-only — not shown, included for type-safety
       [SiteModule.ABONNEMENTS]: "modules.abonnement",
       [SiteModule.COMMISSIONS]: "modules.adminCommissions",

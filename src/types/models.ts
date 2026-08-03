@@ -137,6 +137,11 @@ export enum Permission {
   BESOINS_MODIFIER_RETRO = "BESOINS_MODIFIER_RETRO",
   // Bons de livraison rectificatifs (Sprint BF phase 2)
   BONS_LIVRAISON_RECTIFIER = "BONS_LIVRAISON_RECTIFIER",
+  // Sprint PR1 — Module Prevision (ADR-053 section 6)
+  PREVISIONS_VOIR = "PREVISIONS_VOIR",
+  PREVISIONS_GERER = "PREVISIONS_GERER",
+  PREVISIONS_PARAMETRER = "PREVISIONS_PARAMETRER",
+  PREVISIONS_CLOTURER = "PREVISIONS_CLOTURER",
 }
 
 /**
@@ -380,6 +385,8 @@ export enum SiteModule {
   ABONNEMENTS = "ABONNEMENTS",
   COMMISSIONS = "COMMISSIONS",
   REMISES = "REMISES",
+  // Sprint PR1 — Module Prevision (ADR-053 section 6)
+  PREVISIONS = "PREVISIONS",
 }
 
 export interface Site {
@@ -617,6 +624,14 @@ export interface Vague {
   configElevageId: string | null;
   /** Pack activation source (nullable) — Sprint 20 */
   packActivationId?: string | null;
+  /**
+   * VaguePrevue liee (1-1 optionnelle) — Sprint PR1, ADR-053 decision 2.
+   * Null : vague reelle sans prevision (cas normal pour toute vague deja
+   * en production avant ce module, et pour toute vague creee hors du
+   * flux de planification). Non-null : cette vague realise une VaguePrevue
+   * du module Previsions.
+   */
+  vaguePrevueId: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -4101,4 +4116,369 @@ export interface BacEnDerive {
   premiereDetectionLe: Date;
   derniereDetectionLe: Date;
   dernierContexte: ContexteDetectionEcart;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint PR1 — Module Prévisions (ADR-053)
+//
+// R3 : miroir exact des modeles/enums Prisma (prisma/schema.prisma, section
+// "Modeles — Previsions (Sprint PR1, ADR-053)"). `Decimal` -> `number` (ERR
+// convention constante du depot), `DateTime` -> `Date`, `Type?` -> `Type | null`.
+// R8 : siteId sur chaque modele. Aucune interface *WithRelations n'est
+// definie ici (hors perimetre PR1.2, cf. story) : uniquement les champs
+// scalaires miroirs des tables.
+// ---------------------------------------------------------------------------
+
+/** Statut d'un scenario de prevision (ADR-053 §3.1) */
+export enum StatutScenarioPrevision {
+  /** en cours de parametrage, editable sans restriction */
+  BROUILLON = "BROUILLON",
+  /** publie, sert de reference pour le rapprochement — edition restreinte (ADR-053 §4.3) */
+  ACTIF = "ACTIF",
+  /** remplace par un scenario plus recent, conserve en lecture seule */
+  ARCHIVE = "ARCHIVE",
+}
+
+/** Statut d'une vague prevue (ADR-053 §3.1) */
+export enum StatutVaguePrevue {
+  /** pas encore de vague reelle liee */
+  PLANIFIEE = "PLANIFIEE",
+  /** vagueId renseigne, vague reelle non cloturee */
+  EN_COURS = "EN_COURS",
+  /** vagueId renseigne, vague reelle cloturee */
+  REALISEE = "REALISEE",
+  /** le plan est passe, aucune vague reelle n'a jamais ete liee */
+  NON_REALISEE = "NON_REALISEE",
+  /** scission ou abandon explicite — jamais une suppression physique */
+  ANNULEE = "ANNULEE",
+}
+
+/** Type de poste de prevision (charges) (ADR-053 §3.1) */
+export enum TypePostePrevision {
+  /** ex. transport des alevins, transport aliments — entre dans base_repartition */
+  LOGISTIQUE = "LOGISTIQUE",
+  /** ex. electricite, salaires — entre dans base_repartition */
+  CHARGE_EXPLOITATION = "CHARGE_EXPLOITATION",
+}
+
+/** Categorie d'une ligne du journal de depenses prevues (ADR-053 §3.1) */
+export enum CategorieJournalPrevu {
+  /** depense recurrente/ponctuelle d'exploitation — entre dans base_repartition SI non affectee */
+  OPERATIONNEL = "OPERATIONNEL",
+  /** hors base_repartition, jamais quote-partee (ADR-053 decision 6) */
+  INVESTISSEMENT = "INVESTISSEMENT",
+}
+
+/** Type d'apport de capital (ADR-053 §3.1) */
+export enum TypeApportCapital {
+  /** apport propre */
+  CAPITAL = "CAPITAL",
+  /** emprunt encaisse — un credit recu est un apport de tresorerie, son
+   * remboursement futur est une sortie (ADR-053 point ouvert 9.3), jamais
+   * un investissement */
+  CREDIT = "CREDIT",
+}
+
+/** Source reelle d'une ligne de rapprochement prevu/reel (ADR-053 §3.1) */
+export enum SourceRapprochement {
+  /** CategorieDepense reelle */
+  DEPENSE_CATEGORIE = "DEPENSE_CATEGORIE",
+  /** CategorieProduit reelle */
+  PRODUIT_CATEGORIE = "PRODUIT_CATEGORIE",
+  /** Vente reelle (agregat mensuel) */
+  VENTE = "VENTE",
+  /** MouvementStock reel (agregat mensuel) */
+  MOUVEMENT_STOCK = "MOUVEMENT_STOCK",
+}
+
+/** Cible previsionnelle d'une ligne de rapprochement prevu/reel (ADR-053 §3.1) */
+export enum CibleRapprochement {
+  /** vers PostePrevision */
+  POSTE_PREVISION = "POSTE_PREVISION",
+  /** vers AlimentPrevision */
+  ALIMENT_PREVISION = "ALIMENT_PREVISION",
+  /** vers le revenu prevu (ParametresPrevision.prixVenteKgFCFA) */
+  VENTE_PREVUE = "VENTE_PREVUE",
+  /** bac explicite — jamais un silence (ADR-053 section 5) */
+  NON_RAPPROCHE = "NON_RAPPROCHE",
+}
+
+/**
+ * ScenarioPrevision — plan de prevision autonome a parametres geles
+ * (ADR-053 decision 1). Regroupe tous les sous-modeles du module.
+ */
+export interface ScenarioPrevision {
+  id: string;
+  /** ex. "PLAN-2026-08" — numerote au sein du site, PAS unique global */
+  code: string;
+  nom: string;
+  /** nullable : libre */
+  description: string | null;
+  dureeCycleMois: number;
+  /** premier mois du plan (mois 0 de tous les calculs relatifs) */
+  dateDebutPlan: Date;
+  statut: StatutScenarioPrevision;
+  /** createur — NOT NULL, jamais anonyme */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * ParametresPrevision — parametres globaux d'un scenario (relation 1-1).
+ */
+export interface ParametresPrevision {
+  id: string;
+  scenarioId: string;
+  /** nombre d'alevins stockes par vague planifiee */
+  effectifAlevinsParVague: number;
+  /** absorbe la mortalite — ADR-053 decision 4 */
+  margeSecuriteAlevinsPct: number;
+  poidsMoyenInitialG: number;
+  poidsObjectifG: number;
+  prixAlevinUnitaireFCFA: number;
+  /**
+   * Prix de vente au kg previsionnel — comble le gap dashboard.ts:218
+   * (ADR-053 section 8.1). NOT NULL : jamais de calcul de revenu
+   * previsionnel silencieusement base sur un null.
+   */
+  prixVenteKgFCFA: number;
+  /** capacite de rotation ciblee, purement parametrique — ne reference
+   * AUCUN Bac reel (ADR-053 section 4, note decouplage) */
+  nombreBacsSimultanesCible: number;
+  /** espacement entre deux stockages successifs (peut etre < 1 mois) */
+  frequenceStockageMois: number;
+  /**
+   * Parametres de transport (ex-GAP DE MODELE de
+   * src/lib/previsions/logistique.ts, jeu d'or "Parametres!B25:B30").
+   * Source des valeurs passees en argument au moteur — jamais lues
+   * directement par le moteur (ADR-053 decision 1).
+   */
+  capaciteTransportAlimentsSacs: number;
+  coutTransportAlimentsFCFA: number;
+  capaciteTransportPoissonsKg: number;
+  coutTransportPoissonsFCFA: number;
+  capaciteTransportAlevinsNb: number;
+  coutTransportAlevinsFCFA: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** PalierRemise — palier de remise volume sur l'achat d'aliment. */
+export interface PalierRemise {
+  id: string;
+  scenarioId: string;
+  /** quantite de sacs a partir de laquelle le palier s'applique */
+  seuilSacs: number;
+  pourcentageRemise: number;
+  /** ordre d'evaluation explicite — jamais deduit d'un tri implicite sur seuilSacs */
+  ordre: number;
+  siteId: string;
+}
+
+/**
+ * AlimentPrevision — ligne d'aliment previsionnel, copiee depuis Produit a
+ * la creation puis totalement decouplee (ADR-053 decision 1).
+ */
+export interface AlimentPrevision {
+  id: string;
+  scenarioId: string;
+  /**
+   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053
+   * decision 1). Nullable : un aliment previsionnel peut ne correspondre a
+   * aucun produit reel du catalogue.
+   */
+  produitId: string | null;
+  /** copie depuis Produit.nom a la creation, puis libre */
+  libelle: string;
+  /** copie depuis Produit.tailleGranule a la creation */
+  tailleGranule: TailleGranule | null;
+  /** copie depuis Produit.contenance a la creation */
+  poidsSacKg: number;
+  /** copie depuis Produit.prixUnitaire a la creation */
+  prixSacFCFA: number;
+  /** derivable de poidsSacKg, mais stocke et gele (ADR-053 decision 1) */
+  sacsParTonne: number;
+  /** ordre d'affichage / d'application dans le cycle */
+  ordre: number;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * RepartitionMoisAliment — repartition mensuelle (%) d'un AlimentPrevision
+ * sur les mois du cycle. La somme des pourcentages d'un AlimentPrevision
+ * donne doit valoir 100% — validee par l'application, pas par un CHECK SQL
+ * (ADR-053 section 3.5).
+ */
+export interface RepartitionMoisAliment {
+  id: string;
+  alimentPrevisionId: string;
+  /** 1..scenario.dureeCycleMois — jamais un index 0-based, pour lisibilite UI */
+  moisCycle: number;
+  pourcentage: number;
+  siteId: string;
+}
+
+/**
+ * VaguePrevue — vague planifiee dans un scenario. Relation 1-1 optionnelle
+ * avec Vague (ADR-053 decision 2) via Vague.vaguePrevueId.
+ */
+export interface VaguePrevue {
+  id: string;
+  scenarioId: string;
+  /** ex. "V7", "V7a" — numerote au sein du scenario */
+  code: string;
+  dateStockagePrevue: Date;
+  /** copie depuis ParametresPrevision a la creation, editable ensuite */
+  effectifAlevinsPrevu: number;
+  poidsMoyenInitialG: number;
+  /**
+   * copie gelee de scenario.dureeCycleMois au moment de la creation — un
+   * changement ulterieur de la duree de cycle du scenario n'affecte JAMAIS
+   * une VaguePrevue deja creee (ADR-053 decision 1, §4.1 des exigences)
+   */
+  dureeCycleMoisFigee: number;
+  statut: StatutVaguePrevue;
+  /**
+   * Auto-relation — materialise une scission (ADR-053 decision 2). Null
+   * pour une VaguePrevue d'origine, renseigne pour V7a/V7b issues d'une
+   * scission de V7.
+   */
+  vaguePrevueParentId: string | null;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * AlimentParVaguePrevue — besoin en aliment calcule pour une VaguePrevue,
+ * un AlimentPrevision et un mois de cycle donnes (sortie du moteur).
+ */
+export interface AlimentParVaguePrevue {
+  id: string;
+  vaguePrevueId: string;
+  alimentPrevisionId: string;
+  /** 1..dureeCycleMoisFigee de la VaguePrevue parente */
+  moisCycle: number;
+  /** sortie pure du moteur (ADR-053 section 4) — jamais editee directement */
+  sacsCalcules: number;
+  /**
+   * Surcharge manuelle. Null = utiliser sacsCalcules. Non-null = l'utilisateur
+   * a ajuste le besoin reel constate sur le terrain sans passer par un
+   * recalcul complet du scenario. Tous les calculs downstream (cout, budget,
+   * tresorerie) utilisent COALESCE(sacsSaisis, sacsCalcules) — jamais
+   * sacsCalcules seul une fois qu'une surcharge existe.
+   */
+  sacsSaisis: number | null;
+  quantiteKgCalculee: number;
+  /** apres application des PalierRemise */
+  coutCalculeFCFA: number;
+  siteId: string;
+}
+
+/**
+ * PostePrevision — referentiel parametrable des postes de charges
+ * (logistique / exploitation), PAS un enum code en dur (ADR-053 §3.8).
+ */
+export interface PostePrevision {
+  id: string;
+  scenarioId: string;
+  /** referentiel parametrable — PAS un enum code en dur */
+  libelle: string;
+  type: TypePostePrevision;
+  /**
+   * Inclus dans base_repartition (ADR-053 decision 6) — vrai pour la
+   * quasi-totalite des postes de logistique/exploitation.
+   */
+  inclusBaseRepartition: boolean;
+  ordre: number;
+  siteId: string;
+}
+
+/** ChargeMensuellePrevue — montant d'un PostePrevision pour un mois absolu donne. */
+export interface ChargeMensuellePrevue {
+  id: string;
+  scenarioId: string;
+  posteId: string;
+  /** 0-based depuis scenario.dateDebutPlan (mois 0 = dateDebutPlan) */
+  moisAbsolu: number;
+  montantFCFA: number;
+  siteId: string;
+}
+
+/**
+ * JournalDepensePrevue — ligne de depense ponctuelle/recurrente du journal
+ * previsionnel, optionnellement affectee nominativement a une VaguePrevue.
+ */
+export interface JournalDepensePrevue {
+  id: string;
+  scenarioId: string;
+  date: Date;
+  libelle: string;
+  categorie: CategorieJournalPrevu;
+  montantFCFA: number;
+  /**
+   * Affectation nominative a une vague planifiee precise. Null = depense
+   * generale du plan (entre dans base_repartition si categorie=OPERATIONNEL
+   * et poste associe inclusBaseRepartition=true — ADR-053 decision 6).
+   * Non-null = deja affectee a cette vague, EXCLUE de base_repartition
+   * pour eviter le double comptage (ADR-053 decision 6).
+   */
+  vaguePrevueId: string | null;
+  siteId: string;
+}
+
+/** ApportCapital — apport de tresorerie (capital propre ou credit encaisse). */
+export interface ApportCapital {
+  id: string;
+  scenarioId: string;
+  date: Date;
+  libelle: string;
+  montantFCFA: number;
+  /** un credit encaisse est un apport de tresorerie, jamais un
+   * investissement (ADR-053 §7) */
+  type: TypeApportCapital;
+  siteId: string;
+}
+
+/**
+ * MappingRapprochement — correspondance versionnee entre une cle reelle
+ * (categorie de depense/produit, agregat de vente/mouvement) et une cible
+ * du module Previsions. Scope au site, pas au scenario (ADR-053 §3.9).
+ */
+export interface MappingRapprochement {
+  id: string;
+  /** rapprochement scope au site, PAS au scenario — un mapping sert
+   * potentiellement plusieurs scenarios successifs du meme site */
+  siteId: string;
+  /** incremente a chaque changement de mapping — jamais un UPDATE en
+   * place d'une ligne active, pour preserver l'auditabilite d'un
+   * rapprochement passe meme si le mapping change ensuite */
+  version: number;
+  sourceType: SourceRapprochement;
+  /** valeur litterale de l'enum reel (ex. "ALIMENT" pour CategorieDepense) */
+  sourceCle: string;
+  cibleType: CibleRapprochement;
+  /** nullable : NON_RAPPROCHE n'a pas de cible (ADR-053 section 5) */
+  cibleId: string | null;
+  actif: boolean;
+  createdAt: Date;
+}
+
+/**
+ * ClotureMois — decision humaine explicite verrouillant, cote API, toute
+ * ecriture de rapprochement portant sur ce mois pour ce scenario.
+ */
+export interface ClotureMois {
+  id: string;
+  scenarioId: string;
+  /** meme referentiel que ChargeMensuellePrevue.moisAbsolu */
+  moisAbsolu: number;
+  clotureeParId: string;
+  dateCloture: Date;
+  siteId: string;
 }

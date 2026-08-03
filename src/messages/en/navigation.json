@@ -12,7 +12,8 @@
     "adminPlateforme": "Platform Admin",
     "portefeuille": "Portfolio",
     "utilisateurs": "Users",
-    "notes": "Notes"
+    "notes": "Notes",
+    "previsions": "Forecasts"
   },
   "items": {
     "dashboard": "Dashboard",

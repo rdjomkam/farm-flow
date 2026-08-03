@@ -280,11 +280,11 @@ describe("canAssignRole (anti-escalation)", () => {
 // ===== PERMISSION_GROUPS ===================================================
 
 describe("PERMISSION_GROUPS", () => {
-  it("contient exactement 16 groupes (ADR-022 : adminPlateforme supprime, perms integrees dans administration)", () => {
-    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(16);
+  it("contient exactement 17 groupes (Sprint PR1 : ajout du groupe previsions)", () => {
+    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(17);
   });
 
-  it("les 16 groupes attendus existent (ADR-022 Sprint B)", () => {
+  it("les 17 groupes attendus existent (ADR-022 Sprint B + Sprint PR1)", () => {
     const groupNames = Object.keys(PERMISSION_GROUPS);
     expect(groupNames).toContain("administration");
     expect(groupNames).toContain("elevage");
@@ -305,11 +305,13 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("utilisateurs");
     // Sprint 30 — Abonnements
     expect(groupNames).toContain("abonnements");
+    // Sprint PR1 — Previsions
+    expect(groupNames).toContain("previsions");
     // ADR-022 : adminPlateforme supprime
     expect(groupNames).not.toContain("adminPlateforme");
   });
 
-  it("couvre exactement toutes les permissions sans doublon (47 depuis Sprint 30)", () => {
+  it("couvre exactement toutes les permissions sans doublon (51 depuis Sprint PR1)", () => {
     const allGroupedPerms = Object.values(PERMISSION_GROUPS).flat();
     expect(allGroupedPerms).toHaveLength(ALL_PERMISSIONS.length);
     expect(new Set(allGroupedPerms).size).toBe(ALL_PERMISSIONS.length);
