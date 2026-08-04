@@ -81,7 +81,7 @@ jamais recalculée par le script.
 | `transport` | Capacités et coûts au voyage (aliments, poissons, alevins) | `Paramètres!B25:B30` |
 | `aliments` | 3 granulométries : marque, poids du sac, prix du sac, répartition % par mois de cycle, sacs par tonne standard | `Aliments!A4:J6` |
 | `planVagues` | 19 vagues : mois de stockage, tonnage visé, alevins à commander, remise appliquée, sacs par granulométrie, coût aliments (total + réparti sur les 3 mois du cycle) | `Empoissonnement!A4:H22` + `'Aliment par vague'!D4:P22` |
-| `chargesExploitation` | 6 postes non nuls (main-d'œuvre, énergie, produits vétérinaires, loyer), série sur 21 mois chacun | `Dépenses!A14:V21` |
+| `chargesExploitation` | 4 postes non nuls (sur 8 lignes, dont 4 à zéro sur les 21 mois) : main-d'œuvre, énergie, produits vétérinaires, loyer, série sur 21 mois chacun | `Dépenses!A14:V21` |
 | `journalDepensesPonctuelles` | Les deux lignes en dur `Crédits` (ligne 28) et `Investissements et exceptionnels` (ligne 33) — voir section suivante, ce ne sont pas de vraies lignes de journal | `Dépenses!A28:V28`, `Dépenses!A33:V33` |
 | `donneesManquantes` | Liste explicite de ce que le classeur ne porte nulle part (voir ci-dessous) | — |
 
@@ -145,6 +145,59 @@ Toutes exactes (diff = 0) sur les 21 mois / 19 vagues, à partir des seules vale
 financière et logistique (tonnage, sacs, dépenses, trésorerie), à condition que le moteur applique
 la remise fournisseur par vague (sur le tonnage propre à chaque vague), pas sur un total mensuel
 agrégé — c'est un piège de conception à éviter, pas une limite de la recette elle-même.
+
+## `besoinsAliments.detailParVagueSacs` — les neuf séries « DÉTAIL PAR VAGUE » (Sprint PR2-sexies)
+
+Les deux fixtures portent désormais un nouveau bloc `besoinsAliments.detailParVagueSacs`, extrait
+du bloc `Prévisions!A11:V23` (« DÉTAIL PAR VAGUE — sacs consommés dans le mois (indicatif) »),
+délibérément écarté par le sprint PR2-quinquies (voir story PR2sex.1). Neuf séries numériques :
+
+| Sous-clé | Ligne du classeur | Mois de cycle | Granulométrie |
+|---|---|---|---|
+| `moisCycle1.2mm` | 13 | 1er | 2 mm |
+| `moisCycle1.3mm` | 14 | 1er | 3 mm |
+| `moisCycle1.4mm` | 15 | 1er | 4 mm |
+| `moisCycle2.2mm` | 17 | 2e | 2 mm |
+| `moisCycle2.3mm` | 18 | 2e | 3 mm |
+| `moisCycle2.4mm` | 19 | 2e | 4 mm |
+| `moisCycle3.2mm` | 21 | 3e | 2 mm |
+| `moisCycle3.3mm` | 22 | 3e | 3 mm |
+| `moisCycle3.4mm` | 23 | 3e | 4 mm |
+
+Correspondance ligne↔série vérifiée directement dans le classeur (libellés de colonne A, lignes
+11-23) avant extraction, jamais présumée — voir `docs/tests/rapport-story-PR2sex.1.md`. Chaque
+sous-bloc `moisCycleN` porte sa propre clé `$source` (ex. `"Prévisions!B13:V13, B14:V14, B15:V15"`).
+
+**Un `ROUND`, pas un `CEIL`.** Ces séries sont les sacs **consommés** dans le mois (indicatif,
+lignes 13-23), une notion différente des sacs **à acheter** (lignes 7-10, déjà extraites via
+`besoinsAliments.sacsTotal`/`sacsParGranulometrie`, qui appliquent un `CEIL` par granulométrie — cf.
+section « Vérifications numériques » ci-dessus). Les deux séries répondent à des questions
+différentes du classeur et ne doivent jamais être confondues dans une recette future.
+
+**Non affectées par le patch `B10` ni par le scénario B.** Ce sont des décomptes de sacs, pas des
+montants en FCFA : le patch `Dépenses!B10` (transport des alevins) et la mise à zéro des apports en
+capital/investissements du scénario B ne touchent que des lignes monétaires de la feuille
+`Dépenses`/`Prévisions`, jamais les lignes 13-23. Confirmé empiriquement : les deux fixtures portent
+des valeurs strictement identiques pour `detailParVagueSacs` (seule la zone `resultats` diverge entre
+A et B, comme documenté plus haut pour `entreesModele`).
+
+**Cumuls de contrôle (colonne W du classeur, `SUM` sur les 21 mois), vérifiés exacts :**
+
+| | 2 mm | 3 mm | 4 mm |
+|---|---|---|---|
+| 1er mois de cycle | 1 543 | 867 | 0 |
+| 2e mois de cycle | 385 | 3 471 | 4 820 |
+| 3e mois de cycle | 0 | 0 | 7 230 |
+
+**Les lignes 12/16/20 (« Vague en 1er/2e/3e mois de cycle ») ne sont PAS des séries numériques.**
+Ce sont des lookups `INDEX`/`MATCH` qui n'affichent qu'**une seule** vague par mois de cycle, même
+quand plusieurs vagues coïncident réellement le même mois — un défaut bénin déjà documenté
+(ADR-053 §7, « Défaut bénin confirmé »). Les quantités elles-mêmes (lignes 13-23, `SUMIFS`)
+cumulent correctement toutes les vagues concernées ; seul l'affichage de l'étiquette de vague est
+dégradé. Ce script extrait donc `B12`/`B16`/`B20` **uniquement** comme métadonnée
+`moisCycleNVagueLabelIndexMatch`, marquée explicitement `$defectueux` — jamais comme une entrée
+numérique consommable par une recette, pour ne pas reproduire ce défaut d'affichage dans le moteur
+farm-flow (qui, lui, agrège nativement toutes les `VaguePrevue` actives d'un mois donné).
 
 ## Cinq montants absents du jeu d'or
 

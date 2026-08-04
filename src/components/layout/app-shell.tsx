@@ -67,7 +67,20 @@ export function AppShell({
             userName={userName}
             isSuperAdmin={isSuperAdmin}
           />
-          <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
+          {/*
+            min-w-0 : sans ca, un flex item garde un min-width automatique
+            egal a la taille min-content de son contenu (regle flexbox par
+            defaut). Un descendant large (ex. tableau mois x indicateurs
+            avec beaucoup de colonnes, previsions-mensuelles-tab.tsx) fait
+            alors gonfler cette colonne au-dela du viewport ; overflow-x-clip
+            masque le debordement visuellement mais ne l'empeche pas de se
+            produire, ce qui rend une partie du contenu (dont le scroll
+            horizontal local du tableau) inatteignable. min-w-0 force le
+            flex item a se limiter a l'espace reellement disponible, pour
+            que le defilement horizontal reste confine au conteneur du
+            tableau, jamais a la page entiere.
+          */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip max-w-full">
             <IngenieurHeader />
             <main
               id="main-content"
@@ -109,7 +122,7 @@ export function AppShell({
             userName={userName}
             isSuperAdmin={isSuperAdmin}
           />
-          <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
+          <div className="flex min-w-0 flex-1 flex-col overflow-x-clip max-w-full">
             <FarmHeader />
             <main
               id="main-content"

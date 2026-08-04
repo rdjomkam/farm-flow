@@ -13,7 +13,9 @@
     "portefeuille": "Portfolio",
     "utilisateurs": "Users",
     "notes": "Notes",
-    "previsions": "Forecasts"
+    "previsions": "Forecasts",
+    "adminCommissions": "Commission management",
+    "adminRemises": "Discount management"
   },
   "items": {
     "dashboard": "Dashboard",
@@ -100,7 +102,8 @@
     "choisirSite": "Choose a site",
     "selectionnerSite": "Select a site",
     "enLigne": "Online",
-    "horsLigne": "Offline"
+    "horsLigne": "Offline",
+    "previsions": "Forecasts"
   },
   "roles": {
     "admin": "Administrator",

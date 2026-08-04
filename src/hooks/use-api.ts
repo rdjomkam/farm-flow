@@ -17,12 +17,19 @@ export interface ApiCallOptions {
 export interface ApiResult<T> {
   /** Données parsées (null si erreur) */
   data: T | null;
-  /** Message d'erreur (null si succès) */
+  /** Message d'erreur (null si succès) — inclut le detail par champ si l'API en a fourni un (voir `errors`). */
   error: string | null;
   /** true si la requête a réussi (res.ok) */
   ok: boolean;
   /** Code HTTP de la réponse (null si erreur réseau) */
   status?: number;
+  /**
+   * Erreurs de validation par champ, telles que renvoyées par `apiError()`
+   * (`src/lib/api-utils.ts`, `errors?: Array<{ field, message }>`). Permet à
+   * un appelant qui connaît le formulaire d'afficher l'erreur sur le champ
+   * précis plutôt que de se fier uniquement au message générique.
+   */
+  errors?: Array<{ field: string; message: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,17 +103,38 @@ export function useApi() {
 
         if (!res.ok) {
           // Extraire le message d'erreur de la réponse
-          const errorData = data as Record<string, string> | null;
-          const message =
+          const errorData = data as
+            | (Record<string, string> & { errors?: Array<{ field: string; message: string }> })
+            | null;
+          const baseMessage =
             errorData?.message ??
             errorData?.error ??
             `Erreur serveur (${res.status})`;
+
+          // `errors` (400 de validation, cf. `parseBody`/`apiError` dans
+          // `src/lib/api-utils.ts`) porte le detail par champ. Le message
+          // generique seul ("Erreurs de validation.") ne dit jamais QUEL
+          // champ est refuse — sur un formulaire de plusieurs dizaines de
+          // champs, l'utilisateur ne peut pas deviner. On l'ajoute au
+          // message affiche, sans rien retirer : le message generique reste
+          // en tete, le detail par champ suit.
+          const fieldErrors = Array.isArray(errorData?.errors) ? errorData.errors : [];
+          const message =
+            fieldErrors.length > 0
+              ? `${baseMessage} ${fieldErrors.map((e) => `${e.field} : ${e.message}`).join(" ; ")}`
+              : baseMessage;
 
           if (!silentError) {
             toast({ title: message, variant: "error" });
           }
 
-          return { data: null, error: message, ok: false, status: res.status };
+          return {
+            data: null,
+            error: message,
+            ok: false,
+            status: res.status,
+            errors: fieldErrors.length > 0 ? fieldErrors : undefined,
+          };
         }
 
         if (successMessage) {

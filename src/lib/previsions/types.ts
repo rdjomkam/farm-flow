@@ -60,8 +60,8 @@ export interface AlimentPrevisionCalcInput {
  * (miroir partiel de PalierRemise, ADR-053 section 3.4).
  */
 export interface PalierRemiseInput {
-  /** ordre d'evaluation explicite — jamais deduit d'un tri implicite sur seuilSacs */
+  /** ordre d'evaluation explicite — jamais deduit d'un tri implicite sur seuilTonnes */
   ordre: number;
-  seuilSacs: Decimal;
+  seuilTonnes: Decimal;
   pourcentageRemise: Decimal;
 }

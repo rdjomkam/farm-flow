@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
         poidsObjectifKg,
         biomasse,
         totalVenduKg: Math.round(totalVenduKg * 100) / 100,
+        vaguePrevueId: v.vaguePrevueId ?? null,
       };
     });
 
@@ -462,6 +463,8 @@ export async function POST(request: NextRequest) {
         poidsObjectifKg: vague.poidsObjectifKg ?? null,
         biomasse: null,
         totalVenduKg: 0,
+        // Nouvelle vague — jamais rattachee des la creation (ADR-053 decision 2)
+        vaguePrevueId: null,
       },
       { status: 201 }
     );

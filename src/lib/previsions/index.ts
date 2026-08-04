@@ -15,15 +15,19 @@ export type {
   PalierRemiseInput,
 } from "./types";
 
-export { genererPlanEmpoissonnement } from "./plan";
+export { genererPlanEmpoissonnement, calculerAlevinsACommander } from "./plan";
 export type { ParametresPlanInput, VaguePrevueGeneree } from "./plan";
 
 export {
   calculerBesoinAlimentMensuel,
+  determinerPourcentageRemise,
+  appliquerTauxRemise,
   appliquerPalierRemise,
   calculerCoutAlimentVague,
   apportionnerCoutAlimentMensuel,
   calculerCoutAlimentGranulometrieParMois,
+  repartirSacsEntreArticles,
+  calculerDetailConsommationMensuelle,
 } from "./aliments";
 export type {
   BesoinAlimentMensuelResult,
@@ -32,6 +36,10 @@ export type {
   CoutAlimentMoisResult,
   AlimentParVagueMensuelCalcInput,
   CoutAlimentGranulometrieMoisResult,
+  ArticleRepartitionInput,
+  ArticleRepartitionResult,
+  DetailConsommationCycleInput,
+  DetailConsommationMoisResult,
 } from "./aliments";
 
 export {

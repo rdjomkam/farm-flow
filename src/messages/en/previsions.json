@@ -1,0 +1,741 @@
+{
+  "page": {
+    "title": "Forecast scenarios",
+    "errors": {
+      "projectionUnknown": "The projection calculation failed for an unknown reason.",
+      "projectionUnavailable": "Projection calculation unavailable"
+    }
+  },
+  "list": {
+    "emptyTitle": "No forecast scenario",
+    "emptyDescription": "Create a scenario to plan your batches, feed and cash flow.",
+    "cycleLabel": "{count}-month cycle — starts {date}",
+    "open": "Open",
+    "activate": "Activate",
+    "archive": "Archive",
+    "statuts": {
+      "BROUILLON": "Draft",
+      "ACTIF": "Active",
+      "ARCHIVE": "Archived"
+    }
+  },
+  "scenarioForm": {
+    "triggerButton": "New scenario",
+    "dialogTitle": "New forecast scenario",
+    "sections": {
+      "identification": {
+        "title": "Identification"
+      },
+      "parametres": {
+        "title": "Scenario parameters",
+        "description": "Default values used for each planned batch."
+      },
+      "transport": {
+        "title": "Transport (optional)",
+        "description": "Transport capacities and costs — leave empty if not relevant."
+      }
+    },
+    "fields": {
+      "code": {
+        "label": "Code",
+        "placeholder": "e.g. PLAN-2026-08"
+      },
+      "nom": {
+        "label": "Name",
+        "placeholder": "e.g. August 2026 plan"
+      },
+      "description": {
+        "label": "Description"
+      },
+      "dureeCycleMois": {
+        "label": "Cycle duration (months)",
+        "hint": "Duration of a growth cycle, identical for every batch in this scenario."
+      },
+      "dateDebutPlan": {
+        "label": "Plan start date"
+      },
+      "effectifAlevinsParVague": {
+        "label": "Fingerlings per batch"
+      },
+      "margeSecuriteAlevinsPct": {
+        "label": "Fingerling safety margin (%)",
+        "hint": "Absorbs mortality: applied to the number of fingerlings to order (fingerling cost and logistics), with no effect on feed needs or expected revenue."
+      },
+      "poidsMoyenInitialG": {
+        "label": "Average initial weight (g)"
+      },
+      "poidsObjectifG": {
+        "label": "Target weight (g)"
+      },
+      "prixAlevinUnitaireFCFA": {
+        "label": "Fingerling unit price (FCFA)"
+      },
+      "prixVenteKgFCFA": {
+        "label": "Expected selling price (FCFA/kg)"
+      },
+      "nombreBacsSimultanesCible": {
+        "label": "Target simultaneous tanks",
+        "hint": "Purely indicative — does not reserve any real tank."
+      },
+      "frequenceStockageMois": {
+        "label": "Stocking frequency (months)",
+        "hint": "Spacing between two consecutive stockings (can be less than 1 month)."
+      },
+      "capaciteTransportAlimentsSacs": {
+        "label": "Feed transport capacity (bags)"
+      },
+      "coutTransportAlimentsFCFA": {
+        "label": "Feed transport cost (FCFA)"
+      },
+      "capaciteTransportPoissonsKg": {
+        "label": "Fish transport capacity (kg)"
+      },
+      "coutTransportPoissonsFCFA": {
+        "label": "Fish transport cost (FCFA)"
+      },
+      "capaciteTransportAlevinsNb": {
+        "label": "Fingerling transport capacity (count)"
+      },
+      "coutTransportAlevinsFCFA": {
+        "label": "Fingerling transport cost (FCFA)"
+      }
+    },
+    "requiredError": "This field is required.",
+    "submitting": "Creating...",
+    "submit": "Create scenario"
+  },
+  "tabs": {
+    "tableauBord": "Dashboard",
+    "previsions": "Forecast",
+    "parametres": "Parameters",
+    "aliments": "Feed grades",
+    "vagues": "Batch plan",
+    "charges": "Expenses",
+    "journal": "Journal",
+    "apports": "Contributions"
+  },
+  "parametresTab": {
+    "sectionTitle": "Scenario parameters",
+    "sectionDescription": "Initial copy used for each newly planned batch.",
+    "transportTitle": "Transport (optional)",
+    "saveButton": "Save parameters",
+    "saving": "Saving...",
+    "fields": {
+      "effectifAlevinsParVague": {
+        "label": "Fingerlings per batch"
+      },
+      "margeSecuriteAlevinsPct": {
+        "label": "Fingerling safety margin (%)",
+        "hint": "Applied to the fingerling cost and fingerling logistics (rounded up from (1 + margin) x fish to sell) to absorb mortality; has no effect on feed needs or expected revenue, which are based on the number of fish to sell."
+      },
+      "poidsMoyenInitialG": {
+        "label": "Average initial weight (g)"
+      },
+      "poidsObjectifG": {
+        "label": "Target weight (g)"
+      },
+      "prixAlevinUnitaireFCFA": {
+        "label": "Fingerling unit price (FCFA)",
+        "hint": "Applied only to batches with \"Purchased fingerlings\" enabled."
+      },
+      "prixVenteKgFCFA": {
+        "label": "Expected selling price (FCFA/kg)"
+      },
+      "nombreBacsSimultanesCible": {
+        "label": "Target simultaneous tanks",
+        "hint": "Purely indicative: does not reserve any real tank and is not used by the calculation (ADR-053). Matching with available physical tanks remains manual."
+      },
+      "frequenceStockageMois": {
+        "label": "Stocking frequency (months)"
+      },
+      "tauxEpargnePct": {
+        "label": "Savings rate (%)",
+        "hint": "Applied to the positive part of the monthly result (revenue + contributions - expenses): max(0, result) x rate. A loss-making month saves nothing."
+      },
+      "alevinsAchetesParDefaut": {
+        "label": "Purchased fingerlings by default",
+        "hint": "Applied to each newly planned batch; editable afterwards on a per-batch basis."
+      }
+    },
+    "transportFields": {
+      "capaciteTransportAlimentsSacs": {
+        "label": "Feed transport capacity (bags)"
+      },
+      "coutTransportAlimentsFCFA": {
+        "label": "Feed transport cost (FCFA)"
+      },
+      "capaciteTransportPoissonsKg": {
+        "label": "Fish transport capacity (kg)"
+      },
+      "coutTransportPoissonsFCFA": {
+        "label": "Fish transport cost (FCFA)"
+      },
+      "capaciteTransportAlevinsNb": {
+        "label": "Fingerling transport capacity (count)"
+      },
+      "coutTransportAlevinsFCFA": {
+        "label": "Fingerling transport cost (FCFA)"
+      }
+    },
+    "paliers": {
+      "title": "Discount tiers",
+      "description": "The discount is decided once per wave, from the fish tonnage that wave targets, then applied to the feed cost of the whole wave, across all feed grades. The tier applied is the one with the highest threshold among those less than or equal to that tonnage. Thresholds must be strictly increasing (checked on save). Two tiers cannot share the same evaluation order: each order must be unique, otherwise saving is rejected.",
+      "palierLabel": "Tier {index}",
+      "removeAria": "Remove this tier",
+      "seuilLabel": "Threshold (tonnes)",
+      "seuilHint": "In tonnes of fish targeted per wave: the tier applies as soon as the target tonnage reaches this threshold.",
+      "remiseLabel": "Discount (%)",
+      "ordreLabel": "Order",
+      "addButton": "Add a tier",
+      "saveButton": "Save tiers"
+    }
+  },
+  "aliments": {
+    "emptyTitle": "No feed grade",
+    "emptyDescription": "Add the feed grades used in this scenario.",
+    "weightPrice": "{poids} kg/bag — {prix}",
+    "articleSummary": "{libelle} — {poids} kg/bag — {prix}",
+    "deleteAria": "Delete {libelle}",
+    "needLabel": "Requirement: {value} bags/tonne of fish",
+    "needMissing": "Requirement coefficient not configured",
+    "monthlyRepartitionLabel": "Monthly split:",
+    "monthlyRepartitionFormule": "Monthly split = sum of the percentages entered over all months of the cycle",
+    "monthLabel": "Month {count}",
+    "monthlyRepartitionAria": "Explain the monthly split for {libelle}",
+    "spreadButton": "Spread over the cycle",
+    "articlesTitle": "Articles for this grade",
+    "articlePart": "{value} of supply",
+    "addArticleButton": "Add an article",
+    "addArticleAria": "Add an article for feed grade {calibre}"
+  },
+  "alimentForm": {
+    "triggerButton": "New feed grade",
+    "dialogTitle": "New feed grade",
+    "fields": {
+      "tailleGranule": {
+        "label": "Grade (pellet size)",
+        "placeholder": "Choose a grade"
+      },
+      "libelle": {
+        "label": "Label",
+        "placeholder": "e.g. 2mm pellet"
+      },
+      "poidsSacKg": {
+        "label": "Bag weight (kg)"
+      },
+      "prixSacFCFA": {
+        "label": "Bag price (FCFA)"
+      },
+      "sacsParTonneStandard": {
+        "label": "Bags per tonne of fish (requirement coefficient)",
+        "hint": "Number of bags of this feed grade needed per tonne of fish produced. Leave empty if unknown — any requirement calculation will then be rejected for this feed grade until it is filled in."
+      },
+      "produitId": {
+        "label": "Catalog product (optional)",
+        "none": "No product match"
+      }
+    },
+    "errors": {
+      "libelleRequired": "The label is required.",
+      "poidsSacKgPositive": "Must be strictly greater than 0.",
+      "required": "This field is required.",
+      "tailleGranuleRequired": "The grade is required."
+    },
+    "submitting": "Creating...",
+    "submit": "Create"
+  },
+  "alimentArticleForm": {
+    "triggerButton": "Add an article",
+    "dialogTitle": "Add an article — {calibre}",
+    "existingArticlesTitle": "Articles already supplying this grade",
+    "fields": {
+      "libelle": {
+        "label": "Label",
+        "placeholder": "e.g. Brand A — 15kg bag"
+      },
+      "poidsSacKg": {
+        "label": "Bag weight (kg)"
+      },
+      "prixSacFCFA": {
+        "label": "Bag price (FCFA)"
+      },
+      "produitId": {
+        "label": "Catalog product (optional)",
+        "none": "No product match"
+      },
+      "partApprovisionnementPct": {
+        "label": "Supply share (%)"
+      }
+    },
+    "sumLabel": "Sum of shares",
+    "sumValue": "{value} % / 100 %",
+    "errors": {
+      "libelleRequired": "The label is required.",
+      "poidsSacKgPositive": "Must be strictly greater than 0.",
+      "required": "This field is required.",
+      "sumMustBe100": "The supply shares must add up to 100 %."
+    },
+    "submitting": "Adding...",
+    "submit": "Add"
+  },
+  "repartitionDialog": {
+    "dialogTitle": "Monthly split — {libelle}",
+    "totalLabel": "Total split",
+    "totalValue": "{value} % / 100 %",
+    "imbalanceHint": "The sum of the percentages must be exactly 100 % before saving.",
+    "monthLabel": "Cycle month {count}",
+    "saving": "Saving...",
+    "submit": "Save split"
+  },
+  "planVaguesTab": {
+    "emptyTitle": "No planned batch",
+    "emptyDescription": "Add batches to this scenario's stocking plan.",
+    "statuts": {
+      "PLANIFIEE": "Planned",
+      "EN_COURS": "In progress",
+      "REALISEE": "Completed",
+      "NON_REALISEE": "Not completed",
+      "ANNULEE": "Cancelled"
+    },
+    "badgeAlevinsAchetes": "Purchased fingerlings",
+    "badgeProductionInterne": "Internal production",
+    "stockageLabel": "Stocking: {date} — {count} fingerlings",
+    "fromScission": "Resulting from a split",
+    "totalSacsFormule": "Total bags = sum of the calculated bags (or entered, if overridden) over the whole cycle",
+    "monthLabel": "Month {count}",
+    "totalSacsAria": "Explain the total bags for {code}",
+    "totalCoutFormule": "Total feed cost = sum of the calculated costs (after tier discount) over the whole cycle",
+    "totalCoutAria": "Explain the total feed cost for {code}",
+    "scinderButton": "Split",
+    "annulerButton": "Cancel",
+    "modifierButton": "Edit",
+    "modifierIndisponibleRattachee": "Editing unavailable: a real batch is already linked.",
+    "modifierIndisponibleStatut": "Editing unavailable: only batches still Planned can be edited.",
+    "planInfo": "The plan starts on {date}, {dureeCycleMois}-month cycle.",
+    "genererPlanDesactiveMotif": "Fill in the scenario's Parameters tab before generating a plan."
+  },
+  "genererPlanDialog": {
+    "triggerButton": "Generate a plan",
+    "dialogTitle": "Generate the stocking plan",
+    "description": "Only the horizon needs to be entered: the other parameters (start date, cycle duration, batch size, stocking frequency) are already saved in the scenario's Parameters.",
+    "fields": {
+      "horizonMois": {
+        "label": "Horizon (months)",
+        "placeholder": "e.g. 21"
+      },
+      "mode": {
+        "label": "What should happen to already-planned batches?"
+      }
+    },
+    "mode": {
+      "ajouter": "Add to the end of the existing plan",
+      "remplacer": "Cancel unrealized planned batches and regenerate"
+    },
+    "errors": {
+      "horizonInvalide": "The horizon must be an integer greater than or equal to 0.",
+      "generic": "Error while generating the plan."
+    },
+    "previewButton": "Preview",
+    "previewing": "Computing preview...",
+    "apercu": {
+      "title": "Preview before confirmation",
+      "rattachees": "{count} batch(es) already linked to a real batch will be kept.",
+      "annulees": "{count} unlinked planned batch(es) will be cancelled and replaced.",
+      "nouvelles": "{count} new batch(es) will be created.",
+      "periode": "From {debut} to {fin}.",
+      "aucuneNouvelle": "No new batch will be created with this horizon.",
+      "codesNote": "New codes continue after the last existing code: {codes}."
+    },
+    "backButton": "Edit",
+    "confirmButton": "Confirm generation",
+    "confirming": "Generating..."
+  },
+  "vaguePrevueForm": {
+    "triggerButton": "New planned batch",
+    "dialogTitle": "New planned batch",
+    "dialogTitleEdit": "Edit the planned batch",
+    "fields": {
+      "code": {
+        "label": "Code",
+        "placeholder": "e.g. V1"
+      },
+      "dateStockagePrevue": {
+        "label": "Planned stocking date"
+      },
+      "effectifAlevinsPrevu": {
+        "label": "Number of fingerlings"
+      },
+      "poidsMoyenInitialG": {
+        "label": "Average initial weight (g)"
+      },
+      "alevinsAchetes": {
+        "label": "Purchased fingerlings"
+      }
+    },
+    "errors": {
+      "codeRequired": "The code is required.",
+      "dateRequired": "The date is required.",
+      "effectifPositive": "Must be strictly greater than 0."
+    },
+    "submitting": "Creating...",
+    "submit": "Create",
+    "submittingEdit": "Saving...",
+    "submitEdit": "Save"
+  },
+  "scissionDialog": {
+    "dialogTitle": "Split {code}",
+    "description": "{code} will move to the Cancelled status. Each line below becomes a new, independent planned batch.",
+    "totalLabel": "Distributed count (indicative)",
+    "totalValue": "{reparti} / {total}",
+    "imbalanceHint": "The API does not require this total to match exactly — indicative only.",
+    "childLabel": "Child batch {index}",
+    "removeAria": "Remove child batch {index}",
+    "fields": {
+      "code": {
+        "label": "Code"
+      },
+      "dateStockagePrevue": {
+        "label": "Stocking date"
+      },
+      "effectifAlevinsPrevu": {
+        "label": "Number of fingerlings"
+      },
+      "poidsMoyenInitialG": {
+        "label": "Average initial weight (g)"
+      }
+    },
+    "addButton": "Add a child batch",
+    "submitting": "Splitting...",
+    "submit": "Confirm split"
+  },
+  "rattacherVagueDialog": {
+    "triggerButton": "Link a real batch",
+    "dialogTitle": "Link {code}",
+    "description": "Select the real batch that fulfills this planned batch.",
+    "selectLabel": "Real batch",
+    "selectPlaceholder": "Choose a batch",
+    "noneAvailable": "No real batch available (all already linked).",
+    "errors": {
+      "generic": "Error while linking.",
+      "network": "Network error. Check your connection."
+    },
+    "submitting": "Linking...",
+    "submit": "Link"
+  },
+  "chargesTab": {
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthIndex": "Month {count}",
+    "emptyTitle": "No expense line",
+    "emptyDescription": "Create lines (electricity, salaries, transport...) to enter your monthly expenses.",
+    "saveButton": "Save",
+    "saving": "...",
+    "excludedFromBase": "Excluded from the cost-sharing base between batches.",
+    "totalLabel": "Total for the month:",
+    "totalFormule": "Total for the month = sum of the expense amounts for each line for this month",
+    "totalAria": "Explain the total for the month"
+  },
+  "reporterChargeDialog": {
+    "triggerButton": "Roll over to several months",
+    "dialogTitle": "Roll over charge — {libelle}",
+    "description": "Applies the same amount to several consecutive months for this item.",
+    "fields": {
+      "montant": {
+        "label": "Amount (FCFA)",
+        "placeholder": "0"
+      },
+      "plage": {
+        "label": "Month range"
+      }
+    },
+    "plage": {
+      "depuisMoisCourant": "From this month to the end of the plan",
+      "tousLesMois": "All months of the plan"
+    },
+    "errors": {
+      "montantInvalide": "The amount must be a positive number or zero.",
+      "horizonIndisponible": "Plan horizon currently unavailable.",
+      "generic": "An error occurred."
+    },
+    "apercu": {
+      "title": "Rollover preview",
+      "moisConcernes": "{count} months affected ({debut} → {fin})",
+      "moisEcrases": "{count} months will be overwritten (current value replaced)",
+      "aucunEcrasement": "No existing month will be overwritten.",
+      "detailEcraseligne": "{mois}: {ancien} → {nouveau}"
+    },
+    "previewButton": "Preview",
+    "previewing": "...",
+    "backButton": "Back",
+    "confirmButton": "Apply",
+    "confirming": "Applying..."
+  },
+  "posteForm": {
+    "triggerButton": "New expense line",
+    "dialogTitle": "New expense line",
+    "types": {
+      "LOGISTIQUE": "Logistics",
+      "CHARGE_EXPLOITATION": "Operating expense"
+    },
+    "fields": {
+      "libelle": {
+        "label": "Label",
+        "placeholder": "e.g. Electricity"
+      },
+      "type": {
+        "label": "Type"
+      }
+    },
+    "errors": {
+      "libelleRequired": "The label is required."
+    },
+    "submitting": "Creating...",
+    "submit": "Create"
+  },
+  "journalTab": {
+    "newButton": "New expense",
+    "emptyTitle": "Empty journal",
+    "emptyDescription": "Record one-off or recurring expenses for this scenario.",
+    "categories": {
+      "INVESTISSEMENT": "Capital expense",
+      "OPERATIONNEL": "Operational"
+    },
+    "assignedTo": "Assigned to {code}",
+    "general": "General",
+    "editButton": "Edit",
+    "deleteButton": "Delete"
+  },
+  "journalForm": {
+    "dialogTitleCreate": "New journal entry",
+    "dialogTitleEdit": "Edit journal entry",
+    "categories": {
+      "OPERATIONNEL": "Operational",
+      "INVESTISSEMENT": "Capital expense"
+    },
+    "fields": {
+      "date": {
+        "label": "Date"
+      },
+      "libelle": {
+        "label": "Label"
+      },
+      "categorie": {
+        "label": "Category"
+      },
+      "montantFCFA": {
+        "label": "Amount (FCFA)"
+      },
+      "affectation": {
+        "label": "Assignment",
+        "hint": "General = counted in the cost-sharing between active batches. Assigned = excluded from cost-sharing."
+      }
+    },
+    "noneOption": "General expense (unassigned)",
+    "assignedOption": "Assigned to {code}",
+    "errors": {
+      "dateAndLibelleRequired": "The date and label are required."
+    },
+    "saving": "Saving...",
+    "submitCreate": "Create",
+    "submitEdit": "Save"
+  },
+  "apportsTab": {
+    "emptyTitle": "No capital contribution",
+    "emptyDescription": "Record equity contributions or loans that finance this scenario.",
+    "types": {
+      "CREDIT": "Loan received",
+      "CAPITAL": "Equity"
+    }
+  },
+  "apportForm": {
+    "triggerButton": "New contribution",
+    "dialogTitle": "New capital contribution",
+    "types": {
+      "CAPITAL": "Equity",
+      "CREDIT": "Loan received"
+    },
+    "fields": {
+      "date": {
+        "label": "Date"
+      },
+      "libelle": {
+        "label": "Label"
+      },
+      "montantFCFA": {
+        "label": "Amount (FCFA)"
+      },
+      "type": {
+        "label": "Type"
+      }
+    },
+    "errors": {
+      "dateAndLibelleRequired": "The date and label are required."
+    },
+    "submitting": "Creating...",
+    "submit": "Create"
+  },
+  "tableauBordTab": {
+    "errorHint": "The indicators below are empty because of this error — this is not a real absence of batches or expenses. Fix the reported configuration issue then reload this page.",
+    "tresorerie": {
+      "title": "Projected cash flow",
+      "titleWithMonth": "Projected cash flow — {month}",
+      "formule": "Cumulative cash flow balance projected for the current calendar month — NOT a real balance observed (no account/cash is tracked in farm-flow), a reading of the scenario's projection.",
+      "currentMonthLabel": "Current calendar month",
+      "natureLabel": "Nature of the value",
+      "natureValue": "Scenario projection, not actual data",
+      "aria": "Explain the projected cash flow",
+      "unavailable": "Calculation unavailable — see the error message above.",
+      "beforeHorizon": "Outside the plan's horizon: the plan starts in the future.",
+      "afterHorizon": "Outside the plan's horizon: the plan is already entirely in the past."
+    },
+    "pointBas": {
+      "title": "Lowest cash flow point",
+      "formule": "Minimum of the cumulative cash flow series projected over the whole plan horizon — the maximum financing need to cover.",
+      "monthLabel": "Month of the lowest point",
+      "horizonLabel": "Total plan horizon",
+      "horizonValue": "{count} months",
+      "aria": "Explain the lowest cash flow point",
+      "unavailable": "Calculation unavailable — see the error message above.",
+      "noData": "No data for this scenario (no batch or expense entered)."
+    },
+    "budget": {
+      "title": "Total budget",
+      "formule": "Total production cost of batches + non-production expenses + capital contributions.",
+      "productionLabel": "Production costs",
+      "horsProductionLabel": "Non-production expenses",
+      "apportsLabel": "Capital contributions",
+      "aria": "Explain the total budget"
+    },
+    "revenu": {
+      "title": "Expected revenue (horizon)",
+      "formule": "Sum of the expected revenue for each month of the plan horizon.",
+      "monthsLabel": "Months summed",
+      "aria": "Explain the total expected revenue"
+    },
+    "vagues": {
+      "title": "Batches in the plan",
+      "formule": "Number of planned batches whose status is not Cancelled.",
+      "totalLabel": "Total batches (excluding cancelled)",
+      "aria": "Explain the number of batches in the plan"
+    },
+    "biomasse": {
+      "title": "Total expected biomass",
+      "formule": "Sum of the target biomass of each batch in the plan (target weight x expected fingerling count).",
+      "sumLabel": "Batches summed",
+      "aria": "Explain the total expected biomass"
+    },
+    "chart": {
+      "title": "Projected cash flow over the horizon",
+      "legend": "Red zone = financing need (negative projected cash flow)."
+    }
+  },
+  "previsionsMensuellesTab": {
+    "errorHint": "This is not a real absence of data — fix the reported configuration issue then reload this page.",
+    "noData": "No data to display for this scenario.",
+    "indicatorColumn": "Indicator",
+    "totalColumn": "Total",
+    "rowAria": "Explain the {label} row",
+    "sections": {
+      "resultat": "Result",
+      "production": "Production",
+      "aliments": "Feed",
+      "detailParVague": "Detail by cycle month",
+      "entreesDepenses": "Detailed income & expenses",
+      "ventilations": "Breakdowns (by contribution type, by expense line)"
+    },
+    "rows": {
+      "totalEntrees": {
+        "label": "Total income (FCFA)",
+        "formule": "Total monthly income = revenue (sales value of the batches harvested this month) + capital contributions recorded this month."
+      },
+      "resultatMois": {
+        "label": "Monthly result (FCFA)",
+        "formule": "Monthly result = revenue + contributions - total expenses for this month."
+      },
+      "empoissonne": {
+        "label": "Stocked (t)",
+        "formule": "Monthly stocked biomass = target biomass (target weight x expected fingerling count) of the batches STOCKED this month, summed across every batch concerned."
+      },
+      "ventes": {
+        "label": "Sales (t)",
+        "formule": "Monthly sales = harvested biomass (target weight x expected fingerling count) of the batches whose harvest month falls this month."
+      },
+      "alevinsCommander": {
+        "label": "Fingerlings to order (#)",
+        "formule": "Monthly fingerlings to order = number of fingerlings to order (number of fish to sell increased by the fingerling safety margin, rounded up) for the batches stocked this month."
+      },
+      "besoinAliments": {
+        "label": "Feed requirement (kg)",
+        "formule": "Monthly feed requirement = sum, across every feed grade, of the raw feed requirement (before rounding to bags) scheduled this month for all batches."
+      },
+      "sacsAchat": {
+        "label": "Bags to buy (total)",
+        "formule": "Monthly bags to buy = sum, across every feed grade, of the bags rounded up needed this month."
+      },
+      "sacsGranulometrie": {
+        "label": "of which {granule} bags (total)",
+        "formule": "Monthly {granule} bags = feed requirement of this grade this month, rounded up to a full bag."
+      },
+      "detailSacsParVague": {
+        "label": "{granule} bags consumed (indicative) — Month {count} of the cycle",
+        "formule": "Indicative {granule} bags consumed (ROUND) — Month {count} of the cycle = sum, across every batch stocked {count} month(s) earlier, of that month's {granule} feed requirement, rounded to the nearest bag. Distinct from \"of which {granule} bags (total)\" above, which is the number of bags TO BUY (rounded UP, ceil) — this line must never be used to place an order."
+      },
+      "revenus": {
+        "label": "Revenue (FCFA)",
+        "formule": "Monthly revenue = biomass harvested this month (target weight x expected fingerling count) x selling price per kg, for batches whose harvest month falls this month."
+      },
+      "epargneConseillee": {
+        "label": "Recommended savings (FCFA)",
+        "formule": "Monthly recommended savings = monthly result x savings rate (Parameters), never negative even when the monthly result is."
+      },
+      "coutAliments": {
+        "label": "Feed cost (FCFA)",
+        "formule": "Monthly feed cost = sum of the feed costs (calculated bags x price per bag, tier discount applied) scheduled this month for all batches and feed grades."
+      },
+      "coutAlevins": {
+        "label": "Fingerling cost (FCFA)",
+        "formule": "Monthly fingerling cost = number of fingerlings to order (number of fish to sell increased by the fingerling safety margin, rounded up) x fingerling unit price, for batches stocked this month. The fingerling safety margin (Parameters) is applied here, but not to the expected revenue nor to the feed needs."
+      },
+      "chargesReparties": {
+        "label": "Shared expenses (FCFA)",
+        "formule": "Monthly shared expenses = expenses of lines included in the cost-sharing base + general journal expenses (operational category, no assigned batch), shared between active batches this month."
+      },
+      "investissements": {
+        "label": "Capital expenses (FCFA)",
+        "formule": "Monthly capital expenses = sum of journal expenses of Capital expense category entered this month."
+      },
+      "depensesTotales": {
+        "label": "Total expenses (FCFA)",
+        "formule": "Total monthly expenses = feed cost + fingerling cost + shared expenses + capital expenses for this month."
+      },
+      "apports": {
+        "label": "Contributions (FCFA)",
+        "formule": "Monthly contributions = sum of the capital contributions recorded this month."
+      },
+      "soldeCumule": {
+        "label": "Cumulative balance (FCFA)",
+        "formule": "Cumulative balance = previous month's balance + revenue - expenses + contributions for this month."
+      },
+      "apportParType": {
+        "label": "Contributions — {type} (FCFA)",
+        "formule": "Monthly contributions of type {type} = sum of the capital contributions of this type recorded this month. The sum of both types (Equity + Loan received) reconstructs exactly the \"Contributions (FCFA)\" line."
+      },
+      "depenseParPoste": {
+        "label": "Expenses — {poste} (FCFA)",
+        "formule": "Monthly expenses of the \"{poste}\" line = sum of the monthly charges for this line this month (only lines included in the cost-sharing base). Together with the other lines and the general journal, reconstructs exactly the \"Shared expenses (FCFA)\" line."
+      },
+      "depenseJournalGeneral": {
+        "label": "Expenses — General journal, not assigned to a batch (FCFA)",
+        "formule": "Monthly general journal = journal expenses of Operational category, with no assigned batch, recorded this month. Excludes journal expenses already assigned to a batch (already counted in its direct share) and capital expenses. Together with the lines above, reconstructs exactly the \"Shared expenses (FCFA)\" line."
+      }
+    }
+  },
+  "tresorerieChart": {
+    "noData": "No data to project for this scenario.",
+    "ariaLabel": "Projected cash flow curve over the plan horizon",
+    "seriesName": "Projected cash flow"
+  },
+  "valeurCalculee": {
+    "defaultAriaLabel": "See calculation detail"
+  }
+}

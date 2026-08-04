@@ -10,6 +10,7 @@ import {
   Settings,
   HardHat,
   StickyNote,
+  TrendingUp,
 } from "lucide-react";
 
 export interface SiteModuleConfig {
@@ -29,6 +30,11 @@ export const SITE_MODULES_CONFIG: SiteModuleConfig[] = [
   { value: SiteModule.CONFIGURATION, labelKey: "Configuration", icon: Settings, level: "site" },
   { value: SiteModule.INGENIEUR, labelKey: "Ingenieur", icon: HardHat, level: "site" },
   { value: SiteModule.NOTES, labelKey: "Notes", icon: StickyNote, level: "site" },
+  // Sprint PR2 — Module Prévisions (story PR2.5) : rend le module activable
+  // via l'UI d'admin (admin-site-modules-editor.tsx / backoffice-site-modules-editor.tsx).
+  // Absent jusqu'ici (cf. review PR1, docs/analysis/pre-analysis-story-PR2.5.md §2) —
+  // sans cette entrée, aucun site ne pouvait jamais activer PREVISIONS.
+  { value: SiteModule.PREVISIONS, labelKey: "Prévisions", icon: TrendingUp, level: "site" },
 ];
 
 export const SITE_TOGGLEABLE_MODULES = SITE_MODULES_CONFIG;

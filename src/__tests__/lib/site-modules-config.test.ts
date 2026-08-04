@@ -5,7 +5,9 @@
  * - isModuleActive : modules site dependent de enabledModules
  * - isModuleActive : module inconnu retourne false
  * - SITE_TOGGLEABLE_MODULES : contient tous les modules (= SITE_MODULES_CONFIG)
- * - SITE_MODULES_CONFIG : contient exactement 9 modules site-level
+ * - SITE_MODULES_CONFIG : contient exactement 10 modules site-level
+ *   (9 + PREVISIONS, ajoute par la story PR2.5 — Sprint PR2 module Previsions,
+ *   cf. docs/analysis/pre-analysis-story-PR2.5.md §2)
  */
 
 import { describe, it, expect } from "vitest";
@@ -68,6 +70,14 @@ describe("isModuleActive — modules site (dependent de enabledModules)", () => 
   it("PACKS_PROVISIONING retourne false quand absent de enabledModules", () => {
     expect(isModuleActive(SiteModule.PACKS_PROVISIONING, [])).toBe(false);
   });
+
+  it("PREVISIONS retourne false quand enabledModules est vide", () => {
+    expect(isModuleActive(SiteModule.PREVISIONS, [])).toBe(false);
+  });
+
+  it("PREVISIONS retourne true quand present dans enabledModules", () => {
+    expect(isModuleActive(SiteModule.PREVISIONS, [SiteModule.PREVISIONS])).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -93,8 +103,8 @@ describe("SITE_TOGGLEABLE_MODULES — tous les modules sont site-level", () => {
     expect(SITE_TOGGLEABLE_MODULES).toBe(SITE_MODULES_CONFIG);
   });
 
-  it("contient exactement 9 modules", () => {
-    expect(SITE_TOGGLEABLE_MODULES).toHaveLength(9);
+  it("contient exactement 10 modules", () => {
+    expect(SITE_TOGGLEABLE_MODULES).toHaveLength(10);
   });
 
   it("tous les elements ont level === 'site'", () => {
@@ -130,6 +140,11 @@ describe("SITE_TOGGLEABLE_MODULES — tous les modules sont site-level", () => {
     const values = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
     expect(values).toContain(SiteModule.PACKS_PROVISIONING);
   });
+
+  it("contient PREVISIONS", () => {
+    const values = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
+    expect(values).toContain(SiteModule.PREVISIONS);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -137,13 +152,13 @@ describe("SITE_TOGGLEABLE_MODULES — tous les modules sont site-level", () => {
 // ---------------------------------------------------------------------------
 
 describe("SITE_MODULES_CONFIG — configuration complete des modules", () => {
-  it("contient exactement 9 modules site-level", () => {
-    expect(SITE_MODULES_CONFIG).toHaveLength(9);
+  it("contient exactement 10 modules site-level", () => {
+    expect(SITE_MODULES_CONFIG).toHaveLength(10);
   });
 
   it("tous les modules ont level === 'site'", () => {
     const siteModules = SITE_MODULES_CONFIG.filter((m) => m.level === "site");
-    expect(siteModules).toHaveLength(9);
+    expect(siteModules).toHaveLength(10);
   });
 
   it("chaque entree possede les proprietes value, labelKey, icon et level", () => {

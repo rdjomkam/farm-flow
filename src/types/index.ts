@@ -269,6 +269,8 @@ export type {
   ParametresPrevision,
   PalierRemise,
   AlimentPrevision,
+  AlimentArticlePrevision,
+  AlimentPrevisionWithArticles,
   RepartitionMoisAliment,
   VaguePrevue,
   AlimentParVaguePrevue,
@@ -733,4 +735,16 @@ export type {
   CreateArrivageDTO,
   ArrivageGroupeInputDTO,
   UpdateArrivageGroupeDTO,
+} from "./api";
+
+// Prévisions — Aliments : calibre + article (ADR-053 §12, Sprint PR2-quater)
+export type {
+  AlimentArticlePrevisionInputDTO,
+  CreateAlimentPrevisionDTO,
+  UpdateAlimentPrevisionDTO,
+  UpdateAlimentArticlePrevisionDTO,
+  AlimentArticlePartInputDTO,
+  AddAlimentArticlePrevisionDTO,
+  AlimentPrevisionResponse,
+  AlimentPrevisionListResponse,
 } from "./api";

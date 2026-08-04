@@ -9,9 +9,9 @@
 
 ## 1. Build
 
-**Commande :**
+**Commande :** (identifiant réel retiré au titre de R11, voir `.env` non tracké — cf. ERR-159)
 ```
-DATABASE_URL="postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow" npx next build
+DATABASE_URL="postgresql://<user>:<password>@localhost:8432/farm-flow" npx next build
 ```
 
 **Résultat :** SUCCÈS — `✓ Compiled successfully in 54s`
@@ -22,9 +22,9 @@ Aucune erreur TypeScript, aucune erreur de compilation. Toutes les routes compil
 
 ## 2. Tests unitaires
 
-**Commande :**
+**Commande :** (identifiant réel retiré au titre de R11, voir `.env` non tracké — cf. ERR-159)
 ```
-DATABASE_URL="postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow" npx vitest run
+DATABASE_URL="postgresql://<user>:<password>@localhost:8432/farm-flow" npx vitest run
 ```
 
 **Résultat global :**
@@ -73,8 +73,9 @@ Aucun nouveau test n'a été introduit par Sprint 45. Les changements étant uni
 **Procédure :**
 ```bash
 docker exec -i silures-db psql -U dkfarm -d farm-flow -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-DATABASE_URL="postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow" npx prisma migrate deploy
+DATABASE_URL="postgresql://<user>:<password>@localhost:8432/farm-flow" npx prisma migrate deploy
 npm run db:seed
+# (identifiant réel retiré au titre de R11 — voir .env non tracké, cf. ERR-159)
 ```
 
 **Résultat migrations :** ÉCHEC sur `20260316120000_add_unite_pack_produit`

@@ -499,8 +499,8 @@ occurrences trouvées relèvent de l'une de ces catégories, sans exception :
   motif `scheme://user:pass@host` sans en être une occurrence réelle.
 - `docs/bugs/BUG-CI-migration-order.md` : `dkfarm:x@localhost:55432` et `dkfarm:***@localhost:55432`
   — mot de passe explicitement remplacé par un caractère factice (`x`) ou masqué (`***`), pas
-  l'identifiant réel du conteneur `silures-db` (qui est `%40DkFarm2026!`, jamais écrit dans ce
-  fichier).
+  l'identifiant réel du conteneur `silures-db` (jamais écrit dans ce fichier ni reproduit ici, cf.
+  R11 et ERR-159).
 - Confirmé indépendamment par `gitleaks detect --no-git --config .gitleaks.toml` ciblé sur le
   nouveau fichier de test seul (celui qui n'était couvert par aucune vérification préalable) :
   **`no leaks found`**.

@@ -848,6 +848,7 @@ model Site {
   scenariosPrevision       ScenarioPrevision[]
   paliersRemisePrevision   PalierRemise[]
   alimentsPrevision        AlimentPrevision[]
+  alimentsArticlePrevision AlimentArticlePrevision[]
   repartitionsMoisAliment  RepartitionMoisAliment[]
   vaguesPrevues            VaguePrevue[]
   alimentsParVaguePrevue   AlimentParVaguePrevue[]
@@ -1602,7 +1603,9 @@ model Produit {
   // Sprint 21 — Moteur d'activités
   activitesRecommandees Activite[]           @relation("ActiviteProduitRecommande")
   // Sprint PR1 — Prévisions
-  alimentsPrevision     AlimentPrevision[]
+  // ADR-053 §12.3 (amendement PR2-quater) : produitId descend au niveau article — le
+  // rapprochement se fait par article acheté, pas par calibre abstrait.
+  alimentsArticlePrevision AlimentArticlePrevision[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
@@ -4424,6 +4427,29 @@ model ParametresPrevision {
   capaciteTransportAlevinsNb    Int     @default(20000) // Paramètres!B29
   coutTransportAlevinsFCFA      Decimal @default(30000) // Paramètres!B30 — CHECK >= 0 (migration)
 
+  /**
+   * Taux d'épargne appliqué par le moteur (PR2-quinquies, story PR2q.2) —
+   * jeu d'or "Paramètres!B36". Échelle 0..100 (pourcentage), cohérente
+   * avec margeSecuriteAlevinsPct ci-dessus : le jeu d'or porte 0.3 (fraction),
+   * la conversion d'échelle fraction→pourcentage est la responsabilité du
+   * moteur/de la recette (pctFixtureVersMoteur), pas du schéma.
+   * NOT NULL avec @default(30) — pas nullable (R7) : un taux d'épargne
+   * absent produirait une épargne silencieusement nulle plutôt qu'un rejet
+   * explicite, et 30 % est la valeur du classeur de référence (jeu d'or).
+   */
+  tauxEpargnePct Decimal @default(30)
+
+  /**
+   * Valeur d'amorçage copiée vers VaguePrevue.alevinsAchetes à la création
+   * d'une vague (patron identique à effectifAlevinsParVague →
+   * effectifAlevinsPrevu). Jamais lue directement par le moteur — seule
+   * VaguePrevue.alevinsAchetes l'est (§4.3 des exigences, story PR2oct.2).
+   * NOT NULL avec @default(false) (R7) : le jeu d'or ne connaît que deux
+   * états, jamais un "on ne sait pas" implicite ; false = production
+   * interne, conforme aux 19 vagues du jeu d'or EXCEL-V12.
+   */
+  alevinsAchetesParDefaut Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -4432,44 +4458,105 @@ model PalierRemise {
   id                String            @id @default(cuid())
   scenarioId        String
   scenario          ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  seuilSacs         Decimal // quantité de sacs à partir de laquelle le palier s'applique
+  // Seuil en TONNES comparé au tonnage visé de la vague (ADR-053 §13.3, ERR-143) —
+  // jamais un nombre de sacs : la remise se décide une fois par VaguePrevue.
+  seuilTonnes       Decimal
   pourcentageRemise Decimal
-  ordre             Int // ordre d'évaluation explicite — jamais déduit d'un tri implicite sur seuilSacs
+  ordre             Int // ordre d'évaluation explicite — jamais déduit d'un tri implicite sur seuilTonnes
   siteId            String
   site              Site              @relation(fields: [siteId], references: [id])
 
+  // ADR-053 §13.8 point 3 — deux paliers de même ordre rendraient orderBy({ ordre: "asc" })
+  // non déterministe, donc la remise dépendrait de l'ordre d'insertion.
+  @@unique([scenarioId, ordre])
   @@index([scenarioId])
   @@index([siteId])
 }
 
+/**
+ * Niveau CALIBRE (ADR-053 §12.3, amendement PR2-quater) — porte l'identité de la granulométrie
+ * et le coefficient de besoin biologique, communs à tous les articles (marques) qui la composent.
+ * Le niveau ARTICLE (marque, poids de sac, prix) est porté par AlimentArticlePrevision, un ou
+ * plusieurs enfants de ce modèle. Voir §12.1-12.3 de l'ADR pour la justification du passage à
+ * deux niveaux et le tableau champ par champ de ce qui a migré vers l'article.
+ */
 model AlimentPrevision {
-  id            String            @id @default(cuid())
-  scenarioId    String
-  scenario      ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  id         String            @id @default(cuid())
+  scenarioId String
+  scenario   ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   /**
-   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053 décision 1).
-   * Nullable : un aliment prévisionnel peut ne correspondre à aucun produit
-   * réel du catalogue (ex. produit pas encore créé, ou scénario prospectif).
+   * Taille de granulé — porte désormais l'identité du calibre. NOT NULL (amendement PR2-quater) :
+   * une granulométrie non identifiée ne peut plus être créée ni persister — R7, décision explicite,
+   * pas une nullabilité par défaut. Cf. migration 20260803160000 pour le garde-fou de précondition.
    */
-  produitId     String?
-  produit       Produit?          @relation(fields: [produitId], references: [id], onDelete: SetNull)
-  libelle       String // copié depuis Produit.nom à la création, puis libre
-  tailleGranule TailleGranule? // copié depuis Produit.tailleGranule à la création
-  poidsSacKg    Decimal // copié depuis Produit.contenance à la création
-  prixSacFCFA   Decimal // copié depuis Produit.prixUnitaire à la création
-  sacsParTonne  Decimal // dérivable de poidsSacKg, mais stocké et gelé (ADR-053 décision 1 :
-  // aucun recalcul depuis une formule qui lirait le catalogue)
-  ordre         Int // ordre d'affichage / d'application dans le cycle
+  tailleGranule TailleGranule
+  /**
+   * Coefficient de besoin en aliment : sacs de cette granulométrie par tonne de POISSON produit.
+   * Inchangé depuis l'amendement Sprint PR2 (§11) — reste au niveau calibre, jamais à l'article :
+   * ce coefficient dépend de la granulométrie, pas de la marque qui la fabrique (§12.1). Nullable :
+   * null = non configuré, tout calcul qui en dépend rejette explicitement (§11.2).
+   */
+  sacsParTonneStandard Decimal?
+  ordre         Int // ordre d'affichage des calibres dans le scénario
   siteId        String
   site          Site              @relation(fields: [siteId], references: [id])
 
-  repartitions  RepartitionMoisAliment[]
+  articles      AlimentArticlePrevision[]
+  repartitions  RepartitionMoisAliment[] // grain calibre, inchangé (§12.2, arbitrage 2)
   vaguesPrevues AlimentParVaguePrevue[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([scenarioId, tailleGranule]) // AJOUTE (amendement PR2-quater) — un calibre par scénario
   @@index([scenarioId])
+  @@index([siteId])
+}
+
+/**
+ * Niveau ARTICLE (ADR-053 §12.3, amendement PR2-quater) — une marque/un conditionnement précis
+ * pour un calibre donné. Un ou plusieurs par AlimentPrevision (calibre) ; le cas nominal reste un
+ * seul article à 100 % (§12.6), mais le modèle reste correct pour N > 1 (répartition
+ * d'approvisionnement, §12.2 arbitrage 1 et 3).
+ */
+model AlimentArticlePrevision {
+  id                        String           @id @default(cuid())
+  alimentCalibrePrevisionId String
+  alimentCalibrePrevision   AlimentPrevision @relation(fields: [alimentCalibrePrevisionId], references: [id], onDelete: Cascade)
+  /**
+   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053 décision 1, inchangée).
+   * Nullable : un article prévisionnel peut ne correspondre à aucun produit réel du catalogue
+   * (ex. produit pas encore créé, ou scénario prospectif).
+   */
+  produitId          String?
+  produit            Produit?         @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  libelle            String // copié depuis Produit.nom à la création, puis libre (ex. "Marque A —
+  // sac 15kg") — descend depuis le calibre (§12.1)
+  poidsSacKg         Decimal // copié depuis Produit.contenance à la création — descend depuis le calibre
+  prixSacFCFA        Decimal // copié depuis Produit.prixUnitaire à la création — descend depuis le calibre
+  /**
+   * Pur ratio d'unité de poids (1000 / poidsSacKg) — descend depuis le calibre avec poidsSacKg,
+   * dont il est dérivé (ERR-138 : ne doit jamais entrer dans un calcul de besoin par tonne de
+   * poisson, cf. sacsParTonneStandard qui lui reste au calibre).
+   */
+  sacsParTonneUnitaire Decimal
+  /**
+   * Part de cet article dans l'approvisionnement du calibre, en pourcentage (0..100). La somme des
+   * partApprovisionnementPct de tous les articles d'un même calibre doit valoir exactement 100 —
+   * validée à l'écriture (§12.2 arbitrage 3), jamais par contrainte SQL (même raison qu'en §3.5).
+   * Non nullable : le cas nominal (un seul article) écrit 100 côté serveur sans le demander à
+   * l'utilisateur (§12.6) — aucune sémantique null = 100 à inventer.
+   */
+  partApprovisionnementPct Decimal
+  ordre  Int // ordre d'affichage des articles au sein du calibre — sert aussi de départage
+  // déterministe des ex æquo dans la répartition des sacs (§12.2 arbitrage 1, étape 5)
+  siteId String
+  site   Site @relation(fields: [siteId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([alimentCalibrePrevisionId])
   @@index([siteId])
   @@index([produitId])
 }
@@ -4501,6 +4588,18 @@ model VaguePrevue {
   // un changement ultérieur de la durée de cycle du scénario n'affecte
   // JAMAIS une VaguePrevue déjà créée (ADR-053 décision 1, §4.1 des exigences)
   statut               StatutVaguePrevue @default(PLANIFIEE)
+  /**
+   * Achat vs production interne (§4.3 des exigences) — gouverne
+   * cout_alevins(vague) = alevinsAchetes ? nb_alevins × prix × (1-remise) : 0
+   * (§5.3). Copié depuis ParametresPrevision.alevinsAchetesParDefaut à la
+   * création (patron effectifAlevinsPrevu), éditable ensuite par vague ;
+   * une scission copie la valeur du PARENT, jamais le défaut scénario
+   * (même règle que dureeCycleMoisFigee). NOT NULL avec @default(false)
+   * (R7) : le jeu d'or EXCEL-V12 porte "NON" sur ses 19 vagues, sans
+   * exception — tout autre défaut changerait silencieusement des plans
+   * existants d'environ 46 millions FCFA (story PR2oct.2).
+   */
+  alevinsAchetes       Boolean           @default(false)
   /**
    * Auto-relation — matérialise une scission (ADR-053 décision 2). Null pour une
    * VaguePrevue d'origine, renseigné pour V7a/V7b issues d'une scission de V7.

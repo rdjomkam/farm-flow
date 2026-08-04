@@ -25,8 +25,9 @@
 npx vitest run
 # → 3 963 passed | 26 todo | 1 error (OOM dans releves-form.test.tsx)
 
-DATABASE_URL="postgresql://dkfarm:%40DkFarm2026!@localhost:8432/farm-flow?schema=public" \
+DATABASE_URL="postgresql://<user>:<password>@localhost:8432/farm-flow?schema=public" \
   npx next build --webpack
+# (identifiant réel retiré au titre de R11 — voir .env non tracké, cf. ERR-159)
 # → build OK, 0 erreur TypeScript/ESLint
 ```
 

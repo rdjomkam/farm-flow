@@ -2,16 +2,21 @@
  * Tests d'integration i18n — Completude et parite (Sprint 42, Story 42.3)
  *
  * Objectifs :
- * - Pour chaque namespace (15 au total), verifier que toutes les cles fr existent en en
+ * - Pour chaque namespace (16 au total, cf. liste ci-dessous), verifier que toutes les cles
+ *   fr existent en en
  * - Verifier que toutes les cles en existent en fr (symetrie)
  * - Verifier qu'aucune valeur n'est vide dans les deux locales
  * - Verifier que les interpolations {xxx} sont presentes dans les deux locales
- * - Couvrir tous les 15 namespaces : common, format, navigation, permissions, abonnements,
- *   settings, analytics, vagues, releves, stock, ventes, alevins, users, commissions, errors
+ * - Couvrir tous les 16 namespaces a parite stricte : common, format, navigation, permissions,
+ *   abonnements, settings, analytics, vagues, releves, stock, ventes, alevins, users,
+ *   commissions, errors, previsions (Story PR2bis.1 — ajoute a la liste figee prevue en Sprint 42,
+ *   dette structurelle preexistante non corrigee : cette liste ne boucle pas sur `namespaces` en
+ *   entier, cf. docs/analysis/pre-analysis-story-PR2bis.1.md)
  */
 
 import { describe, it, expect } from "vitest";
 import { namespaces } from "@/messages/index";
+import { requestNamespaces } from "@/i18n/request";
 
 // ---------------------------------------------------------------------------
 // Imports de tous les fichiers JSON fr et en
@@ -89,6 +94,8 @@ import frArrivages from "@/messages/fr/arrivages.json";
 import enArrivages from "@/messages/en/arrivages.json";
 import frTransferts from "@/messages/fr/transferts.json";
 import enTransferts from "@/messages/en/transferts.json";
+import frPrevisions from "@/messages/fr/previsions.json";
+import enPrevisions from "@/messages/en/previsions.json";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -196,6 +203,7 @@ const namespaceFiles: Record<
   reproduction: { fr: frReproduction as Record<string, unknown>, en: enReproduction as Record<string, unknown> },
   arrivages: { fr: frArrivages as Record<string, unknown>, en: enArrivages as Record<string, unknown> },
   transferts: { fr: frTransferts as Record<string, unknown>, en: enTransferts as Record<string, unknown> },
+  previsions: { fr: frPrevisions as Record<string, unknown>, en: enPrevisions as Record<string, unknown> },
 };
 
 // ---------------------------------------------------------------------------
@@ -207,8 +215,8 @@ describe("i18n — registre des namespaces (src/messages/index.ts)", () => {
     expect(Array.isArray(namespaces)).toBe(true);
   });
 
-  it("contient exactement 36 namespaces", () => {
-    expect(namespaces).toHaveLength(36);
+  it("contient exactement 37 namespaces", () => {
+    expect(namespaces).toHaveLength(37);
   });
 
   it("contient tous les namespaces Sprint 39 (common, format)", () => {
@@ -243,6 +251,24 @@ describe("i18n — registre des namespaces (src/messages/index.ts)", () => {
       expect(pair.en).toBeDefined();
     }
   });
+
+  // Garde-fou : `src/i18n/request.ts` (loadMessages) porte sa propre liste de
+  // namespaces charges au runtime. Si un namespace est enregistre dans
+  // `src/messages/index.ts` mais absent de cette liste, `useTranslations(ns)`
+  // ne recoit silencieusement aucun message au runtime — aucun autre test du
+  // depot ne detecte ce cas. Ce test verifie que chaque namespace du registre
+  // est bien charge (relation d'inclusion, pas d'egalite stricte : la liste
+  // de `request.ts` peut legitimement contenir des entrees supplementaires,
+  // cf. `blockedResource`/`maintenance`/`unites-production`, dette
+  // preexistante hors perimetre de ce garde-fou).
+  it("chaque namespace de src/messages/index.ts est charge par src/i18n/request.ts (loadMessages)", () => {
+    for (const ns of namespaces) {
+      expect(
+        requestNamespaces,
+        `"${ns}" est enregistre dans src/messages/index.ts mais absent de requestNamespaces (src/i18n/request.ts) — useTranslations("${ns}") ne recevrait aucun message au runtime`
+      ).toContain(ns);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -253,7 +279,7 @@ describe("i18n — parite des cles fr/en (tous namespaces)", () => {
   for (const ns of [
     "common", "format", "navigation", "permissions", "abonnements",
     "settings", "analytics", "vagues", "releves", "stock", "ventes",
-    "alevins", "users", "commissions", "errors"
+    "alevins", "users", "commissions", "errors", "previsions"
   ]) {
     it(`${ns} — les cles fr et en sont identiques`, () => {
       const { fr, en } = namespaceFiles[ns];
@@ -295,7 +321,7 @@ describe("i18n — aucune valeur vide (tous namespaces)", () => {
   for (const ns of [
     "common", "format", "navigation", "permissions", "abonnements",
     "settings", "analytics", "vagues", "releves", "stock", "ventes",
-    "alevins", "users", "commissions", "errors"
+    "alevins", "users", "commissions", "errors", "previsions"
   ]) {
     it(`${ns}/fr — toutes les valeurs sont des strings non vides`, () => {
       const { fr } = namespaceFiles[ns];

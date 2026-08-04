@@ -1,0 +1,741 @@
+{
+  "page": {
+    "title": "Scénarios de prévision",
+    "errors": {
+      "projectionUnknown": "Le calcul de la projection a échoué pour une raison inconnue.",
+      "projectionUnavailable": "Calcul de la projection indisponible"
+    }
+  },
+  "list": {
+    "emptyTitle": "Aucun scénario de prévision",
+    "emptyDescription": "Créez un scénario pour planifier vos vagues, vos aliments et votre trésorerie.",
+    "cycleLabel": "Cycle de {count} mois — début {date}",
+    "open": "Ouvrir",
+    "activate": "Activer",
+    "archive": "Archiver",
+    "statuts": {
+      "BROUILLON": "Brouillon",
+      "ACTIF": "Actif",
+      "ARCHIVE": "Archivé"
+    }
+  },
+  "scenarioForm": {
+    "triggerButton": "Nouveau scénario",
+    "dialogTitle": "Nouveau scénario de prévision",
+    "sections": {
+      "identification": {
+        "title": "Identification"
+      },
+      "parametres": {
+        "title": "Paramètres du scénario",
+        "description": "Valeurs par défaut utilisées pour chaque vague planifiée."
+      },
+      "transport": {
+        "title": "Transport (optionnel)",
+        "description": "Capacités et coûts de transport — laisser vide si non pertinent."
+      }
+    },
+    "fields": {
+      "code": {
+        "label": "Code",
+        "placeholder": "ex. PLAN-2026-08"
+      },
+      "nom": {
+        "label": "Nom",
+        "placeholder": "ex. Plan août 2026"
+      },
+      "description": {
+        "label": "Description"
+      },
+      "dureeCycleMois": {
+        "label": "Durée du cycle (mois)",
+        "hint": "Durée d'un cycle d'engraissement, identique pour toutes les vagues de ce scénario."
+      },
+      "dateDebutPlan": {
+        "label": "Date de début du plan"
+      },
+      "effectifAlevinsParVague": {
+        "label": "Effectif d'alevins par vague"
+      },
+      "margeSecuriteAlevinsPct": {
+        "label": "Marge de sécurité alevins (%)",
+        "hint": "Absorbe la mortalité : appliquée au nombre d'alevins à commander (coût alevins et logistique alevins), sans effet sur le besoin en aliment ni sur le revenu prévu."
+      },
+      "poidsMoyenInitialG": {
+        "label": "Poids moyen initial (g)"
+      },
+      "poidsObjectifG": {
+        "label": "Poids objectif (g)"
+      },
+      "prixAlevinUnitaireFCFA": {
+        "label": "Prix alevin unitaire (FCFA)"
+      },
+      "prixVenteKgFCFA": {
+        "label": "Prix de vente prévu (FCFA/kg)"
+      },
+      "nombreBacsSimultanesCible": {
+        "label": "Nombre de bacs simultanés cible",
+        "hint": "Purement indicatif — ne réserve aucun bac réel."
+      },
+      "frequenceStockageMois": {
+        "label": "Fréquence de stockage (mois)",
+        "hint": "Espacement entre deux stockages successifs (peut être inférieur à 1 mois)."
+      },
+      "capaciteTransportAlimentsSacs": {
+        "label": "Capacité transport aliments (sacs)"
+      },
+      "coutTransportAlimentsFCFA": {
+        "label": "Coût transport aliments (FCFA)"
+      },
+      "capaciteTransportPoissonsKg": {
+        "label": "Capacité transport poissons (kg)"
+      },
+      "coutTransportPoissonsFCFA": {
+        "label": "Coût transport poissons (FCFA)"
+      },
+      "capaciteTransportAlevinsNb": {
+        "label": "Capacité transport alevins (nb)"
+      },
+      "coutTransportAlevinsFCFA": {
+        "label": "Coût transport alevins (FCFA)"
+      }
+    },
+    "requiredError": "Ce champ est obligatoire.",
+    "submitting": "Création...",
+    "submit": "Créer le scénario"
+  },
+  "tabs": {
+    "tableauBord": "Tableau de bord",
+    "previsions": "Prévisions",
+    "parametres": "Paramètres",
+    "aliments": "Granulométries",
+    "vagues": "Plan des vagues",
+    "charges": "Charges",
+    "journal": "Journal",
+    "apports": "Apports"
+  },
+  "parametresTab": {
+    "sectionTitle": "Paramètres du scénario",
+    "sectionDescription": "Copie initiale utilisée pour chaque nouvelle vague planifiée.",
+    "transportTitle": "Transport (optionnel)",
+    "saveButton": "Enregistrer les paramètres",
+    "saving": "Enregistrement...",
+    "fields": {
+      "effectifAlevinsParVague": {
+        "label": "Effectif d'alevins par vague"
+      },
+      "margeSecuriteAlevinsPct": {
+        "label": "Marge de sécurité alevins (%)",
+        "hint": "Appliquée au coût des alevins et à la logistique alevins (arrondi par excès de (1 + marge) x poissons à vendre) pour absorber la mortalité ; n'affecte ni le besoin en aliment ni le revenu prévu, fondés sur l'effectif de poissons à vendre."
+      },
+      "poidsMoyenInitialG": {
+        "label": "Poids moyen initial (g)"
+      },
+      "poidsObjectifG": {
+        "label": "Poids objectif (g)"
+      },
+      "prixAlevinUnitaireFCFA": {
+        "label": "Prix alevin unitaire (FCFA)",
+        "hint": "Appliqué uniquement aux vagues dont « Alevins achetés » est actif."
+      },
+      "prixVenteKgFCFA": {
+        "label": "Prix de vente prévu (FCFA/kg)"
+      },
+      "nombreBacsSimultanesCible": {
+        "label": "Nombre de bacs simultanés cible",
+        "hint": "Purement indicatif : ne réserve aucun bac réel et n'est pas utilisé par le calcul (ADR-053). Le rapprochement avec les bacs physiques disponibles reste manuel."
+      },
+      "frequenceStockageMois": {
+        "label": "Fréquence de stockage (mois)"
+      },
+      "tauxEpargnePct": {
+        "label": "Taux d'épargne (%)",
+        "hint": "Appliqué à la part positive du résultat mensuel (revenus + apports − dépenses) : max(0, résultat) x taux. Un mois déficitaire n'épargne rien."
+      },
+      "alevinsAchetesParDefaut": {
+        "label": "Alevins achetés par défaut",
+        "hint": "S'applique à chaque nouvelle vague planifiée ; modifiable ensuite vague par vague."
+      }
+    },
+    "transportFields": {
+      "capaciteTransportAlimentsSacs": {
+        "label": "Capacité transport aliments (sacs)"
+      },
+      "coutTransportAlimentsFCFA": {
+        "label": "Coût transport aliments (FCFA)"
+      },
+      "capaciteTransportPoissonsKg": {
+        "label": "Capacité transport poissons (kg)"
+      },
+      "coutTransportPoissonsFCFA": {
+        "label": "Coût transport poissons (FCFA)"
+      },
+      "capaciteTransportAlevinsNb": {
+        "label": "Capacité transport alevins (nb)"
+      },
+      "coutTransportAlevinsFCFA": {
+        "label": "Coût transport alevins (FCFA)"
+      }
+    },
+    "paliers": {
+      "title": "Paliers de remise",
+      "description": "La remise est décidée une seule fois par vague, d'après le tonnage de poisson visé par cette vague, puis appliquée au coût d'aliment de toute la vague, toutes granulométries confondues. Le palier retenu est celui dont le seuil est le plus grand parmi ceux inférieurs ou égaux à ce tonnage. Les seuils doivent être strictement croissants (vérifié à l'enregistrement). Deux paliers ne peuvent pas porter le même ordre d'évaluation : chaque ordre doit être unique, sinon l'enregistrement est refusé.",
+      "palierLabel": "Palier {index}",
+      "removeAria": "Supprimer ce palier",
+      "seuilLabel": "Seuil (tonnes)",
+      "seuilHint": "En tonnes de poisson visées par vague : le palier s'applique dès que le tonnage visé atteint ce seuil.",
+      "remiseLabel": "Remise (%)",
+      "ordreLabel": "Ordre",
+      "addButton": "Ajouter un palier",
+      "saveButton": "Enregistrer les paliers"
+    }
+  },
+  "aliments": {
+    "emptyTitle": "Aucune granulométrie",
+    "emptyDescription": "Ajoutez les granulométries d'aliment utilisées dans ce scénario.",
+    "weightPrice": "{poids} kg/sac — {prix}",
+    "articleSummary": "{libelle} — {poids} kg/sac — {prix}",
+    "deleteAria": "Supprimer {libelle}",
+    "needLabel": "Besoin : {value} sacs/tonne de poisson",
+    "needMissing": "Coefficient de besoin non configuré",
+    "monthlyRepartitionLabel": "Répartition mensuelle :",
+    "monthlyRepartitionFormule": "Répartition mensuelle = somme des pourcentages saisis sur tous les mois du cycle",
+    "monthLabel": "Mois {count}",
+    "monthlyRepartitionAria": "Expliquer la répartition mensuelle de {libelle}",
+    "spreadButton": "Répartir sur le cycle",
+    "articlesTitle": "Articles de ce calibre",
+    "articlePart": "{value} de l'approvisionnement",
+    "addArticleButton": "Ajouter un article",
+    "addArticleAria": "Ajouter un article pour le calibre {calibre}"
+  },
+  "alimentForm": {
+    "triggerButton": "Nouvelle granulométrie",
+    "dialogTitle": "Nouvelle granulométrie",
+    "fields": {
+      "tailleGranule": {
+        "label": "Calibre (taille de granulé)",
+        "placeholder": "Choisir un calibre"
+      },
+      "libelle": {
+        "label": "Libellé",
+        "placeholder": "ex. Granulé 2mm"
+      },
+      "poidsSacKg": {
+        "label": "Poids du sac (kg)"
+      },
+      "prixSacFCFA": {
+        "label": "Prix du sac (FCFA)"
+      },
+      "sacsParTonneStandard": {
+        "label": "Sacs par tonne de poisson (coefficient de besoin)",
+        "hint": "Nombre de sacs de cette granulométrie nécessaires par tonne de poisson produit. Laisser vide si inconnu — tout calcul de besoin sera alors rejeté pour cette granulométrie tant qu'elle n'est pas renseignée."
+      },
+      "produitId": {
+        "label": "Produit du catalogue (optionnel)",
+        "none": "Aucun rapprochement produit"
+      }
+    },
+    "errors": {
+      "libelleRequired": "Le libellé est obligatoire.",
+      "poidsSacKgPositive": "Doit être strictement supérieur à 0.",
+      "required": "Ce champ est obligatoire.",
+      "tailleGranuleRequired": "Le calibre est obligatoire."
+    },
+    "submitting": "Création...",
+    "submit": "Créer"
+  },
+  "alimentArticleForm": {
+    "triggerButton": "Ajouter un article",
+    "dialogTitle": "Ajouter un article — {calibre}",
+    "existingArticlesTitle": "Articles déjà en approvisionnement",
+    "fields": {
+      "libelle": {
+        "label": "Libellé",
+        "placeholder": "ex. Marque A — sac 15kg"
+      },
+      "poidsSacKg": {
+        "label": "Poids du sac (kg)"
+      },
+      "prixSacFCFA": {
+        "label": "Prix du sac (FCFA)"
+      },
+      "produitId": {
+        "label": "Produit du catalogue (optionnel)",
+        "none": "Aucun rapprochement produit"
+      },
+      "partApprovisionnementPct": {
+        "label": "Part d'approvisionnement (%)"
+      }
+    },
+    "sumLabel": "Somme des parts",
+    "sumValue": "{value} % / 100 %",
+    "errors": {
+      "libelleRequired": "Le libellé est obligatoire.",
+      "poidsSacKgPositive": "Doit être strictement supérieur à 0.",
+      "required": "Ce champ est obligatoire.",
+      "sumMustBe100": "La somme des parts d'approvisionnement doit être égale à 100 %."
+    },
+    "submitting": "Ajout...",
+    "submit": "Ajouter"
+  },
+  "repartitionDialog": {
+    "dialogTitle": "Répartition mensuelle — {libelle}",
+    "totalLabel": "Total réparti",
+    "totalValue": "{value} % / 100 %",
+    "imbalanceHint": "La somme des pourcentages doit valoir exactement 100 % pour pouvoir enregistrer.",
+    "monthLabel": "Mois {count} du cycle",
+    "saving": "Enregistrement...",
+    "submit": "Enregistrer la répartition"
+  },
+  "planVaguesTab": {
+    "emptyTitle": "Aucune vague planifiée",
+    "emptyDescription": "Ajoutez des vagues au plan d'empoissonnement de ce scénario.",
+    "statuts": {
+      "PLANIFIEE": "Planifiée",
+      "EN_COURS": "En cours",
+      "REALISEE": "Réalisée",
+      "NON_REALISEE": "Non réalisée",
+      "ANNULEE": "Annulée"
+    },
+    "badgeAlevinsAchetes": "Alevins achetés",
+    "badgeProductionInterne": "Production interne",
+    "stockageLabel": "Stockage : {date} — {count} alevins",
+    "fromScission": "Issue d'une scission",
+    "totalSacsFormule": "Total des sacs = somme des sacs calculés (ou saisis si surchargé) sur tout le cycle",
+    "monthLabel": "Mois {count}",
+    "totalSacsAria": "Expliquer le total de sacs de {code}",
+    "totalCoutFormule": "Coût aliment total = somme des coûts calculés (après remise de palier) sur tout le cycle",
+    "totalCoutAria": "Expliquer le coût aliment total de {code}",
+    "scinderButton": "Scinder",
+    "annulerButton": "Annuler",
+    "modifierButton": "Modifier",
+    "modifierIndisponibleRattachee": "Modification indisponible : une vague réelle est déjà rattachée.",
+    "modifierIndisponibleStatut": "Modification indisponible : seules les vagues encore Planifiées peuvent être modifiées.",
+    "planInfo": "Le plan démarre le {date}, cycle de {dureeCycleMois} mois.",
+    "genererPlanDesactiveMotif": "Renseignez les paramètres du scénario (onglet Paramètres) avant de générer un plan."
+  },
+  "genererPlanDialog": {
+    "triggerButton": "Générer un plan",
+    "dialogTitle": "Générer le plan d'empoissonnement",
+    "description": "Seul l'horizon est à saisir : les autres paramètres (date de début, durée de cycle, effectif par vague, fréquence de stockage) sont déjà enregistrés dans les Paramètres du scénario.",
+    "fields": {
+      "horizonMois": {
+        "label": "Horizon (mois)",
+        "placeholder": "ex. 21"
+      },
+      "mode": {
+        "label": "Que faire des vagues déjà planifiées ?"
+      }
+    },
+    "mode": {
+      "ajouter": "Ajouter à la suite du plan existant",
+      "remplacer": "Annuler les vagues planifiées non réalisées et régénérer"
+    },
+    "errors": {
+      "horizonInvalide": "L'horizon doit être un entier supérieur ou égal à 0.",
+      "generic": "Erreur lors de la génération du plan."
+    },
+    "previewButton": "Voir l'aperçu",
+    "previewing": "Calcul de l'aperçu...",
+    "apercu": {
+      "title": "Aperçu avant confirmation",
+      "rattachees": "{count} vague(s) déjà rattachée(s) à une vague réelle seront conservées.",
+      "annulees": "{count} vague(s) planifiée(s) non rattachée(s) seront annulées et remplacées.",
+      "nouvelles": "{count} nouvelle(s) vague(s) seront créées.",
+      "periode": "Du {debut} au {fin}.",
+      "aucuneNouvelle": "Aucune nouvelle vague ne sera créée avec cet horizon.",
+      "codesNote": "Les nouveaux codes reprennent après le dernier code existant : {codes}."
+    },
+    "backButton": "Modifier",
+    "confirmButton": "Confirmer la génération",
+    "confirming": "Génération..."
+  },
+  "vaguePrevueForm": {
+    "triggerButton": "Nouvelle vague planifiée",
+    "dialogTitle": "Nouvelle vague planifiée",
+    "dialogTitleEdit": "Modifier la vague planifiée",
+    "fields": {
+      "code": {
+        "label": "Code",
+        "placeholder": "ex. V1"
+      },
+      "dateStockagePrevue": {
+        "label": "Date de stockage prévue"
+      },
+      "effectifAlevinsPrevu": {
+        "label": "Effectif d'alevins"
+      },
+      "poidsMoyenInitialG": {
+        "label": "Poids moyen initial (g)"
+      },
+      "alevinsAchetes": {
+        "label": "Alevins achetés"
+      }
+    },
+    "errors": {
+      "codeRequired": "Le code est obligatoire.",
+      "dateRequired": "La date est obligatoire.",
+      "effectifPositive": "Doit être strictement supérieur à 0."
+    },
+    "submitting": "Création...",
+    "submit": "Créer",
+    "submittingEdit": "Enregistrement...",
+    "submitEdit": "Enregistrer"
+  },
+  "scissionDialog": {
+    "dialogTitle": "Scinder {code}",
+    "description": "{code} passera au statut Annulée. Chaque ligne ci-dessous devient une nouvelle vague planifiée indépendante.",
+    "totalLabel": "Effectif réparti (indicatif)",
+    "totalValue": "{reparti} / {total}",
+    "imbalanceHint": "L'API n'exige pas que ce total corresponde exactement — indicatif seulement.",
+    "childLabel": "Vague fille {index}",
+    "removeAria": "Supprimer la vague fille {index}",
+    "fields": {
+      "code": {
+        "label": "Code"
+      },
+      "dateStockagePrevue": {
+        "label": "Date de stockage"
+      },
+      "effectifAlevinsPrevu": {
+        "label": "Effectif d'alevins"
+      },
+      "poidsMoyenInitialG": {
+        "label": "Poids moyen initial (g)"
+      }
+    },
+    "addButton": "Ajouter une vague fille",
+    "submitting": "Scission...",
+    "submit": "Confirmer la scission"
+  },
+  "rattacherVagueDialog": {
+    "triggerButton": "Rattacher une vague réelle",
+    "dialogTitle": "Rattacher {code}",
+    "description": "Sélectionnez la vague réelle qui réalise cette vague planifiée.",
+    "selectLabel": "Vague réelle",
+    "selectPlaceholder": "Choisir une vague",
+    "noneAvailable": "Aucune vague réelle disponible (toutes déjà rattachées).",
+    "errors": {
+      "generic": "Erreur lors du rattachement.",
+      "network": "Erreur réseau. Vérifiez votre connexion."
+    },
+    "submitting": "Rattachement...",
+    "submit": "Rattacher"
+  },
+  "chargesTab": {
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "monthIndex": "Mois {count}",
+    "emptyTitle": "Aucun poste de charge",
+    "emptyDescription": "Créez des postes (électricité, salaires, transport...) pour saisir vos charges mensuelles.",
+    "saveButton": "Enregistrer",
+    "saving": "...",
+    "excludedFromBase": "Exclu de la base de répartition entre vagues.",
+    "totalLabel": "Total du mois :",
+    "totalFormule": "Total du mois = somme des montants de charge de chaque poste pour ce mois",
+    "totalAria": "Expliquer le total du mois"
+  },
+  "reporterChargeDialog": {
+    "triggerButton": "Reporter sur plusieurs mois",
+    "dialogTitle": "Reporter la charge — {libelle}",
+    "description": "Applique un même montant à plusieurs mois consécutifs pour ce poste.",
+    "fields": {
+      "montant": {
+        "label": "Montant (FCFA)",
+        "placeholder": "0"
+      },
+      "plage": {
+        "label": "Plage de mois"
+      }
+    },
+    "plage": {
+      "depuisMoisCourant": "Depuis ce mois jusqu'à la fin du plan",
+      "tousLesMois": "Tous les mois du plan"
+    },
+    "errors": {
+      "montantInvalide": "Le montant doit être un nombre positif ou nul.",
+      "horizonIndisponible": "Horizon du plan indisponible pour le moment.",
+      "generic": "Une erreur est survenue."
+    },
+    "apercu": {
+      "title": "Aperçu du report",
+      "moisConcernes": "{count} mois concernés ({debut} → {fin})",
+      "moisEcrases": "{count} mois seront écrasés (valeur actuelle remplacée)",
+      "aucunEcrasement": "Aucun mois existant ne sera écrasé.",
+      "detailEcraseligne": "{mois} : {ancien} → {nouveau}"
+    },
+    "previewButton": "Voir l'aperçu",
+    "previewing": "...",
+    "backButton": "Retour",
+    "confirmButton": "Appliquer",
+    "confirming": "Application en cours..."
+  },
+  "posteForm": {
+    "triggerButton": "Nouveau poste",
+    "dialogTitle": "Nouveau poste de charge",
+    "types": {
+      "LOGISTIQUE": "Logistique",
+      "CHARGE_EXPLOITATION": "Charge d'exploitation"
+    },
+    "fields": {
+      "libelle": {
+        "label": "Libellé",
+        "placeholder": "ex. Électricité"
+      },
+      "type": {
+        "label": "Type"
+      }
+    },
+    "errors": {
+      "libelleRequired": "Le libellé est obligatoire."
+    },
+    "submitting": "Création...",
+    "submit": "Créer"
+  },
+  "journalTab": {
+    "newButton": "Nouvelle dépense",
+    "emptyTitle": "Journal vide",
+    "emptyDescription": "Enregistrez les dépenses ponctuelles ou récurrentes de ce scénario.",
+    "categories": {
+      "INVESTISSEMENT": "Investissement",
+      "OPERATIONNEL": "Opérationnel"
+    },
+    "assignedTo": "Affectée à {code}",
+    "general": "Générale",
+    "editButton": "Modifier",
+    "deleteButton": "Supprimer"
+  },
+  "journalForm": {
+    "dialogTitleCreate": "Nouvelle ligne de journal",
+    "dialogTitleEdit": "Modifier la ligne de journal",
+    "categories": {
+      "OPERATIONNEL": "Opérationnel",
+      "INVESTISSEMENT": "Investissement"
+    },
+    "fields": {
+      "date": {
+        "label": "Date"
+      },
+      "libelle": {
+        "label": "Libellé"
+      },
+      "categorie": {
+        "label": "Catégorie"
+      },
+      "montantFCFA": {
+        "label": "Montant (FCFA)"
+      },
+      "affectation": {
+        "label": "Affectation",
+        "hint": "Générale = entre dans la répartition entre vagues actives. Affectée = exclue de la répartition."
+      }
+    },
+    "noneOption": "Dépense générale (non affectée)",
+    "assignedOption": "Affectée à {code}",
+    "errors": {
+      "dateAndLibelleRequired": "La date et le libellé sont obligatoires."
+    },
+    "saving": "Enregistrement...",
+    "submitCreate": "Créer",
+    "submitEdit": "Enregistrer"
+  },
+  "apportsTab": {
+    "emptyTitle": "Aucun apport en capital",
+    "emptyDescription": "Enregistrez les apports propres ou crédits qui financent ce scénario.",
+    "types": {
+      "CREDIT": "Crédit encaissé",
+      "CAPITAL": "Capital propre"
+    }
+  },
+  "apportForm": {
+    "triggerButton": "Nouvel apport",
+    "dialogTitle": "Nouvel apport en capital",
+    "types": {
+      "CAPITAL": "Capital propre",
+      "CREDIT": "Crédit encaissé"
+    },
+    "fields": {
+      "date": {
+        "label": "Date"
+      },
+      "libelle": {
+        "label": "Libellé"
+      },
+      "montantFCFA": {
+        "label": "Montant (FCFA)"
+      },
+      "type": {
+        "label": "Type"
+      }
+    },
+    "errors": {
+      "dateAndLibelleRequired": "La date et le libellé sont obligatoires."
+    },
+    "submitting": "Création...",
+    "submit": "Créer"
+  },
+  "tableauBordTab": {
+    "errorHint": "Les indicateurs ci-dessous sont vides à cause de cette erreur — ce n'est pas une absence réelle de vagues ou de charges. Corrigez la configuration signalée puis rechargez cette page.",
+    "tresorerie": {
+      "title": "Trésorerie projetée",
+      "titleWithMonth": "Trésorerie projetée — {month}",
+      "formule": "Solde de trésorerie cumulé projeté au mois calendaire courant — PAS un solde réel constaté (aucun compte/caisse n'est suivi dans farm-flow), une lecture de la projection du scénario.",
+      "currentMonthLabel": "Mois calendaire courant",
+      "natureLabel": "Nature de la valeur",
+      "natureValue": "Projection du scénario, pas le réel",
+      "aria": "Expliquer la trésorerie projetée",
+      "unavailable": "Calcul indisponible — voir le message d'erreur ci-dessus.",
+      "beforeHorizon": "Hors horizon du plan : le plan démarre dans le futur.",
+      "afterHorizon": "Hors horizon du plan : le plan est déjà entièrement passé."
+    },
+    "pointBas": {
+      "title": "Point bas de trésorerie",
+      "formule": "Minimum de la série de trésorerie cumulée projetée sur tout l'horizon du plan — le besoin de financement maximal à couvrir.",
+      "monthLabel": "Mois du point bas",
+      "horizonLabel": "Horizon total du plan",
+      "horizonValue": "{count} mois",
+      "aria": "Expliquer le point bas de trésorerie",
+      "unavailable": "Calcul indisponible — voir le message d'erreur ci-dessus.",
+      "noData": "Aucune donnée sur ce scénario (aucune vague ni charge saisie)."
+    },
+    "budget": {
+      "title": "Budget total",
+      "formule": "Coût total de production des vagues + charges hors production + apports en capital.",
+      "productionLabel": "Coûts de production",
+      "horsProductionLabel": "Charges hors production",
+      "apportsLabel": "Apports en capital",
+      "aria": "Expliquer le budget total"
+    },
+    "revenu": {
+      "title": "Revenu prévu (horizon)",
+      "formule": "Somme des revenus prévus de chaque mois de l'horizon du plan.",
+      "monthsLabel": "Mois sommés",
+      "aria": "Expliquer le revenu total prévu"
+    },
+    "vagues": {
+      "title": "Vagues du plan",
+      "formule": "Nombre de vagues prévues dont le statut n'est pas Annulée.",
+      "totalLabel": "Vagues totales (hors annulées)",
+      "aria": "Expliquer le nombre de vagues du plan"
+    },
+    "biomasse": {
+      "title": "Biomasse totale prévue",
+      "formule": "Somme de la biomasse cible de chaque vague du plan (poids objectif x effectif d'alevins prévu).",
+      "sumLabel": "Vagues sommées",
+      "aria": "Expliquer la biomasse totale prévue"
+    },
+    "chart": {
+      "title": "Trésorerie projetée sur l'horizon",
+      "legend": "Zone rouge = besoin de financement (trésorerie projetée négative)."
+    }
+  },
+  "previsionsMensuellesTab": {
+    "errorHint": "Ce n'est pas une absence réelle de données — corrigez la configuration signalée puis rechargez cette page.",
+    "noData": "Aucune donnée à afficher pour ce scénario.",
+    "indicatorColumn": "Indicateur",
+    "totalColumn": "Total",
+    "rowAria": "Expliquer la ligne {label}",
+    "sections": {
+      "resultat": "Résultat",
+      "production": "Production",
+      "aliments": "Aliments",
+      "detailParVague": "Détail par mois de cycle",
+      "entreesDepenses": "Entrées & dépenses détaillées",
+      "ventilations": "Ventilations (par type d'apport, par poste)"
+    },
+    "rows": {
+      "totalEntrees": {
+        "label": "Total des entrées (FCFA)",
+        "formule": "Total des entrées du mois = revenus (chiffre d'affaires des ventes récoltées ce mois) + apports en capital enregistrés ce mois."
+      },
+      "resultatMois": {
+        "label": "Résultat du mois (FCFA)",
+        "formule": "Résultat du mois = revenus + apports - dépenses totales de ce mois."
+      },
+      "empoissonne": {
+        "label": "Empoissonné (t)",
+        "formule": "Empoissonné du mois = biomasse cible (poids objectif x effectif d'alevins prévu) des vagues STOCKÉES ce mois-ci, cumulée sur toutes les vagues concernées."
+      },
+      "ventes": {
+        "label": "Ventes (t)",
+        "formule": "Ventes du mois = biomasse récoltée (poids objectif x effectif d'alevins prévu) des vagues dont le mois de récolte tombe ce mois-ci."
+      },
+      "alevinsCommander": {
+        "label": "Alevins à commander (nb)",
+        "formule": "Alevins à commander du mois = nombre d'alevins à commander (effectif de poissons à vendre majoré de la marge de sécurité alevins, arrondi par excès) pour les vagues stockées ce mois."
+      },
+      "besoinAliments": {
+        "label": "Besoin en aliments (kg)",
+        "formule": "Besoin en aliments du mois = somme, toutes granulométries confondues, du besoin brut en aliment (avant arrondi en sacs) programmé ce mois pour toutes les vagues."
+      },
+      "sacsAchat": {
+        "label": "Sacs à acheter (total)",
+        "formule": "Sacs à acheter du mois = somme, toutes granulométries confondues, des sacs arrondis par excès nécessaires ce mois-ci."
+      },
+      "sacsGranulometrie": {
+        "label": "dont sacs {granule} (total)",
+        "formule": "Sacs {granule} du mois = besoin en aliment de cette granulométrie ce mois-ci, arrondi par excès au sac entier."
+      },
+      "detailSacsParVague": {
+        "label": "Sacs {granule} consommés (indicatif) — Mois {count} du cycle",
+        "formule": "Sacs {granule} consommés, indicatif (ROUND) — Mois {count} du cycle = somme, pour toutes les vagues empoissonnées {count} mois plus tôt, du besoin en aliment {granule} de ce mois, arrondi au sac le plus proche. Distinct de « dont sacs {granule} (total) » ci-dessus, qui est le nombre de sacs À ACHETER (arrondi PAR EXCÈS, ceil) — cette ligne-ci ne doit jamais servir à passer une commande."
+      },
+      "revenus": {
+        "label": "Revenus (FCFA)",
+        "formule": "Revenus du mois = biomasse récoltée ce mois (poids objectif x effectif d'alevins prévu) x prix de vente au kg, pour les vagues dont le mois de récolte tombe ce mois-ci."
+      },
+      "epargneConseillee": {
+        "label": "Épargne conseillée (FCFA)",
+        "formule": "Épargne conseillée du mois = résultat du mois x taux d'épargne (Paramètres), jamais négative même si le résultat du mois l'est."
+      },
+      "coutAliments": {
+        "label": "Coût aliments (FCFA)",
+        "formule": "Coût aliments du mois = somme des coûts d'aliment (sacs calculés x prix par sac, remise de palier appliquée) programmés ce mois pour toutes les vagues et granulométries."
+      },
+      "coutAlevins": {
+        "label": "Coût alevins (FCFA)",
+        "formule": "Coût alevins du mois = nombre d'alevins à commander (effectif de poissons à vendre majoré de la marge de sécurité alevins, arrondi par excès) x prix unitaire de l'alevin, pour les vagues stockées ce mois. La marge de sécurité alevins (Paramètres) est appliquée ici, mais pas au revenu prévu ni au besoin en aliment."
+      },
+      "chargesReparties": {
+        "label": "Charges réparties (FCFA)",
+        "formule": "Charges réparties du mois = charges des postes inclus dans la base de répartition + dépenses générales du journal (catégorie opérationnelle, sans vague associée), réparties entre les vagues actives ce mois."
+      },
+      "investissements": {
+        "label": "Investissements (FCFA)",
+        "formule": "Investissements du mois = somme des dépenses du journal de catégorie Investissement saisies ce mois."
+      },
+      "depensesTotales": {
+        "label": "Dépenses totales (FCFA)",
+        "formule": "Dépenses totales du mois = coût aliments + coût alevins + charges réparties + investissements de ce mois."
+      },
+      "apports": {
+        "label": "Apports (FCFA)",
+        "formule": "Apports du mois = somme des apports en capital enregistrés ce mois."
+      },
+      "soldeCumule": {
+        "label": "Solde cumulé (FCFA)",
+        "formule": "Solde cumulé = solde du mois précédent + revenus - dépenses + apports de ce mois."
+      },
+      "apportParType": {
+        "label": "Apports — {type} (FCFA)",
+        "formule": "Apports du mois de type {type} = somme des apports en capital de ce type enregistrés ce mois. La somme des 2 types (Capital propre + Crédit encaissé) reconstitue exactement la ligne « Apports (FCFA) »."
+      },
+      "depenseParPoste": {
+        "label": "Dépenses — {poste} (FCFA)",
+        "formule": "Dépenses du poste « {poste} » du mois = somme des charges mensuelles de ce poste ce mois-ci (uniquement les postes inclus dans la base de répartition). Avec les autres postes et le journal général, reconstitue exactement la ligne « Charges réparties (FCFA) »."
+      },
+      "depenseJournalGeneral": {
+        "label": "Dépenses — Journal général, non affecté à une vague (FCFA)",
+        "formule": "Journal général du mois = dépenses du journal de catégorie Opérationnelle, sans vague associée, enregistrées ce mois. N'inclut ni les dépenses de journal déjà affectées à une vague (déjà comptées dans sa quote-part directe), ni les investissements. Avec les postes ci-dessus, reconstitue exactement la ligne « Charges réparties (FCFA) »."
+      }
+    }
+  },
+  "tresorerieChart": {
+    "noData": "Aucune donnée à projeter pour ce scénario.",
+    "ariaLabel": "Courbe de trésorerie projetée sur l'horizon du plan",
+    "seriesName": "Trésorerie projetée"
+  },
+  "valeurCalculee": {
+    "defaultAriaLabel": "Voir le détail du calcul"
+  }
+}

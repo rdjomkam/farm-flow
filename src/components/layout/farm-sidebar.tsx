@@ -37,6 +37,7 @@ import {
   NotebookPen,
   Eye,
   Factory,
+  TrendingUp,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -114,6 +115,21 @@ export function FarmSidebar({
       ],
       permissionRequired: Permission.FINANCES_VOIR,
       moduleRequired: SiteModule.VENTES,
+    },
+    {
+      // Sprint PR2 — Module Prévisions (story PR2.5). Un seul item, pas les
+      // 5 sous-entrées visées par ADR-053 §6/sprint §7.3 : Tableau de bord,
+      // Plan des vagues, Prévisions, Dépenses et Paramètres n'existent pas
+      // comme routes autonomes (PR2.3/PR2.4 ont tout construit en onglets
+      // sous /previsions/scenarios/[id]). Pointer vers 5 hrefs qui n'existent
+      // pas produirait des liens morts — voir docs/analysis/pre-analysis-story-PR2.5.md
+      // §5 et les notes de clôture de PR2.5 dans SPRINT-PR2-PREVISIONS.md.
+      labelKey: "modules.previsions",
+      items: [
+        { href: "/previsions/scenarios", labelKey: "items.previsions", icon: TrendingUp },
+      ],
+      permissionRequired: Permission.PREVISIONS_VOIR,
+      moduleRequired: SiteModule.PREVISIONS,
     },
     {
       labelKey: "groups.reproduction",

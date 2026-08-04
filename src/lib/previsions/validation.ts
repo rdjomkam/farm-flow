@@ -46,7 +46,7 @@ export function validerSommeRepartitionMoisAliment(repartitions: RepartitionMois
  *
  * Un ensemble de `PalierRemise` dont les seuils ne sont pas strictement
  * croissants, dans leur ordre d'evaluation explicite (`ordre`), est un
- * invariant viole : `appliquerPalierRemise` (aliments.ts) presuppose que
+ * invariant viole : `determinerPourcentageRemise` (aliments.ts) presuppose que
  * le DERNIER palier atteint (en parcourant les paliers tries par `ordre`)
  * est le plus favorable — cette hypothese est fausse si les seuils ne
  * sont pas strictement croissants dans cet ordre.
@@ -63,10 +63,33 @@ export function validerPaliersRemiseCroissants(paliers: PalierRemiseInput[]): vo
   const sorted = [...paliers].sort((a, b) => a.ordre - b.ordre);
 
   for (let i = 1; i < sorted.length; i++) {
-    if (!sorted[i].seuilSacs.gt(sorted[i - 1].seuilSacs)) {
+    if (!sorted[i].seuilTonnes.gt(sorted[i - 1].seuilTonnes)) {
       throw new Error(
-        `Les paliers de remise doivent avoir des seuils strictement croissants dans leur ordre d'evaluation (ordre=${sorted[i].ordre}, seuilSacs=${sorted[i].seuilSacs.toString()} n'est pas > ordre=${sorted[i - 1].ordre}, seuilSacs=${sorted[i - 1].seuilSacs.toString()}).`
+        `Les paliers de remise doivent avoir des seuils strictement croissants dans leur ordre d'evaluation (ordre=${sorted[i].ordre}, seuilTonnes=${sorted[i].seuilTonnes.toString()} n'est pas > ordre=${sorted[i - 1].ordre}, seuilTonnes=${sorted[i - 1].seuilTonnes.toString()}).`
       );
     }
+  }
+}
+
+/**
+ * validerSommeApprovisionnementArticles — validation bloquante (ADR-053 §12.2,
+ * arbitrage 3, amendement Sprint PR2-quater).
+ *
+ * La somme des `partApprovisionnementPct` de tous les `AlimentArticlePrevision`
+ * d'un meme calibre (`AlimentPrevision`) doit valoir EXACTEMENT 100 — meme
+ * patron que `validerSommeRepartitionMoisAliment` ci-dessus : bloquante,
+ * appelee dans la MEME transaction Prisma que l'ecriture (R4), jamais une
+ * contrainte SQL (un `CHECK` ne voit qu'une ligne a la fois).
+ *
+ * @param parts - les `partApprovisionnementPct` de TOUS les articles d'UN SEUL calibre (remplace-tout)
+ * @throws {Error} si la somme des parts != 100
+ */
+export function validerSommeApprovisionnementArticles(parts: Decimal[]): void {
+  const somme = parts.reduce((s, p) => s.plus(p), new Decimal(0));
+
+  if (!somme.eq(100)) {
+    throw new Error(
+      `La somme des parts d'approvisionnement des articles d'un aliment previsionnel doit valoir 100 (obtenu : ${somme.toString()}).`
+    );
   }
 }

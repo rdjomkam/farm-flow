@@ -270,10 +270,71 @@ def extraire_entrees_modele(wb):
     }
 
 
+def extraire_detail_par_vague(pv):
+    """Bloc « DÉTAIL PAR VAGUE — sacs consommés dans le mois (indicatif) » (Prévisions!A11:V23).
+
+    Neuf séries numériques, `read_row` sur B..V comme toutes les autres séries de ce script,
+    jamais recalculées :
+
+      - lignes 13/14/15 = 1er mois de cycle, granulométries 2 mm / 3 mm / 4 mm
+      - lignes 17/18/19 = 2e mois de cycle, 2 mm / 3 mm / 4 mm
+      - lignes 21/22/23 = 3e mois de cycle, 2 mm / 3 mm / 4 mm
+
+    Correspondance ligne <-> série vérifiée manuellement sur les libellés de colonne A avant
+    extraction (voir rapport de test associé) — pas présumée.
+
+    Les lignes 12/16/20 (« Vague en 1er/2e/3e mois de cycle ») portent un lookup INDEX/MATCH qui
+    n'affiche qu'UNE vague même quand plusieurs coïncident le même mois — défaut bénin déjà
+    documenté (ADR-053 §7, « Défaut bénin confirmé »). Elles ne sont PAS extraites comme séries
+    numériques ; on ne conserve que leur valeur du mois 1 (colonne B) à titre de métadonnée
+    explicitement marquée comme défectueuse, jamais consommée par le moteur.
+
+    Ces neuf séries sont des sacs CONSOMMÉS (ROUND), pas des sacs À ACHETER (CEIL, lignes 7-10) —
+    voir README, section correspondante. Elles ne sont affectées ni par le patch `Dépenses!B10`
+    (une dépense en FCFA, sans rapport avec un décompte de sacs) ni par la différence entre les
+    scénarios A et B (apports/investissements, eux aussi de purs montants) : identiques dans les
+    deux fixtures, comme le reste de `entreesModele`.
+    """
+    granulometries = ["2mm", "3mm", "4mm"]
+    blocs = [
+        ("moisCycle1", 13, 12),
+        ("moisCycle2", 17, 16),
+        ("moisCycle3", 21, 20),
+    ]
+    detail = {
+        "$description": (
+            "DÉTAIL PAR VAGUE — sacs consommés dans le mois (indicatif), Prévisions!A11:V23. "
+            "Un ROUND (sacs consommés), pas le CEIL de 'Sacs à acheter' (lignes 7-10, sacs à "
+            "commander) — voir README."
+        ),
+        "$source": "Prévisions!B13:V15, B17:V19, B21:V23",
+    }
+    for cle, row_2mm, row_label in blocs:
+        row_3mm, row_4mm = row_2mm + 1, row_2mm + 2
+        detail[cle] = {
+            "2mm": to_json(read_row(pv, row_2mm)),
+            "3mm": to_json(read_row(pv, row_3mm)),
+            "4mm": to_json(read_row(pv, row_4mm)),
+            "$source": f"Prévisions!B{row_2mm}:V{row_2mm}, B{row_3mm}:V{row_3mm}, B{row_4mm}:V{row_4mm}",
+        }
+        detail[f"{cle}VagueLabelIndexMatch"] = {
+            "valeurMois1": pv[f"B{row_label}"].value,
+            "$source": f"Prévisions!B{row_label}",
+            "$defectueux": (
+                "Lookup INDEX/MATCH — n'affiche qu'UNE vague même quand plusieurs coïncident le "
+                "même mois (ADR-053 §7, « Défaut bénin confirmé »). Métadonnée d'affichage "
+                "uniquement, jamais une série numérique, jamais consommée par le moteur : les "
+                "quantités ci-dessus (SUMIFS) cumulent déjà correctement toutes les vagues."
+            ),
+        }
+    return detail
+
+
 def main():
     wb = openpyxl.load_workbook(WORKBOOK, data_only=True)
     pv, dp, ba = wb["Prévisions"], wb["Dépenses"], wb["Besoins aliments"]
     entrees_modele = extraire_entrees_modele(wb)
+    detail_par_vague = extraire_detail_par_vague(pv)
 
     mois = [pv[f"{c}3"].value.strftime("%Y-%m") for c in COLS]
 
@@ -344,6 +405,7 @@ def main():
                 "3mm": to_json(sacs_3mm),
                 "4mm": to_json(sacs_4mm),
             },
+            "detailParVagueSacs": detail_par_vague,
         },
         "logistique": {
             "voyagesAliments": to_json(voyages_aliments),

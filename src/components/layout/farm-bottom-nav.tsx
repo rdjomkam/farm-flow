@@ -39,6 +39,7 @@ import {
   Fish,
   ThermometerSun,
   Factory,
+  TrendingUp,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -170,6 +171,24 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         labelKey: "items.depenses",
         icon: Receipt,
         permissionRequired: Permission.DEPENSES_VOIR,
+      },
+    ],
+  },
+  {
+    // Sprint PR2 — Module Prévisions (story PR2.5). Un seul item : les 5
+    // sous-entrées visées par le sprint (§7.3) n'ont pas de route autonome —
+    // tout vit en onglets sous /previsions/scenarios/[id] (PR2.3/PR2.4).
+    // Voir le commentaire equivalent dans farm-sidebar.tsx et les notes de
+    // clôture de PR2.5.
+    groupKey: "previsions",
+    gatePermission: Permission.PREVISIONS_VOIR,
+    items: [
+      {
+        href: "/previsions/scenarios",
+        labelKey: "items.previsions",
+        icon: TrendingUp,
+        permissionRequired: Permission.PREVISIONS_VOIR,
+        moduleRequired: SiteModule.PREVISIONS,
       },
     ],
   },

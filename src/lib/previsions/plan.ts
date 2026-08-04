@@ -85,6 +85,45 @@ export function genererPlanEmpoissonnement(
 }
 
 /**
+ * calculerAlevinsACommander — ADR-053 decision 4 / exigences fonctionnelles
+ * §4.3.
+ *
+ * `nb_alevins_a_commander = ceil(nb_poissons_a_vendre * (1 + marge_securite))`
+ *
+ * La marge de securite absorbe la mortalite (aucun taux de survie explicite
+ * au MVP — ADR-053 decision 4) : elle gonfle le nombre d'alevins a acheter au
+ * demarrage de la vague par rapport au nombre de poissons vises a la vente en
+ * fin de cycle.
+ *
+ * UNITE — SITE UNIQUE DE CONVERSION (story PR2bis.3, famille ERR-139/ERR-141) :
+ * `margeSecuriteAlevinsPct` est saisi et persiste sur l'echelle 0..100 (ex.
+ * `10` pour "10 %"), exactement comme `PalierRemise.pourcentageRemise`
+ * (`aliments.ts`, `appliquerPalierRemise`) — jamais une fraction 0..1. La
+ * conversion en fraction (`/100`) est faite UNE SEULE FOIS, ici, jamais
+ * dupliquee ailleurs dans le moteur ou l'orchestration.
+ *
+ * `Decimal` STRICT jusqu'au bout — jamais `Math.ceil`, jamais d'arithmetique
+ * en `number` avant le `.ceil()` final : `Math.ceil(25000 * 1.1)` renvoie
+ * `27501` au lieu de `27500` (imprecision binaire IEEE 754), ce qui casse la
+ * vague V5 des deux fixtures de recette (`25000 * 1.1 = 27500` exactement).
+ *
+ * @param poissonsAVendreNb - nombre de poissons vises a la vente pour cette
+ *   vague (`VaguePrevuePourCalcul.effectifAlevinsPrevu`, ADR-053 section 3.6 —
+ *   meme grandeur que celle qui alimente `calculerRevenuPrevu` et
+ *   `tonnageCibleKg` ; homonymie de nom deja signalee, non traitee par cette
+ *   fonction ni par cette story)
+ * @param margeSecuriteAlevinsPct - `ParametresPrevision.margeSecuriteAlevinsPct`, echelle 0..100
+ * @returns nombre d'alevins a commander, entier (arrondi par exces)
+ */
+export function calculerAlevinsACommander(
+  poissonsAVendreNb: number,
+  margeSecuriteAlevinsPct: Decimal
+): number {
+  const fractionMarge = margeSecuriteAlevinsPct.dividedBy(100);
+  return new Decimal(poissonsAVendreNb).times(new Decimal(1).plus(fractionMarge)).ceil().toNumber();
+}
+
+/**
  * Avance une date d'un nombre de mois fractionnaire (peut etre < 1).
  *
  * La partie entiere des mois avance via `setUTCMonth` (respecte les

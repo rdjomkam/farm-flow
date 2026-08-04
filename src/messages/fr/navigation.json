@@ -13,7 +13,9 @@
     "portefeuille": "Portefeuille",
     "utilisateurs": "Utilisateurs",
     "notes": "Notes",
-    "previsions": "Prévisions"
+    "previsions": "Prévisions",
+    "adminCommissions": "Gestion des commissions",
+    "adminRemises": "Gestion des remises"
   },
   "items": {
     "dashboard": "Dashboard",
@@ -100,7 +102,8 @@
     "choisirSite": "Choisir un site",
     "selectionnerSite": "Sélectionner un site",
     "enLigne": "En ligne",
-    "horsLigne": "Hors ligne"
+    "horsLigne": "Hors ligne",
+    "previsions": "Prévisions"
   },
   "roles": {
     "admin": "Administrateur",

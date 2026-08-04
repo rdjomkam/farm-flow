@@ -28,9 +28,15 @@
  * ce fichier.
  */
 import { Decimal } from "../../decimal-config";
-import { calculerBesoinAlimentMensuel, calculerCoutAlimentVague, calculerCoutAlimentGranulometrieParMois } from "../../aliments";
+import {
+  calculerBesoinAlimentMensuel,
+  calculerCoutAlimentVague,
+  calculerCoutAlimentGranulometrieParMois,
+  determinerPourcentageRemise,
+} from "../../aliments";
 import { calculerLogistiqueMensuelle } from "../../logistique";
-import { genererSerieTresorerie } from "../../tresorerie";
+import { calculerAlevinsACommander } from "../../plan";
+import { genererSerieTresorerie, calculerEpargne } from "../../tresorerie";
 import type { AlimentPrevisionCalcInput, PalierRemiseInput } from "../../types";
 import type { AlimentParVagueCalcInput, AlimentParVagueMensuelCalcInput } from "../../aliments";
 import type { LogistiqueMensuelleResult } from "../../logistique";
@@ -128,47 +134,77 @@ export interface CoutAlimentVagueResult {
 }
 
 /**
+ * buildPaliersRemise — transpose les paliers du jeu d'or
+ * (`entreesModele.paliersRemise`, `Parametres!B16:C19`) dans la forme
+ * d'entree du moteur : `seuilTonnes` passe DIRECTEMENT, tel qu'un
+ * utilisateur le saisit dans l'onglet Parametres, sans aucune mise a
+ * l'echelle. Seule conversion : le pourcentage de remise, exprime en
+ * fraction 0..1 dans le JSON, attendu sur 0..100 par le moteur — meme
+ * convention que `pctFixtureVersMoteur`, utilisee partout ailleurs dans ce
+ * fichier.
+ *
+ * Story PR2sept.3 (ADR-053 §13.4) : cette fonction remplace les DEUX
+ * adaptations d'unite `seuilTonnes x sacsParTonneStandard` qui existaient
+ * ici. Elles fabriquaient une entree qu'AUCUN formulaire ne peut produire —
+ * un harnais de recette qui doit transformer ses entrees pour que le moteur
+ * les accepte signale un defaut de modele, il ne le compense pas.
+ */
+export function buildPaliersRemise(fixture: GoldenFixture): PalierRemiseInput[] {
+  return fixture.entreesModele.paliersRemise.map((p) => ({
+    ordre: p.ordre,
+    seuilTonnes: new Decimal(p.seuilTonnes),
+    pourcentageRemise: pctFixtureVersMoteur(p.remisePct), // 0..1 -> 0..100
+  }));
+}
+
+export interface RemisePctVagueResult {
+  vague: string;
+  pourcentageRemiseApplique: Decimal;
+}
+
+/**
+ * buildRemisePctParVague — reproduit `planVagues[].remisePct` du jeu d'or
+ * (0 / 0,02 / 0,04 / 0,06) via `determinerPourcentageRemise` (moteur reel),
+ * a partir du seul `objectifTonnes` de la vague. Recette du POURCENTAGE
+ * RETENU lui-meme, pas seulement du montant qui en decoule (ADR-053 §13.4).
+ */
+export function buildRemisePctParVague(fixture: GoldenFixture): RemisePctVagueResult[] {
+  const paliers = buildPaliersRemise(fixture);
+
+  return fixture.entreesModele.planVagues.map((vague) => ({
+    vague: vague.vague,
+    pourcentageRemiseApplique: determinerPourcentageRemise(new Decimal(vague.objectifTonnes), paliers),
+  }));
+}
+
+/**
  * Reconstruit `planVagues[].coutAlimentsFCFA` (cout aliment TOTAL sur tout
  * le cycle d'une vague, apres remise) via `calculerCoutAlimentVague`.
  *
- * Adaptation d'unite necessaire au point d'appel (pas une reimplementation
- * de formule) : `PalierRemise` du schema ADR-053 (section 3.4) et le moteur
- * (`appliquerPalierRemise`) raisonnent en SEUIL DE SACS, alors que le jeu
- * d'or applique la remise sur le TONNAGE de la vague (`paliersRemise[].seuilTonnes`,
- * verifie numeriquement contre les 19 vagues, voir rapport). Les deux sont
- * equivalents a une mise a l'echelle pres : `sacsCalcules` de chaque ligne =
- * le total de sacs de CETTE granulometrie sur TOUT le cycle de la vague
- * (`objectifTonnes * sacsParTonneStandard`), et le seuil est mis a l'echelle
- * identiquement (`seuilTonnes * sacsParTonneStandard` de la MEME
- * granulometrie) — le rapport (sacs/seuil) est alors strictement egal au
- * rapport (tonnage vague/seuilTonnes), donc la decision de remise obtenue
- * par `appliquerPalierRemise` (interne a `calculerCoutAlimentVague`) est
- * identique a celle du classeur, quelle que soit la granulometrie.
+ * Les seuils du jeu d'or sont passes TELS QUELS (en tonnes) et le tonnage
+ * vise de la vague (`objectifTonnes`, entree du classeur) decide le palier —
+ * exactement la regle du §4.3 des exigences, exactement ce qu'un utilisateur
+ * saisit dans l'onglet Parametres (ADR-053 §13.3).
+ *
+ * `sacsCalcules` de chaque ligne = total de sacs de CETTE granulometrie sur
+ * TOUT le cycle, `ceil` PAR granulometrie (README des fixtures,
+ * « Verifications numeriques effectuees », point 1) — jamais une valeur
+ * fractionnaire, jamais un ceil sur un besoin agrege.
  */
 export function buildCoutAlimentsParVague(fixture: GoldenFixture): CoutAlimentVagueResult[] {
+  const paliers = buildPaliersRemise(fixture);
+
   return fixture.entreesModele.planVagues.map((vague) => {
     const objectifTonnes = new Decimal(vague.objectifTonnes);
 
-    const lignes: AlimentParVagueCalcInput[] = fixture.entreesModele.aliments.map((a) => {
-      const sacsParTonneStandard = new Decimal(a.sacsParTonneStandard);
-      const sacsCalcules = objectifTonnes.times(sacsParTonneStandard).toNumber();
+    const lignes: AlimentParVagueCalcInput[] = fixture.entreesModele.aliments.map((a) => ({
+      alimentPrevisionId: a.granulometrie,
+      sacsCalcules: objectifTonnes.times(a.sacsParTonneStandard).ceil().toNumber(),
+      sacsSaisis: null,
+      prixSacFCFA: new Decimal(a.prixSacFCFA),
+    }));
 
-      const paliers: PalierRemiseInput[] = fixture.entreesModele.paliersRemise.map((p) => ({
-        ordre: p.ordre,
-        seuilSacs: new Decimal(p.seuilTonnes).times(sacsParTonneStandard),
-        pourcentageRemise: new Decimal(p.remisePct).times(100), // 0..1 -> 0..100
-      }));
-
-      return {
-        alimentPrevisionId: a.granulometrie,
-        sacsCalcules,
-        sacsSaisis: null,
-        prixSacFCFA: new Decimal(a.prixSacFCFA),
-        paliers,
-      };
-    });
-
-    return { vague: vague.vague, coutFCFA: calculerCoutAlimentVague(lignes) };
+    return { vague: vague.vague, coutFCFA: calculerCoutAlimentVague(lignes, objectifTonnes, paliers) };
   });
 }
 
@@ -177,6 +213,29 @@ export function buildCoutAlimentsParVague(fixture: GoldenFixture): CoutAlimentVa
  * Gap 1 comble (transport/logistique, src/lib/previsions/logistique.ts).
  * ---------------------------------------------------------------------
  */
+
+export interface AlevinsACommanderVagueResult {
+  vague: string;
+  alevinsACommanderNb: number;
+}
+
+/**
+ * buildAlevinsACommanderParVague — reproduit `planVagues[].alevinsACommanderNb`
+ * (grain PAR VAGUE, tolerance 0) via `calculerAlevinsACommander` (moteur reel,
+ * `plan.ts`), a partir de `poissonsAVendreNb` (entree) et
+ * `margeSecuriteAlevinsPct` (entree de scenario) — jamais recopie ni
+ * recalcule a la main (story PR2bis.3, ERR-141/ERR-142).
+ */
+export function buildAlevinsACommanderParVague(fixture: GoldenFixture): AlevinsACommanderVagueResult[] {
+  const margeSecuriteAlevinsPct = pctFixtureVersMoteur(
+    fixture.entreesModele.parametresScenario.margeSecuriteAlevinsPct
+  );
+
+  return fixture.entreesModele.planVagues.map((vague) => ({
+    vague: vague.vague,
+    alevinsACommanderNb: calculerAlevinsACommander(vague.poissonsAVendreNb, margeSecuriteAlevinsPct),
+  }));
+}
 
 export interface LogistiqueCalendrierResult {
   voyagesAliments: number[];
@@ -213,8 +272,15 @@ export interface LogistiqueCalendrierResult {
  *   (`calculerRevenuPrevu`), pas un tonnage mensuel agrege exploitable ici
  *   sans fabriquer un `effectifFinal` factice — voir le rapport de recette
  *   pour la discussion de ce choix.
- * - `entreesModele.planVagues[].alevinsACommanderNb` — veritable ENTREE de
- *   modele (plan d'empoissonnement), consommee telle quelle.
+ * - `entreesModele.planVagues[].alevinsACommanderNb` — n'est PLUS consomme
+ *   telle quelle depuis la fixture (story PR2bis.3, ERR-141/ERR-142) : c'est
+ *   une SORTIE CALCULEE du moteur reel (`calculerAlevinsACommander`,
+ *   `plan.ts`), reconstruite ici a partir de
+ *   `entreesModele.planVagues[].poissonsAVendreNb` (veritable entree, = D) et
+ *   de `entreesModele.parametresScenario.margeSecuriteAlevinsPct` (veritable
+ *   entree de scenario, = fraction du jeu d'or, convertie via
+ *   `pctFixtureVersMoteur`) — jamais recopiee ni recalculee a la main dans ce
+ *   fichier.
  *
  * @param fixture - fixture du jeu d'or (scenario A ou B)
  * @param sacsTotalCalcule - sortie de `buildBesoinsAlimentsCalendrier(...).sacsTotal` (moteur reel, PAS le jeu d'or)
@@ -226,12 +292,19 @@ export function buildLogistiqueCalendrier(
   nbMoisCalendrier: number
 ): LogistiqueCalendrierResult {
   const { transport } = fixture.entreesModele;
+  const margeSecuriteAlevinsPct = pctFixtureVersMoteur(
+    fixture.entreesModele.parametresScenario.margeSecuriteAlevinsPct
+  );
 
   const alevinsParMoisCalendaire: Decimal[] = Array.from({ length: nbMoisCalendrier }, () => new Decimal(0));
   for (const vague of fixture.entreesModele.planVagues) {
     const idx = indexMoisCalendaire(fixture.mois, vague.moisEmpoissonnement);
     if (idx < nbMoisCalendrier) {
-      alevinsParMoisCalendaire[idx] = alevinsParMoisCalendaire[idx].plus(vague.alevinsACommanderNb);
+      // SORTIE CALCULEE du moteur reel (`calculerAlevinsACommander`), jamais
+      // lue depuis `vague.alevinsACommanderNb` du jeu d'or (voir JSDoc
+      // ci-dessus) — story PR2bis.3, ERR-141/ERR-142.
+      const alevinsACommanderNb = calculerAlevinsACommander(vague.poissonsAVendreNb, margeSecuriteAlevinsPct);
+      alevinsParMoisCalendaire[idx] = alevinsParMoisCalendaire[idx].plus(alevinsACommanderNb);
     }
   }
 
@@ -292,11 +365,11 @@ export interface CoutAlimentLigneCalculee {
  * `calculerCoutAlimentGranulometrieParMois` (moteur reel, compose
  * `appliquerPalierRemise` + `apportionnerCoutAlimentMensuel`).
  *
- * Reutilise EXACTEMENT la meme adaptation d'unite tonnes->sacs que
- * `buildCoutAlimentsParVague` (section 4.2 du rapport de recette) : le
- * total de sacs du CYCLE COMPLET sert de base a la decision de remise,
- * jamais un volume mensuel seul (voir la docstring de
- * `apportionnerCoutAlimentMensuel` dans le moteur).
+ * Memes entrees que `buildCoutAlimentsParVague` : seuils du jeu d'or passes
+ * TELS QUELS (en tonnes) et tonnage vise de la vague comme unique grandeur
+ * de decision du palier — decision prise une fois pour la vague, jamais par
+ * mois ni par calibre (voir la docstring de `apportionnerCoutAlimentMensuel`
+ * dans le moteur).
  *
  * Ne filtre PAS sur `nbMoisCalendrier` ici (un mois de cycle peut
  * legitimement depasser l'horizon du plan pour une vague tardive) — le
@@ -305,28 +378,19 @@ export interface CoutAlimentLigneCalculee {
  */
 export function buildCoutAlimentsParVagueEtMois(fixture: GoldenFixture): CoutAlimentLigneCalculee[] {
   const lignes: CoutAlimentLigneCalculee[] = [];
+  const paliers = buildPaliersRemise(fixture);
 
   for (const vague of fixture.entreesModele.planVagues) {
     const moisDepart = indexMoisCalendaire(fixture.mois, vague.moisEmpoissonnement);
     const objectifTonnes = new Decimal(vague.objectifTonnes);
 
     for (const a of fixture.entreesModele.aliments) {
-      const sacsParTonneStandard = new Decimal(a.sacsParTonneStandard);
-      const sacsCalculesCycle = objectifTonnes.times(sacsParTonneStandard).toNumber();
-
-      // Meme mise a l'echelle tonnes->sacs que buildCoutAlimentsParVague (section 4.2 du rapport).
-      const paliers: PalierRemiseInput[] = fixture.entreesModele.paliersRemise.map((p) => ({
-        ordre: p.ordre,
-        seuilSacs: new Decimal(p.seuilTonnes).times(sacsParTonneStandard),
-        pourcentageRemise: new Decimal(p.remisePct).times(100),
-      }));
-
       const ligne: AlimentParVagueMensuelCalcInput = {
         alimentPrevisionId: a.granulometrie,
-        sacsCalculesCycle,
+        // `ceil` PAR granulometrie (README des fixtures, point 1).
+        sacsCalculesCycle: objectifTonnes.times(a.sacsParTonneStandard).ceil().toNumber(),
         sacsSaisisCycle: null,
         prixSacFCFA: new Decimal(a.prixSacFCFA),
-        paliers,
         repartitions: [
           { moisCycle: 1, pourcentage: pctFixtureVersMoteur(a.repartitionPctMois1) },
           { moisCycle: 2, pourcentage: pctFixtureVersMoteur(a.repartitionPctMois2) },
@@ -334,7 +398,7 @@ export function buildCoutAlimentsParVagueEtMois(fixture: GoldenFixture): CoutAli
         ],
       };
 
-      const resultatsMois = calculerCoutAlimentGranulometrieParMois(ligne);
+      const resultatsMois = calculerCoutAlimentGranulometrieParMois(ligne, objectifTonnes, paliers);
       for (const r of resultatsMois) {
         lignes.push({
           vague: vague.vague,
@@ -425,6 +489,12 @@ export interface ChaineFinanciereCalendrierResult {
   depensesTotalesFCFA: Decimal[];
   /** correspond a resultats.resultat */
   resultatFCFA: Decimal[];
+  /**
+   * correspond a resultats.epargne (story PR2q.2) —
+   * `calculerEpargne(resultatFCFA[m], tauxEpargnePct)`, moteur reel
+   * (`tresorerie.ts`), jamais une formule reimplementee ici.
+   */
+  epargneFCFA: Decimal[];
   /** correspond a resultats.tresorerie (serie cumulee, genererSerieTresorerie) */
   tresorerie: TresorerieMoisResult[];
 }
@@ -494,7 +564,12 @@ export function buildChaineFinanciereCalendrier(
 
   const depensesTotalesFCFA: Decimal[] = [];
   const resultatFCFA: Decimal[] = [];
+  const epargneFCFA: Decimal[] = [];
   const moisOrdonnes: { moisAbsolu: number; revenus: Decimal; depenses: Decimal; apports: Decimal }[] = [];
+  // tauxEpargnePct : fraction 0..1 dans la fixture (meme convention que
+  // margeSecuriteAlevinsPct) -> echelle 0..100 attendue par le moteur, UN
+  // SEUL site de conversion (voir helpers.ts, pctFixtureVersMoteur).
+  const tauxEpargnePct = pctFixtureVersMoteur(fixture.entreesModele.parametresScenario.tauxEpargnePct);
 
   for (let m = 0; m < nbMoisCalendrier; m++) {
     const autresDepenses = baseRepartitionFCFA[m].plus(fixture.resultats.investissements[m]);
@@ -502,7 +577,9 @@ export function buildChaineFinanciereCalendrier(
     depensesTotalesFCFA.push(depensesTotales);
 
     const totalEntrees = new Decimal(fixture.entrees.chiffreAffaires[m]).plus(fixture.resultats.apportsCapital[m]);
-    resultatFCFA.push(totalEntrees.minus(depensesTotales));
+    const resultatMois = totalEntrees.minus(depensesTotales);
+    resultatFCFA.push(resultatMois);
+    epargneFCFA.push(calculerEpargne(resultatMois, tauxEpargnePct));
 
     moisOrdonnes.push({
       moisAbsolu: m,
@@ -517,5 +594,5 @@ export function buildChaineFinanciereCalendrier(
     new Decimal(fixture.entreesModele.parametresScenario.tresorerieInitialeFCFA)
   );
 
-  return { baseRepartitionFCFA, depensesTotalesFCFA, resultatFCFA, tresorerie };
+  return { baseRepartitionFCFA, depensesTotalesFCFA, resultatFCFA, epargneFCFA, tresorerie };
 }

@@ -39,7 +39,23 @@ export interface GoldenVague {
   coutAlimentsMois1FCFA: number;
   coutAlimentsMois2FCFA: number;
   coutAlimentsMois3FCFA: number;
-  /** nombre d'alevins a commander au demarrage de cette vague — ENTREE (entreesModele.planVagues), consommee par la logistique alevins (voyages de mise en charge) */
+  /**
+   * Nombre de poissons vises a la vente en fin de cycle pour cette vague —
+   * ENTREE (entreesModele.planVagues), = D dans le vocabulaire de la story
+   * PR2bis.3. Alimente `tonnageCibleKg`/`calculerRevenuPrevu` cote moteur,
+   * jamais la logistique alevins (voir `alevinsACommanderNb` ci-dessous).
+   */
+  poissonsAVendreNb: number;
+  /**
+   * Nombre d'alevins a commander au demarrage de cette vague — SORTIE CALCULEE
+   * du moteur (`calculerAlevinsACommander(poissonsAVendreNb, margeSecuriteAlevinsPct)`,
+   * `plan.ts`), = E dans le vocabulaire de la story PR2bis.3. Ce champ a
+   * longtemps ete traite a tort comme une entree brute du jeu d'or (ERR-141/
+   * ERR-142) : `margeSecuriteAlevinsPct` etait saisi et affiche mais jamais
+   * consomme par le calcul. Depuis la correction, ce nombre est reconstruit
+   * par le moteur reel et compare a cette valeur du jeu d'or, tolerance 0
+   * (entier) — jamais recopie directement dans un test.
+   */
   alevinsACommanderNb: number;
   /** cout d'achat des alevins (0 si produits en interne, "NON" — toujours 0 dans les deux fixtures du jeu d'or) — ENTREE (entreesModele.planVagues) */
   coutAlevinsFCFA: number;
@@ -58,6 +74,8 @@ export interface GoldenFixture {
     parametresScenario: {
       prixVenteKgFCFA: number;
       poidsMoyenVenteKg: number;
+      margeSecuriteAlevinsPct: number;
+      prixAlevinUnitaireFCFA: number;
       tauxEpargnePct: number;
       tresorerieInitialeFCFA: number;
     };
@@ -84,6 +102,17 @@ export interface GoldenFixture {
     kgParGranulometrie: Record<string, number[]>;
     sacsTotal: number[];
     sacsParGranulometrie: Record<string, number[]>;
+    /**
+     * Story PR2sex.2 (ADR-053 §7/§12) — « DETAIL PAR VAGUE — sacs consommes
+     * dans le mois (indicatif) », `Previsions!A11:V23`. Cle = `moisCycleN`
+     * (N = 1..3 dans le jeu d'or), sous-cle = granulometrie ("2mm"/"3mm"/"4mm"),
+     * valeur = serie de 21 sacs (un ROUND, jamais le CEIL de `sacsTotal`/
+     * `sacsParGranulometrie` ci-dessus). Le nommage `moisCycleN` est une
+     * particularite DU JEU D'OR uniquement (fixture JSON) — jamais reproduit
+     * dans la signature du moteur (`detailParVagueSacs: Record<number, ...>`,
+     * indexation par ENTIER generique, ADR-053 §12.5).
+     */
+    detailParVagueSacs: Record<string, Record<string, number[]>>;
   };
   logistique: {
     voyagesAliments: number[];

@@ -130,6 +130,7 @@ export default async function VaguesPage() {
         poidsObjectifKg,
         biomasse,
         totalVenduKg: Math.round(totalVenduKg * 100) / 100,
+        vaguePrevueId: (v as { vaguePrevueId?: string | null }).vaguePrevueId ?? null,
       };
     });
 

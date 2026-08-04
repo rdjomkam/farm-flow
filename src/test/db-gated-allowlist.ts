@@ -81,4 +81,31 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
       "du moteur, sans équivalent mockable significatif.",
     adr: "ADR-052",
   },
+  {
+    file: "src/lib/queries/__tests__/previsions-int-fractional-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve empiriquement (story PR2.1) le comportement RÉEL du client Prisma face à une " +
+      "valeur fractionnaire écrite dans une colonne Int (AlimentParVaguePrevue.sacsCalcules/ " +
+      "sacsSaisis) : troncature silencieuse (Math.trunc, pas de rejet), différent du driver " +
+      "pg nu (rejet 22P02) — un mock ne peut pas reproduire cette divergence réelle entre le " +
+      "client Prisma et Postgres, seul un vrai aller-retour le révèle (bug documenté dans " +
+      "docs/tests/rapport-story-PR2.1.md).",
+    adr: "ADR-052",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-scenarios-copie-produits-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres (contrainte NOT NULL réelle sur " +
+      "AlimentPrevision) le chemin nominal de création de scénario sur un site avec des " +
+      "Produit ALIMENT actifs — régression PR2-quater où tx.alimentPrevision.create() " +
+      "omettait un champ requis (500 systématique) : un mock JS (previsions-fake-db.ts) " +
+      "n'applique aucune contrainte NOT NULL et ne peut jamais faire échouer un create() " +
+      "auquel il manque un champ requis, seul un vrai Prisma Client contre un vrai " +
+      "Postgres peut exercer cette validation. Couvre aussi le rollback complet " +
+      "(ScenarioPrevision + ParametresPrevision + AlimentPrevision + " +
+      "AlimentArticlePrevision) quand un Produit ALIMENT actif n'a pas de tailleGranule.",
+    adr: "ADR-052",
+  },
 ];

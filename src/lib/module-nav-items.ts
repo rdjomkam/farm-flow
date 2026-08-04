@@ -29,6 +29,7 @@ import {
   Settings,
   Zap,
   CreditCard,
+  TrendingUp,
 } from "lucide-react";
 
 export interface SubNavItem {
@@ -157,6 +158,23 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     matchPaths: ["/mon-portefeuille"],
     items: [
       { href: "/mon-portefeuille", label: "Mon portefeuille", itemKey: "monPortefeuille", icon: Wallet },
+    ],
+  },
+  // Sprint PR2 — Module Prévisions (story PR2.5, gate: PREVISIONS_VOIR).
+  // AJOUTE ICI PAR COHÉRENCE DOCUMENTAIRE AVEC ADR-053 §6 UNIQUEMENT — ce
+  // fichier n'est consommé par aucun composant réellement rendu (vérifié par
+  // grep exhaustif : ses anciens consommateurs, sidebar.tsx/bottom-nav.tsx,
+  // ont été supprimés par le Sprint NC sans que MODULE_NAV soit lui-même
+  // migré ou supprimé). La navigation Prévisions réellement affichée vit
+  // dans farm-sidebar.tsx (NAV_GROUPS) et farm-bottom-nav.tsx (SHEET_GROUPS).
+  // Un seul item ici (pas les 5 de l'ADR-053 §6/sprint §7.3) : aucune des
+  // 5 routes cibles n'existe comme page autonome (tout vit en onglets sous
+  // /previsions/scenarios/[id]) — voir docs/analysis/pre-analysis-story-PR2.5.md.
+  {
+    label: "Prévisions",
+    matchPaths: ["/previsions"],
+    items: [
+      { href: "/previsions/scenarios", label: "Prévisions", itemKey: "previsions", icon: TrendingUp },
     ],
   },
 ];

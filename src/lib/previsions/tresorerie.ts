@@ -65,6 +65,31 @@ export function genererSerieTresorerie(
   return result;
 }
 
+/**
+ * calculerEpargne — story PR2q.2 (ADR-053, jeu d'or "Paramètres!B36").
+ *
+ * `epargne(M) = max(0, resultat(M)) x tauxEpargnePct` — jamais un montant
+ * negatif : un mois deficitaire n'epargne rien, il ne "deseparge" pas non
+ * plus (pas de compensation entre mois, chaque mois est independant).
+ *
+ * `tauxEpargnePct` est sur l'echelle 0..100 (meme convention que
+ * `margeSecuriteAlevinsPct`, ADR-053 decision 4) — l'appelant est
+ * responsable de la conversion depuis toute autre echelle (ex. fraction
+ * 0..1 du jeu d'or, `pctFixtureVersMoteur` cote recette) AVANT d'appeler
+ * cette fonction : un seul site de conversion d'echelle, jamais deux.
+ *
+ * Fonction pure (aucun I/O), Decimal strict (jamais `number`,
+ * `decimal-config.ts`) — verifiee numeriquement par la pre-analyse sur les
+ * 21 mois des deux fixtures du jeu d'or, ecart 0,0 partout.
+ *
+ * @param resultat - `resultatFCFA` du mois (peut etre negatif)
+ * @param tauxEpargnePct - taux d'epargne du scenario, echelle 0..100
+ * @returns montant epargne du mois, toujours >= 0
+ */
+export function calculerEpargne(resultat: Decimal, tauxEpargnePct: Decimal): Decimal {
+  return Decimal.max(0, resultat).times(tauxEpargnePct).dividedBy(100);
+}
+
 export interface PointBasTresorerieResult {
   pointBasFCFA: Decimal;
   moisAbsolu: number;

@@ -8,6 +8,312 @@
 
 ## Catégorie : Schema
 
+### ERR-170 — Un champ des exigences absent du schéma qu'aucune recette ne peut détecter : `alevins_achetes`, jamais modélisé, facturait toujours les alevins
+**Sprint :** PR2-octies (story PR2oct.2) | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (`VaguePrevue`, `ParametresPrevision`), `src/lib/previsions/types.ts`, `src/lib/previsions/__tests__/recette/orchestration.ts`, `docs/decisions/ADR-053-module-previsions.md` §14
+
+**Symptôme :**
+Le §4.3 des exigences définit sur chaque vague `alevins_achetes` (`false` = production interne →
+coût 0) et le §5.3 pose `cout_alevins(vague) = alevins_achetes ? nb_alevins × prix_alevin ×
+(1 − remise) : 0`. Ce champ n'existait ni dans `prisma/schema.prisma` ni dans
+`src/lib/previsions/types.ts`. Le moteur facturait donc **toujours** les alevins, quelle que soit
+l'origine réelle de la vague.
+
+**Cause racine :**
+Le jeu d'or porte `alevinsAchetes: "NON"` sur ses 19 vagues et `depenses.alevins = 0` sur les 21
+mois — la branche `true` de la règle du §5.3 n'est **jamais** exercée par la fixture. C'est la
+variante « champ absent du schéma » d'ERR-160 (un jeu d'or structurellement incapable de discriminer
+deux formules candidates) : une recette à 2 378 assertions et 0 écart ne prouve rien sur une branche
+qu'aucune fixture n'active — elle ne peut même pas révéler que le champ qui piloterait cette branche
+n'existe pas.
+
+Aggravant vérifié par exécution : la recette est en outre structurellement **aveugle** au coût
+d'achat des alevins — le helper `src/lib/previsions/__tests__/recette/orchestration.ts` **lit** la
+valeur depuis la fixture au lieu de la recalculer, et `route-orchestration.recette.test.ts` ne
+compare jamais `coutAlevinsFCFA` à `fixture.depenses.alevins`. Exposition mesurée : environ
+**42 175 000 FCFA** d'écart qu'aucun test actuel ne peut attraper.
+
+Dégât collatéral découvert en même temps : pour reproduire le plan de référence sans le champ,
+`ParametresPrevision.prixAlevinUnitaireFCFA` avait été mis à **0** en base sur le scénario
+`EXCEL-V12`, alors que le classeur porte **70** — une donnée réelle de l'utilisateur détruite pour
+compenser un champ manquant. Un paramètre mis à une valeur neutre « pour que ça tombe juste » est le
+signe d'un champ manquant, jamais une solution.
+
+**Fix :**
+Ajout de `VaguePrevue.alevinsAchetes Boolean @default(false)` et
+`ParametresPrevision.alevinsAchetesParDefaut Boolean @default(false)` au schéma (story PR2oct.2,
+migration `20260805090000_add_vague_prevue_alevins_achetes`). Restauration ciblée et idempotente de
+`prixAlevinUnitaireFCFA = 70` sur `EXCEL-V12` uniquement (jamais un delta, no-op silencieux si le
+scénario est absent). Piège adjacent identifié et à ne jamais reproduire lors du branchement moteur :
+la **logistique** alevins ne dépend PAS de ce champ — vérifié contre les fixtures,
+`voyagesAlevins`/`transportAlevins` sont non nuls sur **19 des 21 mois** alors que les 19 vagues sont
+en production interne (une ferme qui produit ses alevins les transporte quand même). Seul le **coût
+d'achat** est gaté par `alevinsAchetes`.
+
+**Leçon / Règle :**
+Quand une fixture de recette ne porte qu'une seule valeur d'un booléen des exigences, la branche
+opposée exige une **couverture synthétique** dédiée (vague/scénario fabriqué avec
+`alevinsAchetes = true`), pas seulement le jeu d'or hérité de la source externe. Avant de considérer
+un champ des exigences comme couvert, vérifier qu'il existe littéralement dans le schéma Prisma ET
+dans les types applicatifs — un champ jamais modélisé ne fait échouer aucun test tant que la fixture
+ne l'exerce pas. Un paramètre mis à une valeur neutre pour faire coller un résultat de référence est
+un signal d'alarme à traiter comme un champ manquant, jamais comme une correction légitime.
+
+**Mise à jour — story PR2oct.3 (branchement moteur), vérifiée le 2026-08-05 :**
+La cécité identifiée ci-dessus est désormais **comblée**. `route-orchestration.ts` calcule
+`coutAlevinsFCFA = vague.alevinsAchetes ? Decimal(alevinsACommanderNb).times(prixAlevinUnitaireFCFA)
+: Decimal(0)`, et `route-orchestration.recette.test.ts` compare cette valeur à
+`vague.coutAlevinsFCFA`/`fixture.depenses.alevins[m]` (valeurs de fixture, jamais recalculées côté
+test) sur les 19 vagues et 21 mois — **+80 assertions**, recette passée de **2 378 à 2 458**
+assertions, **0 écart**.
+
+**Preuve de discrimination (à généraliser comme pratique) :** une assertion qui ne peut jamais
+échouer sur le bug qu'elle prétend attraper ne prouve rien. Vérification effectuée : restauration
+temporaire de l'ancienne formule non gatée (facturation systématique), exécution de la recette →
+**76 des 80 nouvelles assertions échouent**, avec des écarts allant jusqu'à **2 887 500 FCFA** sur
+une seule vague ; fichier ensuite restauré à l'identique (`git diff --stat` vide vérifié après coup).
+C'est la démonstration qu'il ne suffit pas qu'une assertion existe et passe — il faut prouver qu'elle
+casse quand la régression qu'elle cible est réintroduite.
+
+**Couverture synthétique du cas `alevinsAchetes = true`** (absent du jeu d'or, donc nécessairement
+hors recette) : `src/lib/previsions/__tests__/route-orchestration-alevins-achetes.test.ts`, 4 cas à
+montants écrits en dur et calculés à la main. Cas A : `alevinsACommanderNb = ceil(10 000 × 1,10) =
+11 000` alevins × 70 FCFA = **770 000 FCFA** — recalculé indépendamment par le @code-reviewer et
+confirmé exact. Cas D confirme chiffré la mise en garde « logistique non gatée » du Fix ci-dessus :
+`voyagesAlevins = 1` et `sousTotalFCFA = 45 000` sur un mois où le coût d'achat des alevins vaut 0 —
+le transport ne dépend jamais de `alevinsAchetes`, seul le coût d'achat en dépend.
+
+**Nouveau maillon silencieux relevé pendant la review (M1, non bloquant, sévérité Moyenne) :**
+`scinderVaguePrevueSchema` (`src/lib/validation/previsions.schema.ts`) réutilise
+`createVaguePrevueSchema`, qui porte `alevinsAchetes: z.boolean().optional()`. Un appelant peut donc
+soumettre `alevinsAchetes` par enfant de scission ; Zod l'accepte silencieusement, mais
+`scinderVaguePrevue` l'ignore et copie systématiquement la valeur du **parent** — comportement métier
+correct et testé dans les deux sens, mais contrat d'API trompeur : un schéma Zod non-`.strict()` qui
+accepte un champ ensuite ignoré par la couche métier ne prévient ni par une erreur ni par un
+avertissement. **Règle à retenir** : quand un schéma Zod est dérivé (`.extend`, réutilisation directe)
+pour un usage où un champ du parent n'a plus de sens, l'**omettre explicitement**
+(`.omit({ champ: true })`) plutôt que de laisser Zod l'accepter en silence — un champ qui compile et
+passe la validation mais n'a aucun effet est indiscernable, côté client de l'API, d'un bug.
+
+**Références :** ADR-053 §14, ERR-160, ERR-127, `docs/analysis/pre-analysis-story-PR2oct.2.md`,
+`docs/analysis/pre-analysis-story-PR2oct.3.md`, `docs/reviews/review-story-PR2oct.2.md`,
+`docs/reviews/review-story-PR2oct.3.md`, `docs/tests/rapport-story-PR2oct.3.md`
+
+**Clôture — review de sprint PR2-octies, vérifiée le 2026-08-05 : sprint VALIDÉ.**
+Aucun constat Critique ni Haute. Les trois promesses centrales (drapeau conforme au §5.3 hors
+remise ; logistique alevins jamais gatée ; `prixAlevinUnitaireFCFA` jamais masqué/forcé à 0) ont
+été recontrôlées par lecture directe du code de production, pas seulement sur la foi des rapports
+amont.
+
+**Preuve de discrimination par régression contrôlée — actée comme bonne pratique à généraliser :**
+une assertion qui existe et passe ne prouve rien tant qu'on n'a pas montré qu'elle **casse** sur le
+bug qu'elle prétend attraper. Confirmé une seconde fois en review de sprint (au-delà de la
+vérification déjà faite en story PR2oct.3 ci-dessus) : c'est désormais le standard de preuve attendu
+pour toute nouvelle assertion de recette dans ce module, pas un geste ponctuel isolé à ce sprint.
+
+**Doute méthodique consigné, non tranché :** le helper de recette
+`src/lib/previsions/__tests__/recette/orchestration.ts` **lit** certaines valeurs depuis la fixture
+au lieu de les recalculer — établi pour `coutAlevinsFCFA` (cf. Cause racine ci-dessus). Rien ne
+garantit que ce patron n'existe pas pour d'autres termes du même helper. Ce n'est pas un bug
+identifié mais un **angle mort de recette** : un audit ponctuel du helper reste à faire, hors
+mandat de ce sprint, avant de pouvoir affirmer que la recette recalcule bien tout ce qu'elle compare
+plutôt que de comparer une fixture à elle-même sur certains termes.
+
+**Mesures de clôture vérifiées :** recette **2 458 assertions / 0 écart** ; `npx vitest run`
+**3 passages identiques**, 289 fichiers / 8 977 tests passés, **0 échec** ; `npm run build` OK ;
+`npx prisma migrate deploy` **168 migrations**, aucune en attente ; vérification navigateur réel à
+**360px** (cibles tactiles mesurées à 44px).
+
+**Références (clôture) :** `docs/reviews/review-sprint-PR2-octies.md`,
+`docs/tests/rapport-sprint-PR2-octies.md`
+
+---
+
+### ERR-147 — Un modèle qui fusionne deux natures distinctes (calibre vs article) dans une seule ligne ne peut être révélé faux par un jeu d'or qui n'a qu'une marque par calibre
+**Sprint :** PR2-quater (ADR-053 §12, amendement) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (`AlimentPrevision`), `docs/decisions/ADR-053-module-previsions.md` §12.1
+
+**Symptôme :**
+`AlimentPrevision` portait une seule ligne par granulométrie, confondant deux grandeurs qui ne
+varient pas ensemble : le **calibre** (une taille de granulé, pilote `sacsParTonneStandard` et la
+répartition sur le cycle) et l'**article** (une marque, un poids de sac, un prix, pilote le coût).
+Tant qu'il n'existe qu'un seul article par calibre, les deux natures coïncident numériquement et le
+modèle « fonctionne » — c'est exactement la situation du classeur Excel de référence (une seule
+marque par granulométrie). Dès qu'un second article apparaît pour le même calibre, le modèle n'a
+plus de sens : aucune ligne ne peut porter à la fois le coefficient de besoin biologique (propriété
+du calibre) et le prix d'achat (propriété de l'article). Les 1270 tests de recette (fixtures à un
+seul article par calibre) passaient sans jamais exercer ce défaut.
+
+**Cause racine :**
+Un jeu d'or extrait fidèlement d'une source externe hérite de la structure de cette source. Si la
+source ne contient qu'un cas dégénéré d'une distinction conceptuelle (ici : 1 article = 1 calibre),
+aucune recette qui la rejoue, même à 100 % de couverture et 0 écart, ne peut détecter que le modèle
+confond les deux natures — la recette ne prouve que ce que ses données peuvent exprimer.
+
+**Fix :**
+Modèle scindé en deux niveaux : `AlimentPrevision` porte désormais le calibre seul
+(`tailleGranule`, `sacsParTonneStandard`, `RepartitionMoisAliment`), une nouvelle table
+`AlimentArticlePrevision` (FK `alimentCalibrePrevisionId`) porte chaque article (`poidsSacKg`,
+`prixSacFCFA`, `produitId`, `partApprovisionnementPct`). Le coût se calcule par somme article par
+article (voir ERR-148/ERR-149), jamais au niveau calibre seul. Migration : le PK d'`AlimentPrevision`
+ne change pas de nature (il continue à identifier un calibre), donc aucune FK existante
+(`AlimentParVaguePrevue.alimentPrevisionId`, `RepartitionMoisAliment.alimentPrevisionId`) n'a besoin
+d'être remappée — seule la table `AlimentPrevision` est restructurée (colonnes d'article extraites).
+
+**Leçon / Règle :**
+Avant de considérer qu'un modèle de données est validé par la recette, vérifier explicitement que le
+jeu d'or contient au moins un cas où deux natures qu'un même champ/une même ligne pourrait confondre
+divergent réellement (ici : ≥ 2 articles pour un même calibre). Une recette à 0 écart sur un jeu
+dégénéré est un signal d'alarme méthodologique, pas une garantie de correction du modèle — même
+famille de piège que ERR-127 (jeu d'or à variable constante à zéro) et ERR-138/139, mais élevée d'un
+champ à une ligne entière du schéma.
+
+**Références :** ADR-053 §12.1, ERR-127, ERR-138, ERR-139, ERR-143
+
+---
+
+### ERR-143 — `PalierRemise.seuilSacs` rendait la règle de remise du §4.3 des exigences **inexprimable depuis l'interface** [CORRIGÉ / FERMÉ — sprint PR2-septies]
+**Sprint :** ouvert en PR2-bis (story PR2bis.4, découvert par le @tester en recettant `calculerProjectionScenario`) — **corrigé et fermé en PR2-septies** | **Date d'ouverture :** 2026-08-03 · **Date de clôture :** 2026-08-04
+**Sévérité :** **Haute** (relevée depuis « Moyenne » à la clôture, cf. ADR-053 §13.6) — **statut : CORRIGÉ / FERMÉ**
+**Fichier(s) :** `prisma/schema.prisma` (`PalierRemise`), `src/lib/previsions/aliments.ts`, `src/lib/previsions/route-orchestration.ts`, `src/lib/previsions/__tests__/recette/`
+
+**Symptôme :**
+`PalierRemise.seuilSacs` était comparé au nombre de sacs **d'une seule granulométrie**, alors que le
+§4.3 des exigences fonctionnelles définit sans ambiguïté : `remise_fournisseur` = *le palier dont le
+seuil est le plus grand **≤ objectif_tonnage_t*** — donc (1) une grandeur en **tonnes**, (2) décidée
+**une fois par vague** sur son tonnage visé, (3) appliquée à **tout** le coût d'aliment de cette
+vague. Conséquence chiffrée sur le plan de référence (ADR-053 §13.2) : une vague de 15 t produit
+**120 / 270 / 750** sacs selon le calibre (`sacsParTonneStandard` = 8 / 18 / 50). Aucun jeu de
+seuils **unique par scénario** exprimé en sacs ne peut placer simultanément 120, 270 et 750 dans le
+même palier « 6 % ». **Un utilisateur ne pouvait donc pas saisir, depuis l'onglet Paramètres, un jeu
+de paliers reproduisant le plan de référence** (277 369 600 FCFA de coût aliments) : ce n'était pas
+une imprécision de calcul, c'était une **fonctionnalité absente**.
+
+**Cause racine :**
+La section 3.4 de l'ADR-053 n'a jamais reproduit la règle écrite au §4.3 des exigences — le défaut
+est **d'origine**, il n'a pas été introduit par une régression. Le code (`appliquerPalierRemise`)
+était rigoureusement cohérent avec le modèle ; le modèle était cohérent avec la **mauvaise règle**.
+Aucune étape du processus n'a comparé la section 3.4 de l'ADR au §4.3 des exigences avant de figer le
+schéma. Et surtout, la recette **masquait** le défaut par **trois contournements** (ADR-053 §13.4) :
+1. `recette/orchestration.ts:159` (`buildCoutAlimentsParVague`) — mise à l'échelle
+   `seuilTonnes × sacsParTonneStandard` pour fabriquer un `seuilSacs` (contournement **déclaré et
+   commenté**, donc « honnête ») ;
+2. `recette/orchestration.ts:358` (`buildCoutAlimentsParVagueEtMois`) — jumeau du n°1 sur la
+   ventilation mensuelle, jamais cité nulle part ;
+3. `recette/route-orchestration-builder.ts:24-51` — `paliersRemise: []`, qui **neutralisait
+   entièrement la remise** dans la recette de la couche d'orchestration (le plus grave : une recette
+   qui désactive la règle qu'elle prétend valider).
+
+**Fix (sprint PR2-septies) :**
+- **Schéma** : `seuilSacs` → **`seuilTonnes`** (`Decimal` nu, sans `@db.Decimal`), migration
+  `prisma/migrations/20260804100000_palier_remise_seuil_tonnes/` — **renommage pur**
+  (`ALTER TABLE ... RENAME COLUMN`, jamais la paire `DROP`/`ADD` générée par `prisma migrate diff`,
+  cf. ERR-140), **aucune conversion** (aucun facteur unique n'existe : 8/18/50 selon la
+  granulométrie), garde-fou de précondition `RAISE EXCEPTION` **dans la migration elle-même** si
+  `count(*) > 0` (R10). Table vérifiée vide (0 ligne, tous sites). `@@unique([scenarioId, ordre])`
+  ajoutée dans la même migration.
+- **Moteur** : nouvelle fonction pure `determinerPourcentageRemise(tonnageVagueT, paliers)`
+  (`src/lib/previsions/aliments.ts:126`), sémantique `≥` (seuil atteint exactement → palier
+  applicable) ; décision **hissée hors de la boucle sur les granulométries**, au niveau vague
+  (`route-orchestration.ts:405-409`) — ce qui rend le défaut d'origine structurellement impossible à
+  réintroduire. `RemiseAppliqueeResult.sacs` supprimé (plus aucun référent), message d'erreur de
+  `validerPaliersRemiseCroissants` renommé.
+- **Arbitrage `sacsSaisis`** (ADR-053 §13.7) : le COALESCE `sacsSaisis ?? sacsCalcules` du §3.6 reste
+  **intégralement en vigueur pour le MONTANT** ; la décision de palier, elle, ne prend plus aucun
+  nombre de sacs. Conséquence assumée : **surcharger les sacs change le coût, jamais le taux de
+  remise**.
+- **Recette** : les **trois** contournements supprimés (pas deux) ; les quatre paliers réels du
+  classeur (0 t → 0 %, 5 t → 2 %, 10 t → 4 %, 15 t → 6 %) passés tels quels ; le `remisePct` par
+  vague est désormais **lui-même** comparé au jeu d'or. **2 378 assertions, 0 écart sur le chemin
+  applicatif.**
+- **UI** : libellé « Seuil (sacs) » → « Seuil (tonnes) » (fr + en), description réécrite pour dire
+  que la remise est déterminée par le **tonnage visé de la vague**.
+
+**Ce qui a été explicitement écarté :**
+Les **deux options (a) et (b)** listées dans la version précédente de cette fiche sont **l'une et
+l'autre rejetées** (ADR-053 §13.1) : elles raisonnent toutes deux **en sacs et par granulométrie**,
+alors que la spécification raisonne **en tonnes et par vague**. La bonne réponse était une
+**troisième option, jamais listée** — revenir à la règle écrite. *Un arbitrage entre deux options qui
+manquent toutes les deux la spécification est un arbitrage à refuser, pas à trancher.*
+
+**Leçon / Règle :**
+**Quand un harnais de recette doit transformer ses propres entrées pour que le moteur les accepte,
+cette transformation est un défaut de modèle, jamais une adaptation d'unité anodine.** La question à
+poser devant toute ligne de ce type : **« un utilisateur peut-il produire cette entrée depuis un
+formulaire ? »** Si la réponse est non, **la recette ne teste pas le produit** — elle prouve que le
+moteur sait multiplier, pas que la règle est saisissable. Le contournement n°1 était commenté,
+justifié et arithmétiquement exact : **être déclaré n'en fait pas moins un défaut**, cela le rend
+seulement lisible. Corollaire de méthode : avant de figer un schéma, comparer explicitement la
+section de l'ADR qui le décrit au paragraphe des **exigences** qu'elle est censée traduire — ici, les
+deux ont divergé dès l'origine et la divergence a survécu deux sprints derrière une recette verte.
+
+**Références :** ADR-053 §13 (13.1 à 13.8), [pre-analysis-sprint-PR2-septies](../analysis/pre-analysis-sprint-PR2-septies.md), [rapport-story-PR2sept.3](../tests/rapport-story-PR2sept.3.md), [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md), [review-sprint-PR2-bis](../reviews/review-sprint-PR2-bis.md), ERR-140, ERR-142, ERR-168
+
+---
+
+### ERR-140 — `prisma migrate diff` génère un `DROP COLUMN` + `ADD COLUMN` pour un renommage de colonne : destructeur si appliqué tel quel
+**Sprint :** PR2 (story PR2.2) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/20260803150000_aliment_prevision_sacs_par_tonne_split/migration.sql`
+
+**Symptôme :**
+En scindant `AlimentPrevision.sacsParTonne` en `sacsParTonneUnitaire` et `sacsParTonneStandard`
+(voir ERR-138), le SQL généré par `npx prisma migrate diff --from-config-datasource --to-schema
+prisma/schema.prisma --script` pour la partie renommage contenait un `ALTER TABLE ... DROP COLUMN
+"sacsParTonne"` suivi d'un `ALTER TABLE ... ADD COLUMN "sacsParTonneStandard" ...` — Prisma ne
+détecte pas les renommages de colonne à partir de la seule comparaison de schéma, et génère
+systématiquement une paire suppression/ajout. Appliquer ce SQL tel quel aurait détruit
+irréversiblement toutes les valeurs existantes de la colonne.
+
+**Cause racine :**
+`prisma migrate diff` compare deux schémas structurellement (ensemble de colonnes par nom), sans
+heuristique de renommage : un champ qui change de nom est indiscernable, pour l'outil, d'un champ
+supprimé plus un champ nouveau sans rapport. Le SQL généré est donc correct **du point de vue de la
+structure finale**, mais faux du point de vue de la préservation des données.
+
+**Fix :**
+Le SQL généré a été relu et édité à la main avant d'être placé dans le sous-dossier de migration :
+la paire `DROP COLUMN`/`ADD COLUMN` remplacée par un vrai `ALTER TABLE "AlimentPrevision" RENAME
+COLUMN "sacsParTonne" TO "sacsParTonneStandard"`, avec un commentaire de tête expliquant pourquoi le
+SQL généré a été corrigé à la main. Dans ce cas précis, la table était vide au moment de la
+migration (aucune perte réelle), mais le réflexe de relecture a été appliqué avant de le vérifier,
+pas après.
+
+**Leçon / Règle :**
+Ne jamais appliquer tel quel le SQL produit par `prisma migrate diff` pour un changement qui
+ressemble à un renommage de colonne (ancien nom qui disparaît, nouveau nom de sens équivalent qui
+apparaît dans le même modèle). Relire systématiquement le diff généré avant de l'écrire dans
+`prisma/migrations/`, et remplacer toute paire `DROP COLUMN`/`ADD COLUMN` détectée comme un
+renommage par un `ALTER TABLE ... RENAME COLUMN ... TO ...`, avec un commentaire expliquant
+l'édition manuelle. Ce correctif reste conforme à R10 : la migration reste une migration versionnée
+en sous-dossier avec `migration.sql`, seul son contenu généré est corrigé avant application — ne
+jamais appliquer le SQL généré à la main sur une base sans l'avoir relu au préalable, table vide ou
+non.
+
+**Mise à jour (PR2-quater, 2026-08-03) — variante plus dangereuse : déplacer une colonne d'une table
+vers une autre n'est PAS un renommage, et l'erreur est plus facile à commettre.** Lors de la scission
+`AlimentPrevision` → `AlimentPrevision` (calibre) + `AlimentArticlePrevision` (article, ADR-053 §12,
+voir ERR-147), `prisma migrate diff` a de nouveau généré un `DROP COLUMN` pour `poidsSacKg`,
+`prixSacFCFA`, `produitId`, `libelle`, `sacsParTonneUnitaire` — cette fois vers une **table
+différente**, pas une colonne renommée dans la même table. Un simple `RENAME COLUMN` est ici
+insuffisant : il faut relire le SQL généré et intercaler un `INSERT INTO "AlimentArticlePrevision"
+(...) SELECT ... FROM "AlimentPrevision"` **avant** les `DROP COLUMN`, avec
+`partApprovisionnementPct = 100` pour la ligne article unique créée par migration (cas nominal,
+cf. ADR-053 §12.5). Deux garde-fous de précondition ajoutés dans la même migration, en tête, avant
+tout `ALTER TABLE` : un bloc qui échoue si `tailleGranule IS NULL` existe encore sur une ligne, un
+second qui échoue sur toute collision `(scenarioId, tailleGranule)` — voir ERR-151 pour l'exigence
+que ces garde-fous nomment les lignes fautives. **Leçon élargie : le réflexe de relecture du SQL
+généré par `prisma migrate diff` ne s'applique pas seulement à un renommage de colonne au sein d'une
+même table — il s'applique à tout `DROP COLUMN` qui accompagne l'apparition d'une nouvelle table ou
+d'un nouveau modèle dans le même diff, car c'est le signal qu'une donnée change de table plutôt que
+de disparaître.**
+
+**Références :** [review-story-PR2.2](../reviews/review-story-PR2.2.md), R10, ADR-049, ERR-138, ERR-147, ERR-151
+
+---
+
 ### ERR-132 — Convention de nommage des contraintes CHECK SQL : `<Table>_<champ>_check` a déjà un précédent, ne pas supposer son absence
 **Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
 **Sévérité :** Basse
@@ -513,8 +819,421 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
-### ERR-134 — Une fonction de mapping enum → clé i18n peut référencer une clé absente des fichiers de traduction sans qu'aucun outil ne le détecte
-**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03
+### ERR-164 — Deux tests de parité structurelle fr/en ne protègent contre **aucun libellé faux** : « Seuil (sacs) » / "Threshold (bags)" passe la parité sans broncher
+**Sprint :** PR2-septies (constat du @tester, §B6 du rapport de sprint) | **Date :** 2026-08-04
+**Sévérité :** Moyenne (garantie apparente qui ne discrimine pas)
+**Fichier(s) :** `src/__tests__/i18n/messages.test.ts`, `src/__tests__/integration/i18n-completeness.test.ts`, `src/messages/{fr,en}/previsions.json`
+
+**Symptôme :**
+Le libellé faux `previsions.parametresTab.paliers.seuilLabel` = « Seuil (sacs) » (la formulation même
+qui a porté ERR-143 pendant deux sprints) a traversé toute la suite i18n sans jamais être signalé —
+et l'aurait traversée tout autant s'il avait été traduit fidèlement en "Threshold (bags)". **Les deux
+tests i18n du dépôt ne peuvent pas, par construction, détecter un libellé métier faux.**
+
+**Cause racine :**
+Vérifié fichier par fichier, les deux garanties supposées n'en sont pas :
+- `src/__tests__/i18n/messages.test.ts` **ne charge même pas `previsions.json`** — il n'importe que
+  `common.json` et `format.json` (fr + en). Le namespace concerné est **entièrement hors de son
+  périmètre** ; son nom générique (« messages ») laisse pourtant croire le contraire.
+- `src/__tests__/integration/i18n-completeness.test.ts` charge bien `previsions.json`, mais ne teste
+  que la **parité structurelle** : mêmes clés des deux côtés, aucune valeur vide, interpolations
+  identiques. Un libellé faux **traduit symétriquement** satisfait ces trois propriétés parfaitement.
+La seule protection réelle qui existe est une **assertion de composant sur le texte exact**
+(`src/components/previsions/__tests__/parametres-tab.test.tsx:117`).
+
+**Fix :**
+Aucun changement d'outillage dans ce sprint — le libellé a été corrigé (« Seuil (tonnes) », fr + en,
+ERR-143) et l'assertion de composant sur le texte exact est en place. Ce qui est fiché ici est la
+**limite structurelle** des deux tests i18n, pour qu'aucun agent ne la reprenne pour une garantie.
+
+**Leçon / Règle :**
+Un test de parité i18n prouve qu'aucune traduction ne **manque** ; il ne prouve **jamais** qu'une
+traduction est **juste**. Ne jamais écrire « la justesse des libellés est couverte par les tests
+i18n » dans un rapport ou une review — c'est faux par construction. Tout libellé qui porte une
+**unité, une grandeur ou une règle métier** (« (sacs) », « (tonnes) », « HT/TTC », « par mois ») doit
+être figé par une assertion de composant sur le **texte exact**, dans les deux langues si les deux
+sont visibles. Vérifier aussi le **périmètre réel** d'un fichier de test avant de s'en réclamer : ici,
+le nom `messages.test.ts` suggère une couverture générale que ses imports démentent. Même famille que
+ERR-127 et ERR-148 : une garantie apparente qui ne discrimine pas.
+
+**Références :** ERR-143, ERR-127, ERR-148, ERR-134, ERR-144, [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §B6 et §8 point 5
+
+---
+
+### ERR-165 — Un mapping HTTP fondé sur `message.includes(...)` transforme un texte d'UI en contrat d'API : signalé par **trois reviews consécutives** sans jamais avoir été fiché
+**Sprint :** PR2-septies (fiché enfin ; signalé en PR2-quinquies, PR2-sexies et PR2-septies) | **Date :** 2026-08-04
+**Sévérité :** Moyenne — **ouvert** (correction de fond hors périmètre, @architect)
+**Fichier(s) :** `src/app/api/previsions/_shared.ts` (`PREVISIONS_STATUS_MAP`), `src/lib/queries/previsions-scenarios.ts` (`replacePaliersRemise`, message de garde métier)
+
+**Symptôme :**
+Le statut HTTP d'une erreur métier est décidé en cherchant une **sous-chaîne** dans le message
+destiné à l'utilisateur final — ici l'entrée `{ match: "meme ordre d'evaluation", status: 400 }`.
+Conséquence directe et documentée dans le code lui-même : **le message français doit rester écrit
+sans accents**. L'accentuer — correction parfaitement légitime dans une UI française, qu'un
+développeur ferait sans y penser — **casse le lien en silence** et fait retomber le cas en **500**,
+sans qu'aucun test ne le signale. Un texte d'interface est ainsi devenu, de fait, un contrat d'API.
+
+**Cause racine :**
+Le mapping par sous-chaîne est le chemin de moindre résistance quand la couche query lève des `Error`
+nues : il évite d'introduire un type d'erreur métier, au prix d'un couplage invisible entre deux
+couches qui n'ont aucune raison de partager une orthographe. Le garde-fou posé à la place — un
+**commentaire d'avertissement aux deux extrémités** — ne protège que le lecteur qui le lit ; il
+n'oppose aucune résistance à un `git commit` qui accentue le message.
+
+**Fix :**
+Non corrigé (hors périmètre du sprint). État actuel vérifié par le @tester : le chemin HTTP réel sort
+bien en **400** via le `.superRefine` zod **en amont** de la query, et l'entrée de la map reste un
+**filet utile pour les appelants non-HTTP** — prouvée non morte par falsification (retrait de
+l'entrée → exactement 1 test tombe). Le couplage, lui, reste **non testé**. Correction de fond
+attendue : une **erreur métier typée portant son statut** (classe/objet d'erreur avec un champ
+`status`), jamais un `includes` sur un texte d'UI.
+
+**Leçon / Règle :**
+**Ne jamais dériver un statut HTTP, un branchement ou une décision de contrôle d'une sous-chaîne d'un
+message destiné à l'utilisateur.** Le message est une donnée de présentation : il est traduisible,
+accentuable, reformulable — trois opérations qui doivent rester sans conséquence. Quand une couche
+basse doit transmettre une intention de statut, elle transmet un **type** ou un **code**, pas une
+phrase. Et un commentaire d'avertissement n'est **pas** un garde-fou : s'il faut prévenir un futur
+lecteur qu'il ne doit pas corriger une faute d'orthographe, c'est le design qui est faux. Point de
+processus, à retenir tel quel : **ce défaut a été signalé par trois reviews consécutives sans jamais
+être fiché ici — une réserve répétée mais jamais capitalisée redevient invisible au sprint suivant.**
+Toute réserve qui réapparaît une deuxième fois dans une review doit entrer dans ce fichier, même si
+elle n'est pas corrigée.
+
+**Références :** ERR-150 (même famille : mapping HTTP par sous-chaîne), [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §B4 et §8 point 4
+
+---
+
+### ERR-166 — `aria-describedby` référençant un id **non rendu** : corrigé dans `input.tsx`, **latent et intact** dans `textarea.tsx` et `select.tsx`
+**Sprint :** PR2-septies (passe de correction UI ; jumeaux relevés par le @tester) | **Date :** 2026-08-04
+**Sévérité :** Moyenne pour le défaut corrigé (accessibilité, actif en production) — Basse pour les deux jumeaux (latents)
+**Fichier(s) :** `src/components/ui/input.tsx:33` (corrigé), `src/components/ui/textarea.tsx:22` (**non corrigé**), `src/components/ui/select.tsx:29` (**non corrigé**)
+
+**Symptôme :**
+Le calcul de l'attribut faisait `hint ? hintId : null`, alors que le **rendu** du hint était, lui,
+conditionné par `hint && !error`. Les deux conditions étaient désaccordées : dès qu'un appelant
+fournissait `hint` **et** `error` simultanément, l'`aria-describedby` annonçait aux technologies
+d'assistance la description d'un élément **qui n'existe pas dans le DOM**.
+
+**Cause racine :**
+Une condition de rendu et la condition de l'attribut qui y renvoie ont été écrites à **deux endroits
+distincts du même composant**, sans lien de typage ni assertion commune — rien ne les force à rester
+d'accord. Aucune assertion ne couvrait la combinaison `hint` + `error`, la seule où elles divergent.
+**Le commentaire ajouté par le correctif était lui-même inexact** : il présentait ce cas comme
+« désormais atteignable sur le premier palier de remise », alors que le recensement exhaustif des
+15 appelants d'`Input` avec `hint` en montre **4 qui fournissent déjà `error` en même temps** avant
+ce sprint (`scenario-form-dialog.tsx:250,302,314`, `parametres-tab.tsx:303`). Le défaut était donc
+**actif en production**, pas introduit par le sprint.
+
+**Fix :**
+`hint ? hintId : null` → `hint && !error ? hintId : null` dans `input.tsx` uniquement. Le seul cas où
+la sortie change est `hint` **et** `error` : le changement y consiste **exclusivement à retirer un id
+orphelin**, jamais à retirer un id rendu ni à en ajouter un — aucun appelant ne peut perdre une
+description existante. Prouvé dans les deux directions par falsification jouée contre la **suite
+entière** : retour à l'ancienne écriture → **exactement 1 test** tombe (le nouveau) et les 8 864
+autres passent, donc rien dans le dépôt ne dépendait de l'id orphelin.
+**`textarea.tsx:22` et `select.tsx:29` portent le défaut identique et ne sont pas corrigés** : aucun
+appelant actuel ne leur passe `hint` **et** `error`. Le défaut y est **latent, pas absent** — il
+deviendra actif au premier appelant qui le fera, sans aucun signal.
+
+**Leçon / Règle :**
+Quand un composant calcule un `aria-describedby` (ou tout attribut qui **référence un id**), la
+condition de l'attribut doit être **la même expression** que la condition de rendu de l'élément
+référencé — idéalement extraite dans une constante locale unique, jamais réécrite à deux endroits.
+Deuxième règle, plus générale : **un correctif appliqué à un composant `ui/` doit systématiquement
+être cherché par grep dans ses frères** (`input`/`textarea`/`select` partagent la même anatomie
+label/hint/error) — corriger un seul des trois laisse deux bombes à retardement que plus personne ne
+reliera au correctif d'origine. Enfin : ne jamais écrire dans un commentaire de correctif qu'un cas
+est « désormais atteignable » sans l'avoir vérifié par recensement des appelants — ici, l'affirmation
+minimisait un défaut d'accessibilité déjà en production.
+
+**Références :** [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §B1, §6.3, §6.4 et §8 point 3, ERR-167
+
+---
+
+### ERR-167 — 79 avertissements Radix `Missing Description for {DialogContent}` sur 47 fichiers de test : un défaut d'accessibilité réel, invisible parce qu'il ne fait échouer aucun test
+**Sprint :** PR2-septies (relevé par le @tester en scannant un run complet, en correction d'une de ses propres affirmations antérieures) | **Date :** 2026-08-04
+**Sévérité :** Moyenne — **ouvert**, préexistant et transverse (file de polissage)
+**Fichier(s) :** transverse — **47 fichiers de test** couvrant `ventes`, `vagues`, `dashboard`, `layout`, `filters`, `export`, `plans`… (pas seulement `previsions`), et les composants `DialogContent` correspondants
+
+**Symptôme :**
+Un run complet de `npx vitest run` émet sur `stderr` **79 occurrences** de
+``Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}``. **Aucun
+test n'échoue.** La suite est verte, les compteurs sont stables, et le signal n'apparaît nulle part
+dans les rapports — un rapport de test antérieur affirmait même explicitement « aucune sortie
+parasite », affirmation que le @tester corrige ici comme **fausse** après avoir capturé et scanné un
+run **en intégralité** (et non seulement sa queue).
+
+**Cause racine :**
+Deux mécanismes se combinent. (1) Radix signale une exigence ARIA par un `console.warn`, qui n'a par
+construction aucun effet sur le résultat d'un test. (2) L'habitude de ne lire que **la queue** de la
+sortie vitest (les lignes de compteurs) rend invisible tout ce qui a été écrit avant — un run complet
+n'est scanné que lorsqu'on cherche autre chose. Le défaut sous-jacent est réel et **non cosmétique** :
+un `DialogContent` sans description accessible n'est pas annoncé correctement aux lecteurs d'écran.
+
+**Fix :**
+Aucun dans ce sprint (préexistant, transverse, hors périmètre — le traiter dossier par dossier
+créerait 47 diffs sans lien avec la remise fournisseur). À traiter globalement en file de polissage :
+chaque `DialogContent` reçoit soit un `<DialogDescription>`, soit un `aria-describedby={undefined}`
+explicite quand l'absence de description est un choix assumé.
+
+**Leçon / Règle :**
+**Une suite verte ne dit rien de ce qu'elle a écrit sur `stderr`.** Avant d'affirmer dans un rapport
+qu'un run est « propre » ou « sans sortie parasite », capturer le run **en entier** (pas sa queue) et
+le scanner explicitement pour `Warning`, `Unhandled`, `did not close`, `open handle` — sinon
+l'affirmation n'est pas une observation, c'est une supposition. Et un avertissement d'accessibilité
+émis par une librairie **est un défaut du produit**, pas du bruit d'outillage : il se compte, se
+localise et se verse à ce qui reste ouvert, jamais se filtre pour rendre la sortie plus lisible.
+
+**Références :** [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §1.2, §6.1 et §8 point 2, R5 (accessibilité Radix), ERR-166
+
+---
+
+### ERR-153 — Une donnée calculée puis gardée en variable locale de boucle ou en Map interne est, depuis l'UI, indiscernable d'une donnée jamais calculée
+**Sprint :** PR2-quinquies (story PR2q.1 et alentours) | **Date :** 2026-08-04
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/previsions-mensuelles-tab.tsx`, orchestration
+`src/lib/previsions/` (site de calcul des grandeurs concernées)
+
+**Symptôme :**
+Le correctif de la vue mensuelle des prévisions est passé de 8 à 30 lignes affichées. Six des
+lignes manquantes correspondaient à des grandeurs **déjà calculées** par l'orchestration du moteur,
+mais jamais copiées dans la structure de sortie (DTO) consommée par le composant — elles restaient
+piégées dans des variables locales de boucle ou des `Map` internes à la fonction d'orchestration, et
+disparaissaient donc avant d'atteindre l'UI.
+
+**Cause racine :**
+Rien ne distingue, à la lecture du composant qui affiche « il manque une ligne », une grandeur
+jamais calculée d'une grandeur calculée puis perdue en cours de route — les deux se manifestent de
+façon identique (absence de la donnée à l'endroit où on l'attend). Le réflexe naturel est alors de
+la recalculer localement dans la couche de présentation, ce qui crée un second site de calcul et un
+risque de divergence avec le moteur (voir ERR-131/ERR-133 et consorts sur les formules dupliquées).
+
+**Fix :**
+Les grandeurs concernées ont été propagées jusqu'à la structure de sortie du moteur/orchestration
+(DTO) plutôt que recalculées côté composant ; le composant les lit telles quelles, sans réimplémenter
+de formule.
+
+**Leçon / Règle :**
+Avant de conclure qu'une série manque à l'affichage et de la recalculer dans la couche de
+présentation, chercher d'abord si elle est **déjà calculée puis perdue** dans la couche
+d'orchestration (variable locale de boucle, `Map` interne jamais exportée). Un correctif de vue qui
+fait grandir significativement le nombre de lignes/colonnes affichées (ici 8 → 30) n'est pas « juste
+de l'affichage » : c'est souvent le signe que plusieurs grandeurs traversaient déjà le moteur sans
+jamais atteindre le DTO de sortie.
+
+**Références :** review-story-PR2q1, review-story-PR2q2
+
+---
+
+### ERR-150 — Un message d'erreur métier qui ne correspond à aucun pattern du mapping HTTP par sous-chaîne retombe en 500, masquant les vrais 500 dans les logs
+**Sprint :** PR2-quater (story PR2q.4, bug trouvé par le @tester) | **Date :** 2026-08-03
+**Sévérité :** Basse/Moyenne (triage @project-manager)
+**Fichier(s) :** `src/lib/previsions/previsions-aliments.ts` (`addAlimentArticlePrevision`), `src/app/api/previsions/_shared.ts` (`PREVISIONS_STATUS_MAP`), `src/lib/http/handle-api-error.ts` (ou équivalent `handleApiError`)
+
+**Symptôme :**
+`POST /api/previsions/aliments/[id]/articles` avec un payload `repartition` malformé (aucun élément
+sans `articleId`) lève `Error("La repartition doit contenir exactement un element sans articleId
+(le nouvel article) — obtenu : 0.")`. Ce message ne correspond à aucun pattern de
+`PREVISIONS_STATUS_MAP` ni à aucun pattern générique de `handleApiError` (`introuvable`,
+`Impossible`, `n'appartient pas`...) — la route répond **500**, alors que la cause est une entrée
+client invalide (devrait être 400/422).
+
+**Cause racine :**
+Le mécanisme de mapping HTTP est un mapping **par sous-chaîne du message d'erreur** — toute erreur
+levée avec un `new Error(...)` ordinaire, sans type dédié, retombe dans le générique 500 dès que son
+texte ne matche aucun pattern connu. Rien ne distingue structurellement, au niveau du type, une
+erreur de validation d'entrée d'une véritable défaillance serveur : les deux sont de simples `Error`.
+Un 500 sur une entrée invalide n'est pas seulement un mauvais code HTTP — il **masque les vrais 500**
+dans les logs/alerting, qui ne peuvent plus être distingués d'un rejet de saisie utilisateur banal.
+
+**Fix :**
+Non corrigé par le @tester (hors mandat), signalé au @project-manager pour triage. Fix recommandé,
+pas encore appliqué : lever une `ValidationError` typée (classe dédiée, distincte d'`Error`) dans
+`addAlimentArticlePrevision` pour ce cas, reconnue par `handleApiError` **avant** tout mapping par
+sous-chaîne — un `instanceof ValidationError` doit toujours produire 400/422, indépendamment du
+texte du message.
+
+**Leçon / Règle :**
+Un mapping HTTP par sous-chaîne de message (`PREVISIONS_STATUS_MAP` et équivalents dans d'autres
+modules) est fragile par construction : chaque nouvelle erreur métier doit soit matcher un pattern
+existant par coïncidence de vocabulaire, soit être ajoutée explicitement au mapping — rien ne
+force cet ajout, ni le compilateur ni un test générique. **Dette structurelle assumée et non
+traitée à ce stade** (réserve n°6 de la review PR2-bis, repoussée volontairement par prudence sur
+la recette) : ne pas la reproduire dans un nouveau module sans y réfléchir. Critère de
+déclenchement pour la traiter : avant la prochaine story qui retouche `validation.ts` ou
+`_shared.ts` du module Prévisions — introduire alors une classe `ValidationError` reconnue en
+priorité par `handleApiError`, plutôt que d'ajouter une énième entrée au mapping par sous-chaîne.
+
+**Références :** [rapport-story-PR2q.4](../tests/rapport-story-PR2q.4.md), review-sprint-PR2-bis (réserve n°6)
+
+---
+
+### ERR-144 — Liste de namespaces i18n dupliquée à la main entre le point de chargement runtime et le barrel export, déjà désynchronisée
+**Sprint :** PR2-bis (story PR2bis.1) | **Date :** 2026-08-03
+**Sévérité :** Moyenne — garde-fou partiel posé, dette résiduelle ouverte
+**Fichier(s) :** `src/i18n/request.ts`, `src/messages/index.ts`
+
+**Symptôme :**
+`src/i18n/request.ts` — le fichier qui décide, **au runtime**, quels namespaces de traduction sont
+effectivement chargés pour une requête — porte sa propre liste de namespaces, recopiée à la main
+depuis `src/messages/index.ts` (le barrel export utilisé par le reste du code). Les deux listes
+étaient **déjà désynchronisées** au moment de l'investigation : `src/messages/index.ts` contient 3
+namespaces de plus (`blockedResource`, `maintenance`, `unites-production`) qu'aucun test ne
+rapprochait de `request.ts`. Un namespace absent de `request.ts` ne casse ni le build ni les tests
+existants : `useTranslations(namespace)` retourne silencieusement un résultat vide au rendu, sans
+erreur.
+
+**Cause racine :**
+Deux listes maintenues manuellement, à deux endroits différents du dépôt, pour représenter la même
+information (l'ensemble des namespaces de traduction disponibles), sans mécanisme qui force leur
+convergence. Exactement le type de désynchronisation silencieuse qui avait servi de motif au
+contournement de `next-intl` en PR2.3 (avant que PR2bis.1 ne traite l'internationalisation
+proprement).
+
+**Fix :**
+Un garde-fou d'inclusion a été ajouté par la story PR2bis.1, prouvé efficace par cassage volontaire
+puis restauration (un namespace retiré de `request.ts` fait échouer le test, restauré il repasse).
+Ce garde-fou **détecte** une régression future sur les namespaces qu'il connaît, mais **ne force
+pas** la convergence totale des deux listes existantes : les 3 namespaces déjà divergents au moment
+de l'investigation ne sont pas nécessairement couverts par construction si le garde-fou vérifie une
+liste elle aussi recopiée à la main plutôt qu'une dérivation automatique d'une source unique.
+
+**Leçon / Règle :**
+Dette résiduelle ouverte, à traiter avant qu'un futur namespace ajouté à `src/messages/index.ts` ne
+soit oublié dans `src/i18n/request.ts` (ou l'inverse) sans qu'aucun test ne le remonte. Fix propre
+recommandé : dériver la liste de `request.ts` directement de `src/messages/index.ts` (une seule
+source de vérité, zéro liste dupliquée) plutôt que de maintenir un garde-fou qui compare deux listes
+recopiées à la main. Plus généralement : un garde-fou qui compare deux copies manuelles d'une même
+information est une amélioration réelle (détecte la régression future) mais ne résout pas la cause
+racine (la duplication elle-même) — préférer, quand c'est possible, éliminer la seconde source
+plutôt que de la surveiller.
+
+**Références :** [review-sprint-PR2-bis](../reviews/review-sprint-PR2-bis.md)
+
+---
+
+### ERR-137 — Trois représentations de `Decimal` coexistent dans le dépôt et ne doivent jamais être mélangées implicitement
+**Sprint :** PR2 (story PR2.1) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/decimal-io.ts`, `src/lib/queries/commissions.ts` (`getPortefeuille`), `src/app/api/portefeuille/route.ts`
+
+**Symptôme :**
+Trois représentations distinctes de `Decimal` coexistent dans le dépôt : (a) `Prisma.Decimal`,
+qui est une copie **vendorée** de decimal.js embarquée dans le runtime Prisma généré — un
+`Decimal.set(...)` de configuration appliqué au paquet `decimal.js` ne la configure PAS ; (b)
+`decimal.js@10.6.0`, le paquet déclaré en dépendance, utilisé par le moteur de calcul ; (c)
+`number`, aux frontières JSON. Les mélanger implicitement (conversion via `.toNumber()`
+intermédiaire, ou confusion entre les deux packages) perd de la précision ou casse une
+configuration censée s'appliquer globalement.
+
+**Cause racine :**
+`Prisma.Decimal` et `decimal.js` sont deux exemplaires distincts du même code, chargés depuis deux
+chemins de résolution de module différents (l'un vendoré dans le client Prisma généré, l'autre en
+dépendance directe) — rien dans le typage TypeScript ne signale qu'il s'agit de deux classes
+distinctes avec la même API.
+
+**Fix :**
+Conversion explicite et centralisée dans un seul utilitaire, `src/lib/previsions/decimal-io.ts` :
+`Prisma.Decimal → decimal.js` via `.toString()`, jamais via un `.toNumber()` intermédiaire qui
+perdrait de la précision ; `.toNumber()` réservé à la seule frontière API/JSON. Précédent contraire
+trouvé dans le dépôt et signalé sans être corrigé (hors périmètre de cette story) :
+`src/lib/queries/commissions.ts` → `getPortefeuille` → `src/app/api/portefeuille/route.ts` laisse
+fuiter des `Decimal` bruts jusqu'à `NextResponse.json`, en contradiction silencieuse avec la
+convention `Decimal → number` documentée.
+
+**Leçon / Règle :**
+Ne jamais supposer qu'un `Decimal.set(...)` de configuration s'applique globalement sans vérifier
+de quel package (`Prisma.Decimal` vendoré vs `decimal.js` en dépendance) il s'agit réellement.
+Centraliser toute conversion `Prisma.Decimal ↔ decimal.js ↔ number` dans un utilitaire unique,
+jamais dispersée dans les routes ou les queries, et toujours via `.toString()` pour le passage
+`Prisma.Decimal → decimal.js` (jamais `.toNumber()` intermédiaire). Avant de fermer une story qui
+touche un module financier, grep les usages existants de `Decimal` dans les routes API pour
+détecter une fuite déjà présente (`src/app/api/portefeuille/route.ts` en est un exemple connu, non
+corrigé).
+
+**Références :** [review-story-PR2.1](../reviews/review-story-PR2.1.md), ADR-053
+
+---
+
+### ERR-136 — Le piège Prisma 7 `create`/`update` + `include` avec FK brutes se répète systématiquement dans le dépôt, sans jamais avoir eu d'entrée dédiée
+**Sprint :** PR2 (story PR2.1) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/queries/vagues.ts`, `src/lib/queries/previsions-*.ts` (6 occurrences)
+
+**Symptôme :**
+Utiliser une FK brute (ex. `clientId`) dans un `create()` accompagné d'un `include` déclenche
+`Argument '<relation>' is missing`. Le même piège vaut pour `update()` + `include`. Ce pattern
+existait déjà dans `src/lib/queries/vagues.ts` avant ce sprint, et a été réappliqué 6 fois de plus
+dans les queries du module Prévisions — deux agents distincts (@db-specialist et @tester) ont
+signalé indépendamment que le fichier `ERRORS-AND-FIXES.md` ne documentait pas encore ce piège
+pourtant récurrent.
+
+**Cause racine :**
+Le générateur `prisma-client` sépare strictement les types d'input « checked » (syntaxe relation,
+ex. `client: { connect: { id } }`) et « unchecked » (FK brute, ex. `clientId`). Un `create()`/
+`update()` qui mélange une FK brute avec un `include` sur la relation correspondante échoue parce
+que le typage généré pour `include` présuppose la syntaxe « checked ».
+
+**Fix :**
+Scinder systématiquement en deux appels : `create({ data })` (ou `update({ where, data })`) sans
+`include`, puis un second appel `findUniqueOrThrow({ where, include })` pour récupérer l'entité
+avec ses relations chargées. Ne concerne PAS `findMany`/`findFirst`/`findUnique`, uniquement les
+opérations d'écriture accompagnées d'un `include`.
+
+**Leçon / Règle :**
+Devant tout `create()`/`update()` Prisma 7 qui utilise une FK brute ET un `include` sur la relation
+correspondante, scinder systématiquement en deux appels (écriture sans `include`, puis lecture avec
+`include`) avant même de tenter de lancer le code — ce piège s'est déjà reproduit au moins 7 fois
+dans ce dépôt (`vagues.ts` + 6 fois dans les queries Prévisions) et continuera de se reproduire tant
+que cette entrée n'est pas consultée avant d'écrire une nouvelle query d'écriture avec relations.
+
+**Références :** [review-story-PR2.1](../reviews/review-story-PR2.1.md)
+
+---
+
+### ERR-135 — Prisma tronque silencieusement une valeur fractionnaire écrite dans une colonne `Int`, sans lever aucune exception
+**Sprint :** PR2 (story PR2.1) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/previsions-*.ts` (colonnes `Int` alimentées par un DTO externe)
+
+**Symptôme :**
+Écrire `3.7` dans une colonne Prisma `Int` ne lève AUCUNE exception — Prisma applique `Math.trunc`
+côté client (`3.7 → 3`) avant même d'atteindre PostgreSQL. Vérifié par contraste que le driver `pg`
+nu, lui, rejette bruyamment la même valeur (code SQLSTATE `22P02`). C'est donc bien Prisma qui
+masque le problème, pas PostgreSQL. Conséquence : une donnée corrompue silencieusement, sans aucun
+signal d'erreur.
+
+**Cause racine :**
+Le client Prisma applique une coercition implicite (`Math.trunc`) sur toute valeur JS passée à un
+champ typé `Int` avant sérialisation vers le protocole de la base, plutôt que de valider que la
+valeur est déjà un entier et de rejeter le cas contraire. Toute colonne `Int` alimentée par un DTO
+externe (payload API, entrée utilisateur) sans validation applicative préalable est donc exposée à
+une troncature silencieuse.
+
+**Fix :**
+Garde applicative explicite `Number.isInteger()` avant toute écriture, placée avant tout accès DB
+et à l'intérieur de la transaction quand il y en a une. Implémentée sous le nom
+`assertEntierColonneInt` dans les queries du module Prévisions. Message d'erreur : `"<nomChamp>
+doit etre un entier (colonne Prisma Int) — valeur recue : <valeur>."`.
+
+**Leçon / Règle :**
+Ne jamais faire confiance à une colonne Prisma `Int` pour rejeter une valeur fractionnaire — Prisma
+la tronque silencieusement au lieu d'échouer. Toute colonne `Int` alimentée par un DTO externe doit
+être protégée par une garde explicite (`Number.isInteger()` ou équivalent, voir
+`assertEntierColonneInt`) placée avant l'écriture. Aggravant à vérifier systématiquement : si la
+colonne participe à un index unique composite (ex. `@@unique([posteId, moisAbsolu])`), la
+troncature peut faire collisionner deux clés distinctes et écraser silencieusement la mauvaise
+ligne — c'est le cas le plus dangereux, à traiter en priorité Haute partout où il se présente (voir
+finding #1 de [review-story-PR2.1](../reviews/review-story-PR2.1.md), non corrigé au moment de la
+review).
+
+**Références :** [review-story-PR2.1](../reviews/review-story-PR2.1.md), ERR-130
+
+---
+
+### ERR-134 — Une fonction de mapping enum → clé i18n peut référencer une clé absente des fichiers de traduction sans qu'aucun outil ne le détecte [RÉSOLU - ne devrait plus arriver]
+**Sprint :** PR1 (story PR1.1) | **Date :** 2026-08-03 | **Vérifié résolu :** 2026-08-03 (review PR2-bis)
 **Sévérité :** Basse (dette préexistante, non corrigée — hors périmètre de la story qui l'a révélée)
 **Fichier(s) :** `src/components/abonnements/plan-form-dialog.tsx` (fonction `getModuleNavKey`, l.182-183)
 
@@ -533,9 +1252,11 @@ traduction ne casse ni le build ni les tests, elle échoue seulement au rendu (f
 clé brute affichée), et seulement si le chemin de code est effectivement exercé.
 
 **Fix :**
-Aucun — hors périmètre de la story qui l'a révélée. Consigné comme dette connue pour un sprint
-ultérieur (ajout des clés `adminCommissions`/`adminRemises` aux `navigation.json`, ou audit
-systématique des clés référencées par `getModuleNavKey` contre les fichiers de traduction).
+Vérifié résolu lors de la review de PR2-bis (2026-08-03) : les clés `modules.adminCommissions` et
+`modules.adminRemises` existent désormais bien dans `src/messages/{fr,en}/navigation.json` **et**
+`src/messages/{fr,en}/common.json` (ajoutées depuis, hors du périmètre de PR2-bis lui-même — la
+correction date d'un sprint antérieur non identifié précisément par cette entrée, probablement
+PR2.5). `getModuleNavKey()` ne référence donc plus de clé absente.
 
 **Leçon / Règle :**
 `tsc --noEmit` et `npm run build` ne détectent PAS une clé i18n manquante — seul un test dédié qui
@@ -2448,6 +3169,1086 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-168 — **[PRATIQUE — ce qui a fonctionné]** Valider une recette **par falsification** : muter délibérément le code et compter les assertions qui tombent
+**Sprint :** PR2-septies (méthode employée par le @tester sur tout le sprint) | **Date :** 2026-08-04
+**Sévérité :** — (entrée de **pratique reproductible**, pas d'erreur)
+**Fichier(s) :** méthode transverse — appliquée à `src/lib/previsions/route-orchestration.ts`, `src/lib/previsions/aliments.ts`, `src/app/api/previsions/_shared.ts`, `src/components/previsions/parametres-tab.tsx`, `src/components/ui/input.tsx`
+
+**Le problème que cette pratique résout :**
+Une suite verte a **deux** causes possibles indiscernables de l'extérieur : le code est correct, **ou**
+les tests sont indifférents à ce que le code fait. Aucun compteur — 2 378 assertions, 8 864 tests,
+0 écart — ne permet de trancher entre les deux. C'est exactement le mécanisme qui a laissé ERR-143
+vivre deux sprints derrière une recette verte, et celui que ERR-127, ERR-148, ERR-155 et ERR-160
+décrivent chacun sous un angle différent.
+
+**La pratique, telle qu'elle a été exécutée :**
+1. **Empreintes `sha256` de tous les fichiers applicatifs concernés, prises AVANT toute mutation.**
+2. Pour chaque garantie qu'on prétend tenir, **écrire la mutation qui devrait la casser**, l'appliquer
+   au code de **production** (jamais au test), relancer, et **compter précisément** ce qui tombe :
+   - re-neutraliser la remise dans la recette d'orchestration (recréer le contournement supprimé) →
+     **71 assertions tombent** — preuve que le retrait du contournement n°3 est réel, pas cosmétique ;
+   - `tonnageVagueT.gte(...)` → `.gt(...)` dans `determinerPourcentageRemise` → **317 assertions
+     tombent** — preuve que la sémantique « seuil atteint exactement → palier applicable » est
+     réellement figée, et pas seulement écrite dans un commentaire ;
+   - trois mutations d'arrondi (`toDecimalPlaces(0)`) posées à trois endroits distincts de la chaîne
+     de coût → **des ensembles de tests différents et disjoints** tombent, ce qui prouve que les tests
+     discriminent les trois positions **séparément** et non par effet de bord commun ;
+   - mutation d'un composant `ui/` partagé, jouée contre la **suite entière** → exactement 1 test
+     tombe, les 8 864 autres passent : preuve simultanée que le correctif est testé **et** qu'aucun
+     appelant n'en dépendait.
+3. **Restauration bit-à-bit prouvée** : `sha256` identiques aux empreintes de référence + `diff` vide
+   sur chaque fichier muté, puis un passage complet de la suite. Sans cette étape, la méthode est un
+   risque, pas une garantie.
+
+**Ce qu'elle a rapporté, concrètement :**
+Deux trous que **2 378 assertions de recette ne couvraient pas** :
+- un **arrondi en amont sur `coutBrutFCFA`** qui **survit** à toute la recette (les prix de sac du jeu
+  d'or sont entiers, donc l'arrondi y est invisible) — seuls 3 tests synthétiques ajoutés au sprint
+  précédent le détectent ; sans eux, **aucune protection** ;
+- une entrée de `PREVISIONS_STATUS_MAP` dont il fallait savoir si elle était morte : la mutation
+  répond sans ambiguïté (retrait → 1 test tombe → elle est un filet utile, pas du code mort), là où
+  une lecture de code aurait laissé le doute.
+Et un **trou de couverture UI** fermé au passage (vidage des erreurs positionnelles à la suppression
+d'un palier), lui aussi prouvé fermé par la mutation correspondante.
+
+**Leçon / Règle :**
+**Une assertion dont on n'a jamais vu l'échec ne prouve rien.** Pour toute garantie qu'un rapport ou
+une review présente comme tenue, la question n'est pas « le test passe-t-il ? » mais **« quelle
+mutation du code de production le ferait tomber, et l'a-t-on observée tomber ? »**. Protocole minimal
+à reproduire : (1) empreintes avant, (2) une mutation par garantie revendiquée, appliquée au code de
+production, (3) **compte exact** des tests tombés — un compte de **0** est un trou de couverture
+découvert, un compte **trop large** signale des tests qui se déclenchent par effet de bord commun,
+(4) restauration prouvée par `sha256` + `diff` vide, (5) passage complet final. À appliquer en
+priorité aux garanties les plus coûteuses à perdre : ordre des opérations, frontières
+d'inégalité (`≥` vs `>`), arrondis, et toute règle qu'une recette prétend valider bout en bout.
+
+**Références :** ERR-143 (le défaut que cette pratique aurait détecté deux sprints plus tôt), ERR-127, ERR-148, ERR-155, ERR-160, [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §4, [rapport-story-PR2sept.3](../tests/rapport-story-PR2sept.3.md) §B.1 et §B.3
+
+---
+
+### ERR-169 — Un ADR append-only peut nommer une fonction qui n'existe sous aucun nom dans le code : `mettreAJourPaliersRemise` vs `replacePaliersRemise`
+**Sprint :** PR2-septies (relevé à la capitalisation) | **Date :** 2026-08-04
+**Sévérité :** Basse — **note de correspondance ; amendement demandé à @architect**
+**Fichier(s) :** `docs/decisions/ADR-053-module-previsions.md:1973` (§13.8 point 3), `src/lib/queries/previsions-scenarios.ts:448`
+
+**Symptôme :**
+L'ADR-053 §13.8 justifie l'ajout de `@@unique([scenarioId, ordre])` par le fait que
+« **`mettreAJourPaliersRemise`** applique un `deleteMany` puis un `createMany` dans une transaction ».
+**Aucune fonction de ce nom n'existe dans le dépôt.** La fonction réelle, dont le comportement décrit
+est exact, s'appelle **`replacePaliersRemise`** (`src/lib/queries/previsions-scenarios.ts:448`).
+
+**Cause racine :**
+Un ADR décrit un chemin de code par son **nom** ; ce nom n'est vérifié par aucun compilateur, aucun
+test, aucun lint. Le raisonnement de l'ADR est ici parfaitement juste — c'est uniquement l'étiquette
+qui est fausse. Le coût est différé : dans six mois, un agent qui cherche `mettreAJourPaliersRemise`
+ne trouve rien et doit choisir entre supposer que la fonction a été supprimée (faux) ou repartir en
+exploration.
+
+**Fix :**
+**Note de correspondance consignée ici, l'ADR n'est pas modifié** — il est append-only et propriété de
+@architect. **Correspondance à retenir : ADR-053 §13.8 « `mettreAJourPaliersRemise` » = code
+`replacePaliersRemise` (`src/lib/queries/previsions-scenarios.ts:448`).** **Amendement demandé à
+@architect** : rectifier le nom dans une section d'amendement de l'ADR-053.
+
+**Leçon / Règle :**
+Tout nom de fonction, de fichier ou de champ cité dans un ADR doit être **vérifié par grep au moment
+de l'écriture** — c'est une vérification de quelques secondes qui empêche une divergence
+irrattrapable dans un document append-only. Réciproquement, un agent qui découvre une telle
+divergence dans un document dont il n'est pas propriétaire **ne le corrige pas** : il consigne la
+correspondance dans ce fichier et demande l'amendement au propriétaire, faute de quoi la propriété du
+document devient négociable au cas par cas. Même famille qu'ERR-040 et ERR-117 (un ADR ne prouve rien
+sur le code, il faut aller vérifier le call site réel).
+
+**Références :** ADR-053 §13.8, ERR-040, ERR-117, ERR-085, ERR-143
+
+---
+
+### ERR-162 — `RepartitionMoisAliment` peut ne pas couvrir `1..dureeCycleMoisFigee` sans qu'aucune validation ne le détecte : un mois de cycle absent est traité silencieusement comme 0 %
+**Sprint :** PR2-sexies (story PR2sex.2, réserve ouverte par @code-reviewer) | **Date :** 2026-08-04
+**Sévérité :** Moyenne — **ouvert, à solder avant PR3**
+**Fichier(s) :** `src/lib/previsions/validation.ts` (fonction de couverture absente), `src/lib/previsions/aliments.ts:60-61`
+
+**Symptôme :**
+`validation.ts` porte `validerSommeRepartitionMoisAliment` (vérifie que la somme des pourcentages de
+`RepartitionMoisAliment` fait 100 %) mais aucune fonction ne vérifie que la couverture des `moisCycle`
+correspond exactement à `1..dureeCycleMoisFigee` de la vague. Si un mois de cycle est absent de la
+répartition, le moteur ne rejette rien : `aliments.ts:60-61` traite l'absence comme un pourcentage de
+0 %, et le total de sacs calculé pour ce calibre est silencieusement trop faible.
+
+**Cause racine :**
+La doctrine de rejet 422 existe déjà pour un cas analogue
+(`sacsParTonneStandard === null`, `route-orchestration.ts:393-398`) mais n'a pas été étendue à la
+couverture de `RepartitionMoisAliment` — la validation existante contrôle la forme (somme à 100 %) mais
+pas la complétude (toutes les positions de cycle représentées). Gap pré-existant au sprint PR2sex.2, ni
+introduit ni corrigé par lui : la pré-analyse l'avait identifié et recommandé de le signaler plutôt que
+de le traiter dans cette story, ce que le @developer a fait.
+
+**Fix :**
+Non corrigé à ce stade. À traiter avant toute story PR3 qui dépendrait d'un `RepartitionMoisAliment`
+fiable : ajouter une fonction de validation qui rejette (422) toute `RepartitionMoisAliment` dont
+l'ensemble des `moisCycle` présents diffère de `{1, ..., dureeCycleMoisFigee}` pour la vague concernée,
+sur le même patron que le rejet déjà en place pour `sacsParTonneStandard === null`.
+
+**Leçon / Règle :**
+Une validation qui contrôle la forme d'une donnée (somme = 100 %) ne contrôle pas nécessairement sa
+complétude (toutes les positions attendues sont présentes) — les deux sont des propriétés distinctes et
+doivent être vérifiées séparément. Quand une doctrine de rejet 422 existe déjà pour un cas analogue dans
+le même module, l'étendre systématiquement aux cas structurellement voisins plutôt que de la laisser
+couvrir un seul cas historique — sinon un mois de cycle mal saisi produit un nombre silencieusement
+faux en production, sans jamais lever d'erreur.
+
+**Références :** [review-story-PR2sex.2](../reviews/review-story-PR2sex.2.md) §5, ADR-053 §12.5
+
+---
+
+### ERR-161 — Deux arrondis voisins pour deux grandeurs voisines (`ceil` sacs à acheter vs `ROUND` sacs consommés) : même risque de confusion qu'un même nom pour deux grandeurs
+**Sprint :** PR2-sexies (story PR2sex.2) | **Date :** 2026-08-04
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/aliments.ts` (`calculerBesoinAlimentMensuel` l.55-75, `calculerDetailConsommationMensuelle` l.408-445)
+
+**Symptôme :**
+Le classeur de référence applique `ceil` aux sacs **à acheter** (§5.1) et `ROUND` aux sacs
+**consommés** (bloc « indicatif »). Les deux grandeurs vivent dans la même section de la même vue et
+afficheront des nombres différents pour ce qui ressemble, à l'œil, à la même chose (« combien de sacs
+pour ce mois ? ») — un terrain de confusion aussi réel qu'ERR-138 (un même nom pour deux grandeurs
+différentes) ou ERR-139 (un facteur composite qui se décompose), mais porté ici par deux fonctions
+d'arrondi différentes plutôt que par un nom ou un facteur.
+
+**Cause racine :**
+Le classeur ne documente cette distinction nulle part explicitement — elle ne se découvre qu'en lisant
+les deux formules brutes côte à côte. Sans séparation stricte du code et sans libellé UI explicite, un
+développeur ou un utilisateur qui voit deux valeurs différentes pour « les sacs du mois » peut
+raisonnablement conclure à un bug plutôt qu'à une distinction voulue (achat prévisionnel arrondi au
+sac entier supérieur, vs consommation réelle arrondie au plus proche).
+
+**Fix :**
+`calculerBesoinAlimentMensuel` (ceil, sacs à acheter) et `calculerDetailConsommationMensuelle` (ROUND,
+sacs consommés, indicatif) sont des fonctions strictement séparées, sans aucun appel croisé — la
+seconde ne prend en entrée que `sommeSacsEffectifsCycle` et `repartitions`, jamais `quantiteKg`,
+`poidsSacKg`, ni le résultat de la première (signature `DetailConsommationCycleInput`,
+`aliments.ts:408-413`). Un commentaire de code (`aliments.ts:354-360`) nomme explicitement le risque et
+renvoie à ERR-138/ERR-139. Un test de non-contamination (`aliments.test.ts:529-546`) construit un cas
+(101 sacs, 33 %) où `ceil` et `ROUND` divergent (34 vs 33) et vérifie que la fonction sous test retourne
+bien la valeur ROUND, pas la valeur ceil — preuve par construction que les deux chemins de calcul ne se
+mélangent pas, pas simple déclaration d'intention. La distinction est aussi rendue explicite dans le
+libellé UI et le texte d'explication de la vue, pas seulement dans le code.
+
+**Leçon / Règle :**
+Quand une même vue affiche deux grandeurs voisines par leur nom mais divergentes par leur règle
+d'arrondi (ou plus généralement par leur méthode de calcul), (1) garder les deux fonctions strictement
+séparées — aucun appel croisé, aucune entrée partagée qui laisserait une valeur de l'une contaminer
+l'autre ; (2) nommer le risque en commentaire à l'endroit du code où il pourrait se produire ; (3)
+écrire un test construit spécifiquement sur un cas où les deux méthodes divergent (jamais un cas où
+elles coïncident par hasard, cf. ERR-148) ; (4) rendre la distinction visible **dans l'UI et le texte
+d'explication**, pas seulement dans le code — sans quoi l'utilisateur, qui ne lit jamais le code,
+conclut à un bug là où il n'y en a pas.
+
+**Références :** [review-story-PR2sex.2](../reviews/review-story-PR2sex.2.md) §1, ERR-138, ERR-139
+
+---
+
+### ERR-160 — Un jeu d'or peut être structurellement incapable de discriminer deux formules candidates : vérifier qu'il contient un cas de divergence avant de s'y fier pour trancher
+**Sprint :** PR2-sexies (story PR2sex.2) | **Date :** 2026-08-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/route-orchestration.ts` (accumulateur `sacsEffectifsCycleParAlimentMoisPosition`), `src/lib/previsions/__tests__/route-orchestration-detail-consommation.test.ts`, `src/lib/previsions/__tests__/recette/route-orchestration.recette.test.ts`
+
+**Symptôme :**
+Le classeur de référence agrège les sacs consommés par `SUMIFS` puis applique un seul `ROUND` au total
+(sum-then-round) — formule brute : `Prévisions!B13 =
+ROUND(SUMIFS('Aliment par vague'!$D$4:$D$22,Empoissonnement!$B$4:$B$22,B$3)*N(Aliments!$F$4),0)`, un
+seul `ROUND` enveloppant la somme. Mais les 19 vagues des deux fixtures de la recette ont **19 mois
+d'empoissonnement strictement distincts** : aucune coïncidence de deux vagues à la même position de
+cycle le même mois. Sur un tel jeu, `ROUND(Σ)` (sum-then-round, la formule réelle) et `Σ ROUND()`
+(round-then-sum, la formule alternative plausible) produisent **exactement les mêmes valeurs sur les
+2300 tests de recette**. Une recette entièrement verte n'aurait rien vu si le mauvais ordre avait été
+implémenté.
+
+**Cause racine :**
+Un jeu d'or extrait fidèlement d'un plan réel hérite de la structure de ce plan — ici, un plan où les
+vagues sont empoissonnées à des mois différents. Rien dans le nombre de tests de la recette (2300) ne
+garantit que ce jeu contient un cas capable de distinguer deux formules d'agrégation candidates : la
+richesse structurelle du jeu d'or (est-ce qu'il existe au moins un cas où les deux formules divergent
+?) est une propriété indépendante de son volume. Même famille de piège qu'ERR-148 (deux formules
+équivalentes sur le jeu disponible ne sont pas prouvées équivalentes) et qu'ERR-155 (une série jamais
+non nulle dans le jeu d'or est un angle mort invisible que le compte de tests ne révèle pas).
+
+**Fix :**
+Le choix sum-then-round n'a pas été établi par la recette (structurellement incapable de trancher) mais
+par **lecture directe de la formule brute** du classeur (un seul `ROUND` enveloppant tout le `SUMIFS`),
+puis protégé par un **test synthétique construit exprès** pour faire diverger les deux candidats : deux
+vagues à 3 sacs chacune (16,66 % de répartition chacune) au même mois de cycle produisent `ROUND(Σ) =
+ROUND(1.0) = 1` alors que `Σ ROUND() = ROUND(0.5) + ROUND(0.5) = 0 + 0 = 0` (arrondi bancaire) —
+l'assertion vérifie explicitement `expect(...).not.toBe(0)`, pas seulement `toBe(1)`, pour discriminer
+réellement le résultat correct du résultat de la formule concurrente
+(`route-orchestration-detail-consommation.test.ts`, test 1 ; variante sur la fonction pure dans
+`aliments.test.ts:486-527`).
+
+**Leçon / Règle :**
+Avant de s'appuyer sur un jeu d'or pour trancher entre deux formules candidates (ici : ordre
+sum-then-round vs round-then-sum), vérifier explicitement que ce jeu contient au moins un cas où les
+deux formules produisent des résultats différents — sinon 0 écart sur l'ensemble du jeu ne prouve rien
+sur le choix de formule, seulement que le jeu ne peut pas trancher. Si le jeu d'or disponible ne
+contient pas un tel cas (ce qui peut être une propriété structurelle du plan réel, pas un défaut du jeu
+d'or lui-même), trancher par lecture directe de la source (la formule brute, pas sa description) et
+écrire un test **synthétique dédié**, construit spécifiquement pour faire diverger les deux candidats,
+plutôt que de se fier au silence de la recette. La couverture d'une recette est bornée par la richesse
+structurelle de son jeu d'or, pas par son nombre de tests (cf. ADR-053 §12.5).
+
+**Références :** [review-story-PR2sex.2](../reviews/review-story-PR2sex.2.md) §2, ERR-148, ERR-155, ADR-053 §12.5
+
+---
+
+### ERR-159 — Coller une sortie de commande brute dans un rapport de test versionné est un vecteur de fuite de secret aussi réel que du code
+**Sprint :** PR2-quinquies (vérification de fin de sprint, détecté par @tester via gitleaks) | **Date :** 2026-08-04
+**Sévérité :** Moyenne (identifiant de dev local, pas de production — mais violation littérale de R11)
+**Fichier(s) :** `docs/tests/rapport-story-PR1.4.md:263`, et par contagion `docs/tests/rapport-sprint-CR.md:28`, `docs/tests/rapport-sprint-45.md:14,27,76`, `docs/tests/rapport-final-sprint-PR2-quinquies.md:258-259,274-275,344`, `docs/tests/rapport-sprint-CI.md:502`
+
+**Symptôme :**
+Un identifiant réel de la base de développement locale (utilisateur + mot de passe en clair, URL-encodé,
+port 8432) apparaît en dur dans plusieurs rapports de test versionnés, à l'intérieur de blocs de
+commande copiés-collés (`export DATABASE_URL="postgresql://...";npx vitest run`, etc.), ainsi que dans
+un rapport de vérification qui cite littéralement le secret en documentant la finding gitleaks
+elle-même. `gitleaks` (règle `connection-string-with-credentials`) l'a correctement détecté dans
+`rapport-story-PR1.4.md:263` pendant la vérification de fin de sprint PR2-quinquies.
+
+**Cause racine :**
+Un rapport de test authentique documente honnêtement la commande exécutée pour obtenir un résultat
+reproductible — l'auteur ne se pense à aucun moment en train « d'écrire un secret », il documente un
+fait. Mais une commande `export DATABASE_URL="..."` collée telle quelle porte l'identifiant complet en
+clair, exactement comme s'il avait été écrit en dur dans un script. R11 ne fait aucune exception de
+nature de fichier (« aucun fichier du dépôt, quel qu'il soit », documentation comprise), et gitleaks
+n'a aucune restriction d'extension — la lacune n'était pas outillée, elle était humaine : personne ne
+relit une sortie de commande collée dans un rapport avec le même regard qu'un diff de code.
+
+**Fix :**
+Chaque occurrence remplacée par un placeholder explicite `postgresql://<user>:<password>@localhost:8432/farm-flow`,
+avec une note renvoyant au `.env` non tracké comme source réelle de la valeur — la commande reste
+lisible et rejouable par quiconque dispose de son propre `.env` local. Le rapport qui citait
+littéralement le secret dans sa description de la finding gitleaks a aussi été redigé (la finding
+reste décrite fidèlement, sans reproduire la valeur). La valeur réelle reste présente dans
+l'historique git de `rapport-story-PR1.4.md` (identifiant de dev local seulement — pas de rotation ni
+de réécriture d'historique effectuée, hors mandat de ce correctif).
+
+**Leçon / Règle :**
+Avant de coller une sortie de commande dans un rapport de test, de bug ou d'audit, relire la **ligne
+de commande elle-même** (pas seulement sa sortie) — c'est presque toujours elle, et non la sortie du
+programme, qui porte l'identifiant en clair (`export DATABASE_URL=...`, `DATABASE_URL=... npx ...`,
+`psql -U user -h host`). Préférer systématiquement `"$DATABASE_URL"` (déjà exportée dans le shell) à sa
+valeur littérale dans tout bloc de commande destiné à être collé dans un document versionné. Un rapport
+qui documente une violation R11 trouvée par un autre agent doit décrire la finding sans **reproduire**
+la valeur du secret — sinon le rapport de correction devient lui-même une nouvelle occurrence de la
+même violation.
+
+**Références :** R11 (CLAUDE.md), ADR-052 §5.3, `docs/security/REMEDIATION-SECRET-HISTORIQUE.md`
+
+---
+
+### ERR-163 — Dupliquer un prédicat métier entre deux fichiers est un ERR-138 en puissance, même avec un test comparatif contre l'original
+> **Renumérotée en PR2-septies : cette fiche portait le numéro ERR-158, déjà attribué à une autre
+> entrée du même sprint PR2-quinquies (« Une exigence produit "le grand tableau peut rester réservé
+> au bureau"… », toujours **ERR-158**). C'est **celle-ci** qui a été renumérotée, parce que **tous**
+> les renvois externes au numéro 158 (`docs/analysis/pre-analysis-sprint-PR2-septies.md:224-225`,
+> `docs/analysis/pre-analysis-story-PR2sex.3.md:289,341`) désignent la fiche de présentation, jamais
+> celle-ci. Les mentions de plage « ERR-153 à ERR-158 » (`docs/TASKS.md:7727`,
+> `docs/sprints/SPRINT-PR2-quinquies-PREVISIONS.md:280`) restent exactes en tant que plage de
+> capitalisation, mais couvrent désormais **7 fiches** : ERR-153 à ERR-158 **plus ERR-163**.**
+
+**Sprint :** PR2-quinquies (story PR2q.4) | **Date :** 2026-08-04 · **renumérotée le 2026-08-04 (PR2-septies)**
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/charges.ts` (`calculerBaseRepartition`, deux `.filter()` inline
+aux lignes 105-118), `src/lib/previsions/ventilations.ts` (lignes 152/168, reproduction caractère
+pour caractère des mêmes conditions)
+
+**Symptôme :**
+`ventilations.ts` recalcule, indépendamment, le même filtre que `calculerBaseRepartition` dans
+`charges.ts` (les journaux inclus dans la base de répartition, et la distinction journal
+général/journal rattaché à une vague). Rien dans le typage ne lie ces deux expressions : elles
+peuvent diverger silencieusement à la prochaine modification de l'une sans que l'autre soit
+retouchée.
+
+**Cause racine :**
+Le scope de la story PR2q.4 excluait explicitement `charges.ts` (pas de story pour l'y toucher), ce
+qui a rendu la duplication le chemin de moindre résistance plutôt qu'une extraction de prédicat
+partagé — alors qu'une extraction (deux fonctions pures `estInclusDansBaseRepartition` /
+`estJournalGeneral` exportées depuis `charges.ts`) était possible sans changer aucun comportement,
+donc sans re-recetter le moteur.
+
+**Fix :**
+Non corrigé dans ce sprint (scope assumé). Mitigation existante : un test compare le résultat de
+`ventilations.ts` à un appel réel de `calculerBaseRepartition` importée depuis `charges.ts` (jamais
+réimplémentée dans le test) — voir review-story-PR2q4, point 1 (« piège 2 »).
+
+**Leçon / Règle :**
+Un test comparatif contre la fonction d'origine est **un filet réel mais partiel** : il ne détecte
+que les divergences que son propre jeu de données exerce (ici : un seul cas de `vaguePrevueId` non
+nul mêlé à un journal général). Il ne détecte ni un 3ᵉ état de la même variable, ni une nouvelle
+valeur d'enum, ni un changement de sémantique du champ testé — sauf si quelqu'un pense à enrichir ce
+test précis en même temps que la fonction d'origine. Sa valeur dépend entièrement de la discipline de
+maintenance future, ce qui en fait un ERR-138 en puissance plutôt qu'un ERR-138 réel : **avant toute
+story qui modifierait la définition du prédicat dupliqué dans le fichier d'origine, extraire un
+prédicat partagé exporté en premier**, pas après avoir découvert la divergence en production.
+
+**Références :** review-story-PR2q4, review-sprint-PR2-quinquies §4, ERR-138 · *(anciennement numérotée ERR-158)*
+
+---
+
+### ERR-158 — Une exigence produit ("le grand tableau peut rester réservé au bureau") reste un choix par défaut, révisable par un retour utilisateur explicite ; la carte mobile alternative avait elle-même réintroduit une navigation par clics que l'utilisateur rejetait
+**Sprint :** PR2-quinquies (correctif post-livraison, module Prévisions) | **Date :** 2026-08-04
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/previsions-mensuelles-tab.tsx`
+
+**Symptôme :**
+La première version du tableau mensuel de prévisions suivait à la lettre le §7.4 des exigences
+("le grand tableau peut rester réservé au bureau") : sous 768px, le tableau était remplacé par une
+carte empilée d'UN mois à la fois, navigable par des boutons "mois précédent"/"mois suivant". Cette
+version passait tous les tests et la review, mais l'utilisateur — qui compare mentalement 21 mois
+d'un coup d'œil — a explicitement rejeté ce choix : une navigation par clics est precisement ce
+qu'il cherche a éviter ("facilitate viewing all in a whole with just simple scrolling left or right,
+avoiding clicks").
+
+**Cause racine :**
+Une exigence documentée dans un ADR ("peut rester réservé au bureau") a été lue comme une
+prescription plutôt que comme une option par défaut — aucune vérification a posteriori avec
+l'utilisateur réel du scénario `EXCEL-V12` n'a eu lieu avant de considérer la story livrée. Le
+§7.4 laissait explicitement la porte ouverte ("peut"), mais rien dans le processus ne prévoyait de
+revalider ce choix par défaut contre l'usage réel une fois la fonctionnalité utilisable.
+
+**Fix :**
+Un seul tableau (même markup, mêmes lignes/colonnes) servi à toutes les tailles d'écran, défilement
+horizontal confiné au conteneur du tableau (`overflow-x-auto` + `overscroll-x-contain` +
+`touch-pan-x` + `-webkit-overflow-scrolling: touch`, pour que le geste au doigt ne déclenche jamais
+la navigation précédente/suivante du navigateur). Colonne collante retrécie et libellés tronqués
+(`truncate` + attribut `title`) sous `md:`, plutôt qu'une largeur desktop fixe qui aurait mangé une
+part disproportionnée des ~350px utiles à 375px. Deux signaux statiques (jamais asservis à
+`scrollLeft`, donc jamais dépendants d'un JS de suivi qui pourrait se dégrader silencieusement) —
+ombre portée sur la colonne collante, dégradé `pointer-events-none` en bord droit — signalent qu'il
+y a du contenu hors écran. Vérifié en Chromium réel (scénario `EXCEL-V12`, lecture seule stricte,
+`ScenarioPrevision.updatedAt` inchangé avant/après) à 375/768/1280px : à chaque largeur,
+`document.documentElement.scrollWidth === clientWidth` (aucun débordement de page), le conteneur du
+tableau défile bien lui-même (`scrollWidth > clientWidth`), la colonne collante reste en place à
+`scrollLeft` maximum, et les en-têtes de section restent des bandes non vides au défilement (la
+garantie ERR-157 tient aussi à 375px, pas seulement au-delà de `md:`).
+
+**Leçon / Règle :**
+Une clause d'exigence qui autorise explicitement une exception ("peut rester...") documente une
+option par défaut acceptée au moment de l'écriture de l'ADR, pas un verdict définitif — surtout pour
+un module encore en cours d'usage actif par l'utilisateur final (`EXCEL-V12`). Quand l'utilisateur
+qui travaille quotidiennement dans une fonctionnalité livrée exprime un désaccord explicite et
+argumenté avec un choix par défaut, ce désaccord prime sur l'exigence documentée — la mise à jour de
+l'ADR/de la doc suit la décision, elle ne la bloque pas. Voir aussi ERR-157 : toute nouvelle
+garantie visuelle introduite par un tel correctif (ici : largeur de colonne, troncature, confinement
+du défilement tactile, affordance de bord) doit être vérifiée en navigateur réel aux largeurs
+concernées, jamais seulement par un test jsdom qui ne peut prouver aucune de ces garanties par
+construction.
+
+**Références :** ERR-157, **§7.4 des exigences fonctionnelles du module Prévisions (document hors
+dépôt)** — *correction PR2-septies : cette ligne renvoyait auparavant à « ADR-053 §7.4 », référence
+**morte**. Vérifié : l'ADR-053 ne contient qu'un titre `## 7. Recette` et **aucune sous-section
+numérotée 7.x**. Toutes les occurrences de « §7.4 » dans cette fiche et dans ERR-157 désignent le
+document d'exigences fonctionnelles, absent du dépôt — ne pas les résoudre contre l'ADR.*
+
+---
+
+### ERR-157 — Un test jsdom ne prouve aucune garantie de mise en page (sticky, collision, débordement, couleur rendue) : seule la structure du DOM est vérifiée
+**Sprint :** PR2-quinquies (correctif post-livraison, module Prévisions) | **Date :** 2026-08-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/components/previsions/previsions-mensuelles-tab.tsx` (en-têtes de section),
+`src/components/ui/popover.tsx`
+
+**Symptôme :**
+Les titres de section du tableau mensuel de prévisions devenaient des bandes grises **entièrement
+vides** dès qu'on faisait défiler le tableau horizontalement — le libellé de section disparaissait
+de l'écran. Le défaut a traversé un cycle complet @developer → @tester → @code-reviewer **sans être
+détecté**, alors que la story portait des tests de rendu et une review par lecture de code
+approfondie.
+
+**Cause racine :**
+`position: sticky left-0` était posé sur un `<td colSpan={mois.length + 2}>` qui occupait déjà toute
+la largeur du tableau — une cellule qui remplit toute la largeur n'a strictement aucune marge de
+défilement dans laquelle « s'épingler ». Mesuré après coup : le titre se retrouvait à
+`left = -1331` pour un conteneur commençant à 264, soit 1595 px hors écran. **jsdom (l'environnement
+des tests `vitest`/Testing Library) ne calcule aucune boîte de mise en page, aucun `position:
+sticky`, aucun défilement réel** — la structure du DOM était parfaitement correcte (le texte, le rôle
+ARIA, l'attribut `aria-expanded` étaient tous présents et corrects), seule la mise en page rendue
+dans un vrai moteur de rendu était fausse. Aucun outil du harnais de test en place ne pouvait, par
+construction, détecter ce défaut.
+
+**Fix :**
+Réutilisation du mécanisme déjà en place et déjà correct pour les lignes de données : une cellule
+collante étroite, de la largeur exacte de la colonne de libellés (`sticky left-0 z-10 border-r
+bg-muted`, fond **opaque** — un fond semi-transparent laisserait les chiffres des mois défiler
+visiblement dessous), suivie d'une bande de fond non collante en `colSpan={mois.length + 1}` avec
+`aria-hidden="true"` (elle ne masque aucun contenu utile). Vérifié en Chromium réel après coup :
+titre stable à `265 → 717` à tout `scrollLeft`, identique à la colonne des libellés.
+
+**Leçon / Règle :**
+Pour toute exigence de présentation (§7.4 de ce module ou équivalent ailleurs), recenser
+explicitement, avant de considérer la garantie « testée », lesquelles de ses sous-garanties sont
+vérifiables par le harnais en place et lesquelles ne le sont **structurellement pas**. Sur les 7
+garanties visuelles de ce module, au moins 4 sont hors de portée de jsdom par construction :
+colonne collante, en-tête de section collant, collision de popover contre le bord du viewport,
+absence de débordement horizontal de la page — et la troncature de libellé dépend d'un calcul de
+largeur réel non simulé. Même parmi les garanties considérées « couvertes », vérifier le niveau réel
+de preuve : « négatifs en rouge » n'était vérifié qu'au niveau du **nom de classe CSS posé**
+(`text-danger`), jamais de la couleur effectivement rendue — un mauvais mappage de cette variable
+dans le thème resterait invisible à ce test. **Un test qui vérifie la structure du DOM ne doit jamais
+être présenté, dans un rapport de test ou de review, comme une vérification de rendu.** Quand une
+garantie visuelle n'est pas vérifiable par le harnais actuel, le dire explicitement dans le test
+lui-même (commentaire), plutôt que de laisser un nombre de tests vert donner l'illusion d'une
+couverture qui n'existe pas. Pour les garanties récurrentes déjà prises en défaut une fois (sticky,
+collision), envisager un test en moteur de rendu réel (Chromium) exécuté en routine, pas seulement
+en vérification ad hoc après signalement.
+
+**Références :** review-sprint-PR2-quinquies §1 et §3
+
+---
+
+### ERR-156 — Un total sur une série de flux et un total sur une série déjà cumulative n'obéissent pas à la même règle d'agrégation : la règle appartient à la définition de la ligne, pas au code d'affichage
+**Sprint :** PR2-quinquies (story PR2q.1) | **Date :** 2026-08-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/components/previsions/previsions-mensuelles-tab.tsx`
+
+**Symptôme :**
+La colonne « Total » du tableau mensuel de prévisions sommait les 21 valeurs mensuelles de
+`soldeFCFA` (trésorerie **cumulée**) exactement comme elle sommait les lignes de flux (CA, dépenses,
+etc.). Sommer une série déjà cumulative compte chaque mois autant de fois qu'il reste de mois après
+lui — un résultat sans aucun sens financier, affiché sans avertissement ni signalement visuel. Le
+classeur Excel de référence le savait : `Prévisions!W35` (Total de la ligne solde cumulé) vaut
+`=V35`, la dernière valeur de la ligne, jamais une somme.
+
+**Cause racine :**
+Le code d'affichage traitait toutes les lignes du tableau de façon uniforme (une seule fonction de
+somme appliquée indistinctement), sans distinguer les lignes qui représentent un flux (où sommer 21
+mois a un sens : total annuel) des lignes qui représentent un état cumulatif (où seule la dernière
+valeur a un sens : solde final).
+
+**Fix :**
+Le mode de totalisation est devenu une propriété **déclarée par la ligne** (`TotalMode = "somme" |
+"derniereValeur"`, champ de `LIGNE_KEYS`), et `calculerTotalLigne(moisListe, key, totalMode)` est
+appelée uniformément par le rendu sans branche conditionnelle par nom de ligne. Seule la ligne
+`soldeFCFA` porte `"derniereValeur"` ; toutes les autres restent `"somme"`.
+
+**Leçon / Règle :**
+Quand deux lignes d'un même tableau obéissent à des règles d'agrégation différentes (flux vs
+cumulatif, par exemple), la règle appartient à la **définition de la ligne**, jamais à un `if` en
+dur dans le code de rendu par nom de ligne — sinon chaque nouvelle ligne ajoutée au tableau oblige à
+se souvenir de retoucher le rendu, et l'oubli reproduit ce bug silencieusement. Avant d'ajouter une
+colonne « Total » sur une série, vérifier d'abord si elle est un flux ou un état cumulatif : ce
+n'est jamais une hypothèse par défaut.
+
+**Références :** review-story-PR2q1, ADR-053 (classeur de référence, `Prévisions!W35`)
+
+---
+
+### ERR-155 — Une série présente dans le jeu d'or mais jamais assertée par la recette est un angle mort invisible : le nombre de tests ne dit rien de la couverture des séries disponibles
+**Sprint :** PR2-quinquies (story PR2q.2) | **Date :** 2026-08-04
+**Sévérité :** Moyenne
+**Fichier(s) :** `prisma/fixtures/previsions/*.json` (champ `resultats.epargne`),
+`src/lib/previsions/__tests__/recette/`
+
+**Symptôme :**
+`resultats.epargne` existait dans les deux fixtures du jeu d'or depuis la story PR1.4, mais la
+recette ne la comparait à aucune sortie du moteur — le rapport de test affichait « 842/842 tests
+passent, 0 écart » tout en ignorant silencieusement une colonne entière du classeur source, pendant
+trois sprints (PR1.4 → PR2q.2, où `calculerEpargne` a finalement été implémentée et testée).
+
+**Cause racine :**
+Une dette signalée par une review (ici : « `resultats.epargne` — hors périmètre, aucune fonction
+ADR correspondante ») n'est pas une dette réduite si elle n'est pas reconvoquée à chaque sprint
+suivant. Le compteur de tests d'une suite de recette ne distingue pas « toutes les séries
+disponibles sont couvertes » de « toutes les séries couvertes le sont correctement » — un jeu d'or
+riche en colonnes peut être exploité seulement partiellement sans qu'aucun signal n'alerte.
+
+**Fix :**
+`calculerEpargne` a été implémentée (story PR2q.2) et une recette dédiée compare désormais
+`resultats.epargne` du jeu d'or à la sortie réelle du moteur.
+
+**Leçon / Règle :**
+Ajouter, comme critère systématique de revue d'une recette/suite de tests contre un jeu d'or, la
+question : « quelles séries présentes dans le jeu d'or ne sont comparées par aucun test ? ». Cette
+question, posée dès PR1.4, aurait révélé l'angle mort sur l'épargne trois sprints plus tôt. Même
+mécanique que la leçon consignée en ADR-053 §12.5 (la couverture d'une recette est bornée par la
+richesse structurelle du jeu d'or) mais appliquée ici non à la structure du jeu d'or, à ce qu'on
+choisit effectivement d'en lire et d'en assertée.
+
+**Références :** rapport-story-PR1.4, review-story-PR2q2, ADR-053 §12.5
+
+---
+
+### ERR-154 — Le cas dégénéré d'une entrée vide (`[]`) peut faire passer pour rapprochée une série qui ne teste en réalité qu'une seule de ses composantes
+**Sprint :** PR2-quinquies (story PR2q.2) | **Date :** 2026-08-04
+**Sévérité :** Basse
+**Fichier(s) :** `src/lib/previsions/__tests__/recette/` (builder de scénario Section C,
+`apports: []`)
+
+**Symptôme :**
+La ligne « Total des entrées » du moteur se dérive de `revenusFCFA + apportsFCFA`. Le builder de
+recette construit toujours `apports: []` (le jeu d'or `entreesModele` ne porte aucune ligne de
+saisie d'apports — ce sont des sorties du classeur, pas des entrées). La dérivation
+`revenusFCFA + apportsFCFA` dégénère donc systématiquement à `revenusFCFA` seul, et le test
+« passe » en donnant l'impression trompeuse que la formule complète est rapprochée, alors qu'une de
+ses deux composantes (`apportsFCFA`) n'est jamais exercée avec une valeur non nulle.
+
+**Cause racine :**
+Un cas dégénéré (opérande neutre, ici `0` via tableau vide) rend une formule à plusieurs termes
+indiscernable, au niveau du résultat du test, d'une formule à un seul terme — le test « passe » sans
+qu'aucune tolérance ne soit élargie, ce qui le rend particulièrement difficile à repérer en review
+rapide (contrairement à une tolérance élargie, qui est un signal explicite à chercher).
+
+**Fix :**
+Documenté explicitement dans le commentaire du test lui-même : la série n'est rapprochée que
+partiellement (composante `apportsFCFA` non exercée), plutôt que présentée comme entièrement
+couverte.
+
+**Leçon / Règle :**
+Quand un test de recette compare une formule à plusieurs termes mais que le jeu d'or ne fournit une
+valeur non dégénérée que pour un seul de ces termes, documenter **explicitement dans le test** que
+la couverture est partielle — jamais présenter le test comme couvrant la formule entière, et ne
+jamais le retirer silencieusement en pensant qu'il est redondant. Un test qui passe avec un opérande
+neutre a une garantie strictement plus faible qu'un test qui exerce tous les termes avec des valeurs
+non nulles.
+
+**Références :** review-story-PR2q2
+
+---
+
+### ERR-152 — Supprimer à la main une ligne orpheline sur une base de dev partagée, sans consigner son origine, reproduit le geste que R10 cherche à éliminer par principe
+**Sprint :** PR2-quater (migration ADR-053 §12.5) | **Date :** 2026-08-03
+**Sévérité :** Moyenne (procédure, pas de perte de données réelle)
+**Fichier(s) :** `prisma/migrations/*_aliment_prevision_calibre_article/migration.sql`, base Docker `silures-db` (dev, partagée par tous les agents)
+
+**Symptôme :**
+Le garde-fou de précondition `tailleGranule IS NULL` (voir ERR-151) s'est déclenché sur une ligne
+résiduelle réelle lors de l'application de la migration. @db-specialist a supprimé cette ligne **à la
+main via `docker exec ... psql`** sur la base de dev partagée par tous les agents, puis a marqué la
+migration `--rolled-back` pour la rejouer proprement.
+
+**Cause racine :**
+La base de dev n'est pas la production : R10 (« tout correctif de données est une migration ») ne
+s'applique pas au sens strict, ce qui a rendu le geste acceptable dans l'instant. Mais une ligne
+orpheline qui fait échouer un garde-fou de migration peut être le **symptôme d'un bug réel d'une
+story antérieure** (ex. un chemin de code qui crée une `AlimentPrevision` sans `tailleGranule`) — la
+supprimer sans consigner son origine élimine la preuve qu'un bug a peut-être existé, exactement le
+geste que R10 cherche à empêcher par principe, même hors production.
+
+**Fix :**
+Aucun fix rétroactif nécessaire (base de dev, pas de donnée réelle perdue). Point positif à créditer :
+le refus de contourner le garde-fou anti-agent-IA de `prisma migrate reset` — la ligne a été
+supprimée manuellement puis la migration rejouée proprement, plutôt que de forcer un reset qui aurait
+masqué le problème.
+
+**Leçon / Règle :**
+Une intervention manuelle sur des données, même sur une base de dev/staging non couverte au sens
+strict par R10, doit être **consignée** (bug/BUG-XXX.md ou commentaire de commit expliquant
+pourquoi la ligne existait et pourquoi elle a été supprimée) dès qu'elle contourne un garde-fou —
+sinon l'origine potentielle d'un bug amont disparaît silencieusement. Ne jamais banaliser
+« c'est juste du dev » comme argument suffisant pour sauter cette consignation.
+
+**Références :** ADR-053 §12.5, R10, ADR-049, ERR-151
+
+---
+
+### ERR-151 — Un garde-fou de migration doit nommer les lignes fautives dans son message d'erreur, pas seulement les compter
+**Sprint :** PR2-quater (ADR-053 §12.5) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `prisma/migrations/*_aliment_prevision_calibre_article/migration.sql`
+
+**Symptôme :**
+Les deux garde-fous de précondition ajoutés à la migration de scission calibre/article
+(`tailleGranule IS NULL`, collision `(scenarioId, tailleGranule)`) devaient être écrits de façon à
+nommer explicitement `id`/`scenarioId` des lignes en cause dans le message `RAISE EXCEPTION`, et non
+se contenter d'un comptage (« 3 lignes invalides »).
+
+**Cause racine :**
+Un message qui ne dit que « il y a un problème, N occurrences » oblige l'opérateur qui lit l'échec de
+la migration à réenquêter (requête SQL manuelle) pour savoir *quoi* corriger avant de relancer — un
+échec muet à l'échelle d'une migration reproduit exactement le défaut d'affichage silencieux que
+l'ADR proscrit ailleurs pour l'application (section 5 du même ADR : bac « Non rapproché » explicite
+plutôt qu'un silence).
+
+**Fix :**
+Les deux `RAISE EXCEPTION` de la migration incluent la liste des `id`/`scenarioId` fautifs dans le
+message (via `string_agg` ou équivalent sur la sous-requête de détection), pas seulement `count(*)`.
+
+**Leçon / Règle :**
+Tout garde-fou de précondition dans une migration (`DO $$ ... RAISE EXCEPTION ... END $$;`, cf.
+ERR-130) doit nommer les clés primaires/étrangères des lignes qui violent la précondition dans le
+message d'erreur lui-même — jamais se contenter d'un comptage. C'est ce qui permet à l'opérateur
+d'agir immédiatement sans requête d'investigation supplémentaire.
+
+**Références :** ADR-053 §12.5, ERR-130, ERR-152
+
+---
+
+### ERR-149 — Répartir un total entier arrondi entre N parts par arrondi supérieur individuel gonfle le total : utiliser la méthode du plus fort reste (Hare-Niemeyer)
+**Sprint :** PR2-quater (ADR-053 §12.2, arbitrage 1) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/aliments.ts` (`repartirSacsEntreArticles`)
+
+**Symptôme :**
+Répartir un total entier `N` de sacs entre `n` articles selon leurs parts `pᵢ` en arrondissant chaque
+part au sac supérieur (`sacsᵢ = ceil(N × pᵢ / 100)`) gonfle le total acheté : avec `N = 101` sacs
+répartis 50 %/50 %, `ceil(101 × 0.5) = 51` pour chaque article, soit `51 + 51 = 102` — un sac acheté
+en trop à chaque calibre et chaque mois, sans que rien ne le signale.
+
+**Cause racine :**
+Un `ceil` appliqué indépendamment à chaque part ne garantit aucune borne sur la somme des parts
+arrondies — chaque arrondi individuel peut ajouter jusqu'à `< 1` unité, et ces excédents s'accumulent
+sans compensation entre eux.
+
+**Fix :**
+Méthode du plus fort reste (Hare-Niemeyer) : plancher (`floor`) de chaque part exacte, puis
+attribution de `+1` aux `restantATteribuer = N − Σ planchers` articles dont le reste
+(`partExacte − plancher`) est le plus grand, avec départage déterministe des ex æquo par `ordre`
+croissant de l'article puis `id` croissant. Preuve : `Σ sacsᵢ = Σ planchᵢ + restantATteribuer =
+(N − restantATteribuer) + restantATteribuer = N`, exactement, jamais plus, jamais moins.
+
+**Leçon / Règle :**
+Ne jamais répartir un total entier déjà arrondi une fois entre plusieurs parts en arrondissant
+chaque part individuellement au supérieur — cela introduit un second arrondi non compensé qui peut
+faire dépasser le total d'origine. Utiliser une méthode de répartition à reste (Hare-Niemeyer ou
+équivalent) qui garantit `Σ parts = total` exactement, avec un départage des ex æquo **déterministe
+et documenté** (jamais un ordre d'itération implicite) — sans déterminisme, deux exécutions du même
+scénario peuvent diverger, ce qui romprait la reproductibilité exigée par la recette (ADR-053 §7) et
+par le principe des paramètres gelés (ADR-053 décision 1).
+
+**Références :** ADR-053 §12.2 arbitrage 1, ERR-143 (remise appliquée au total du calibre, jamais par article, cohérent avec cette règle)
+
+---
+
+### ERR-148 — Deux formules qui produisent le même résultat sur le jeu de test disponible ne sont pas « équivalentes » : c'est un signal que le jeu de test ne tranche pas
+**Sprint :** PR2-quater (ADR-053 §12.2, arbitrage 1 — révision) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `docs/decisions/ADR-053-module-previsions.md` §12.2, `src/lib/previsions/aliments.ts`
+
+**Symptôme :**
+L'arbitrage initial sur la règle de coût d'un calibre à plusieurs articles avait retenu une
+**moyenne pondérée** de `poidsSacKg`/`prixSacFCFA`, avec une démonstration algébrique de
+non-régression du cas dégénéré (1 seul article) présentée comme preuve d'équivalence avec la règle
+alternative (somme article par article). Cette « équivalence » n'était vraie que dans le cas
+dégénéré : dès que N > 1 article, une moyenne des prix (même pondérée par les parts déclarées) n'est
+**pas** la même grandeur qu'une somme de (quantité réellement achetée de chaque article × son prix),
+en particulier dès que la répartition entière des sacs entre articles diverge des parts déclarées à
+cause d'un arrondi (structurellement le cas dès N > 1, cf. ERR-149). Un arbitrage utilisateur
+explicite a dû corriger cette décision après coup.
+
+**Cause racine :**
+La démonstration algébrique n'était pas fausse en elle-même — elle prouvait correctement l'égalité
+dans le cas dégénéré (1 article). Mais elle prouvait l'équivalence du **mauvais candidat** : le fond
+du problème (une moyenne perd l'information de répartition réelle par article) n'est pas résolu en
+général, seulement masqué par le fait qu'un seul article ne peut jamais faire apparaître de
+divergence entre les deux formules.
+
+**Fix :**
+Règle réécrite : `coutCalibreFCFA = (1 − remisePct/100) × Σᵢ (sacsᵢ × articleᵢ.prixSacFCFA)` —
+somme article par article, jamais une moyenne appliquée à un total agrégé. Le cas dégénéré (1
+article à 100 %) reste identique byte pour byte au calcul actuel, donc la recette (1270 tests) reste
+valide sans modification.
+
+**Leçon / Règle :**
+Quand deux formules candidates produisent un résultat identique sur l'intégralité du jeu de test
+disponible, **ce n'est jamais, en soi, un argument pour choisir la plus simple des deux** — c'est un
+signal que ce jeu de test ne contient aucune donnée capable de les discriminer (même famille que
+ERR-127, ERR-147). Avant d'acter un arbitrage de calcul sur la base d'une preuve d'équivalence,
+vérifier explicitement sur quel sous-ensemble des cas réels cette équivalence est démontrée — une
+preuve limitée au cas dégénéré n'est pas une preuve générale, et doit être présentée comme telle,
+pas comme une validation de l'arbitrage.
+
+**Références :** ADR-053 §12.2 arbitrage 1 (section « RÉVISÉ »), ERR-127, ERR-147, ERR-149
+
+---
+
+### ERR-145 — Dialogue non réinitialisé à la réouverture : corruption silencieuse de données (Bug B)
+**Sprint :** PR2-ter (story PR2ter.2) | **Date :** 2026-08-03
+**Sévérité :** Critique
+**Fichier(s) :** `src/hooks/use-dialog-close-guard.ts`, les 10 dialogues de `src/components/previsions/` (`scenario-form-dialog`, `aliment-form-dialog`, `vague-prevue-form-dialog`, `poste-form-dialog`, `apport-form-dialog`, `journal-form-dialog`, `repartition-mois-dialog`, `generer-plan-dialog`, `scission-dialog`, `rattacher-vague-dialog`)
+
+**Symptôme :**
+Constaté à l'écran par l'utilisateur pendant le rejeu du plan de référence Excel : après fermeture
+accidentelle puis réouverture de « Nouveau scénario », les champs réaffichaient les valeurs
+précédentes et la saisie suivante s'ajoutait par-dessus, sans aucune erreur — code
+`EXCEL-V12EXCEL-V12`, nom `Plan de reference Excel v12Plan de reference Excel v12`, marge de
+sécurité `105400701900410`. 9 dialogues du module sur 10 étaient touchés.
+
+**Cause racine :**
+`setForm(EMPTY_STATE)` (ou équivalent `resetForm()`) n'était appelé que dans la branche de succès
+de soumission, jamais sur Annuler ni sur `onOpenChange`. Le composant dialogue est monté
+statiquement par le parent et **ne se démonte jamais** entre deux ouvertures — l'état React survit
+donc intégralement à la fermeture, contrairement à l'intuition qu'un dialogue fermé « repart de
+zéro ».
+
+**Fix :**
+`resetForm()` appelé sur **tout** chemin de fermeture via un `handleOpenChange(next)` unique,
+centralisant la logique de reset. Piège associé, à connaître avant de reproduire ce pattern :
+**Radix ne réinvoque pas `onOpenChange` sur un `setOpen(false)` externe** (ex. bouton Annuler
+ordinaire) — il faut appeler explicitement `handleOpenChange(false)` depuis ce bouton, sinon le
+reset ne s'applique pas sur ce chemin précis alors qu'il fonctionne sur clic extérieur/Échap/croix.
+En mode édition (`journal-form-dialog`, `repartition-mois-dialog`), restaurer depuis la réponse API
+fraîche (`result.data`) et non depuis les props du parent, encore stale au moment du reset
+synchrone qui suit la soumission.
+
+**Leçon / Règle :**
+Voir la règle commune énoncée dans ERR-146 (même sprint, même cause structurelle) : tout dialogue
+de formulaire monté statiquement (jamais démonté entre deux ouvertures) doit avoir un test
+« ouvrir → saisir → fermer (par chaque chemin : Annuler, croix, clic extérieur, Échap, succès) →
+rouvrir → vérifier champs vides », faute de quoi ce bug de corruption silencieuse ne peut être
+détecté par aucune suite de tests qui ne ferme et rouvre jamais le dialogue.
+
+**Références :** [review-story-PR2ter.2](../reviews/review-story-PR2ter.2.md), ERR-146
+
+---
+
+### ERR-146 — Clic extérieur ou Échap ferme un formulaire long sans avertissement, aucune suite de tests ne le détecte (Bug A)
+**Sprint :** PR2-ter (story PR2ter.2) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/hooks/use-dialog-close-guard.ts`, les 10 dialogues de `src/components/previsions/`
+
+**Symptôme :**
+8 champs sur 19 remplis dans un formulaire long ; un clic légèrement à côté du dialogue (ou une
+touche Échap) fermait le dialogue et effaçait toute la saisie, sans confirmation d'aucune sorte.
+
+**Cause racine :**
+Aucune protection sur `onInteractOutside`/`onEscapeKeyDown` de `DialogContent` : ces événements
+Radix fermaient le dialogue inconditionnellement, qu'il y ait ou non une saisie non enregistrée.
+Aucun test de la suite existante (7487 tests à l'époque) n'attrapait ce bug ni le Bug B (ERR-145)
+parce qu'ils vivent dans le **cycle de vie du composant**, pas dans la logique métier : toute la
+couverture existante ouvrait un dialogue, saisissait, soumettait — jamais elle ne le fermait puis
+le rouvrait, et jamais elle ne testait un clic extérieur.
+
+**Fix :**
+Hook partagé `src/hooks/use-dialog-close-guard.ts` exposant `{ onInteractOutside,
+onEscapeKeyDown }`, qui `preventDefault()` uniquement si le formulaire est modifié (`touched`/
+`isDirty`). Annuler et la croix restent toujours des chemins de fermeture directs, hors guard, pour
+ne jamais piéger irrémédiablement l'utilisateur dans un dialogue qu'il ne peut plus fermer.
+
+**Leçon / Règle :**
+Règle commune à ERR-145 et ERR-146, à appliquer à tout dialogue de formulaire futur : (1) un test
+« ouvrir → saisir → fermer → rouvrir → vérifier champs vides » **et** (2) un test complémentaire
+« clic extérieur SANS saisie → le dialogue se ferme bien » (sans lequel le premier peut être vert
+pour la mauvaise raison — un dialogue qui ne se ferme jamais passerait aussi le test de non-fuite
+de données). Piège de test à connaître, découvert dans ce sprint : sous jsdom,
+`@radix-ui/react-dismissable-layer` n'attache son listener `document.addEventListener("pointerdown",
+…)` qu'à l'intérieur d'un `window.setTimeout(fn, 0)`, jamais synchrone au montage — sans un `await
+new Promise((r) => setTimeout(r, 0))` avant de dispatcher `pointerdown` dans un test, celui-ci est
+un **faux négatif** : le dialogue paraît ne jamais se fermer, y compris sans aucune saisie.
+
+**Références :** [review-story-PR2ter.2](../reviews/review-story-PR2ter.2.md), ERR-145
+
+---
+
+### ERR-142 — Une couche d'orchestration non recettée entre un moteur recetté et l'UI est l'endroit où les bugs de calcul se logent
+**Sprint :** PR2 (review de sprint) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/previsions/route-orchestration.ts`, `__tests__/recette/`
+
+**Symptôme :**
+Le moteur pur du module Prévisions était validé à 842 tests / 0 écart contre un jeu d'or, et
+pourtant **trois bugs de sévérité Haute** ont été livrés au cours du sprint PR2 — tous les trois
+localisés dans `route-orchestration.ts`, le fichier d'orchestration écrit pour brancher le moteur
+sur les routes API, explicitement hors du périmètre de la recette.
+
+**Cause racine :**
+Les erreurs ne portaient pas sur les formules du moteur (qui restaient inchangées et couvertes)
+mais sur ce qui les entoure : quelle grandeur est passée en argument (homonymie entre deux champs
+de même nom mais d'unités différentes, cf. ERR-138), dans quelle unité (kg au lieu de tonnes, cf.
+ERR-139), et quelles données persistées sont lues ou ignorées (surcharges manuelles jamais
+appliquées, cf. ERR-140/ERR-141 pour la famille voisine « champ jamais lu »). La recette protège
+la fonction pure ; rien ne protège la composition de ses entrées.
+
+**Fix :**
+Aucun correctif de code porté par cette entrée (voir les ERR référencées ci-dessus pour les fixes
+individuels). Recommandation actée dans `docs/reviews/review-sprint-PR2.md` : étendre
+`__tests__/recette/` pour comparer la sortie de `calculerProjectionScenario` elle-même (la
+fonction d'entrée publique de `route-orchestration.ts`) aux séries mensuelles du jeu d'or, au
+moins sur `besoinTotalCycleKg` et sur l'application de `sacsSaisis`.
+
+**Mise à jour (story PR2bis.4, 2026-08-03) — recommandation exécutée :**
+390 tests ajoutés contre `calculerProjectionScenario`, recette 880 → **1270 tests, 0 écart**.
+Résultat notable : **0 nouvel écart trouvé** — la couche d'orchestration était déjà correcte après
+les trois correctifs Haute de PR2 (ERR-138/139/140/141), mais elle n'était protégée par aucune
+recette avant cette story ; elle l'est désormais contre toute régression future. Ce n'est pas un
+résultat nul : une couverture qui ne trouve rien de nouveau après des correctifs manuels reste la
+seule façon de vérifier que ces correctifs n'ont rien laissé d'autre derrière eux.
+
+**Règle de non-tautologie qui a rendu ces 390 tests utiles** (à respecter pour toute extension
+future de `__tests__/recette/`) : la valeur attendue de chaque test vient du JSON du jeu d'or,
+**jamais** d'un recalcul de la même formule à l'intérieur du test — un test qui réimplémente le
+calcul pour vérifier le calcul ne prouve rien. Deux ajustements de conception ont été nécessaires
+et sont des corrections honnêtes du test, pas des accommodements pour le faire passer : la somme
+des arrondis (`ceil`) mensuels n'est pas égale à l'arrondi du total de cycle (attendu, propriété des
+arrondis par excès, pas un bug) ; et le seuil de remise a dû être calibré pour que le test du Grain
+2 ne soit pas vide (un seuil trop haut ne testait aucun cas de remise appliquée).
+
+**Leçon / Règle :**
+La confiance qu'inspire un moteur recetté ne s'étend pas à la couche qui l'appelle — et c'est
+précisément là que l'attention baisse, parce que le moteur « est déjà testé ». Toute couche
+d'orchestration qui compose les entrées d'un moteur recetté doit avoir sa propre comparaison
+contre le même jeu d'or, au niveau de sa fonction d'entrée publique — pas seulement des tests de
+régression écrits après la découverte d'un bug, qui par construction ne couvrent que ce qu'on a
+déjà trouvé.
+
+**Mise à jour (sprint PR2-nonies, story PR2non.1, 2026-08-04) — RÉCIDIVE DIRECTE, voir ERR-171 :**
+La recommandation de cette entrée (« 390 tests ajoutés contre `calculerProjectionScenario` ») a
+bien été exécutée par PR2bis.4, mais **partiellement** : la couverture ajoutée dans
+`route-orchestration.recette.test.ts` portait sur des **identités internes**
+(`resultatFCFA == revenusFCFA + apportsFCFA − depensesFCFA`) et non sur une comparaison directe de
+`baseRepartitionFCFA`/`depensesFCFA`/`logistique` au jeu d'or — ce qui a laissé le trou ouvert.
+Résultat : un bug d'orchestration (logistique jamais ajoutée à `baseRepartitionFCFA`,
+10 210 000 FCFA de transport jamais décaissés) a vécu au moins un sprint entier derrière 2 458
+assertions de recette toutes vertes. La leçon corrigée : « étendre `__tests__/recette/` contre
+`calculerProjectionScenario` » ne suffit pas si l'extension ne compare pas **chaque grandeur
+individuelle** de sortie au jeu d'or — une identité interne au code testé passe toujours, qu'il
+manque un terme ou non. Voir ERR-171 pour le détail complet et la correction (comparaison directe
+de la série mensuelle + falsification prouvant 140/141 assertions qui tombent).
+
+**Références :** [review-sprint-PR2](../reviews/review-sprint-PR2.md), ERR-138, ERR-139, ERR-140,
+ERR-141, ERR-171 (récidive)
+
+---
+
+### ERR-171 — `baseRepartitionFCFA`/`depensesFCFA` calculaient la logistique mais ne l'ajoutaient jamais : 10 210 000 FCFA de transport jamais décaissés — récidive directe d'ERR-142
+**Sprint :** PR2-nonies — « La logistique doit entrer dans les dépenses » | **Date :** 2026-08-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/route-orchestration.ts`, `src/lib/previsions/__tests__/recette/orchestration.ts`, `src/lib/previsions/__tests__/recette/route-orchestration-builder.ts`, `src/lib/previsions/__tests__/recette/route-orchestration.recette.test.ts`, `src/lib/previsions/__tests__/recette/route-orchestration-baseRepartition.recette.test.ts` (créé)
+
+**Symptôme :**
+`GET /api/previsions/scenarios/[id]/calculer` calculait la logistique et l'exposait dans sa réponse
+mensuelle (mois 0 : `logistique.sousTotalFCFA = 45 000`) mais ne l'ajoutait **ni à
+`baseRepartitionFCFA`, ni à `depensesFCFA`**. Mois 0 : `baseRepartitionFCFA = 980 000` (charges
+d'exploitation seules) au lieu de 1 025 000. Sur l'horizon complet du scénario A (21 mois) : **10
+210 000 FCFA de transport jamais décaissés** — dépenses totales 332 349 600 au lieu de 342 559 600 ;
+résultat cumulé 155 550 400 au lieu de 145 340 400 ; point bas +2 321 600 au lieu de +2 276 600
+(écart exact = la logistique du premier mois). Effet en aval, par la quote-part de répartition sur
+les vagues : `quotePartChargesFCFA` de V1 sous-évalué (1 796 666,67 au lieu de 1 961 666,67),
+`coutProductionFCFA` (6 660 666,67 au lieu de 6 825 666,67), et `budget.totalCoutsProductionFCFA`/
+`budgetTotalFCFA` en cascade — visible sur l'écran de détail scénario.
+
+**Cause racine :**
+Dans `route-orchestration.ts`, `baseRepartitionFCFA` était calculé **avant** `logistiqueMois` dans
+la boucle mensuelle — la valeur n'existait tout simplement pas encore au moment de l'appel à
+`calculerBaseRepartition`. Le moteur pur n'était pas en cause : `calculerBaseRepartition` additionne
+correctement la logistique qu'on lui passe (son paramètre s'appelle explicitement
+`chargesLogistiqueEtExploitation`) — c'est l'enchaînement de la route, jamais le moteur, qui ne la
+lui a jamais fournie.
+
+**Fix :**
+Réordonnancement de la boucle mensuelle + injection de `logistiqueMois.sousTotalFCFA` comme entrée
+du paramètre `chargesLogistiqueEtExploitation` de `calculerBaseRepartition`, plutôt qu'une addition
+après coup sur `depensesFCFA` — pour que le moteur pur reste la seule source de la formule §5.5.
+
+**C'est le vrai sujet de cette entrée : une RÉCIDIVE DIRECTE d'ERR-142**, malgré la recommandation
+de 2026-08-03 (« 390 tests ajoutés contre `calculerProjectionScenario` ») explicitement exécutée.
+L'audit PR2non.1 a établi pourquoi ce filet n'a rien attrapé : **2 458 assertions de recette
+passaient sur ce sprint alors que le bug était présent depuis PR2bis.4.** Deux implémentations
+indépendantes de la même formule coexistaient : `route-orchestration.ts` (production, fautive) et
+`__tests__/recette/orchestration.ts` (recomposition de test, juste — elle additionne correctement
+`sousTotalLogistiqueFCFA + chargesExpParMois`). `plan-v12-corrige.recette.test.ts` et
+`annexe-b-corrigee.recette.test.ts` n'appelaient **jamais** `calculerProjectionScenario` : ils ne
+recettaient que le moteur pur + cette composition alternative écrite dans le test, jamais le code
+de production servant la route API. Le seul fichier qui exécutait réellement
+`calculerProjectionScenario`, `route-orchestration.recette.test.ts`, ne testait
+`depensesFCFA`/`baseRepartitionFCFA` que par des **identités internes**
+(`resultatFCFA == revenusFCFA + apportsFCFA − depensesFCFA`, `solde[m] − solde[m−1] ==
+resultatFCFA[m]`) — vraies par construction du code testé, qu'il contienne ou non le terme
+manquant, donc incapables par nature de détecter un poste absent. Zéro assertion, dans ce fichier,
+sur `logistique`/`baseRepartitionFCFA`/`depensesFCFA` comparée à une valeur du jeu d'or.
+
+L'audit a aussi révélé un trou dérivé, corrigé dans le même sprint (story PR2non.3) :
+`route-orchestration-builder.ts` (le harnais de recette, pas la production) ne mappait jamais
+`entreesModele.chargesExploitation` vers `scenario.postes`, ni `resultats.investissements` vers
+`scenario.journal`, ni `resultats.apportsCapital` vers `scenario.apports`. Même après correction du
+bug de logistique, `route-orchestration.recette.test.ts` n'aurait toujours pas pu prouver
+`baseRepartitionFCFA = logistique + chargesExploitation` de bout en bout au niveau production
+(`chargesDuMois` serait resté vide) — un futur bug qui aurait omis les charges d'exploitation, au
+lieu de la logistique, aurait traversé la recette exactement de la même façon, invisible pour la
+même raison structurelle.
+
+**Preuve par falsification (story PR2non.3, méthode ERR-168) :** retirer la logistique de
+`route-orchestration.ts` fait tomber **140 assertions**, toutes localisées dans le nouveau fichier
+`route-orchestration-baseRepartition.recette.test.ts` — zéro échec dans les sections A-E de
+`route-orchestration.recette.test.ts`, confirmant qu'elles restent aveugles au bug par construction.
+Désactiver le mapping des charges d'exploitation dans le harnais de recette fait tomber **141**
+assertions. Avant ce sprint : **0** — la campagne complète (2 458 assertions, 1270+ tests) ne
+bronchait sur aucune des deux mutations.
+
+**Leçon / Règle :**
+**Une recette qui recompose la formule dans le test au lieu d'appeler la fonction de production ne
+teste que le test.** Toute grandeur de sortie doit être comparée au jeu d'or **à travers la chaîne
+réelle** (`calculerProjectionScenario`, jamais une réimplémentation locale au fichier de test) — et
+la campagne doit être validée **par falsification** (casser volontairement le code de production et
+compter les assertions qui tombent, cf. ERR-168), pas seulement par un total d'assertions vertes qui
+peut rester haut et stable sans jamais toucher la ligne fautive. Un compteur de tests (« 1270 tests,
+0 écart ») ne dit rien sur la couverture réelle d'une grandeur précise tant qu'on n'a pas vérifié,
+fichier par fichier, que le code qui produit cette grandeur pour l'API est bien celui exécuté par le
+test — deux fichiers portant un nom voisin (« orchestration ») peuvent tester deux choses
+entièrement différentes.
+
+**Références :** [rapport-story-PR2non.1](../tests/rapport-story-PR2non.1.md) (audit),
+[rapport-story-PR2non.3](../tests/rapport-story-PR2non.3.md) (correctif + falsification), ERR-142
+(récidivée par cette entrée), ERR-168 (méthode de falsification employée)
+
+---
+
+### ERR-141 — Un paramètre saisi, validé et affiché, mais jamais consommé par le calcul [MIS À JOUR — corrigé en PR2bis.3]
+**Sprint :** PR2 (story PR2.4) — corrigé PR2-bis (story PR2bis.3) | **Date :** 2026-08-03
+**Sévérité :** Moyenne
+**Fichier(s) :** `prisma/schema.prisma` (`ParametresPrevision.margeSecuriteAlevinsPct`), `src/lib/previsions/plan.ts`, `src/lib/previsions/route-orchestration.ts`, `src/components/previsions/previsions-mensuelles-tab.tsx`
+
+**Symptôme :**
+`ParametresPrevision.margeSecuriteAlevinsPct` existe en base, est validé par zod, est éditable dans
+l'UI, et documenté par l'ADR-053 décision 4 comme le mécanisme censé absorber la mortalité des
+alevins dans le plan de production — mais **aucun fichier du moteur ne le lit**. `plan.ts` copie
+`effectifAlevinsParVague` brut, sans y appliquer la marge, et `route-orchestration.ts` multiplie cet
+effectif brut par le prix unitaire pour produire le coût aliments prévisionnel. Recherche exhaustive
+dans le dépôt : `margeSecuriteAlevinsPct` n'apparaît dans aucun site de lecture, seulement dans le
+schéma, la validation et l'affichage. Rien n'échoue : le champ est simplement inerte, et le tooltip
+de `previsions-mensuelles-tab.tsx` affirme même à tort que la marge est déjà incluse.
+
+**Cause racine :**
+Un champ de paramétrage a été ajouté au schéma, exposé dans l'UI et documenté comme faisant partie
+du calcul, sans qu'aucune étape du pipeline (pré-analyse, implémentation, test, review) ne vérifie
+qu'il possède effectivement un site de lecture dans le code de calcul. Le défaut n'a été détecté que
+parce qu'un @code-reviewer a vérifié qu'une explication affichée à l'utilisateur (le tooltip de la
+colonne « Coût alevins ») correspondait au calcul réellement effectué, et a remonté la chaîne
+jusqu'au moteur.
+
+**Fix :**
+Signalé en finding 1 de la review PR2.4 — à corriger avant clôture : soit corriger le texte du
+tooltip pour refléter le comportement réel (la marge n'est pas appliquée), soit faire consommer le
+champ par `plan.ts`/`route-orchestration.ts` si c'était bien l'intention produit documentée par
+l'ADR-053.
+
+**Mise à jour (story PR2bis.3, 2026-08-03) — le champ est désormais consommé :**
+`calculerAlevinsACommander` (`src/lib/previsions/plan.ts`) implémente la formule ADR-053 §4.3 :
+`alevinsACommanderNb = ceil(poissonsAVendreNb × (1 + margeSecuriteAlevinsPct / 100))`.
+
+- **Distinction D vs E, cruciale pour ne pas appliquer la marge au mauvais endroit** : D = nombre de
+  poissons visés à la vente en fin de cycle (`tonnageCibleKg`, `calculerRevenuPrevu` restent calculés
+  sur D, la marge alevins ne les concerne pas) ; E = nombre d'alevins à commander en démarrage de
+  vague pour absorber la mortalité (`coutAlevinsFCFA` **et** `alevinsNbParMois` — ce second site,
+  purement logistique, est celui qu'un correctif partiel oublie typiquement — sont basculés sur E).
+  La marge ne doit jamais fuiter vers le calcul d'aliment ni vers le revenu prévisionnel.
+- **Piège d'arrondi vérifié numériquement, le point le plus réutilisable de cette story** :
+  `Math.ceil(25000 * 1.1)` renvoie **27501** au lieu de 27500, à cause de l'imprécision binaire
+  IEEE 754 sur `25000 * 1.1` — ce qui aurait cassé la vague V5 des deux fixtures de recette
+  (`25000 * 1.1 = 27500` exactement en Decimal). L'implémentation passe donc par `Decimal` strict de
+  bout en bout (`.dividedBy(100)`, `.times()`, `.ceil()`), **jamais** de passage par `number`/`Math.ceil`
+  avant l'arrondi final.
+- **Piège d'unité, un seul site de conversion de chaque côté** : `margeSecuriteAlevinsPct` est saisi
+  et persisté sur l'échelle 0..100 (ex. `10` pour "10 %"), exactement comme
+  `PalierRemise.pourcentageRemise` — jamais une fraction 0..1 en base ni dans le moteur. Les fixtures
+  JSON du jeu d'or, elles, expriment la marge en **fraction** (`0.1`). La conversion `/100` n'est
+  faite qu'une seule fois, dans `calculerAlevinsACommander`, jamais dupliquée ailleurs dans le moteur
+  ou l'orchestration ; côté fixture, la conversion fraction → échelle 0..100 n'a elle aussi qu'un seul
+  site.
+- Textes UI relus et corrigés : n'affirment plus que la marge est déjà incluse partout ; scopent
+  correctement sa portée (coût et logistique alevins seulement, jamais aliment ni revenu).
+- Recette étendue en conséquence : 842 → 880 tests (+38 = 19 vagues × 2 fixtures), tolérance zéro.
+
+**Statut : RÉSOLU** — vérifié par lecture directe du code lors de la review PR2-bis (2026-08-03).
+
+**Leçon / Règle :**
+Un champ de paramétrage qui n'a aucun site de lecture est un bug silencieux, de la même famille que
+`dashboard.ts:218` (une valeur en dur à `null` qui rendait `revenuAttendu` mort depuis toujours).
+Détection systématique proposée : pour chaque champ de paramétrage ajouté, vérifier par recherche
+exhaustive qu'il possède au moins un site de **lecture** dans le code de calcul, pas seulement un
+site d'écriture (formulaire, zod) et un site d'affichage (UI). Corollaire : une explication affichée
+à l'utilisateur (tooltip, popover, aide en ligne) est une **assertion vérifiable sur le comportement
+du code** — elle doit être relue contre le code comme n'importe quelle autre affirmation, et une
+explication fausse est pire qu'une explication absente, parce qu'elle inspire une confiance
+injustifiée. Leçon complémentaire actée par le fix : dès qu'un calcul mélange une conversion d'unité
+(pourcentage ↔ fraction) et un arrondi par excès, valider le résultat en arithmétique exacte
+(`Decimal`) plutôt qu'en flottant, et vérifier au moins un cas numérique connu pour piéger
+l'imprécision binaire avant qu'elle ne se loge dans une recette silencieusement fausse.
+
+**Références :** [review-story-PR2.4](../reviews/review-story-PR2.4.md), ADR-053 (décision 4)
+
+---
+
+### ERR-139 — Un écart observé qui est un produit de facteurs ne se corrige pas en traitant la première cause trouvée : chercher systématiquement s'il se décompose
+**Sprint :** PR2 (story PR2.2) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/aliments.ts`, `src/lib/previsions/vagues.ts` (`tonnageCibleKg`)
+
+**Symptôme :**
+Le besoin total en aliment calculé par le moteur divergeait du jeu de référence d'un facteur
+observé de ×8300 environ. Ce facteur composait en réalité **deux** erreurs indépendantes : la
+confusion `sacsParTonne` documentée en ERR-138 (facteur ×8) et une erreur d'unité kg/tonnes dans
+`tonnageCibleKg()`, qui renvoyait une biomasse en **kg** alors que la formule transposée depuis le
+classeur Excel attendait des **tonnes** — il manquait une division par 1000 (facteur ×1000). Le
+produit des deux (`(66 667 / 8) × 1000`) correspond exactement à l'écart observé.
+
+**Cause racine :**
+Corriger uniquement la première cause identifiée (la confusion `sacsParTonne`) aurait fait
+disparaître le facteur ×8 mais laissé un résidu ×1000 non détecté — le résultat serait redevenu
+« plausible » (un ordre de grandeur crédible pour un tonnage d'aliment) sans être juste, exactement
+comme le bug initial d'ERR-138 n'échouait aucun test parce qu'il produisait un nombre plausible.
+Un écart numérique de grande ampleur entre deux calculs a de bonnes chances d'être composite :
+s'arrêter à la première explication qui « rend compte » de l'écart n'établit pas qu'elle en rend
+compte en totalité.
+
+**Fix :**
+`tonnageCibleKg()` renommée en clarifiant l'unité réellement produite, et une conversion explicite
+kg → tonnes ajoutée à la frontière où la formule du classeur attend des tonnes, en plus du split
+`sacsParTonneUnitaire`/`sacsParTonneStandard` d'ERR-138.
+
+**Leçon / Règle :**
+Quand un écart numérique entre un calcul et une valeur de référence est mesuré, ne pas s'arrêter à
+la première cause qui l'explique partiellement : vérifier si l'écart résiduel après correction de
+cette première cause est lui-même un facteur rond (×10, ×1000, ×8, etc.), signe qu'une seconde
+erreur composite reste à corriger. Suffixer systématiquement les noms de variables manipulant des
+masses par leur unité (`xxxKg`, `xxxTonnes`) et convertir explicitement à toute frontière entre les
+deux, plutôt que de laisser l'unité implicite au nom de la variable seul.
+
+**Références :** [review-story-PR2.2](../reviews/review-story-PR2.2.md), ERR-138, ADR-053
+
+---
+
+### ERR-138 — Un même nom pour deux grandeurs différentes fausse un calcul d'un facteur 8, sans jamais échouer aucun test
+**Sprint :** PR2 (story PR2.2) | **Date :** 2026-08-03
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (`AlimentPrevision`), `src/lib/previsions/aliments.ts`, `prisma/migrations/20260803150000_aliment_prevision_sacs_par_tonne_split/migration.sql`
+
+**Symptôme :**
+`AlimentPrevision.sacsParTonne` désignait à la fois un pur ratio d'unité de poids (`1000 /
+poidsSacKg` — combien de sacs de cette granulométrie pèsent une tonne) et, dans le jeu d'or de
+référence, un coefficient de besoin en aliment par tonne de poisson produite (8, 18 ou 50 selon la
+granulométrie). La formule `tonnage × sacsParTonne × poidsSacKg` dégénérait algébriquement en
+`tonnage × 1000`, un résultat identique quelle que soit la granulométrie choisie — la variable
+censée porter la différence entre granulométries n'intervenait plus du tout dans le résultat.
+**Aucun test ne tombait** : le calcul produisait un nombre plausible, du bon ordre de grandeur.
+
+**Cause racine :**
+Deux grandeurs de nature différente (un ratio d'unité de conversion, et un coefficient métier de
+besoin nutritionnel) portaient le même nom de champ, `sacsParTonne`, ce qui a permis d'écrire une
+formule mathématiquement cohérente en apparence mais qui n'utilisait en réalité que l'une des deux
+significations, faisant disparaître l'autre par simplification algébrique.
+
+**Indice de détection décisif, à retenir :** les trois granulométries du jeu d'or partageaient le
+même `poidsSacKg` (15 kg), alors que la valeur de `sacsParTonne` variait (8/18/50) selon la
+granulométrie. Une grandeur qui varie alors que son dénominateur supposé (`1000 / poidsSacKg`) ne
+varie pas ne peut pas être un ratio de ce dénominateur — ce simple constat suffisait à détecter la
+confusion avant même de tracer la formule complète.
+
+**Fix :**
+Le champ `sacsParTonne` a été scindé en deux colonnes distinctes dans le schéma :
+`sacsParTonneUnitaire` (le ratio de conversion, `1000 / poidsSacKg`) et `sacsParTonneStandard` (le
+coefficient métier de besoin, 8/18/50), acté par un amendement à l'ADR-053 (section 11) et
+appliqué par la migration `20260803150000_aliment_prevision_sacs_par_tonne_split`. Le calcul de
+besoin (voir ERR-139) utilise exclusivement `sacsParTonneStandard`.
+
+**Leçon / Règle :**
+Quand une valeur du modèle de production et une valeur du jeu de référence (fixture, jeu d'or,
+classeur Excel de départ) portent le même nom, vérifier explicitement qu'elles ont la même unité et
+la même origine métier **avant** d'écrire la formule qui les relie — ne jamais supposer qu'un nom
+partagé implique une seule et même grandeur. Si plusieurs granulométries/catégories partagent une
+même valeur pour un paramètre A pendant qu'un paramètre B varie entre elles, B ne peut pas être
+défini comme une fonction pure de A seul.
+
+**Références :** [review-story-PR2.2](../reviews/review-story-PR2.2.md), ADR-053 (section 11), ERR-139
+
+---
 
 ### ERR-129 — Une remise de volume mal calée sur le grain de décision produit un résultat faux si elle est recalculée à un grain plus fin
 **Sprint :** PR1 (story PR1.3) | **Date :** 2026-08-03

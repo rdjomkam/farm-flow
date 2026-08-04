@@ -20,11 +20,13 @@ import { loadGoldenFixture, expectEntierExact, expectMontantFCFA, expectKgApprox
 import {
   buildBesoinsAlimentsCalendrier,
   buildCoutAlimentsParVague,
+  buildRemisePctParVague,
   buildLogistiqueCalendrier,
   buildCoutAlimentsParVagueEtMois,
   aggregerDepensesAlimentsParMoisCalendaire,
   aggregerCoutAlimentsParVagueEtMoisCycle,
   buildChaineFinanciereCalendrier,
+  buildAlevinsACommanderParVague,
 } from "./orchestration";
 
 const fixture = loadGoldenFixture("annexe-b-corrigee.json");
@@ -96,6 +98,41 @@ describe("Recette PR1.4 — annexe-b-corrigee.json (scenario B)", () => {
     });
   });
 
+  /**
+   * Story PR2sept.3 (ADR-053 §13.4) : recette du POURCENTAGE DE REMISE
+   * RETENU lui-meme (`planVagues[].remisePct` du jeu d'or), pas seulement du
+   * montant qui en decoule. Les quatre paliers du classeur sont passes TELS
+   * QUELS (seuils en tonnes), et les quatre sont atteints par les 19 vagues :
+   * 4 t -> 0 %, 8 t -> 2 %, 10 t (seuil EXACT) et 12 t -> 4 %, 15 t (seuil
+   * EXACT) -> 6 %.
+   */
+  describe("Story PR2sept.3 — remisePct par vague (determinerPourcentageRemise), 19 vagues, decidee sur le tonnage vise", () => {
+    const resultats = buildRemisePctParVague(fixture);
+
+    for (const vague of fixture.entreesModele.planVagues) {
+      it(`${vague.vague} — ${vague.objectifTonnes} t -> remisePct = ${vague.remisePct}`, () => {
+        const obtenu = resultats.find((r) => r.vague === vague.vague)!;
+        // Le jeu d'or exprime la remise en fraction 0..1, le moteur sur 0..100.
+        expect(obtenu.pourcentageRemiseApplique.equals(new Decimal(vague.remisePct).times(100))).toBe(true);
+      });
+    }
+  });
+
+  describe("Story PR2bis.3 — alevinsACommanderNb (calculerAlevinsACommander), 19 vagues, tolerance 0", () => {
+    const resultats = buildAlevinsACommanderParVague(fixture);
+
+    for (const vague of fixture.entreesModele.planVagues) {
+      it(`${vague.vague} — alevinsACommanderNb (tolerance 0)`, () => {
+        const obtenu = resultats.find((r) => r.vague === vague.vague)!;
+        expectEntierExact(
+          obtenu.alevinsACommanderNb,
+          vague.alevinsACommanderNb,
+          `planVagues.${vague.vague}.alevinsACommanderNb`
+        );
+      });
+    }
+  });
+
   describe("Gap 1 comble — logistique (calculerLogistiqueMensuelle), 21 mois", () => {
     const besoins = buildBesoinsAlimentsCalendrier(fixture, NB_MOIS);
     const logistique = buildLogistiqueCalendrier(fixture, besoins.sacsTotal, NB_MOIS);
@@ -165,6 +202,9 @@ describe("Recette PR1.4 — annexe-b-corrigee.json (scenario B)", () => {
       });
       it(`mois ${i} (${moisLabel}) — resultat (tolerance <= 1 FCFA)`, () => {
         expectMontantFCFA(chaine.resultatFCFA[i], fixture.resultats.resultat[i], `resultats.resultat[${moisLabel}]`);
+      });
+      it(`mois ${i} (${moisLabel}) — epargne (tolerance <= 1 FCFA, story PR2q.2)`, () => {
+        expectMontantFCFA(chaine.epargneFCFA[i], fixture.resultats.epargne[i], `resultats.epargne[${moisLabel}]`);
       });
       it(`mois ${i} (${moisLabel}) — tresorerie cumulee (tolerance <= 1 FCFA)`, () => {
         expectMontantFCFA(chaine.tresorerie[i].soldeFCFA, fixture.resultats.tresorerie[i], `resultats.tresorerie[${moisLabel}]`);

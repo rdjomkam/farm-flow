@@ -259,8 +259,12 @@ extension de la recette).
 
 ### `npx vitest run` (DATABASE_URL exportée, cf. ERR-118)
 
+> Note (R11, ajoutée a posteriori par @knowledge-keeper) : l'identifiant réel de la base de
+> développement locale a été retiré de la commande ci-dessous et remplacé par un placeholder — voir
+> ERR-159. Les valeurs réelles sont dans `.env` (non tracké), jamais dans ce dépôt.
+
 ```
-export DATABASE_URL="postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow"
+export DATABASE_URL="postgresql://<user>:<password>@localhost:8432/farm-flow"
 npx vitest run
 ```
 

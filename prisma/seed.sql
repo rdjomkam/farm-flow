@@ -68,6 +68,9 @@ DELETE FROM "AlimentParVaguePrevue";
 DELETE FROM "ChargeMensuellePrevue";
 DELETE FROM "PostePrevision";
 DELETE FROM "RepartitionMoisAliment";
+-- ADR-053 §12 (amendement PR2-quater) — AlimentArticlePrevision (niveau article) avant
+-- AlimentPrevision (niveau calibre), sa table parente (FK alimentCalibrePrevisionId)
+DELETE FROM "AlimentArticlePrevision";
 DELETE FROM "AlimentPrevision";
 DELETE FROM "PalierRemise";
 DELETE FROM "ParametresPrevision";

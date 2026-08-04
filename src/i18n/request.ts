@@ -35,15 +35,27 @@ async function detectLocale(): Promise<Locale> {
 }
 
 /**
+ * Namespaces actually loaded at runtime by `loadMessages()`.
+ *
+ * IMPORTANT — must stay a superset of `namespaces` exported by
+ * `src/messages/index.ts`: if a namespace is registered there but missing
+ * here, `useTranslations(ns)`/`getTranslations(ns)` silently receives no
+ * messages at runtime (no test catches this besides the guard test in
+ * `src/__tests__/integration/i18n-completeness.test.ts`). Exported (rather
+ * than kept as a function-local const) precisely so that guard test can
+ * import and compare it.
+ */
+export const requestNamespaces = ["common", "format", "navigation", "permissions", "abonnements", "settings", "analytics", "errors", "stock", "ventes", "vagues", "releves", "alevins", "users", "commissions", "activites", "admin", "alertes", "arrivages", "backoffice", "bacs", "besoins", "blockedResource", "calibrage", "config-elevage", "dashboard", "depenses", "ingenieur", "layout", "maintenance", "notes", "observations", "packs", "planning", "remises", "sites", "reproduction", "transferts", "unites-production", "previsions"];
+
+/**
  * Load messages for a given locale.
  * Each namespace is a separate JSON file under src/messages/{locale}/.
  * If a file doesn't exist yet, it is silently skipped.
  */
 async function loadMessages(locale: Locale): Promise<Record<string, unknown>> {
-  const namespaces = ["common", "format", "navigation", "permissions", "abonnements", "settings", "analytics", "errors", "stock", "ventes", "vagues", "releves", "alevins", "users", "commissions", "activites", "admin", "alertes", "arrivages", "backoffice", "bacs", "besoins", "blockedResource", "calibrage", "config-elevage", "dashboard", "depenses", "ingenieur", "layout", "maintenance", "notes", "observations", "packs", "planning", "remises", "sites", "reproduction", "transferts", "unites-production"];
   const messages: Record<string, unknown> = {};
 
-  for (const ns of namespaces) {
+  for (const ns of requestNamespaces) {
     try {
       const mod = await import(`../messages/${locale}/${ns}.json`);
       messages[ns] = mod.default ?? mod;

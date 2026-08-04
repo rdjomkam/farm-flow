@@ -4262,6 +4262,19 @@ export interface ParametresPrevision {
   coutTransportPoissonsFCFA: number;
   capaciteTransportAlevinsNb: number;
   coutTransportAlevinsFCFA: number;
+  /**
+   * Taux d'epargne applique par le moteur (PR2-quinquies, story PR2q.2) —
+   * jeu d'or "Parametres!B36". Echelle 0..100 (pourcentage), cohérente
+   * avec `margeSecuriteAlevinsPct` ci-dessus.
+   */
+  tauxEpargnePct: number;
+  /**
+   * Valeur d'amorcage copiee vers VaguePrevue.alevinsAchetes a la creation
+   * d'une vague (patron identique a effectifAlevinsParVague ->
+   * effectifAlevinsPrevu). Jamais lue directement par le moteur — seule
+   * VaguePrevue.alevinsAchetes l'est — ADR-053 §14.
+   */
+  alevinsAchetesParDefaut: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -4270,38 +4283,54 @@ export interface ParametresPrevision {
 export interface PalierRemise {
   id: string;
   scenarioId: string;
-  /** quantite de sacs a partir de laquelle le palier s'applique */
-  seuilSacs: number;
+  /** seuil EN TONNES compare au tonnage vise de la vague (ADR-053 §13.3, ERR-143) */
+  seuilTonnes: number;
   pourcentageRemise: number;
-  /** ordre d'evaluation explicite — jamais deduit d'un tri implicite sur seuilSacs */
+  /** ordre d'evaluation explicite — jamais deduit d'un tri implicite sur seuilTonnes */
   ordre: number;
   siteId: string;
 }
 
 /**
- * AlimentPrevision — ligne d'aliment previsionnel, copiee depuis Produit a
- * la creation puis totalement decouplee (ADR-053 decision 1).
+ * AlimentPrevision — le CALIBRE d'aliment previsionnel (ex. "2 mm"), niveau
+ * granulometrique du plan (ADR-053 §12, amendement Sprint PR2-quater).
+ *
+ * Jusqu'a l'amendement §12, ce modele portait a la fois l'identite du
+ * calibre ET les caracteristiques d'un article achete (marque, poids de
+ * sac, prix) — une confusion de deux natures qui ne coincidaient que tant
+ * qu'un calibre n'avait jamais qu'un seul fournisseur (§12.1, §12.5). Les
+ * champs propres a l'article (`produitId`, `libelle`, `poidsSacKg`,
+ * `prixSacFCFA`, `sacsParTonneUnitaire`) ont ete deplaces vers
+ * `AlimentArticlePrevision` (ci-dessous) ; ce modele ne porte plus que ce
+ * qui depend de la granulometrie elle-meme, jamais de la marque qui la
+ * fabrique.
  */
 export interface AlimentPrevision {
   id: string;
   scenarioId: string;
   /**
-   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053
-   * decision 1). Nullable : un aliment previsionnel peut ne correspondre a
-   * aucun produit reel du catalogue.
+   * Taille de granule — porte desormais L'IDENTITE du calibre. NOT NULL
+   * (ADR-053 §12.3, amendement Sprint PR2-quater) : une granulometrie non
+   * identifiee ne peut plus etre creee ni persister — R7, decision
+   * explicite, pas une nullabilite par defaut heritee de l'ancien modele.
    */
-  produitId: string | null;
-  /** copie depuis Produit.nom a la creation, puis libre */
-  libelle: string;
-  /** copie depuis Produit.tailleGranule a la creation */
-  tailleGranule: TailleGranule | null;
-  /** copie depuis Produit.contenance a la creation */
-  poidsSacKg: number;
-  /** copie depuis Produit.prixUnitaire a la creation */
-  prixSacFCFA: number;
-  /** derivable de poidsSacKg, mais stocke et gele (ADR-053 decision 1) */
-  sacsParTonne: number;
-  /** ordre d'affichage / d'application dans le cycle */
+  tailleGranule: TailleGranule;
+  /**
+   * Coefficient de BESOIN EN ALIMENT : nombre de sacs de CETTE
+   * granulometrie necessaires par tonne de POISSON produit (taux de
+   * conversion alimentaire biologique, ex. 8/18/50 dans le jeu d'or de
+   * recette pour 2mm/3mm/4mm) — inchange depuis l'amendement Sprint PR2
+   * (ADR-053 section 11.2), reste au niveau CALIBRE, jamais a l'article
+   * (§12.1) : ce coefficient depend de la granulometrie, pas de la marque
+   * qui la fabrique. Nullable : AUCUNE source de derivation automatique
+   * n'existe dans le catalogue `Produit` actuel — doit etre saisi
+   * manuellement par l'utilisateur. `null` = non configure : tout calcul
+   * de besoin en aliment reposant sur cette granulometrie DOIT etre rejete
+   * explicitement (jamais un `0`/`1`/valeur derivee substitue
+   * silencieusement).
+   */
+  sacsParTonneStandard: number | null;
+  /** ordre d'affichage des CALIBRES entre eux dans le scenario */
   ordre: number;
   siteId: string;
   createdAt: Date;
@@ -4309,10 +4338,77 @@ export interface AlimentPrevision {
 }
 
 /**
+ * AlimentArticlePrevision — un ARTICLE achete pour un calibre donne (ex.
+ * "Marque A — sac 15kg" pour le calibre 2 mm). Ajoute par l'amendement
+ * ADR-053 §12 (Sprint PR2-quater) pour permettre a un meme calibre d'avoir
+ * plusieurs fournisseurs/marques — cas nominal : un seul article par
+ * calibre (§12.6), mais le modele reste correct pour N > 1.
+ */
+export interface AlimentArticlePrevision {
+  id: string;
+  /** FK vers le calibre parent (AlimentPrevision) */
+  alimentCalibrePrevisionId: string;
+  /**
+   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053
+   * decision 1, inchangee). Nullable : un article previsionnel peut ne
+   * correspondre a aucun produit reel du catalogue.
+   */
+  produitId: string | null;
+  /** copie depuis Produit.nom a la creation, puis libre (ex. "Marque A — sac 15kg") */
+  libelle: string;
+  /** copie depuis Produit.contenance a la creation */
+  poidsSacKg: number;
+  /** copie depuis Produit.prixUnitaire a la creation */
+  prixSacFCFA: number;
+  /**
+   * Pur ratio d'UNITE DE POIDS : 1000 / poidsSacKg (nombre de sacs de CET
+   * ARTICLE, de CE poidsSacKg, pour faire une tonne de CE PRODUIT).
+   * Derivable de poidsSacKg, mais stocke et gele (ADR-053 decision 1) —
+   * descend au niveau article avec l'amendement §12 (ERR-138 : ne doit
+   * JAMAIS entrer dans le calcul d'un besoin en aliment par tonne de
+   * POISSON produit, cf. `AlimentPrevision.sacsParTonneStandard` ci-dessus,
+   * qui lui reste au calibre).
+   */
+  sacsParTonneUnitaire: number;
+  /**
+   * Part de CET article dans l'approvisionnement du calibre parent, en
+   * pourcentage (0..100). La somme des `partApprovisionnementPct` de tous
+   * les articles d'un meme calibre doit valoir exactement 100 — validee a
+   * l'ecriture (ADR-053 §12.2 arbitrage 3), jamais par contrainte SQL
+   * (meme raison qu'en §3.5 pour RepartitionMoisAliment).
+   *
+   * R7 — nullabilite tranchee explicitement : NOT NULL, PAS de sentinelle
+   * `null` = 100%. Tant qu'un calibre n'a qu'un seul article, l'UI ne
+   * demande pas cette valeur a l'utilisateur (ADR-053 §12.6) — c'est le
+   * SERVEUR qui ecrit 100 dans la meme transaction que la creation, jamais
+   * un champ optionnel cote API interprete comme "100 si absent" par
+   * chaque appelant : la valeur reelle existe toujours en base, seule sa
+   * saisie est masquee dans le cas nominal.
+   */
+  partApprovisionnementPct: number;
+  /** ordre d'affichage des ARTICLES au sein du calibre */
+  ordre: number;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * AlimentPrevision (calibre) avec ses articles charges — forme de lecture
+ * la plus courante de l'API (ADR-053 §12.6 : l'UI affiche un calibre comme
+ * une seule entite tant qu'il n'a qu'un article).
+ */
+export interface AlimentPrevisionWithArticles extends AlimentPrevision {
+  articles: AlimentArticlePrevision[];
+}
+
+/**
  * RepartitionMoisAliment — repartition mensuelle (%) d'un AlimentPrevision
- * sur les mois du cycle. La somme des pourcentages d'un AlimentPrevision
- * donne doit valoir 100% — validee par l'application, pas par un CHECK SQL
- * (ADR-053 section 3.5).
+ * (CALIBRE — inchange par l'amendement §12, ADR-053 §12.2 arbitrage 2 : la
+ * repartition mensuelle est une propriete du besoin biologique par
+ * granulometrie, pas de l'article achete) sur les mois du cycle. La somme
+ * des pourcentages d'un AlimentPrevision donne doit valoir 100% — validee
+ * par l'application, pas par un CHECK SQL (ADR-053 section 3.5).
  */
 export interface RepartitionMoisAliment {
   id: string;
@@ -4343,6 +4439,8 @@ export interface VaguePrevue {
    */
   dureeCycleMoisFigee: number;
   statut: StatutVaguePrevue;
+  /** copie depuis ParametresPrevision.alevinsAchetesParDefaut a la creation, editable ensuite — ADR-053 §14 */
+  alevinsAchetes: boolean;
   /**
    * Auto-relation — materialise une scission (ADR-053 decision 2). Null
    * pour une VaguePrevue d'origine, renseigne pour V7a/V7b issues d'une
@@ -4356,11 +4454,15 @@ export interface VaguePrevue {
 
 /**
  * AlimentParVaguePrevue — besoin en aliment calcule pour une VaguePrevue,
- * un AlimentPrevision et un mois de cycle donnes (sortie du moteur).
+ * un AlimentPrevision (CALIBRE — la FK reste au niveau calibre apres
+ * l'amendement §12, ADR-053 §12.2 arbitrage 2 : un "sac de 2mm consomme"
+ * est une grandeur de calibre, quelle que soit la marque effectivement
+ * achetee ce mois-la) et un mois de cycle donnes (sortie du moteur).
  */
 export interface AlimentParVaguePrevue {
   id: string;
   vaguePrevueId: string;
+  /** FK vers le CALIBRE (AlimentPrevision.id), jamais vers un article */
   alimentPrevisionId: string;
   /** 1..dureeCycleMoisFigee de la VaguePrevue parente */
   moisCycle: number;
@@ -4375,7 +4477,12 @@ export interface AlimentParVaguePrevue {
    */
   sacsSaisis: number | null;
   quantiteKgCalculee: number;
-  /** apres application des PalierRemise */
+  /**
+   * Apres application des PalierRemise. Depuis l'amendement §12 (arbitrage 1
+   * revise), somme des couts par article du calibre — jamais une moyenne —
+   * mais reste un total UNIQUE par calibre, pas une ligne par article
+   * (ADR-053 §12.2 arbitrage 2).
+   */
   coutCalculeFCFA: number;
   siteId: string;
 }

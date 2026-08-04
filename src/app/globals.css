@@ -180,8 +180,23 @@ h1, h2, h3 {
   text-wrap: balance;
 }
 
+/*
+ * Utilitaire reutilisable : masque la barre de defilement sur les trois
+ * moteurs (Chrome/Safari via ::-webkit-scrollbar, Firefox via
+ * scrollbar-width, Edge ancien via -ms-overflow-style) sans desactiver le
+ * defilement lui-meme -- a poser sur tout conteneur `overflow-x-auto` qui
+ * doit rester parcourable au doigt/a la molette mais sans affordance visible
+ * (meme intention que le tableau mensuel de Previsions, cf.
+ * previsions-mensuelles-tab.tsx). Ne pas dupliquer en style inline dans un
+ * composant : cette classe est le seul point a maintenir.
+ */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge ancien / IE */
+}
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;
+  display: none; /* Chrome, Safari, Edge Chromium */
 }
 
 .font-mono {
