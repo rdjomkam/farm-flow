@@ -54,6 +54,14 @@ interface RapprochementTabProps {
   scenarioId: string;
   scenarioNom: string;
   permissions: Permission[];
+  /**
+   * ADR-053 §16.12, exigence A — table `PostePrevision.id -> { libelle,
+   * actif }` de son `posteReferentiel`, derivee cote presentation
+   * (`scenario-detail-client.tsx`). Transmise aux 3 vues qui affichent un
+   * libelle de `PostePrevision` resolu par le moteur pur — JAMAIS au moteur
+   * lui-meme.
+   */
+  posteRattachementParId?: Record<string, { libelle: string; actif: boolean }>;
 }
 
 /** Mois par defaut du selecteur : le mois calendaire courant, borne a l'horizon du plan — jamais un acces hors bornes. */
@@ -65,7 +73,13 @@ function moisParDefaut(dateDebutPlan: Date, moisDisponibles: number[]): number {
   return moisCourant;
 }
 
-export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permissions }: RapprochementTabProps) {
+export function RapprochementTab({
+  rapprochement,
+  scenarioId,
+  scenarioNom,
+  permissions,
+  posteRattachementParId,
+}: RapprochementTabProps) {
   const t = useTranslations("previsions");
   const dateDebutPlan = useMemo(() => new Date(rapprochement.dateDebutPlan), [rapprochement.dateDebutPlan]);
   const [moisSelectionne, setMoisSelectionne] = useState(() =>
@@ -122,6 +136,7 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
               nonRapproche={rapprochement.nonRapprocheParMois[moisSelectionne] ?? []}
               totalMonetaire={rapprochement.totalMoisMonetaireParMois[moisSelectionne]}
               totalQuantite={rapprochement.totalMoisQuantiteParMois[moisSelectionne]}
+              posteRattachementParId={posteRattachementParId}
             />
           )}
         </TabsContent>
@@ -136,6 +151,7 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
               totalGlobalMonetaire={rapprochement.cumuleGlobalMonetaireParMois[moisSelectionne]}
               totalGlobalQuantite={rapprochement.cumuleGlobalQuantiteParMois[moisSelectionne]}
               parPoste={rapprochement.cumuleParPosteParMois[moisSelectionne] ?? []}
+              posteRattachementParId={posteRattachementParId}
             />
           )}
         </TabsContent>
@@ -157,6 +173,7 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
               moisAbsolu={moisSelectionne}
               lignesMonetaires={rapprochement.topEcartsMonetaireParMois[moisSelectionne] ?? []}
               lignesQuantite={rapprochement.topEcartsQuantiteParMois[moisSelectionne] ?? []}
+              posteRattachementParId={posteRattachementParId}
             />
           )}
         </TabsContent>

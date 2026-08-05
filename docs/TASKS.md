@@ -8143,8 +8143,51 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR3-QUATER*.md` n'a été trouvé dan
 
 | Nature | Point |
 |---|---|
-| **Évolution UX optionnelle — À VALIDER PAR L'UTILISATEUR, NE PAS IMPLÉMENTER SANS SON ACCORD** | **ADR-053 §16.10** — création d'un poste par **sélection explicite dans le référentiel de site** (parcours à deux temps : chercher dans le référentiel, ou créer une nouvelle entrée explicitement) au lieu du champ texte unique + get-or-create livré en §16.11. **Hors périmètre.** L'ADR précise que cette évolution est possible **sans nouvelle migration** (le modèle `PosteReferentiel` est déjà en place). §16.10 est explicitement **reclassé en évolution future optionnelle**, plus une condition bloquante ; l'exigence de **validation utilisateur préalable à toute construction d'écran** reste entière. |
-| Extension additive future, non implémentée | **ADR-053 §16.6** — contrat à deux champs explicites `posteReferentielId` **XOR** `nouveauPosteReferentielLibelle`. **Non implémenté**, réservé en **extension additive future** : il implique nécessairement l'écran de §16.10 ci-dessus. Report acté en §16.11, confirmé par la review (Remarque #2). |
+| ~~**Évolution UX optionnelle — À VALIDER PAR L'UTILISATEUR, NE PAS IMPLÉMENTER SANS SON ACCORD**~~ → **LEVÉE par la story A.5 (sprint PR3-quinquies)** | **ADR-053 §16.10** — création d'un poste par **sélection explicite dans le référentiel de site** (parcours à deux temps : chercher dans le référentiel, ou créer une nouvelle entrée explicitement) au lieu du champ texte unique + get-or-create livré en §16.11. **Hors périmètre.** L'ADR précise que cette évolution est possible **sans nouvelle migration** (le modèle `PosteReferentiel` est déjà en place). §16.10 est explicitement **reclassé en évolution future optionnelle**, plus une condition bloquante ; l'exigence de **validation utilisateur préalable à toute construction d'écran** reste entière.<br>**LEVÉE au 2026-08-05** — la validation utilisateur exigée a été obtenue (arbitrages A et B de la story A.5, non rediscutables), et §16.10 est **implémenté** puis **réécrit en ACTIVÉE** dans l'ADR : ce n'est plus une évolution future optionnelle. La mention « hors périmètre / à valider » ci-dessus décrit l'état au moment de PR3-quater et est **conservée à titre d'historique**. |
+| ~~Extension additive future, non implémentée~~ → **LEVÉE par la story A.5 (sprint PR3-quinquies)** | **ADR-053 §16.6** — contrat à deux champs explicites `posteReferentielId` **XOR** `nouveauPosteReferentielLibelle`. **Non implémenté**, réservé en **extension additive future** : il implique nécessairement l'écran de §16.10 ci-dessus. Report acté en §16.11, confirmé par la review (Remarque #2).<br>**LEVÉE au 2026-08-05** — le contrat XOR est **implémenté et activé** par la story A.5 (les deux champs ou aucun → 400 ; collision de slug avec une entrée active → 409 explicite, jamais de suffixe auto-généré), et §16.6 est **réécrite en ACTIVÉE** dans l'ADR. La mention « non implémenté / extension future » ci-dessus décrit l'état au moment de PR3-quater et est **conservée à titre d'historique**. |
 | Divergence documentée et testée, aucune correction prévue à ce stade | **ERR-184** — divergence de slug **SQL ↔ TS hors alphabet français** : `Ø`/`ø` (présentes dans la table `src_chars` du backfill SQL, mais **non décomposables par NFD** côté TS) et les diacritiques d'Europe centrale/Baltique (`ą ć ń ś ź ż ș ț`, décomposables côté TS, absentes de `src_chars` côté SQL). **Périmètre de parité garanti : alphabet français standard** (+ parité de comportement sur `œ`/`æ`). Divergence **prouvée par 36 tests dédiés**, **non atteinte par les données réelles** (libellés de postes en français). **Pas de correction prévue à ce stade.** |
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR3-quinquies — Référentiel de postes : rattachement visible + administration
+Voir : *aucun fichier `docs/sprints/SPRINT-PR3-QUINQUIES*.md` n'existe* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`, **même convention que PR3-quater**.
+
+**Statut :** `FAIT` — **review de story `VALIDÉ`, aucun point Bloquant**
+**Objectif :** solder les deux points laissés ouverts par **PR3-quater** au titre d'**ADR-053 §16.10** et **§16.6**, désormais **validés par l'utilisateur** (arbitrages non rediscutables) : rendre le **rattachement au référentiel visible partout** où un poste apparaît, et livrer l'**écran d'administration du référentiel** (renommer / désactiver). La désactivation rend **vivant** le chemin 409 aujourd'hui **dormant** de §16.5/§16.11.
+
+| Story | Type | Sujet | Pipeline | Statut |
+|-------|------|-------|----------|--------|
+| A.5 | API + UI + TEST | **Référentiel de postes : rattachement visible + administration (renommer / désactiver)** : `posteReferentielId` exposé au DTO et au mapping SSR, affichage du rattachement partout où un poste apparaît, écran d'administration site-scopé (renommer `libelle`, désactiver `actif`), activation du contrat §16.6 (`posteReferentielId` **XOR** `nouveauPosteReferentielLibelle`) | @pre-analyst → @architect → @developer → @tester → @code-reviewer → @knowledge-keeper → @status-updater | `FAIT` |
+
+**A.5 — `FAIT`.** Livré et validé le **2026-08-05**. Deux arbitrages **validés par l'utilisateur**, non rediscutables :
+
+- **A. Libellé propre au scénario, pré-rempli.** `PostePrevision.libelle` **reste éditable et propre au scénario**, **pré-rempli** depuis `PosteReferentiel.libelle` à la sélection. **Contrepartie exigée** : le **rattachement** (entrée référentiel visée) doit être **VISIBLE PARTOUT** où un poste apparaît, **pas seulement au formulaire de création** — sinon **ERR-185 rejoué** : un texte qui ment sur ce qu'il désigne.
+- **B. Écran d'administration du référentiel** (**site-scopé**) : **renommer** (`libelle` seul, **`code` figé**) et **désactiver** (`actif = false`) une entrée `PosteReferentiel`. La désactivation **rend vivant** le chemin **409** aujourd'hui **dormant** d'**ADR-053 §16.5/§16.11** : elle **bloque les nouveaux rattachements sans casser l'existant**.
+
+**Périmètre technique :** activer le contrat **ADR-053 §16.6** — `posteReferentielId` **XOR** `nouveauPosteReferentielLibelle` sur `POST /api/previsions/scenarios/[id]/postes` (**les deux ou aucun → 400**) ; **collision de slug avec une entrée ACTIVE → 409 explicite** invitant à **lier l'existante**, **jamais de suffixe numérique auto-généré**.
+
+**Référence :** [ADR-053](decisions/ADR-053-module-previsions.md) **§16.5, §16.6, §16.8, §16.10, §16.11**. **Aucune migration nécessaire** (vérifié par @pre-analyst : `PosteReferentiel.actif` et `PostePrevision.posteReferentielId` existent déjà depuis `20260805120000_add_poste_referentiel`).
+
+**Points ouverts de PR3-quater soldés par ce sprint :** les deux lignes « **ADR-053 §16.10** » et « **ADR-053 §16.6** » du tableau « Points restés ouverts » de **PR3-quater** sont **LEVÉES** et annotées comme telles ci-dessus (historique conservé, non effacé). **§16.6** et **§16.10** sont **réécrites en ACTIVÉES** dans l'ADR : ce ne sont plus des extensions futures.
+
+**Chiffres de clôture — mesures réelles :**
+- `npx vitest run` : **341 fichiers de test / 9 712 tests / 0 skip / 0 échec / 26 todo**.
+- **Recette du moteur : 2 709 / 2 709, 0 écart.**
+- `npm run build` : **exit 0**.
+- **Intégrité `EXCEL-V12` vérifiée identique AVANT et APRÈS par chaque agent ayant touché la base.**
+
+**Livrables :** [pre-analysis-story-A5-poste-referentiel-admin.md](analysis/pre-analysis-story-A5-poste-referentiel-admin.md) (**GO AVEC RÉSERVES**) ; [ADR-053 §16.6, §16.10, §16.12](decisions/ADR-053-module-previsions.md) (**réécrites** — **§16.6 et §16.10 sont désormais `ACTIVÉES`**, plus des extensions futures) ; [rapport-story-A5-poste-referentiel-admin.md](tests/rapport-story-A5-poste-referentiel-admin.md) ; [review-story-A5-poste-referentiel-admin.md](reviews/review-story-A5-poste-referentiel-admin.md) (**VALIDÉ**) ; `docs/knowledge/ERRORS-AND-FIXES.md` (**ERR-186**, **ERR-187**, **ERR-188**, **ERR-189**).
+
+**Points restés ouverts — consignés (leçon ERR-180 : un report non consigné est un report perdu). PAS des stories de ce sprint :**
+
+| Sévérité / Nature | Point |
+|---|---|
+| Basse — **préexistante, pas une régression de A.5** | `poste-form-dialog.tsx` : les `Tabs` **ne sont pas désactivés pendant `submitting`**. Un changement d'onglet pendant une requête en vol peut **démonter l'`Input` porteur du `role="alert"`** et rendre l'erreur **silencieuse** pour un lecteur d'écran comme à l'œil. |
+| Moyenne | `mapping-form-dialog.tsx` : `cibleReferentielIntrouvableWarning` **conflate « introuvable » et « désactivé »** — deux situations distinctes pour l'exploitant (une cible supprimée vs une cible volontairement désactivée) affichées sous un même message. |
+| Moyenne | **Pas d'avertissement « blast radius » avant désactivation** d'une entrée référentiel : l'écran ne dit pas combien de postes/mappings sont rattachés à l'entrée qu'on s'apprête à désactiver. |
+| Moyenne | **Pas de test end-to-end en navigateur réel** pour l'écran d'administration du référentiel (ERR-157). |
+| Dette projet — **non imputable à A.5** | `npx tsc --noEmit` ≈ **1 449 erreurs préexistantes**, déjà tracée dans [`docs/reviews/review-sprint-PR2-octies.md`](reviews/review-sprint-PR2-octies.md), **porteur @project-manager**. **A.5 l'a réduite d'environ 19.** |
 
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**

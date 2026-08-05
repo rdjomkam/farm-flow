@@ -175,6 +175,15 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     matchPaths: ["/previsions"],
     items: [
       { href: "/previsions/scenarios", label: "Prévisions", itemKey: "previsions", icon: TrendingUp },
+      // ADR-053 §16.12, story A.5 — ajoute ici par la meme coherence
+      // documentaire que le commentaire ci-dessus (mort fonctionnellement,
+      // sans effet reel).
+      {
+        href: "/previsions/postes-referentiel",
+        label: "Référentiel des postes",
+        itemKey: "referentielPostes",
+        icon: TrendingUp,
+      },
     ],
   },
 ];

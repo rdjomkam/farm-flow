@@ -232,6 +232,11 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/clients":            Permission.CLIENTS_VOIR,
   "/factures":           Permission.FACTURES_VOIR,
   "/finances":           Permission.FINANCES_VOIR,
+  // Previsions (gate: PREVISIONS_VOIR) — ADR-053 §16.12, story A.5 :
+  // l'ecran d'administration du referentiel des postes exige
+  // PREVISIONS_PARAMETRER (parametrage de structure), pas seulement la
+  // lecture.
+  "/previsions/postes-referentiel": Permission.PREVISIONS_PARAMETRER,
   // Depenses & Besoins (Sprint 18)
   "/depenses":               Permission.DEPENSES_VOIR,
   "/depenses/recurrentes":   Permission.DEPENSES_VOIR,

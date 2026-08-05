@@ -464,10 +464,17 @@ function buildCases(): RouteCase[] {
             libelle: "Electricite",
             type: "CHARGE_EXPLOITATION",
             ordre: 1,
+            // ADR-053 §16.6/§16.12 (story A.5) — contrat XOR : la creation
+            // exige desormais posteReferentielId XOR nouveauPosteReferentielLibelle.
+            nouveauPosteReferentielLibelle: "Electricite",
           }),
           idParams()
         ),
-      setupSuccess: () => mockCreatePostePrevision.mockResolvedValue({ id: "poste-1" }),
+      setupSuccess: () =>
+        mockCreatePostePrevision.mockResolvedValue({
+          poste: { id: "poste-1" },
+          reutilise: false,
+        }),
     },
     {
       name: "PUT /postes/[id]/charges",

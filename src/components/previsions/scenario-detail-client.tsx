@@ -41,7 +41,7 @@
  * ventile par type d'apport / par poste — aucune nouvelle requete, aucune
  * duplication de donnees.
  */
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -117,6 +117,24 @@ export function ScenarioDetailClient({
   const router = useRouter();
   const [vaguesPrevues, setVaguesPrevues] = useState(initialVaguesPrevues);
   const tabsListRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * ADR-053 §16.12, exigence A, point 7 — table de correspondance
+   * `PostePrevision.id -> { libelle, actif }` de son `posteReferentiel`,
+   * derivee de `initialPostes` (deja rafraichie par `handleDataChanged` a
+   * chaque mutation, cf. commentaire ci-dessous). Passee en PROP aux 3 vues
+   * de rapprochement qui resolvent un `PostePrevision.id` (mensuelle,
+   * cumulee, top ecarts) — le moteur pur (`src/lib/previsions/rapprochement.ts`)
+   * ne connait JAMAIS cette table, l'enrichissement reste strictement en
+   * presentation.
+   */
+  const posteRattachementParId = useMemo(() => {
+    const map: Record<string, { libelle: string; actif: boolean }> = {};
+    for (const p of initialPostes) {
+      map[p.id] = { libelle: p.posteReferentiel.libelle, actif: p.posteReferentiel.actif };
+    }
+    return map;
+  }, [initialPostes]);
 
   /**
    * Point d'appel unique de `router.refresh()` — cf. commentaire d'entete.
@@ -266,6 +284,7 @@ export function ScenarioDetailClient({
             scenarioId={scenario.id}
             scenarioNom={scenario.nom}
             permissions={permissions}
+            posteRattachementParId={posteRattachementParId}
           />
         </TabsContent>
 

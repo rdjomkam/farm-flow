@@ -235,4 +235,19 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
       "persistées.",
     adr: "ADR-053",
   },
+  {
+    file: "src/lib/queries/__tests__/previsions-postes-referentiel-admin-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres les trois cas métier exigés par le chef de " +
+      "projet pour la story A.5 (ADR-053 §16.12) : renommerPosteReferentiel/" +
+      "desactiverPosteReferentiel (updateMany + conditions réelles), la contrainte " +
+      "@@unique([siteId, code]) qui bloque un nouveau rattachement à une entrée désactivée, " +
+      "et le pipeline complet calculerRapprochementScenario (agrégations SQL réelles) qui " +
+      "doit rester stable avant/après renommage et laisser les PostePrevision/" +
+      "MappingRapprochement existants intacts après désactivation — un mock JS ne peut " +
+      "prouver ni la contrainte d'unicité réelle, ni que les agrégations SQL produisent le " +
+      "même résultat après un UPDATE réel en base.",
+    adr: "ADR-053",
+  },
 ];

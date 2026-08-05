@@ -146,10 +146,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Electricite",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Electricite",
           });
 
           await creerVersionMapping(siteId, [
@@ -196,20 +197,24 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const posteA = await createPostePrevision(scenarioA.id, siteId, {
+          const { poste: posteA } = await createPostePrevision(scenarioA.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
-          // Meme libelle (casse differente) dans le scenario B : get-or-create
-          // (§16.11) reutilise la MEME entree PosteReferentiel — c'est le
-          // chemin normal par lequel un administrateur reproduit un poste
-          // d'un plan a l'autre.
-          const posteB = await createPostePrevision(scenarioB.id, siteId, {
+          // Contrat XOR ACTIVE (ADR-053 §16.6/§16.12, story A.5) : plus de
+          // get-or-create silencieux — le scenario B rattache EXPLICITEMENT
+          // son poste a la MEME entree referentiel via posteReferentielId
+          // (branche a), c'est le chemin normal par lequel un administrateur
+          // reproduit un poste d'un plan a l'autre.
+          const { poste: posteB, reutilise } = await createPostePrevision(scenarioB.id, siteId, {
             libelle: "salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            posteReferentielId: posteA.posteReferentielId,
           });
+          expect(reutilise).toBe(true);
           expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
           expect(posteA.id).not.toBe(posteB.id);
 
@@ -265,15 +270,17 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const posteA = await createPostePrevision(scenarioA.id, siteId, {
+          const { poste: posteA } = await createPostePrevision(scenarioA.id, siteId, {
             libelle: "Loyer",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Loyer",
           });
-          const posteB = await createPostePrevision(scenarioB.id, siteId, {
+          const { poste: posteB } = await createPostePrevision(scenarioB.id, siteId, {
             libelle: "Loyer",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            posteReferentielId: posteA.posteReferentielId,
           });
           expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
           const referentielId = posteA.posteReferentielId;
@@ -340,10 +347,11 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const poste = await createPostePrevision(scenarioA.id, siteId, {
+          const { poste } = await createPostePrevision(scenarioA.id, siteId, {
             libelle: "Assurance",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Assurance",
           });
 
           await creerVersionMapping(siteId, [
@@ -390,10 +398,11 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const posteA = await createPostePrevision(scenarioA.id, siteId, {
+          const { poste: posteA } = await createPostePrevision(scenarioA.id, siteId, {
             libelle: "Electricite (scenario A)",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Electricite (scenario A)",
           });
 
           // Mapping cree contre l'entree referentiel du poste du scenario A —
@@ -453,10 +462,10 @@ describe.runIf(requireDatabaseUrl())(
     );
 
     it(
-      "(6, §16.9 point 10, R4) GET-OR-CREATE SOUS CONCURRENCE REELLE : deux createPostePrevision concomitants du meme libelle dans deux scenarios du meme site ne produisent JAMAIS deux entrees PosteReferentiel",
+      "(6, §16.12 'Concurrence', DIVERGENCE EXPLICITE d'avec §16.9 point 10/§16.11) CONCURRENCE REELLE SOUS LE CONTRAT XOR : deux createPostePrevision concomitants avec nouveauPosteReferentielLibelle du meme libelle dans deux scenarios du meme site ne produisent JAMAIS deux entrees PosteReferentiel — mais la requete perdante recoit desormais un 409 explicite, JAMAIS une reutilisation silencieuse",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.6] DB de dev injoignable — test ignore (dbAvailable=false).");
+          console.warn("[PR3quinquies.A5.6] DB de dev injoignable — test ignore (dbAvailable=false).");
           return;
         }
         const { siteId, userId } = await seedSite(client, "concurrence");
@@ -476,30 +485,60 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          // Deux appels reellement concomitants (Promise.all, pas sequentiel)
-          // — l'un des deux `create` de PosteReferentiel va necessairement
-          // manquer son `findUnique` initial et rattraper la violation
-          // @@unique([siteId, code]) reelle de Postgres (P2002), §16.11.
-          const [posteA, posteB] = await Promise.all([
+          // Deux appels reellement concomitants (Promise.allSettled, pas
+          // sequentiel) — l'un des deux `create` de PosteReferentiel va
+          // necessairement manquer son `findUnique` initial et rattraper la
+          // violation @@unique([siteId, code]) reelle de Postgres (P2002).
+          // Sous le contrat XOR ACTIVE (§16.12), la requete perdante ne se
+          // rabat plus sur une reutilisation silencieuse : elle echoue
+          // TOUJOURS avec un 409 POSTE_REFERENTIEL_CODE_COLLISION — la
+          // seconde requete voulait CREER, pas SELECTIONNER.
+          const [resultatA, resultatB] = await Promise.allSettled([
             createPostePrevision(scenarioA.id, siteId, {
               libelle: "Carburant",
               type: TypePostePrevision.LOGISTIQUE,
               ordre: 0,
+              nouveauPosteReferentielLibelle: "Carburant",
             }),
             createPostePrevision(scenarioB.id, siteId, {
               libelle: "Carburant",
               type: TypePostePrevision.LOGISTIQUE,
               ordre: 0,
+              nouveauPosteReferentielLibelle: "Carburant",
             }),
           ]);
 
-          expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
+          const resultats = [resultatA, resultatB];
+          const gagnants = resultats.filter(
+            (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof createPostePrevision>>> =>
+              r.status === "fulfilled"
+          );
+          const perdants = resultats.filter(
+            (r): r is PromiseRejectedResult => r.status === "rejected"
+          );
+
+          // Exactement une des deux requetes reussit, l'autre echoue en 409 —
+          // jamais deux succes, jamais deux echecs.
+          expect(gagnants).toHaveLength(1);
+          expect(perdants).toHaveLength(1);
+          expect(perdants[0].reason).toMatchObject({
+            status: 409,
+            code: "POSTE_REFERENTIEL_CODE_COLLISION",
+          });
 
           const referentiels = await client.query(
             `SELECT id FROM "PosteReferentiel" WHERE "siteId" = $1 AND code = 'carburant'`,
             [siteId]
           );
           expect(referentiels.rowCount).toBe(1);
+
+          // Un seul PostePrevision a ete cree (celui de la requete gagnante) —
+          // la requete perdante n'a laisse AUCUN poste orphelin.
+          const postes = await client.query(
+            `SELECT id FROM "PostePrevision" WHERE "siteId" = $1`,
+            [siteId]
+          );
+          expect(postes.rowCount).toBe(1);
         } finally {
           await cleanup(client, siteId, userId);
         }
@@ -523,10 +562,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Maintenance",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Maintenance",
           });
           const referentielId = poste.posteReferentielId;
 

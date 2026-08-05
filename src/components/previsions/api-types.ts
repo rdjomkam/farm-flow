@@ -191,6 +191,24 @@ export interface VaguePrevueDetailDTO extends VaguePrevueListItemDTO {
   enfantsScission: VaguePrevueListItemDTO[];
 }
 
+/**
+ * PostePrevisionDTO — poste de charge SCENARIO-scope (ADR-053 §3.8).
+ *
+ * `posteReferentielId`/`posteReferentiel` (ADR-053 §16, story A.5) : le
+ * rattachement au referentiel SITE-scope doit etre visible PARTOUT ou ce
+ * DTO est affiche (exigence A de la story A.5 — contrepartie du libelle
+ * scenario-local pre-rempli mais editable independamment). `libelle`
+ * ci-dessous reste le texte propre au scenario (peut diverger de
+ * `posteReferentiel.libelle`) ; ne JAMAIS fusionner silencieusement les
+ * deux textes — cf. `libelleDivergeDuReferentiel` (`src/lib/previsions/
+ * poste-rattachement.ts`) et la regle de signalisation ADR-053 §16.12.
+ *
+ * `posteReferentielId` est NOT NULL en base depuis la migration
+ * `20260805120000_add_poste_referentiel` : ce sous-objet n'est jamais
+ * optionnel ici — un `PostePrevisionDTO` sans `posteReferentiel` est un bug
+ * de mapping SSR/API, pas un etat metier legitime (charge via `include`
+ * cible dans la meme requete Prisma, jamais un second aller-retour reseau).
+ */
 export interface PostePrevisionDTO {
   id: string;
   scenarioId: string;
@@ -199,14 +217,22 @@ export interface PostePrevisionDTO {
   inclusBaseRepartition: boolean;
   ordre: number;
   siteId: string;
+  posteReferentielId: string;
+  posteReferentiel: {
+    libelle: string;
+    actif: boolean;
+  };
 }
 
 /**
  * PosteReferentielDTO — entree site-scopee du referentiel des postes
- * (ADR-053 §16, story A.4). Consommee par `mapping-form-dialog.tsx` pour la
- * cible `POSTE_PREVISION` — remplace la liste scenario-scopee
- * `PostePrevisionDTO`, source du defaut ERR-179 (une cible qui devient
- * orpheline des qu'un nouveau scenario est cree ou l'ancien supprime).
+ * (ADR-053 §16, story A.4). Consommee par `mapping-form-dialog.tsx` et
+ * `rapprochement-mapping-tab.tsx` pour la cible `POSTE_PREVISION` — remplace
+ * la liste scenario-scopee `PostePrevisionDTO`, source du defaut ERR-179
+ * (une cible qui devient orpheline des qu'un nouveau scenario est cree ou
+ * l'ancien supprime). Depuis la story A.5 (§16.12), egalement consommee par
+ * l'ecran d'administration `/previsions/postes-referentiel`
+ * (`PATCH`/renommage, `POST .../desactiver`/`.../reactiver`).
  */
 export interface PosteReferentielDTO {
   id: string;
@@ -216,6 +242,86 @@ export interface PosteReferentielDTO {
   actif: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Payload de `PATCH /api/previsions/postes-referentiel/[id]` (ADR-053
+ * §16.12, story A.5). `libelle` uniquement — `code` reste FIGE a sa valeur
+ * d'origine, jamais expose en ecriture par cette route (voir justification
+ * ADR-053 §16.12 "Arbitrage 1").
+ */
+export interface RenommerPosteReferentielDTO {
+  libelle: string;
+}
+
+/**
+ * Payload de `POST /api/previsions/scenarios/[id]/postes` (ADR-053 §16.6/
+ * §16.10 ACTIVES par la story A.5, "Contrat des routes" §16.12). Remplace le
+ * contrat historique `{ libelle, type, inclusBaseRepartition, ordre }` —
+ * `posteReferentielId` XOR `nouveauPosteReferentielLibelle` est desormais
+ * OBLIGATOIRE (exactement l'un des deux, jamais les deux, jamais aucun des
+ * deux, 400 sinon). `libelle` reste requis, JAMAIS derive silencieusement
+ * cote serveur (voir ADR-053 §16.12 "libelle : requis, jamais derive") — le
+ * client le pre-remplit depuis le referentiel (branche a) ou depuis le texte
+ * de creation (branche b), et l'utilisateur peut l'editer avant envoi.
+ */
+export type CreatePostePrevisionRequestDTO = {
+  libelle: string;
+  type: TypePostePrevision;
+  inclusBaseRepartition?: boolean;
+  ordre: number;
+} & (
+  | { posteReferentielId: string; nouveauPosteReferentielLibelle?: never }
+  | { nouveauPosteReferentielLibelle: string; posteReferentielId?: never }
+);
+
+/**
+ * Reponse 201 de `POST /api/previsions/scenarios/[id]/postes` (ADR-053
+ * §16.12). `reutilise` reflete la branche empruntee (`true` = branche (a),
+ * selection explicite d'une entree existante ; `false` = branche (b), une
+ * nouvelle entree a ete creee) — PLUS un signal de reutilisation SILENCIEUSE
+ * (ce comportement disparait avec le contrat XOR, voir ADR-053 §16.12 "Ce
+ * que devient le get-or-create silencieux de §16.11"), seulement un reflet
+ * du choix deja fait explicitement par l'utilisateur, utile pour un message
+ * de confirmation coherent.
+ */
+export interface CreatePostePrevisionResponseDTO extends PostePrevisionDTO {
+  reutilise: boolean;
+}
+
+/**
+ * Codes machine stables (`ApiErrorResponse.code`) pour le contrat XOR de
+ * `POST /api/previsions/scenarios/[id]/postes` (ADR-053 §16.12). Le client
+ * DOIT mapper ces codes vers des cles i18n locales (`posteForm.errors.*`,
+ * namespace `previsions`) et ne JAMAIS rendre `ApiErrorResponse.message` brut
+ * pour ces cas precis — c'est la premiere fois que ce contrat exige un texte
+ * bilingue fr/en, alors que les messages serveur historiques de ce module
+ * restent en francais uniquement (ecart documente et assume, ADR-053 §16.12
+ * "i18n").
+ */
+export const POSTE_REFERENTIEL_ERROR_CODES = {
+  CHAMPS_EXCLUSIFS: "POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS", // 400 — les deux champs XOR fournis
+  CHAMP_REQUIS: "POSTE_REFERENTIEL_CHAMP_REQUIS", // 400 — aucun des deux champs XOR fourni
+  INTROUVABLE: "POSTE_REFERENTIEL_INTROUVABLE", // 404 — posteReferentielId absent/autre site
+  INACTIF: "POSTE_REFERENTIEL_INACTIF", // 409 — entree cible desactivee (branche a OU b)
+  CODE_COLLISION: "POSTE_REFERENTIEL_CODE_COLLISION", // 409 — slug de nouveauPosteReferentielLibelle
+  // deja pris par une entree active du site (branche b) — synchrone OU issu d'une course
+  // concurrente (P2002), jamais une reutilisation silencieuse (ADR-053 §16.12 "Concurrence").
+} as const;
+
+/**
+ * Payload enrichi porte par `ApiErrorResponse.details` pour les 409
+ * `POSTE_REFERENTIEL_CODE_COLLISION`/`POSTE_REFERENTIEL_INACTIF` (branche
+ * "creer") — permet a l'UI de proposer directement "Lier celle-ci" sans
+ * round-trip reseau supplementaire (ADR-053 §16.12, "Payload du 409 de
+ * collision"). Extension GENERIQUE de `ApiErrorResponse` (`src/types/api.ts`),
+ * pas un champ reserve a ce seul cas d'usage.
+ */
+export interface PosteReferentielExistantDetailsDTO {
+  posteReferentielExistant: {
+    id: string;
+    libelle: string;
+  };
 }
 
 export interface ChargeMensuellePrevueDTO {

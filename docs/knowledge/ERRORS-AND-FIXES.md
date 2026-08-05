@@ -819,6 +819,27 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-187 — Un `.refine()` Zod placé en amont rend une branche d'erreur métier — et son mapping i18n client — inatteignable, sans faire baisser aucun compteur de test
+**Sprint :** PR3-quinquies (story A.5, review — Écart Moyenne #1) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/validation/previsions.schema.ts` (`createPostePrevisionSchema`), `src/app/api/previsions/_shared.ts` (`parseBody`), `src/lib/queries/previsions-charges.ts` (`createPostePrevision`), `src/components/previsions/poste-form-dialog.tsx` (`posteForm.errors.champRequis`)
+
+**Symptôme :**
+`createPostePrevision` posait bien un `code: "POSTE_REFERENTIEL_CHAMP_REQUIS"` quand aucun des deux champs XOR n'était fourni — testé et vert au niveau fonction (mock, appel direct). Mais la route HTTP réelle ne renvoyait jamais ce `code` : le `.refine()` du schéma Zod `createPostePrevisionSchema`, exécuté par `parseBody` **avant** que la requête n'atteigne `createPostePrevision`, rejetait déjà la requête avec un 400 générique, sans jamais poser de `code` exploitable. La branche serveur qui pose `POSTE_REFERENTIEL_CHAMP_REQUIS` était donc du code mort — et le mapping client `posteForm.errors.champRequis`, qui dépend de ce `code` dans la réponse HTTP, était mort avec elle. Aucun test (build, vitest, tests fonction) ne l'a détecté : les tests niveau fonction contournaient Zod en appelant directement `createPostePrevision`.
+
+**Cause racine :**
+Une validation de schéma placée en amont de la couche métier peut dupliquer — et court-circuiter — une règle déjà encodée dans la couche métier, sans que les deux couches soient jamais exercées ensemble par un test. Le contrat documenté par l'ADR (le `code` renvoyé par l'API) n'est prouvé que si le test exerce la chaîne complète route → validation → query → réponse HTTP, pas seulement la fonction query isolée.
+
+**Fix :**
+`params: { code: "POSTE_REFERENTIEL_CHAMP_REQUIS" }` ajouté sur le `.refine()` Zod concerné, relayé par `parseBody` jusqu'au JSON de réponse. Vérification croisée effectuée sur l'autre `.refine()` du même schéma (`POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS`) : celui-ci n'était PAS mort, car sa condition de garde est un OU (pas un XOR strict), donc le cas « les deux champs fournis » traverse Zod et atteint bien la query — aucune correction nécessaire sur cette branche.
+
+**Leçon / Règle :**
+Tout code d'erreur documenté dans un contrat (ADR, i18n client) doit être testé **au niveau HTTP réel** — assertion sur `body.code` d'une requête envoyée à la route, jamais seulement sur le comportement de la fonction query appelée directement. Quand une story ajoute une validation Zod en amont d'une règle déjà codée en aval, vérifier systématiquement, pour chaque branche d'erreur de la couche aval, si elle reste atteignable après le nouveau filtre amont — sinon c'est du code mort qui trompe à la fois le rapport de couverture et l'utilisateur (message i18n jamais affiché).
+
+**Références :** ADR-053 §16.6, `docs/reviews/review-story-A5-poste-referentiel-admin.md`
+
+---
+
 ### ERR-178 — Un message de repli confond « la donnée n'existe pas » avec « la donnée n'a pas pu être chargée »
 **Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
 **Sévérité :** Moyenne
@@ -3313,6 +3334,27 @@ Toujours utiliser le champ métier (`date`) pour le tri et l'affichage, pas les 
 
 ## Catégorie : Build
 
+### ERR-186 — `next build` ne type-check pas les fichiers `__tests__` : un build vert ne prouve pas que les tests compilent
+**Sprint :** PR3-quinquies (story A.5, second passage de test §8.1) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/__tests__/charges-tab.test.tsx`, `src/components/previsions/__tests__/previsions-mensuelles-tab.test.tsx`, `src/components/previsions/__tests__/permissions-gating.test.tsx`, `src/components/previsions/api-types.ts` (`PostePrevisionDTO`)
+
+**Symptôme :**
+`PostePrevisionDTO.posteReferentielId`/`posteReferentiel` sont devenus des champs **non optionnels** (reflétant `posteReferentielId String NOT NULL` en base). Trois fichiers de fixtures de test existants continuaient de construire des `PostePrevisionDTO` sans ces champs. `npm run build` restait exit 0 tout du long — la régression de fixtures n'a été révélée que par `npx tsc --noEmit` sur le `tsconfig.json` complet, qui a remonté 7 emplacements en erreur.
+
+**Cause racine :**
+Le vérificateur de types de Next.js (`next build`) n'inclut pas les fichiers `__tests__` dans son graphe de contrôle — il type-check uniquement ce qui est atteignable depuis les points d'entrée de l'application (pages, routes API). Un enrichissement de DTO non optionnel peut donc casser silencieusement des fixtures de test sans jamais faire échouer le build, tant que Vitest n'est pas relancé avec les mêmes fixtures (et si les fixtures utilisent des casts permissifs ou des mocks partiels, même Vitest peut ne rien détecter avant l'exécution effective du test).
+
+**Fix :**
+Les 3 fichiers de fixtures corrigés pour inclure `posteReferentielId`/`posteReferentiel`, reflétant le contrat réel plutôt que de rendre le champ optionnel pour éviter la mise à jour (voir ERR-188, qui documente pourquoi cette seconde option aurait été pire).
+
+**Leçon / Règle :**
+Après tout enrichissement de DTO (champ rendu non optionnel, champ ajouté), lancer `npx tsc --noEmit` en plus de `npm run build` — le build de production seul ne couvre pas les fichiers de test. Un build vert n'est pas une preuve que la suite de tests compile encore.
+
+**Références :** `docs/tests/rapport-story-A5-poste-referentiel-admin.md` §8.1
+
+---
+
 ### ERR-095 — Turbopack cache silencieux sur des règles CSS globales (pseudo-éléments, @media)
 **Sprint :** Bugfixing | **Date :** 2026-05-03
 **Sévérité :** Haute
@@ -3380,6 +3422,48 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-189 — [PRATIQUE — ce qui a fonctionné] La falsification systématique a révélé un trou de couverture réel qu'aucune lecture de code n'aurait trouvé : le sous-cas « entrée inactive + libellé coïncident » sur 3 vues de rapprochement
+**Sprint :** PR3-quinquies (story A.5, second passage §8.4) | **Date :** 2026-08-05
+**Sévérité :** — (entrée de **pratique reproductible**, complète ERR-168/ERR-172)
+**Fichier(s) :** `src/lib/previsions/poste-rattachement.ts` (`calculerSignalRattachement`), `src/components/previsions/__tests__/rapprochement-vue-rattachement.test.tsx`
+
+**Symptôme :**
+La falsification de la règle « signal "inactif" affiché MÊME sans divergence » (retrait délibéré de la condition manquante `!referentiel.actif` dans `calculerSignalRattachement`) a fait tomber 4 tests au premier essai, mais **aucun** dans `rapprochement-vue-rattachement.test.tsx` — le fichier censé prouver la propagation du signal aux 3 vues de rapprochement (mensuelle, cumulée, top-écarts). Un composant qui délègue l'affichage à une fonction partagée déjà testée ailleurs (`enrichirLibelleAvecRattachement`) pouvait sembler couvert « par transitivité », mais ce fichier ne couvrait en réalité que le sous-cas divergent+actif, jamais inactif+coïncident.
+
+**Cause racine :**
+Un appelant peut toujours diverger de la fonction qu'il appelle (branchement conditionnel, filtre, transformation intermédiaire) — c'est exactement le raisonnement qui a produit ERR-185 (un texte qui ment sur ce qu'il désigne). Seul un test qui exerce l'appelant lui-même, avec le sous-cas précis, le prouve ; une couverture « par construction » (la fonction sous-jacente est testée, donc l'appelant l'est aussi) est une supposition, pas une preuve.
+
+**Fix :**
+3 tests ajoutés (un par vue) pour le sous-cas « inactif + libellé coïncident », avec une nouvelle entrée de fixture dédiée (`poste-inactif-coincident`, libellé référentiel === libellé de ligne, `actif: false`). Falsification **rejouée** dans son intégralité (restauration puis re-cassage) : 7 tests tombent cette fois, dont les 3 nouveaux — le gap est confirmé comblé par re-exécution, pas seulement par lecture du code corrigé.
+
+**Leçon / Règle :**
+La falsification systématique (casser délibérément une règle dans le code de production, relancer la suite, compter les tests qui tombent, restaurer, prouver la restauration par `diff`) n'est pas seulement une validation de ce qui est déjà supposé couvert — c'est un outil de **découverte** de trous de couverture réels que la lecture de code ne révèle pas, précisément parce que la couverture « par transitivité » d'un appelant via sa fonction sous-jacente est une intuition fausse à vérifier systématiquement, écran par écran, sous-cas par sous-cas. Quand une falsification fait tomber des tests ailleurs que dans le fichier censé couvrir un écran précis, c'est un signal qu'il manque un test à cet endroit précis — combler puis rejouer la falsification, ne pas se contenter du chiffre global non nul.
+
+**Références :** ERR-168, ERR-172, ERR-185, `docs/tests/rapport-story-A5-poste-referentiel-admin.md` §8.3-8.4
+
+---
+
+### ERR-188 — Rendre un champ de DTO optionnel « pour ne pas casser les tests » peut masquer une absence réelle d'affichage en production, même quand les tests restent verts
+**Sprint :** PR3-quinquies (story A.5) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/api-types.ts` (`PostePrevisionDTO`), `src/components/previsions/charges-tab.tsx`, `src/components/previsions/rapprochement-vue-mensuelle.tsx`
+
+**Symptôme :**
+Enrichir `PostePrevisionDTO` avec `posteReferentielId`/`posteReferentiel` faisait échouer 3 fichiers de fixtures existants (voir ERR-186). Rendre ces champs **optionnels** dans le DTO aurait fait repasser ces fixtures au vert sans les modifier — mais aurait aussi permis à un écran de compiler et de tester « vert » tout en cessant silencieusement d'afficher le rattachement dès que la donnée réelle serait absente d'un payload, puisque plus aucun test ni le compilateur n'obligerait à la fournir.
+
+**Cause racine :**
+La défensivité de typage (rendre un champ optionnel) résout un symptôme de compilation local sans jamais prouver que le champ, quand il est réellement présent, est effectivement lu et affiché quelque part. Un DTO optionnel « pour les tests » déplace le risque de la couche compilation vers la couche runtime, où rien ne le détecte plus.
+
+**Fix :**
+Les champs ont été rendus **non optionnels** (reflétant le NOT NULL réel en base) et les 3 fixtures corrigées pour les fournir, plutôt que l'inverse. Un test dédié par écran consommateur (`charges-tab.test.tsx`, `rapprochement-vue-rattachement.test.tsx`, `previsions-mensuelles-tab.test.tsx`) prouve l'affichage du signal de rattachement **quand la donnée est présente**, avec falsification associée qui fait tomber ces tests si la propagation est cassée (cf. ERR-189).
+
+**Leçon / Règle :**
+Tout champ rendu optionnel « pour ne pas casser les tests existants » doit être accompagné d'un test qui prouve l'affichage **quand la donnée est présente**, et d'une falsification qui le fait tomber si l'affichage est retiré — sinon le champ optionnel n'est qu'un silence organisé. Cette leçon est la même famille qu'ERR-185 (un texte qui ment sur ce qu'il désigne) : dans les deux cas, le système reste vert alors que l'information réelle n'atteint plus l'utilisateur.
+
+**Références :** ERR-185, ERR-186, ERR-189, `docs/tests/rapport-story-A5-poste-referentiel-admin.md` §8.1-8.2
+
+---
 
 ### ERR-185 — [RÉTROACTIF, jamais fiché au moment du fix] La ligne « Aliment » du rapprochement comparait des sacs (entiers, après `ceil`) à des kilogrammes réels : 384 kg de besoin s'affichaient « 0,0 t »
 **Sprint :** PR3-ter, commit `45e8e57` (« rapprochement, trésorerie réelle, et une unité qui mentait ») | **Date :** 2026-08-05 — entrée rédigée rétroactivement, story A.4, le fix lui-même est antérieur et n'avait jamais été fiché

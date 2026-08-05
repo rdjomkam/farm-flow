@@ -80,6 +80,14 @@ export class ValidationError extends Error {
  * violation de regle metier : chaque site de levee doit choisir
  * explicitement 400/409/422).
  *
+ * `details` (ADR-053 §16.12, story A.5) : payload structure optionnel,
+ * propre a un `code` donne — introduit pour porter
+ * `{ posteReferentielExistant: { id, libelle } }` sur les 409
+ * `POSTE_REFERENTIEL_CODE_COLLISION`/`POSTE_REFERENTIEL_INACTIF`, pour que
+ * l'UI propose directement une action de rattrapage ("Lier celle-ci") sans
+ * round-trip reseau supplementaire. Generique et reutilisable pour tout
+ * futur cas similaire, jamais un champ reserve a un seul usage.
+ *
  * @example
  * throw new BusinessRuleError(
  *   "La somme des pourcentages de repartition mensuelle doit valoir 100.",
@@ -90,7 +98,8 @@ export class BusinessRuleError extends Error {
   constructor(
     message: string,
     public readonly status: number, // 400 | 409 | 422 — jamais deduit du message
-    public readonly code?: string // identifiant machine stable, optionnel (ex. futur i18n)
+    public readonly code?: string, // identifiant machine stable, optionnel (ex. futur i18n)
+    public readonly details?: Record<string, unknown> // payload structure optionnel (ADR-053 §16.12)
   ) {
     super(message);
     this.name = "BusinessRuleError";

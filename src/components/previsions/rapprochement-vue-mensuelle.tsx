@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RapprochementLignesListe, type TotalAffichableDTO } from "@/components/previsions/rapprochement-lignes-liste";
 import { RapprochementNonRapproche } from "@/components/previsions/rapprochement-non-rapproche";
 import { libelleMoisCalendaire } from "@/lib/previsions/tableau-de-bord-helpers";
+import { enrichirLibelleAvecRattachement } from "@/components/previsions/poste-rattachement-badge";
 import type { AgregatEcartDTO, LigneRapprochementDTO } from "@/components/previsions/rapprochement-types";
 
 interface RapprochementVueMensuelleProps {
@@ -35,6 +36,8 @@ interface RapprochementVueMensuelleProps {
   nonRapproche: LigneRapprochementDTO[];
   totalMonetaire: AgregatEcartDTO | undefined;
   totalQuantite: AgregatEcartDTO | undefined;
+  /** ADR-053 §16.12, exigence A — cf. `rapprochement-tab.tsx`. */
+  posteRattachementParId?: Record<string, { libelle: string; actif: boolean }>;
 }
 
 export function RapprochementVueMensuelle({
@@ -44,10 +47,19 @@ export function RapprochementVueMensuelle({
   nonRapproche,
   totalMonetaire,
   totalQuantite,
+  posteRattachementParId,
 }: RapprochementVueMensuelleProps) {
   const t = useTranslations("previsions");
   const libelleMois = libelleMoisCalendaire(dateDebutPlan, moisAbsolu);
-  const lignesPrincipales = lignes.filter((l) => l.statutRapprochement !== "NON_RAPPROCHE");
+  // ADR-053 §16.12, exigence A : `libelle` enrichi d'un suffixe compact de
+  // rattachement (presentation uniquement) — jamais applique aux lignes
+  // NON_RAPPROCHE (aucun PostePrevision associe).
+  const lignesPrincipales = lignes
+    .filter((l) => l.statutRapprochement !== "NON_RAPPROCHE")
+    .map((l) => ({
+      ...l,
+      libelle: enrichirLibelleAvecRattachement(t, l.id, l.libelle, posteRattachementParId),
+    }));
 
   const totaux: TotalAffichableDTO[] = [];
   if (totalMonetaire) {

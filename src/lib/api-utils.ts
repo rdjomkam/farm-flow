@@ -12,6 +12,12 @@ export interface ApiErrorOptions {
   code?: string;
   /** Erreurs de validation par champ (utilisees pour les reponses 400). */
   errors?: Array<{ field: string; message: string }>;
+  /**
+   * Payload structure optionnel, propre a un `code` donne (ADR-053 §16.12,
+   * story A.5) — ex. `{ posteReferentielExistant: { id, libelle } }` pour
+   * `POSTE_REFERENTIEL_CODE_COLLISION`/`POSTE_REFERENTIEL_INACTIF`.
+   */
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -53,6 +59,10 @@ export function apiError(
 
   if (opts?.errors !== undefined && opts.errors.length > 0) {
     body.errors = opts.errors;
+  }
+
+  if (opts?.details !== undefined) {
+    body.details = opts.details;
   }
 
   return NextResponse.json(body, { status });
@@ -114,7 +124,11 @@ export function handleApiError(
     return apiError(error.status, error.message);
   }
   if (error instanceof BusinessRuleError) {
-    return apiError(error.status, error.message, error.code ? { code: error.code } : undefined);
+    const opts: ApiErrorOptions | undefined =
+      error.code || error.details
+        ? { ...(error.code ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) }
+        : undefined;
+    return apiError(error.status, error.message, opts);
   }
 
   const message = error instanceof Error ? error.message : "Erreur serveur.";

@@ -1650,6 +1650,16 @@ export interface ApiErrorResponse {
     field: string;
     message: string;
   }>;
+  /**
+   * Payload structure optionnel, propre a un `code` donne (ADR-053 §16.12,
+   * story A.5 : introduit pour `POSTE_REFERENTIEL_CODE_COLLISION`/
+   * `POSTE_REFERENTIEL_INACTIF` sur `POST /api/previsions/scenarios/[id]/postes`,
+   * `PosteReferentielExistantDetailsDTO` dans
+   * `src/components/previsions/api-types.ts`). Generique et reutilisable pour
+   * tout futur 409 qui doit porter une ressource candidate — JAMAIS un champ
+   * cree ad hoc par cas d'usage. Chaque appelant type-narrow selon `code`.
+   */
+  details?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

@@ -103,7 +103,8 @@
     "selectionnerSite": "Select a site",
     "enLigne": "Online",
     "horsLigne": "Offline",
-    "previsions": "Forecasts"
+    "previsions": "Forecasts",
+    "referentielPostes": "Cost item reference"
   },
   "roles": {
     "admin": "Administrator",

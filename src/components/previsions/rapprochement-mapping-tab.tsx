@@ -65,8 +65,9 @@
  * l'etat actuel" et "je regarde un instantane passe".
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, History, Info, Loader2, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, ExternalLink, History, Info, Loader2, Pencil, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -204,6 +205,16 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>{t("rapprochementTab.mapping.scopeBanner", { scenario: scenarioNom })}</p>
       </div>
+
+      {peutParametrer && (
+        <Link
+          href="/previsions/postes-referentiel"
+          className="inline-flex items-center gap-1 self-start text-xs font-medium text-primary hover:underline"
+        >
+          {t("rapprochementTab.mapping.gererReferentielLink")}
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </Link>
+      )}
 
       {/* Story C.3 (PR3-ter) : selecteur de version — toujours visible des qu'au
           moins une version existe, meme pendant le chargement d'une nouvelle

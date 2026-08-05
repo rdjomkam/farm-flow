@@ -325,13 +325,70 @@ export const vaguesPrevuesQuerySchema = z.object({
 // PostePrevision / ChargeMensuellePrevue
 // ---------------------------------------------------------------------------
 
-export const createPostePrevisionSchema = z.object({
-  libelle: z.string().min(1, "Le libelle est obligatoire."),
-  type: z.nativeEnum(TypePostePrevision),
-  inclusBaseRepartition: z.boolean().optional(),
-  ordre: positiveInt,
-});
+/**
+ * ADR-053 §16.6/§16.12 (story A.5) — contrat XOR ACTIVE : `posteReferentielId`
+ * XOR `nouveauPosteReferentielLibelle`, exactement l'un des deux. La
+ * validation XOR elle-meme (avec les codes machine
+ * `POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS`/`POSTE_REFERENTIEL_CHAMP_REQUIS`) reste
+ * appliquee par `createPostePrevision` (`src/lib/queries/previsions-charges.ts`,
+ * `BusinessRuleError` avec `status`/`code` explicites) — c'est la query qui
+ * reste le seul point de verite METIER pour la distinction
+ * CHAMPS_EXCLUSIFS/CHAMP_REQUIS, jamais deux implementations divergentes de
+ * la logique. Ce schema Zod ne fait que typer/exiger la PRESENCE d'au moins
+ * un champ non vide (filet de securite au niveau forme du payload, avant
+ * meme d'atteindre la query) : quand ce filet rejette (aucun champ fourni),
+ * il court-circuite la requete AVANT la query — la branche
+ * `POSTE_REFERENTIEL_CHAMP_REQUIS` de `createPostePrevision` devient alors du
+ * code mort cote route si ce refine ne porte pas lui-meme le meme `code`
+ * machine. Corrige (review story A.5, ecart Moyenne #1) via `params.code`,
+ * relaye par `parseBody` (`src/app/api/previsions/_shared.ts`) — le refine ne
+ * duplique aucune logique de decision, il ne fait que reetiqueter avec le
+ * MEME code documente le meme cas qu'aurait rejete la query. Le cas
+ * symetrique (les deux champs fournis, `POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS`)
+ * n'a PAS besoin du meme traitement : ce refine utilise un OU (`||`), pas un
+ * XOR strict, donc "les deux fournis" passe la validation Zod et atteint
+ * reellement `createPostePrevision`, qui leve alors son `BusinessRuleError`
+ * normalement intercepte par `handleApiError` — code deja vivant, verifie a
+ * la lecture (aucun court-circuit avant la query pour ce cas).
+ */
+export const createPostePrevisionSchema = z
+  .object({
+    libelle: z.string().min(1, "Le libelle est obligatoire."),
+    type: z.nativeEnum(TypePostePrevision),
+    inclusBaseRepartition: z.boolean().optional(),
+    ordre: positiveInt,
+    posteReferentielId: z.string().min(1).optional(),
+    nouveauPosteReferentielLibelle: z.string().min(1).optional(),
+  })
+  .refine((d) => !!d.posteReferentielId || !!d.nouveauPosteReferentielLibelle, {
+    message: "Selectionnez une entree du referentiel ou creez-en une nouvelle.",
+    path: ["posteReferentielId"],
+    // ADR-053 §16.12 (story A.5, correctif review Moyenne #1) — ce court-circuit
+    // Zod produit le MEME 400 que `createPostePrevision` (previsions-charges.ts)
+    // aurait leve si la requete avait atteint la query, donc DOIT porter le
+    // MEME code machine documente, sous peine que le contrat §16.12 ne soit
+    // jamais observable par un appelant HTTP reel (le refine s'execute avant
+    // la query, la branche `BusinessRuleError` correspondante devient alors
+    // du code mort). `params.code` est le mecanisme GENERIQUE relaye par
+    // `parseBody` (`src/app/api/previsions/_shared.ts`) — reutilisable par
+    // tout autre `.refine()` du projet, pas un bricolage propre a cette route.
+    params: { code: "POSTE_REFERENTIEL_CHAMP_REQUIS" },
+  });
 export type CreatePostePrevisionInput = z.infer<typeof createPostePrevisionSchema>;
+
+/**
+ * PATCH /api/previsions/postes-referentiel/[id] (ADR-053 §16.12, story A.5,
+ * "Arbitrage 1") — `libelle` UNIQUEMENT. `.strict()` : un champ `code`
+ * (ou tout autre champ) dans le body est REFUSE explicitement (400), jamais
+ * ignore silencieusement — un appelant qui croit pouvoir changer `code` doit
+ * etre informe que ce n'est pas possible, pas laisse croire que ca a marche.
+ */
+export const renommerPosteReferentielSchema = z
+  .object({
+    libelle: z.string().min(1, "Le libelle est obligatoire."),
+  })
+  .strict();
+export type RenommerPosteReferentielInput = z.infer<typeof renommerPosteReferentielSchema>;
 
 export const upsertChargeMensuelleSchema = z.object({
   moisAbsolu: positiveInt,

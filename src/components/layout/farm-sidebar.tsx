@@ -38,6 +38,7 @@ import {
   Eye,
   Factory,
   TrendingUp,
+  ListTree,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -127,6 +128,11 @@ export function FarmSidebar({
       labelKey: "modules.previsions",
       items: [
         { href: "/previsions/scenarios", labelKey: "items.previsions", icon: TrendingUp },
+        // ADR-053 §16.12, story A.5 : referentiel des postes, site-scope,
+        // decouple du cycle de vie de tout scenario — item de nav distinct,
+        // gate via ITEM_VIEW_PERMISSIONS (PREVISIONS_PARAMETRER, pas
+        // PREVISIONS_VOIR).
+        { href: "/previsions/postes-referentiel", labelKey: "items.referentielPostes", icon: ListTree },
       ],
       permissionRequired: Permission.PREVISIONS_VOIR,
       moduleRequired: SiteModule.PREVISIONS,

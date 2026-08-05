@@ -40,6 +40,7 @@ import {
   ThermometerSun,
   Factory,
   TrendingUp,
+  ListTree,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -188,6 +189,15 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         labelKey: "items.previsions",
         icon: TrendingUp,
         permissionRequired: Permission.PREVISIONS_VOIR,
+        moduleRequired: SiteModule.PREVISIONS,
+      },
+      // ADR-053 §16.12, story A.5 : referentiel des postes, gate
+      // PREVISIONS_PARAMETRER (pas PREVISIONS_VOIR — cf. farm-sidebar.tsx).
+      {
+        href: "/previsions/postes-referentiel",
+        labelKey: "items.referentielPostes",
+        icon: ListTree,
+        permissionRequired: Permission.PREVISIONS_PARAMETRER,
         moduleRequired: SiteModule.PREVISIONS,
       },
     ],

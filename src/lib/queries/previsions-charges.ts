@@ -49,11 +49,37 @@ function assertEntierColonneInt(valeur: number, nomChamp: string): void {
   }
 }
 
+/**
+ * Payload de `createPostePrevision` (ADR-053 §16.6/§16.12, story A.5 — contrat XOR ACTIVE).
+ * `posteReferentielId` XOR `nouveauPosteReferentielLibelle` : exactement l'un des deux, jamais
+ * les deux, jamais aucun des deux (verifie applicativement dans la fonction, 400 sinon — filet
+ * de securite en plus de la validation Zod au niveau route, cf. `previsions.schema.ts`).
+ *
+ * Remplace le get-or-create silencieux de §16.11 (`resoudrePosteReferentielIdDansTransaction`,
+ * retire — un seul appelant en production, confirme par grep exhaustif, ADR-053 §16.12 "Ce que
+ * devient le get-or-create silencieux de §16.11").
+ */
 export interface CreatePostePrevisionDTO {
   libelle: string;
   type: TypePostePrevision;
   inclusBaseRepartition?: boolean;
   ordre: number;
+  posteReferentielId?: string;
+  nouveauPosteReferentielLibelle?: string;
+}
+
+/**
+ * Reponse de `createPostePrevision` — le `PostePrevision` cree (avec son `posteReferentiel`
+ * inclus, ADR-053 §16.12 point 2/3 de la liste des ecrans) plus `reutilise` : `true` si
+ * `posteReferentielId` a ete fourni (branche a, selection explicite d'une entree existante),
+ * `false` si `nouveauPosteReferentielLibelle` a effectivement cree une nouvelle entree (branche
+ * b) — un simple reflet de la branche empruntee, plus un signal de reutilisation SILENCIEUSE
+ * (ce comportement disparait avec le contrat XOR, la branche b renvoie toujours 409 sur
+ * collision, jamais une reutilisation implicite).
+ */
+export interface CreatePostePrevisionResult {
+  poste: Awaited<ReturnType<typeof creerPostePrevisionAvecReferentiel>>;
+  reutilise: boolean;
 }
 
 export interface CreateJournalDepensePrevueDTO {
@@ -83,11 +109,20 @@ export interface CreateApportCapitalDTO {
 // PostePrevision
 // ---------------------------------------------------------------------------
 
-/** Liste les PostePrevision d'un scenario, ordonnes par `ordre`. */
+/**
+ * Selection Prisma commune pour `posteReferentiel` — utilisee partout ou un `PostePrevision`
+ * est charge/cree/retourne, pour que le rattachement soit visible (ADR-053 §16.12, exigence A).
+ */
+const INCLUDE_POSTE_REFERENTIEL = {
+  posteReferentiel: { select: { libelle: true, actif: true } },
+} as const;
+
+/** Liste les PostePrevision d'un scenario, ordonnes par `ordre`, avec le rattachement referentiel. */
 export async function getPostesPrevisionParScenario(scenarioId: string, siteId: string) {
   return prisma.postePrevision.findMany({
     where: { scenarioId, siteId },
     orderBy: { ordre: "asc" },
+    include: INCLUDE_POSTE_REFERENTIEL,
   });
 }
 
@@ -110,67 +145,168 @@ function estCollisionUniciteCodeReferentiel(error: unknown): boolean {
   return Array.isArray(target) && target.includes("code") && target.includes("siteId");
 }
 
+/** Construit le payload `details.posteReferentielExistant` porte par les 409 (ADR-053 §16.12). */
+function posteReferentielExistantDetails(entry: { id: string; libelle: string }) {
+  return { posteReferentielExistant: { id: entry.id, libelle: entry.libelle } };
+}
+
 /**
- * Resout (get-or-create) l'entree `PosteReferentiel` du site pour ce `code`, a l'interieur
- * d'une transaction Prisma deja ouverte (ADR-053 §16.11).
+ * Branche (a) du contrat XOR — `posteReferentielId` fourni (ADR-053 §16.12 "Contrat des
+ * routes"). L'entree doit exister DANS LE SITE COURANT (sinon 404, jamais 403 — ne jamais
+ * reveler l'existence d'une ressource d'un autre site) et etre ACTIVE (sinon 409). Aucune
+ * creation, aucun appel a `sluggifierLibellePoste`.
  *
- * @throws {BusinessRuleError} (409) si le slug matche une entree referentiel DESACTIVEE du site
- *   — jamais de reactivation silencieuse, jamais de doublon avec un code en collision.
+ * @throws {BusinessRuleError} 404 POSTE_REFERENTIEL_INTROUVABLE si absente ou d'un autre site.
+ * @throws {BusinessRuleError} 409 POSTE_REFERENTIEL_INACTIF si desactivee.
  */
-async function resoudrePosteReferentielIdDansTransaction(
+async function resoudreBranchePosteReferentielExistant(
   tx: PrismaTransactionClient,
   siteId: string,
-  code: string,
-  libelleOrigine: string
-): Promise<string> {
+  posteReferentielId: string
+): Promise<{ posteReferentielId: string; reutilise: true }> {
+  const referentiel = await tx.posteReferentiel.findFirst({
+    where: { id: posteReferentielId, siteId },
+  });
+  if (!referentiel) {
+    throw new BusinessRuleError(
+      "Entree referentiel introuvable.",
+      404,
+      "POSTE_REFERENTIEL_INTROUVABLE"
+    );
+  }
+  if (!referentiel.actif) {
+    throw new BusinessRuleError(
+      `Entree referentiel desactivee ("${referentiel.libelle}"). Reactivez-la avant de lier ` +
+        `un poste, ou choisissez une entree active.`,
+      409,
+      "POSTE_REFERENTIEL_INACTIF",
+      posteReferentielExistantDetails(referentiel)
+    );
+  }
+  return { posteReferentielId: referentiel.id, reutilise: true };
+}
+
+/**
+ * Branche (b) du contrat XOR — `nouveauPosteReferentielLibelle` fourni (ADR-053 §16.12
+ * "Contrat des routes"). Slugifie le libelle, refuse explicitement toute collision (active OU
+ * desactivee) — JAMAIS un suffixe numerique auto-genere, JAMAIS une reutilisation silencieuse.
+ *
+ * @throws {BusinessRuleError} 409 POSTE_REFERENTIEL_CODE_COLLISION si le slug collide avec une
+ *   entree ACTIVE du site.
+ * @throws {BusinessRuleError} 409 POSTE_REFERENTIEL_INACTIF si le slug collide avec une entree
+ *   DESACTIVEE du site.
+ */
+async function resoudreBrancheNouveauPosteReferentiel(
+  tx: PrismaTransactionClient,
+  siteId: string,
+  nouveauLibelle: string
+): Promise<{ posteReferentielId: string; reutilise: false }> {
+  const code = sluggifierLibellePoste(nouveauLibelle);
   const existant = await tx.posteReferentiel.findUnique({
     where: { siteId_code: { siteId, code } },
   });
 
   if (existant) {
-    if (!existant.actif) {
+    if (existant.actif) {
       throw new BusinessRuleError(
-        `Un poste referentiel desactive existe deja pour ce libelle ("${existant.libelle}"). ` +
-          `Reactivez-le ou choisissez un libelle different plutot que d'en creer un doublon.`,
+        `Un poste referentiel actif existe deja pour ce libelle ("${existant.libelle}"). ` +
+          `Liez-le plutot que d'en creer un doublon.`,
         409,
-        "POSTE_REFERENTIEL_INACTIF"
+        "POSTE_REFERENTIEL_CODE_COLLISION",
+        posteReferentielExistantDetails(existant)
       );
     }
-    return existant.id;
+    throw new BusinessRuleError(
+      `Un poste referentiel desactive existe deja pour ce libelle ("${existant.libelle}"). ` +
+        `Reactivez-le avant de creer un doublon, ou choisissez un libelle different.`,
+      409,
+      "POSTE_REFERENTIEL_INACTIF",
+      posteReferentielExistantDetails(existant)
+    );
   }
 
   // `actif` explicite (redondant avec le defaut du schema Prisma @default(true), mais
-  // volontaire, R7) : la valeur cree doit etre sans ambiguite pour tout consommateur qui lit
+  // volontaire, R7) : la valeur creee doit etre sans ambiguite pour tout consommateur qui lit
   // cette ligne, y compris un mock de test qui n'applique pas les defauts du schema.
   const cree = await tx.posteReferentiel.create({
-    data: { siteId, code, libelle: libelleOrigine, actif: true },
+    data: { siteId, code, libelle: nouveauLibelle, actif: true },
   });
-  return cree.id;
+  return { posteReferentielId: cree.id, reutilise: false };
+}
+
+/** Cree le `PostePrevision` avec son `posteReferentiel` inclus — un seul point d'ecriture. */
+async function creerPostePrevisionAvecReferentiel(
+  tx: PrismaTransactionClient,
+  scenarioId: string,
+  siteId: string,
+  data: CreatePostePrevisionDTO,
+  posteReferentielId: string
+) {
+  return tx.postePrevision.create({
+    data: {
+      scenarioId,
+      libelle: data.libelle,
+      type: data.type,
+      inclusBaseRepartition: data.inclusBaseRepartition ?? true,
+      ordre: data.ordre,
+      siteId,
+      posteReferentielId,
+    },
+    include: INCLUDE_POSTE_REFERENTIEL,
+  });
 }
 
 /**
- * Cree un PostePrevision (chemin par defaut, ADR-053 §16.11) : le contrat de route reste
- * inchange (seul `libelle`), mais la creation resout desormais en interne, par get-or-create
- * transactionnel sur `sluggifierLibellePoste(libelle)`, l'entree `PosteReferentiel` du site a
- * lier — la creant si aucune entree active du site ne porte ce `code`. R4 : tout se passe dans
- * la MEME transaction Prisma que la creation du `PostePrevision` (jamais une entree referentiel
- * creee puis un echec de creation du poste, qui laisserait une entree orpheline sans poste).
+ * Cree un PostePrevision — contrat XOR ACTIVE (ADR-053 §16.6/§16.10/§16.12, story A.5).
+ * Remplace le get-or-create silencieux de §16.11 : la resolution du `posteReferentielId`
+ * exige desormais EXACTEMENT l'un des deux champs `posteReferentielId` (branche a, selection
+ * explicite d'une entree active existante du site) OU `nouveauPosteReferentielLibelle`
+ * (branche b, creation explicite) — jamais les deux, jamais aucun des deux (400).
  *
- * Concurrence (R4, §16.11) : si deux requetes concomitantes manquent toutes deux le
- * `findUnique` initial avant que l'une des deux n'ait committe sa creation, la seconde voit son
- * `create` echouer avec `P2002` sur `@@unique([siteId, code])` — la contrainte en base est
- * l'arbitre final, jamais l'application seule. Cette transaction ayant ete annulee par Postgres
- * a l'echec de la contrainte, le rattrapage se fait HORS de cette transaction (une transaction
- * avortee ne peut plus etre reutilisee pour une requete de lecture) : un unique retry
- * deterministe relit l'entree desormais committee par la premiere requete, puis cree le
- * `PostePrevision` en la reutilisant.
+ * R4 : tout se passe dans la MEME transaction Prisma que la creation du `PostePrevision`
+ * (jamais une entree referentiel creee puis un echec de creation du poste, qui laisserait une
+ * entree orpheline sans poste).
+ *
+ * Concurrence (R4, §16.12 "Concurrence" — DIVERGENCE EXPLICITE d'avec §16.11) : si le `create`
+ * de la branche (b) echoue avec `P2002` sur `@@unique([siteId, code])` (course entre deux
+ * creations concomitantes), le comportement N'EST PLUS de rattraper silencieusement en
+ * reutilisant l'entree committee par la requete gagnante — la seconde requete voulait CREER,
+ * pas SELECTIONNER. Un seul retry de LECTURE, deterministe, jamais de boucle non bornee, mais
+ * son issue est desormais TOUJOURS un 409 POSTE_REFERENTIEL_CODE_COLLISION, jamais un succes
+ * silencieux.
+ *
+ * @throws {BusinessRuleError} 400 POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS si les deux champs XOR
+ *   sont fournis. Filet de securite en plus de la validation Zod cote route.
+ * @throws {BusinessRuleError} 400 POSTE_REFERENTIEL_CHAMP_REQUIS si aucun des deux n'est fourni.
+ * @throws {BusinessRuleError} 404 POSTE_REFERENTIEL_INTROUVABLE (branche a, entree absente/autre site).
+ * @throws {BusinessRuleError} 409 POSTE_REFERENTIEL_INACTIF (branche a ou b, entree desactivee).
+ * @throws {BusinessRuleError} 409 POSTE_REFERENTIEL_CODE_COLLISION (branche b, slug deja pris
+ *   par une entree active — synchrone ou issu d'une course concurrente).
  */
 export async function createPostePrevision(
   scenarioId: string,
   siteId: string,
   data: CreatePostePrevisionDTO
-) {
+): Promise<CreatePostePrevisionResult> {
   assertEntierColonneInt(data.ordre, "ordre");
+
+  const aPosteReferentielId = !!data.posteReferentielId;
+  const aNouveauLibelle = !!data.nouveauPosteReferentielLibelle?.trim();
+
+  if (aPosteReferentielId && aNouveauLibelle) {
+    throw new BusinessRuleError(
+      "Choisissez soit une entree referentiel existante, soit un nouveau libelle — pas les deux.",
+      400,
+      "POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS"
+    );
+  }
+  if (!aPosteReferentielId && !aNouveauLibelle) {
+    throw new BusinessRuleError(
+      "Selectionnez une entree du referentiel ou creez-en une nouvelle.",
+      400,
+      "POSTE_REFERENTIEL_CHAMP_REQUIS"
+    );
+  }
 
   const scenario = await prisma.scenarioPrevision.findFirst({
     where: { id: scenarioId, siteId },
@@ -180,36 +316,54 @@ export async function createPostePrevision(
     throw new Error("Scenario introuvable");
   }
 
-  const code = sluggifierLibellePoste(data.libelle);
-
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const posteReferentielId = await resoudrePosteReferentielIdDansTransaction(
+  if (aPosteReferentielId) {
+    // Branche (a) : aucune ecriture sur PosteReferentiel, donc aucun risque de P2002 — pas de
+    // retry necessaire, une seule transaction couvre la lecture de verification + la creation.
+    return prisma.$transaction(async (tx) => {
+      const { posteReferentielId, reutilise } = await resoudreBranchePosteReferentielExistant(
         tx,
         siteId,
-        code,
-        data.libelle
+        data.posteReferentielId!
       );
+      const poste = await creerPostePrevisionAvecReferentiel(
+        tx,
+        scenarioId,
+        siteId,
+        data,
+        posteReferentielId
+      );
+      return { poste, reutilise };
+    });
+  }
 
-      return tx.postePrevision.create({
-        data: {
-          scenarioId,
-          libelle: data.libelle,
-          type: data.type,
-          inclusBaseRepartition: data.inclusBaseRepartition ?? true,
-          ordre: data.ordre,
-          siteId,
-          posteReferentielId,
-        },
-      });
+  // Branche (b).
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const { posteReferentielId, reutilise } = await resoudreBrancheNouveauPosteReferentiel(
+        tx,
+        siteId,
+        data.nouveauPosteReferentielLibelle!
+      );
+      const poste = await creerPostePrevisionAvecReferentiel(
+        tx,
+        scenarioId,
+        siteId,
+        data,
+        posteReferentielId
+      );
+      return { poste, reutilise };
     });
   } catch (error) {
     if (!estCollisionUniciteCodeReferentiel(error)) {
       throw error;
     }
 
-    // Un seul retry deterministe (R4) : l'entree PosteReferentiel vient d'etre committee par
-    // la requete concurrente gagnante, hors de la transaction avortee ci-dessus.
+    // Course concurrente (R4, §16.12 "Concurrence") : la transaction ci-dessus a ete annulee par
+    // Postgres a l'echec de la contrainte — le rattrapage se fait HORS de cette transaction (une
+    // transaction avortee ne peut plus etre reutilisee pour une requete de lecture). Un unique
+    // retry de lecture relit l'entree desormais committee par la requete gagnante, puis repond
+    // TOUJOURS 409 (jamais une reutilisation silencieuse — divergence explicite d'avec §16.11).
+    const code = sluggifierLibellePoste(data.nouveauPosteReferentielLibelle!);
     const referentiel = await prisma.posteReferentiel.findUnique({
       where: { siteId_code: { siteId, code } },
     });
@@ -218,26 +372,13 @@ export async function createPostePrevision(
       // route de suppression n'existe (§16.5) : ce cas ne devrait jamais survenir en pratique.
       throw error;
     }
-    if (!referentiel.actif) {
-      throw new BusinessRuleError(
-        `Un poste referentiel desactive existe deja pour ce libelle ("${referentiel.libelle}"). ` +
-          `Reactivez-le ou choisissez un libelle different plutot que d'en creer un doublon.`,
-        409,
-        "POSTE_REFERENTIEL_INACTIF"
-      );
-    }
-
-    return prisma.postePrevision.create({
-      data: {
-        scenarioId,
-        libelle: data.libelle,
-        type: data.type,
-        inclusBaseRepartition: data.inclusBaseRepartition ?? true,
-        ordre: data.ordre,
-        siteId,
-        posteReferentielId: referentiel.id,
-      },
-    });
+    throw new BusinessRuleError(
+      `Un poste referentiel actif existe deja pour ce libelle ("${referentiel.libelle}"). ` +
+        `Liez-le plutot que d'en creer un doublon.`,
+      409,
+      "POSTE_REFERENTIEL_CODE_COLLISION",
+      posteReferentielExistantDetails(referentiel)
+    );
   }
 }
 

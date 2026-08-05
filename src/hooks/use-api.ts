@@ -30,6 +30,22 @@ export interface ApiResult<T> {
    * précis plutôt que de se fier uniquement au message générique.
    */
   errors?: Array<{ field: string; message: string }>;
+  /**
+   * Code machine stable (`ApiErrorResponse.code`, `src/lib/api-utils.ts`) —
+   * permet à un appelant de mapper une erreur métier vers une clé i18n
+   * locale plutôt que d'afficher `error` (le message serveur brut, jamais
+   * garanti bilingue). Introduit pour ADR-053 §16.12 (codes
+   * `POSTE_REFERENTIEL_*`), généralisé (aucun champ réservé à un seul
+   * usage).
+   */
+  code?: string;
+  /**
+   * Payload structuré optionnel, propre à un `code` donné
+   * (`ApiErrorResponse.details`, ADR-053 §16.12) — ex.
+   * `{ posteReferentielExistant: { id, libelle } }` sur les 409
+   * `POSTE_REFERENTIEL_CODE_COLLISION`/`POSTE_REFERENTIEL_INACTIF`.
+   */
+  details?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +120,11 @@ export function useApi() {
         if (!res.ok) {
           // Extraire le message d'erreur de la réponse
           const errorData = data as
-            | (Record<string, string> & { errors?: Array<{ field: string; message: string }> })
+            | (Record<string, string> & {
+                errors?: Array<{ field: string; message: string }>;
+                code?: string;
+                details?: Record<string, unknown>;
+              })
             | null;
           const baseMessage =
             errorData?.message ??
@@ -134,6 +154,8 @@ export function useApi() {
             ok: false,
             status: res.status,
             errors: fieldErrors.length > 0 ? fieldErrors : undefined,
+            code: errorData?.code,
+            details: errorData?.details,
           };
         }
 

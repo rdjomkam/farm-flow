@@ -188,6 +188,8 @@ describe("ChargesTab — permissions PREVISIONS_VOIR seule", () => {
     inclusBaseRepartition: true,
     ordre: 0,
     siteId: "site-1",
+    posteReferentielId: "ref-1",
+    posteReferentiel: { libelle: "Electricite", actif: true },
   };
 
   it("le champ de saisie de charge est désactivé et aucun bouton Enregistrer/Créer un poste n'apparaît avec PREVISIONS_VOIR seule", () => {

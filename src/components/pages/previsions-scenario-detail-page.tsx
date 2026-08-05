@@ -416,6 +416,11 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     inclusBaseRepartition: p.inclusBaseRepartition,
     ordre: p.ordre,
     siteId: p.siteId,
+    posteReferentielId: p.posteReferentielId,
+    posteReferentiel: {
+      libelle: p.posteReferentiel.libelle,
+      actif: p.posteReferentiel.actif,
+    },
   }));
 
   const chargesDto: ChargeMensuellePrevueDTO[] = charges.map((c) => ({

@@ -39,8 +39,11 @@ import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import { PosteFormDialog } from "@/components/previsions/poste-form-dialog";
 import { ReporterChargeDialog } from "@/components/previsions/reporter-charge-dialog";
 import { ValeurCalculee } from "@/components/previsions/valeur-calculee";
+import { PosteRattachementLigne } from "@/components/previsions/poste-rattachement-badge";
 import { formatMontantPrevision } from "@/lib/previsions/format-previsions";
 import type { PostePrevisionDTO, ChargeMensuellePrevueDTO } from "@/components/previsions/api-types";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 
 interface ChargesTabProps {
   scenarioId: string;
@@ -189,7 +192,14 @@ export function ChargesTab({
       </div>
 
       {peutParametrer && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link
+            href="/previsions/postes-referentiel"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            {t("chargesTab.gererReferentielLink")}
+            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          </Link>
           <PosteFormDialog
             scenarioId={scenarioId}
             ordreSuivant={postes.length}
@@ -236,6 +246,7 @@ export function ChargesTab({
                     </Button>
                   )}
                 </div>
+                <PosteRattachementLigne libelleScenario={p.libelle} posteReferentiel={p.posteReferentiel} />
                 {!p.inclusBaseRepartition && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t("chargesTab.excludedFromBase")}

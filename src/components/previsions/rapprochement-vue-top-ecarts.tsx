@@ -23,6 +23,7 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RapprochementLignesListe } from "@/components/previsions/rapprochement-lignes-liste";
 import { libelleMoisCalendaire } from "@/lib/previsions/tableau-de-bord-helpers";
+import { enrichirLibelleAvecRattachement } from "@/components/previsions/poste-rattachement-badge";
 import type { LigneRapprochementDTO } from "@/components/previsions/rapprochement-types";
 
 interface RapprochementVueTopEcartsProps {
@@ -30,6 +31,8 @@ interface RapprochementVueTopEcartsProps {
   moisAbsolu: number;
   lignesMonetaires: LigneRapprochementDTO[];
   lignesQuantite: LigneRapprochementDTO[];
+  /** ADR-053 §16.12, exigence A — cf. `rapprochement-tab.tsx`. */
+  posteRattachementParId?: Record<string, { libelle: string; actif: boolean }>;
 }
 
 export function RapprochementVueTopEcarts({
@@ -37,9 +40,20 @@ export function RapprochementVueTopEcarts({
   moisAbsolu,
   lignesMonetaires,
   lignesQuantite,
+  posteRattachementParId,
 }: RapprochementVueTopEcartsProps) {
   const t = useTranslations("previsions");
   const libelleMois = libelleMoisCalendaire(dateDebutPlan, moisAbsolu);
+  // ADR-053 §16.12, exigence A : `libelle` enrichi d'un suffixe compact de
+  // rattachement (presentation uniquement).
+  const lignesMonetairesAffichees = lignesMonetaires.map((l) => ({
+    ...l,
+    libelle: enrichirLibelleAvecRattachement(t, l.id, l.libelle, posteRattachementParId),
+  }));
+  const lignesQuantiteAffichees = lignesQuantite.map((l) => ({
+    ...l,
+    libelle: enrichirLibelleAvecRattachement(t, l.id, l.libelle, posteRattachementParId),
+  }));
 
   return (
     <div className="space-y-4">
@@ -51,7 +65,7 @@ export function RapprochementVueTopEcarts({
           <p className="text-xs text-muted-foreground">{t("rapprochementTab.topEcarts.descriptionMonetaire")}</p>
         </CardHeader>
         <CardContent>
-          <RapprochementLignesListe lignes={lignesMonetaires} emptyLabel={t("rapprochementTab.topEcarts.empty")} />
+          <RapprochementLignesListe lignes={lignesMonetairesAffichees} emptyLabel={t("rapprochementTab.topEcarts.empty")} />
         </CardContent>
       </Card>
 
@@ -63,7 +77,7 @@ export function RapprochementVueTopEcarts({
           <p className="text-xs text-muted-foreground">{t("rapprochementTab.topEcarts.descriptionQuantite")}</p>
         </CardHeader>
         <CardContent>
-          <RapprochementLignesListe lignes={lignesQuantite} emptyLabel={t("rapprochementTab.topEcarts.empty")} />
+          <RapprochementLignesListe lignes={lignesQuantiteAffichees} emptyLabel={t("rapprochementTab.topEcarts.empty")} />
         </CardContent>
       </Card>
     </div>

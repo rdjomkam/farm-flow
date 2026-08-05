@@ -439,7 +439,8 @@
     "excludedFromBase": "Excluded from the cost-sharing base between batches.",
     "totalLabel": "Total for the month:",
     "totalFormule": "Total for the month = sum of the expense amounts for each line for this month",
-    "totalAria": "Explain the total for the month"
+    "totalAria": "Explain the total for the month",
+    "gererReferentielLink": "Manage cost item reference"
   },
   "reporterChargeDialog": {
     "triggerButton": "Roll over to several months",
@@ -476,12 +477,39 @@
     "confirmButton": "Apply",
     "confirming": "Applying..."
   },
+  "posteFormDialog": {
+    "reutiliseNotice": "Attached to the existing reference entry \"{libelle}\"."
+  },
+  "posteRattachement": {
+    "label": "Reference:",
+    "inactifSuffix": "disabled",
+    "compactSuffix": "ref. {libelle}",
+    "compactSuffixInactif": "ref. disabled"
+  },
   "posteForm": {
     "triggerButton": "New expense line",
     "dialogTitle": "New expense line",
     "types": {
       "LOGISTIQUE": "Logistics",
       "CHARGE_EXPLOITATION": "Operating expense"
+    },
+    "mode": {
+      "search": "Search the reference list",
+      "create": "Create a new entry"
+    },
+    "search": {
+      "placeholder": "Search for a cost item…",
+      "empty": "No matching cost item.",
+      "createFromQuery": "Create \"{recherche}\" as a new entry",
+      "resultCode": "Code: {code}"
+    },
+    "create": {
+      "fields": {
+        "libelle": {
+          "label": "New entry label"
+        }
+      },
+      "hint": "This entry will be added to the site's cost item reference list, shared by all scenarios."
     },
     "fields": {
       "libelle": {
@@ -493,10 +521,61 @@
       }
     },
     "errors": {
-      "libelleRequired": "The label is required."
+      "libelleRequired": "The label is required.",
+      "champsExclusifs": "Choose either an existing entry or a new label — not both.",
+      "champRequis": "Select a reference entry or create a new one.",
+      "collisionCode": "An entry \"{libelle}\" already exists in the reference list.",
+      "lierExistante": "Link this one",
+      "referentielIntrouvable": "This reference entry does not exist or is no longer accessible.",
+      "referentielInactifCreation": "A disabled entry already exists for this label. Reactivate it from the reference list, or choose a different label.",
+      "referentielInactifSelection": "This reference entry is disabled.",
+      "gererReferentielLink": "Manage reference list ↗"
     },
     "submitting": "Creating...",
     "submit": "Create"
+  },
+  "posteReferentielAdmin": {
+    "pageTitle": "Cost item reference",
+    "pageDescription": "Cost items shared by all scenarios of this site — renaming or disabling an entry never affects cost items already attached to it.",
+    "columns": {
+      "code": "Code",
+      "libelle": "Label",
+      "statut": "Status"
+    },
+    "actions": {
+      "renommer": "Rename",
+      "desactiver": "Disable",
+      "reactiver": "Reactivate"
+    },
+    "badges": {
+      "actif": "Active",
+      "inactif": "Disabled"
+    },
+    "renameDialog": {
+      "title": "Rename entry",
+      "fields": {
+        "libelle": {
+          "label": "Label"
+        }
+      },
+      "submit": "Save",
+      "submitting": "Saving..."
+    },
+    "desactiverDialog": {
+      "confirmTitle": "Disable this entry?",
+      "confirmDescription": "Cost items already attached are never affected — only creating new attachments will be blocked. Reversible at any time.",
+      "confirmButton": "Disable"
+    },
+    "reactiverDialog": {
+      "confirmTitle": "Reactivate this entry?",
+      "confirmDescription": "This entry becomes available again for new attachments.",
+      "confirmButton": "Reactivate"
+    },
+    "errors": {
+      "libelleRequired": "The label is required."
+    },
+    "empty": "No entries in this site's cost item reference list.",
+    "loadError": "Unable to load the cost item reference list."
   },
   "journalTab": {
     "newButton": "New expense",
@@ -815,6 +894,7 @@
     },
     "mapping": {
       "scopeBanner": "This mapping applies to the WHOLE SITE, not just this scenario ({scenario}) — it potentially serves several successive scenarios of the same site.",
+      "gererReferentielLink": "Manage cost item reference",
       "loadError": "Unable to load the reconciliation mapping.",
       "cibleIntrouvable": "Target not found",
       "cibleNonChargee": "Target not loaded",

@@ -156,6 +156,7 @@ import type {
 } from "@/components/previsions/api-types";
 import { TypeApportCapital } from "@/types";
 import { cn } from "@/lib/utils";
+import { suffixeCompactRattachement } from "@/components/previsions/poste-rattachement-badge";
 
 interface PrevisionsMensuellesTabProps {
   dateDebutPlan: string;
@@ -574,15 +575,25 @@ export function PrevisionsMensuellesTab({
    * scenario a 10 postes).
    */
   const lignesDepensesParPoste = useMemo<LigneDescriptor[]>(() => {
-    return ventilationDepenses.parPoste.map((p) => ({
-      id: `depenseParPoste-${p.posteId}`,
-      accessor: (m: MoisProjectionDTO) => p.parMois.get(m.moisAbsolu) ?? 0,
-      totalMode: "somme" as TotalMode,
-      format: "montant" as LigneFormat,
-      label: t("previsionsMensuellesTab.rows.depenseParPoste.label", { poste: p.libelle }),
-      formule: t("previsionsMensuellesTab.rows.depenseParPoste.formule", { poste: p.libelle }),
-    }));
-  }, [t, ventilationDepenses]);
+    return ventilationDepenses.parPoste.map((p) => {
+      // ADR-053 §16.12, exigence A : suffixe compact "(réf. …)" quand le
+      // libelle scenario-local diverge du referentiel, ou "(réf. désactivé)"
+      // si l'entree referentiel est desactivee — jamais dans le moteur pur
+      // (ventilationDepenses), toujours en presentation.
+      const poste = postes.find((candidat) => candidat.id === p.posteId);
+      const suffixe =
+        poste && poste.posteReferentiel ? suffixeCompactRattachement(t, p.libelle, poste.posteReferentiel) : null;
+      const libelleAffiche = suffixe ? `${p.libelle} (${suffixe})` : p.libelle;
+      return {
+        id: `depenseParPoste-${p.posteId}`,
+        accessor: (m: MoisProjectionDTO) => p.parMois.get(m.moisAbsolu) ?? 0,
+        totalMode: "somme" as TotalMode,
+        format: "montant" as LigneFormat,
+        label: t("previsionsMensuellesTab.rows.depenseParPoste.label", { poste: libelleAffiche }),
+        formule: t("previsionsMensuellesTab.rows.depenseParPoste.formule", { poste: libelleAffiche }),
+      };
+    });
+  }, [t, ventilationDepenses, postes]);
 
   const SECTIONS = useMemo<SectionDescriptor[]>(() => {
     const ligne = (

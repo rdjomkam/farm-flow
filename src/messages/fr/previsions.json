@@ -439,7 +439,8 @@
     "excludedFromBase": "Exclu de la base de répartition entre vagues.",
     "totalLabel": "Total du mois :",
     "totalFormule": "Total du mois = somme des montants de charge de chaque poste pour ce mois",
-    "totalAria": "Expliquer le total du mois"
+    "totalAria": "Expliquer le total du mois",
+    "gererReferentielLink": "Gérer le référentiel des postes"
   },
   "reporterChargeDialog": {
     "triggerButton": "Reporter sur plusieurs mois",
@@ -476,12 +477,39 @@
     "confirmButton": "Appliquer",
     "confirming": "Application en cours..."
   },
+  "posteFormDialog": {
+    "reutiliseNotice": "Rattaché à l'entrée référentiel existante « {libelle} »."
+  },
+  "posteRattachement": {
+    "label": "Référentiel :",
+    "inactifSuffix": "désactivé",
+    "compactSuffix": "réf. {libelle}",
+    "compactSuffixInactif": "réf. désactivé"
+  },
   "posteForm": {
     "triggerButton": "Nouveau poste",
     "dialogTitle": "Nouveau poste de charge",
     "types": {
       "LOGISTIQUE": "Logistique",
       "CHARGE_EXPLOITATION": "Charge d'exploitation"
+    },
+    "mode": {
+      "search": "Rechercher dans le référentiel",
+      "create": "Créer une nouvelle entrée"
+    },
+    "search": {
+      "placeholder": "Rechercher un poste…",
+      "empty": "Aucun poste ne correspond.",
+      "createFromQuery": "Créer « {recherche} » comme nouvelle entrée",
+      "resultCode": "Code : {code}"
+    },
+    "create": {
+      "fields": {
+        "libelle": {
+          "label": "Libellé de la nouvelle entrée"
+        }
+      },
+      "hint": "Cette entrée sera ajoutée au référentiel des postes du site, partagé par tous les scénarios."
     },
     "fields": {
       "libelle": {
@@ -493,10 +521,61 @@
       }
     },
     "errors": {
-      "libelleRequired": "Le libellé est obligatoire."
+      "libelleRequired": "Le libellé est obligatoire.",
+      "champsExclusifs": "Choisissez soit une entrée existante, soit un nouveau libellé — pas les deux.",
+      "champRequis": "Sélectionnez une entrée du référentiel ou créez-en une nouvelle.",
+      "collisionCode": "Une entrée « {libelle} » existe déjà dans le référentiel.",
+      "lierExistante": "Lier celle-ci",
+      "referentielIntrouvable": "Cette entrée référentiel n'existe pas ou n'est plus accessible.",
+      "referentielInactifCreation": "Une entrée désactivée existe déjà pour ce libellé. Réactivez-la depuis le référentiel, ou choisissez un libellé différent.",
+      "referentielInactifSelection": "Cette entrée référentiel est désactivée.",
+      "gererReferentielLink": "Gérer le référentiel ↗"
     },
     "submitting": "Création...",
     "submit": "Créer"
+  },
+  "posteReferentielAdmin": {
+    "pageTitle": "Référentiel des postes",
+    "pageDescription": "Postes de charge partagés par tous les scénarios de ce site — renommer ou désactiver une entrée n'affecte jamais les postes déjà rattachés.",
+    "columns": {
+      "code": "Code",
+      "libelle": "Libellé",
+      "statut": "Statut"
+    },
+    "actions": {
+      "renommer": "Renommer",
+      "desactiver": "Désactiver",
+      "reactiver": "Réactiver"
+    },
+    "badges": {
+      "actif": "Actif",
+      "inactif": "Désactivé"
+    },
+    "renameDialog": {
+      "title": "Renommer l'entrée",
+      "fields": {
+        "libelle": {
+          "label": "Libellé"
+        }
+      },
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement..."
+    },
+    "desactiverDialog": {
+      "confirmTitle": "Désactiver cette entrée ?",
+      "confirmDescription": "Les postes déjà rattachés ne sont jamais affectés — seule la création de nouveaux rattachements sera bloquée. Réversible à tout moment.",
+      "confirmButton": "Désactiver"
+    },
+    "reactiverDialog": {
+      "confirmTitle": "Réactiver cette entrée ?",
+      "confirmDescription": "Cette entrée redevient disponible pour de nouveaux rattachements.",
+      "confirmButton": "Réactiver"
+    },
+    "errors": {
+      "libelleRequired": "Le libellé est obligatoire."
+    },
+    "empty": "Aucune entrée dans le référentiel des postes de ce site.",
+    "loadError": "Impossible de charger le référentiel des postes."
   },
   "journalTab": {
     "newButton": "Nouvelle dépense",
@@ -815,6 +894,7 @@
     },
     "mapping": {
       "scopeBanner": "Ce mapping s'applique à TOUT LE SITE, pas seulement à ce scénario ({scenario}) — il sert potentiellement plusieurs scénarios successifs du même site.",
+      "gererReferentielLink": "Gérer le référentiel des postes",
       "loadError": "Impossible de charger le mapping de rapprochement.",
       "cibleIntrouvable": "Cible introuvable",
       "cibleNonChargee": "Cible non chargée",

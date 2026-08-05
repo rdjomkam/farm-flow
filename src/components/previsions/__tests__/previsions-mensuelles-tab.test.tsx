@@ -149,6 +149,8 @@ const postes: PostePrevisionDTO[] = [
     inclusBaseRepartition: true,
     ordre: 1,
     siteId: "site-1",
+    posteReferentielId: "ref-1",
+    posteReferentiel: { libelle: "Loyer", actif: true },
   },
   {
     id: "poste-2",
@@ -158,12 +160,29 @@ const postes: PostePrevisionDTO[] = [
     inclusBaseRepartition: false,
     ordre: 2,
     siteId: "site-1",
+    posteReferentielId: "ref-2",
+    posteReferentiel: { libelle: "Poste hors base (memo)", actif: true },
+  },
+  {
+    id: "poste-3",
+    scenarioId: "scenario-1",
+    libelle: "Salaires terrain",
+    type: TypePostePrevision.CHARGE_EXPLOITATION,
+    inclusBaseRepartition: true,
+    ordre: 3,
+    siteId: "site-1",
+    posteReferentielId: "ref-3",
+    // ADR-053 §16.12 — divergence deliberee (libelle scenario != libelle
+    // referentiel) pour prouver que le suffixe compact "(réf. …)" apparait
+    // bien dans "Dépenses — {poste}" (previsions-mensuelles-tab.tsx §579-585).
+    posteReferentiel: { libelle: "Salaires équipe production", actif: true },
   },
 ];
 
 const charges: ChargeMensuellePrevueDTO[] = [
   { id: "charge-1", scenarioId: "scenario-1", posteId: "poste-1", moisAbsolu: 0, montantFCFA: 70000, siteId: "site-1" },
   { id: "charge-2", scenarioId: "scenario-1", posteId: "poste-2", moisAbsolu: 0, montantFCFA: 999999, siteId: "site-1" },
+  { id: "charge-3", scenarioId: "scenario-1", posteId: "poste-3", moisAbsolu: 0, montantFCFA: 30000, siteId: "site-1" },
 ];
 
 const journal: JournalDepensePrevueDTO[] = [
@@ -753,5 +772,28 @@ describe("PrevisionsMensuellesTab — section Ventilations (story PR2q.4, apport
 
     const explication = await screen.findAllByText(/base de répartition/i);
     expect(explication.length).toBeGreaterThan(0);
+  });
+
+  it("ADR-053 §16.12 : le libellé d'une ligne « Dépenses — {poste} » porte le suffixe compact de rattachement quand le libellé scénario diverge du référentiel", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { table } = renderEtRecupererTable();
+    const dansTable = within(table);
+
+    await user.click(dansTable.getByRole("button", { name: "Ventilations (par type d'apport, par poste)" }));
+
+    // poste-3 ("Salaires terrain") a un referentiel divergent ("Salaires
+    // équipe production") — le suffixe compact "(réf. …)" DOIT apparaitre
+    // dans le libelle de la ligne, sans quoi le rattachement devient
+    // invisible sur cet ecran (ERR-185 rejoue).
+    const ligneDivergente = dansTable
+      .getByText("Dépenses — Salaires terrain (réf. Salaires équipe production) (FCFA)")
+      .closest("tr")!;
+    expect(within(ligneDivergente).getAllByText("30 000")[0]).toBeInTheDocument();
+
+    // Le poste "Loyer" (libelle == referentiel, actif) ne porte, lui,
+    // JAMAIS de suffixe — sinon l'ecran serait surcharge d'une ligne
+    // redondante sur le cas majoritaire (§16.12).
+    expect(dansTable.getByText("Dépenses — Loyer (FCFA)")).toBeInTheDocument();
+    expect(dansTable.queryByText(/Loyer \(réf\./)).not.toBeInTheDocument();
   });
 });

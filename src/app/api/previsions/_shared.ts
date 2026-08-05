@@ -46,8 +46,25 @@ export function parseBody<T>(
 ): { data: T; error?: undefined } | { data?: undefined; error: NextResponse<ApiErrorResponse> } {
   const result = schema.safeParse(body);
   if (!result.success) {
+    // ADR-053 §16.12 (story A.5, correctif review) — un `.refine()` peut
+    // attacher un code machine stable a une violation de forme via le
+    // troisieme parametre zod `params: { code: "..." }` (ex.
+    // POSTE_REFERENTIEL_CHAMP_REQUIS / POSTE_REFERENTIEL_CHAMPS_EXCLUSIFS,
+    // `previsions.schema.ts`). C'est un mecanisme GENERIQUE, pas un cas
+    // particulier de cette route : tout `.refine()` du projet qui a besoin
+    // d'exposer un `code` machine (au lieu d'un simple message francais)
+    // peut poser `params: { code }`, et `parseBody` le propage automatiquement
+    // jusqu'a la reponse HTTP 400 — sans jamais dupliquer la logique metier
+    // (la query reste seule source de verite pour distinguer les codes fins,
+    // ce filet de securite au niveau forme du payload ne fait que relayer le
+    // code que le schema porte deja explicitement).
+    const codedIssue = result.error.issues.find(
+      (issue): issue is z.core.$ZodIssueCustom & { params: { code: string } } =>
+        issue.code === "custom" && typeof issue.params?.code === "string"
+    );
     return {
       error: apiError(400, "Erreurs de validation.", {
+        ...(codedIssue ? { code: codedIssue.params.code } : {}),
         errors: result.error.issues.map((issue) => ({
           field: issue.path.join(".") || "(racine)",
           message: issue.message,

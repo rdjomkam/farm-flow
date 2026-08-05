@@ -147,10 +147,11 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           // Deux mois de donnees -> horizonMois = 2, pour ne pas se limiter
           // au seul mois 0 (piege ERR-155 : une serie jamais non nulle sur
@@ -206,10 +207,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Transport",
             type: TypePostePrevision.LOGISTIQUE,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Transport",
           });
           await upsertChargeMensuelle(poste.id, siteId, 0, 20000);
 
@@ -247,10 +249,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           // 3 mois d'horizon (0, 1, 2) — le mois 1 reste SANS aucune ligne
           // reelle (aucune Depense/Vente ce mois-la).
@@ -293,10 +296,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           // Charge PREVUE de 10 000 sur le mois 0 -> resultatFCFA prevu =
           // -10 000 ce mois (aucun revenu/apport). Le mois 1 n'a aucune
@@ -362,10 +366,11 @@ describe.runIf(requireDatabaseUrl())(
             userId,
             parametres: parametresBase,
           });
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           await upsertChargeMensuelle(poste.id, siteId, 0, 10000);
 
@@ -450,10 +455,11 @@ describe.runIf(requireDatabaseUrl())(
             userId: siteA.userId,
             parametres: parametresBase,
           });
-          const posteA = await createPostePrevision(scenarioA.id, siteA.siteId, {
+          const { poste: posteA } = await createPostePrevision(scenarioA.id, siteA.siteId, {
             libelle: "Salaires A",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires A",
           });
           await upsertChargeMensuelle(posteA.id, siteA.siteId, 0, 5000);
 
@@ -464,10 +470,11 @@ describe.runIf(requireDatabaseUrl())(
             userId: siteB.userId,
             parametres: parametresBase,
           });
-          const posteB = await createPostePrevision(scenarioB.id, siteB.siteId, {
+          const { poste: posteB } = await createPostePrevision(scenarioB.id, siteB.siteId, {
             libelle: "Salaires B",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires B",
           });
           await upsertChargeMensuelle(posteB.id, siteB.siteId, 0, 999999);
 

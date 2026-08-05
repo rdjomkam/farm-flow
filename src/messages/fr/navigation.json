@@ -103,7 +103,8 @@
     "selectionnerSite": "Sélectionner un site",
     "enLigne": "En ligne",
     "horsLigne": "Hors ligne",
-    "previsions": "Prévisions"
+    "previsions": "Prévisions",
+    "referentielPostes": "Référentiel des postes"
   },
   "roles": {
     "admin": "Administrateur",

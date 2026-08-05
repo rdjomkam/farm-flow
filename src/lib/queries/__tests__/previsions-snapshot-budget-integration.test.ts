@@ -108,10 +108,11 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           await upsertChargeMensuelle(poste.id, siteId, 0, 100000);
           await upsertChargeMensuelle(poste.id, siteId, 1, 100000);
@@ -157,10 +158,11 @@ describe.runIf(requireDatabaseUrl())(
             parametres: parametresBase,
           });
 
-          const poste = await createPostePrevision(scenario.id, siteId, {
+          const { poste } = await createPostePrevision(scenario.id, siteId, {
             libelle: "Salaires",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
           });
           await upsertChargeMensuelle(poste.id, siteId, 0, 250000);
 

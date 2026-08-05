@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RapprochementLignesListe } from "@/components/previsions/rapprochement-lignes-liste";
 import { formatMontantPrevision, formatTonnagePrevision } from "@/lib/previsions/format-previsions";
 import { libelleMoisCalendaire } from "@/lib/previsions/tableau-de-bord-helpers";
+import { enrichirLibelleAvecRattachement } from "@/components/previsions/poste-rattachement-badge";
 import type { AgregatEcartDTO, AgregatPosteDTO, LigneRapprochementDTO } from "@/components/previsions/rapprochement-types";
 
 interface RapprochementVueCumuleeProps {
@@ -27,6 +28,8 @@ interface RapprochementVueCumuleeProps {
   totalGlobalMonetaire: AgregatEcartDTO | undefined;
   totalGlobalQuantite: AgregatEcartDTO | undefined;
   parPoste: AgregatPosteDTO[];
+  /** ADR-053 §16.12, exigence A — cf. `rapprochement-tab.tsx`. */
+  posteRattachementParId?: Record<string, { libelle: string; actif: boolean }>;
 }
 
 /** Bloc "Total cumulé" pour une seule unité (FCFA ou kg) — jamais les deux mélangées dans le même bloc (story C.2). */
@@ -67,6 +70,7 @@ export function RapprochementVueCumulee({
   totalGlobalMonetaire,
   totalGlobalQuantite,
   parPoste,
+  posteRattachementParId,
 }: RapprochementVueCumuleeProps) {
   const t = useTranslations("previsions");
   const libelleMois = libelleMoisCalendaire(dateDebutPlan, moisAbsolu);
@@ -74,10 +78,12 @@ export function RapprochementVueCumulee({
   // Reutilise le rendu de `RapprochementLignesListe` en projetant chaque
   // AgregatPosteDTO comme une LigneRapprochementDTO — meme forme de
   // donnees deja tranchee (sens/couleur/ecart), aucune recomposition.
+  // ADR-053 §16.12, exigence A : `libelle` enrichi d'un suffixe compact de
+  // rattachement (presentation uniquement, jamais dans le moteur pur).
   const lignesPourAffichage: LigneRapprochementDTO[] = parPoste.map((p) => ({
     id: p.cle,
     moisAbsolu,
-    libelle: p.libelle,
+    libelle: enrichirLibelleAvecRattachement(t, p.cle, p.libelle, posteRattachementParId),
     natureGrandeur: p.natureGrandeur,
     prevu: p.totalPrevu,
     reel: p.nombreLignesSansSourceReelle === p.nombreLignes ? null : p.totalReel,

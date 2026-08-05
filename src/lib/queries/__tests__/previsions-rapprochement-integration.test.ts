@@ -205,10 +205,11 @@ describe.runIf(requireDatabaseUrl())(
         });
 
         // Une seule categorie MAPPEE (SALAIRE) — EAU reste volontairement sans mapping.
-        const poste = await createPostePrevision(scenario.id, siteId, {
+        const { poste } = await createPostePrevision(scenario.id, siteId, {
           libelle: "Salaires",
           type: TypePostePrevision.CHARGE_EXPLOITATION,
           ordre: 0,
+          nouveauPosteReferentielLibelle: "Salaires",
         });
         await upsertChargeMensuelle(poste.id, siteId, 0, 50000);
         // ADR-053 §16 (story A.4) : cibleId = posteReferentielId (site-scope).
@@ -259,10 +260,11 @@ describe.runIf(requireDatabaseUrl())(
           parametres: parametresBase,
         });
 
-        const poste = await createPostePrevision(scenario.id, siteId, {
+        const { poste } = await createPostePrevision(scenario.id, siteId, {
           libelle: "Transport",
           type: TypePostePrevision.LOGISTIQUE,
           ordre: 0,
+          nouveauPosteReferentielLibelle: "Transport",
         });
         await upsertChargeMensuelle(poste.id, siteId, 0, 30000);
 

@@ -38,8 +38,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const parsed = parseBody(createPostePrevisionSchema, body);
     if (parsed.error) return parsed.error;
 
-    const poste = await createPostePrevision(id, auth.activeSiteId, parsed.data);
-    return NextResponse.json(poste, { status: 201 });
+    const { poste, reutilise } = await createPostePrevision(id, auth.activeSiteId, parsed.data);
+    return NextResponse.json({ ...poste, reutilise }, { status: 201 });
   } catch (error) {
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/postes",
