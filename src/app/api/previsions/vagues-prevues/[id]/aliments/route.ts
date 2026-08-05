@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { replaceAlimentsParVaguePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PUT /api/previsions/vagues-prevues/[id]/aliments — remplace en bloc les
@@ -40,8 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/vagues-prevues/[id]/aliments",
       error,
-      "Erreur serveur lors de la mise a jour des aliments de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour des aliments de la vague prevue."
     );
   }
 }

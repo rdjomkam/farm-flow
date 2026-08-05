@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { scinderVaguePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/vagues-prevues/[id]/scinder — scinde une VaguePrevue
@@ -33,8 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/vagues-prevues/[id]/scinder",
       error,
-      "Erreur serveur lors de la scission de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la scission de la vague prevue."
     );
   }
 }

@@ -14,6 +14,9 @@ import {
 } from "@/lib/queries/previsions-charges";
 import { chargerScenarioPourMoteur } from "@/lib/queries/previsions-scenario-loader";
 import { calculerProjectionScenario } from "@/lib/previsions/route-orchestration";
+import { chargerRapprochementScenario } from "@/lib/queries/previsions-vue-rapprochement";
+import { construireRapprochementDTO } from "@/components/previsions/rapprochement-dto";
+import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
 import type { Decimal } from "@/lib/previsions/decimal-config";
 import { prisma } from "@/lib/db";
 import {
@@ -109,6 +112,20 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     },
   };
 
+  const RAPPROCHEMENT_VIDE: RapprochementScenarioDTO = {
+    horizonMois: 0,
+    dateDebutPlan: scenario.dateDebutPlan.toISOString(),
+    moisDisponibles: [],
+    lignesParMois: {},
+    totalMoisParMois: {},
+    nonRapprocheParMois: {},
+    cumuleGlobalParMois: {},
+    cumuleParPosteParMois: {},
+    topEcartsParMois: {},
+    vagues: [],
+    calculeLe: new Date().toISOString(),
+  };
+
   /**
    * Story PR2.4 : la projection complete de l'horizon (tableau de bord +
    * vue mensuelle) alimente `calculerProjectionScenario` directement,
@@ -127,8 +144,15 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
    * texte generique) jusqu'aux onglets Tableau de bord et Previsions, qui
    * l'affichent dans un etat dedie, distinct de l'etat "vide" legitime.
    */
-  const { projection, erreurProjection }: { projection: ProjectionScenarioDTO; erreurProjection: string | null } =
-    await (async () => {
+  const {
+    projection,
+    erreurProjection,
+    rapprochement,
+  }: {
+    projection: ProjectionScenarioDTO;
+    erreurProjection: string | null;
+    rapprochement: RapprochementScenarioDTO;
+  } = await (async () => {
       try {
         const scenarioPourCalcul = await chargerScenarioPourMoteur(id, siteId);
         const p = calculerProjectionScenario(scenarioPourCalcul);
@@ -191,11 +215,30 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
             budgetTotalFCFA: n(p.budget.budgetTotalFCFA),
           },
         };
-        return { projection: projectionCalculee, erreurProjection: null };
+
+        /**
+         * Rapprochement prevu/reel (story PR3.7, ADR-053 section 15) —
+         * reutilise `scenarioPourCalcul`/`p` DEJA charges/calcules
+         * ci-dessus (jamais un second appel independant a
+         * `chargerScenarioPourMoteur`/`calculerProjectionScenario`, qui
+         * pourrait diverger, ADR-053 section 15.6 point 1). Un echec de ce
+         * calcul specifique ne doit jamais invalider la projection deja
+         * calculee avec succes — capture separement, l'onglet
+         * Rapprochement affiche alors son propre etat vide/erreur.
+         */
+        let rapprochementCalcule = RAPPROCHEMENT_VIDE;
+        try {
+          const vue = await chargerRapprochementScenario(id, siteId, scenarioPourCalcul, p);
+          rapprochementCalcule = construireRapprochementDTO(vue, scenario.dateDebutPlan.toISOString());
+        } catch {
+          // rapprochementCalcule reste RAPPROCHEMENT_VIDE — l'onglet gere son propre etat vide.
+        }
+
+        return { projection: projectionCalculee, erreurProjection: null, rapprochement: rapprochementCalcule };
       } catch (err) {
         const message =
           err instanceof Error ? err.message : t("page.errors.projectionUnknown");
-        return { projection: PROJECTION_VIDE, erreurProjection: message };
+        return { projection: PROJECTION_VIDE, erreurProjection: message, rapprochement: RAPPROCHEMENT_VIDE };
       }
     })();
 
@@ -375,6 +418,7 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
           permissions={permissions}
           projection={projection}
           erreurProjection={erreurProjection}
+          rapprochement={rapprochement}
         />
       </div>
     </>

@@ -312,6 +312,10 @@ export function buildScenarioPourCalculDepuisFixture(
       capacite: new Decimal(transport.voyageAlevinsCapaciteNb),
       coutUnitaireFCFA: new Decimal(transport.voyageAlevinsCoutFCFA),
     },
+    // Story PR3.1a — desormais lu par la production (route-orchestration.ts)
+    // au lieu d'un `new Decimal(0)` fige. Vaut 0 pour les deux fixtures du
+    // jeu d'or (EXCEL-V12) : ce cablage ne change aucun resultat attendu.
+    tresorerieInitialeFCFA: new Decimal(parametresScenario.tresorerieInitialeFCFA),
   };
 
   const vaguesPrevues: VaguePrevuePourCalcul[] = planVagues.map((v) => {

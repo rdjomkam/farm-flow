@@ -90,6 +90,7 @@ function seedFullScenario(siteId: string, nbVagues: number) {
     coutTransportPoissonsFCFA: "30000",
     capaciteTransportAlevinsNb: "5000",
     coutTransportAlevinsFCFA: "15000",
+    tresorerieInitialeFCFA: "0",
   });
   stores.palierRemise.push({ id: "pr1", scenarioId: "s1", seuilTonnes: "10", pourcentageRemise: "5", ordre: 1, siteId });
   stores.alimentPrevision.push({

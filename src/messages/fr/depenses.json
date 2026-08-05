@@ -14,14 +14,14 @@
   "categories": {
     "ALIMENT": "Aliment",
     "INTRANT": "Intrant",
-    "EQUIPEMENT": "Equipement",
-    "ELECTRICITE": "Electricite",
+    "EQUIPEMENT": "Équipement",
+    "ELECTRICITE": "Électricité",
     "EAU": "Eau",
     "LOYER": "Loyer",
     "SALAIRE": "Salaire",
     "TRANSPORT": "Transport",
-    "VETERINAIRE": "Veterinaire",
-    "REPARATION": "Reparation",
+    "VETERINAIRE": "Vétérinaire",
+    "REPARATION": "Réparation",
     "INVESTISSEMENT": "Investissement",
     "AUTRE": "Autre"
   },

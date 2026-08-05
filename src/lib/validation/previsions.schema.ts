@@ -25,6 +25,8 @@ import {
   TypePostePrevision,
   CategorieJournalPrevu,
   TypeApportCapital,
+  SourceRapprochement,
+  CibleRapprochement,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,14 @@ export const parametresPrevisionCreateSchema = z.object({
   tauxEpargnePct: pourcentage0a100.optional(),
   /** ADR-053 §14 / ERR-170 — defaut applique a la creation des VaguePrevue */
   alevinsAchetesParDefaut: z.boolean().optional(),
+  /**
+   * Tresorerie d'ouverture (§4.1 des exigences) — LIBRE, peut etre
+   * negative (un scenario peut demarrer decouvert) : surtout PAS de
+   * `.min(0)` ici, contrairement aux champs de transport ci-dessus.
+   * Optionnel a la creation/mise a jour, retombe sur le `@default(0)` du
+   * schema si absent.
+   */
+  tresorerieInitialeFCFA: z.number().optional(),
 });
 
 export const createScenarioSchema = z.object({
@@ -369,3 +379,80 @@ export const createApportCapitalSchema = z.object({
   type: z.nativeEnum(TypeApportCapital),
 });
 export type CreateApportCapitalInput = z.infer<typeof createApportCapitalSchema>;
+
+// ---------------------------------------------------------------------------
+// MappingRapprochement / ClotureMois (Sprint PR3, story PR3.6)
+// ---------------------------------------------------------------------------
+
+/**
+ * Une ligne du mapping (ADR-053 §3.9) — `cibleId` nullable (NON_RAPPROCHE
+ * n'a pas de cible). `.refine()` (Sprint PR3-bis, story PR3bis.1, pre-analyse
+ * section 1 : gap signale par la review PR3) : lie explicitement la presence
+ * de `cibleId` a `cibleType`, plutot que de laisser le moteur traiter
+ * silencieusement une ligne mal formee comme NON_RAPPROCHE
+ * (`previsions-rapprochement.ts:105-113`, `cibleCle = null` si `cibleId`
+ * absent). `POSTE_PREVISION`/`ALIMENT_PREVISION` exigent un `cibleId` reel
+ * (FK) ; `VENTE_PREVUE` (cible singleton batie depuis `sourceCle`, jamais un
+ * FK, `previsions-rapprochement.ts:113-114`) et `NON_RAPPROCHE` (aucune
+ * cible, ADR-053 section 5) exigent `cibleId` absent/`null`.
+ */
+export const ligneMappingRapprochementInputSchema = z
+  .object({
+    sourceType: z.nativeEnum(SourceRapprochement),
+    sourceCle: z.string().min(1, "sourceCle est obligatoire."),
+    cibleType: z.nativeEnum(CibleRapprochement),
+    cibleId: z.string().nullable().optional(),
+  })
+  .superRefine((ligne, ctx) => {
+    const exigeCibleId =
+      ligne.cibleType === CibleRapprochement.POSTE_PREVISION ||
+      ligne.cibleType === CibleRapprochement.ALIMENT_PREVISION;
+    const aCibleId = ligne.cibleId !== null && ligne.cibleId !== undefined && ligne.cibleId !== "";
+    if (exigeCibleId && !aCibleId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cibleId"],
+        message: "cibleId est obligatoire pour cibleType POSTE_PREVISION ou ALIMENT_PREVISION.",
+      });
+    }
+    if (!exigeCibleId && aCibleId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cibleId"],
+        message: "cibleId doit etre absent (ou null) pour cibleType VENTE_PREVUE ou NON_RAPPROCHE.",
+      });
+    }
+  });
+export type LigneMappingRapprochementInput = z.infer<typeof ligneMappingRapprochementInputSchema>;
+
+/**
+ * Remplacement en bloc du mapping d'un site — cree une NOUVELLE VERSION
+ * (jamais un UPDATE en place, ADR-053 §3.9/§15.3). `lignes` doit contenir
+ * AU MOINS une ligne : une version vide desactiverait tout le
+ * rapprochement du site (garde identique cote query,
+ * `creerVersionMapping`, verifiee ici en amont pour un message 400 immediat
+ * plutot qu'un aller-retour serveur).
+ */
+export const creerVersionMappingSchema = z.object({
+  lignes: z
+    .array(ligneMappingRapprochementInputSchema)
+    .min(1, "Le mapping doit contenir au moins une ligne."),
+});
+export type CreerVersionMappingInput = z.infer<typeof creerVersionMappingSchema>;
+
+/** `version` traverse un query param (string | null) — jamais `z.coerce.number()` seul (voir apercuGenerationPlanQuerySchema). */
+export const mappingRapprochementQuerySchema = z.object({
+  version: z
+    .string()
+    .optional()
+    .refine((v) => v === undefined || (v.length > 0 && Number.isInteger(Number(v)) && Number(v) >= 0), {
+      message: "Le parametre 'version' doit etre un entier positif ou nul.",
+    })
+    .transform((v) => (v === undefined ? undefined : Number(v))),
+});
+export type MappingRapprochementQueryInput = z.infer<typeof mappingRapprochementQuerySchema>;
+
+export const cloturerMoisSchema = z.object({
+  moisAbsolu: positiveInt,
+});
+export type CloturerMoisInput = z.infer<typeof cloturerMoisSchema>;

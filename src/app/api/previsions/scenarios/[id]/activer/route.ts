@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { activerScenario } from "@/lib/queries/previsions-scenarios";
+import { activerScenarioAvecSnapshot } from "@/lib/queries/previsions-snapshot-budget";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/scenarios/[id]/activer — transition de statut
- * BROUILLON -> ACTIF.
+ * BROUILLON -> ACTIF, et gel du budget initial (ADR-053 §15.2, amendement
+ * Sprint PR3, story PR3.3) dans LA MEME transaction (R4) :
+ * `activerScenarioAvecSnapshot` cree `SnapshotBudgetInitial` et fait passer
+ * `ScenarioPrevision.statut` a `ACTIF` atomiquement — jamais l'un sans
+ * l'autre. Une deuxieme activation du meme scenario est refusee (409, un
+ * scenario ne s'active qu'une seule fois dans son cycle de vie).
  *
  * Permission : PREVISIONS_GERER — meme raisonnement que
  * `scenarios/[id]/archiver` (transition de statut = edition de l'entite,
@@ -18,14 +22,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const auth = await requirePermission(request, Permission.PREVISIONS_GERER);
     const { id } = await params;
 
-    const scenario = await activerScenario(id, auth.activeSiteId);
+    const scenario = await activerScenarioAvecSnapshot(id, auth.activeSiteId);
     return NextResponse.json(scenario);
   } catch (error) {
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/activer",
       error,
-      "Erreur serveur lors de l'activation du scenario.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de l'activation du scenario."
     );
   }
 }

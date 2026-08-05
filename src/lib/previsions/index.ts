@@ -13,6 +13,11 @@ export type {
   RepartitionMoisInput,
   AlimentPrevisionCalcInput,
   PalierRemiseInput,
+  StatutRapprochement,
+  SensEcart,
+  NatureGrandeur,
+  CouleurEcart,
+  LigneRapprochement,
 } from "./types";
 
 export { genererPlanEmpoissonnement, calculerAlevinsACommander } from "./plan";
@@ -82,3 +87,28 @@ export {
   validerSommeRepartitionMoisAliment,
   validerPaliersRemiseCroissants,
 } from "./validation";
+
+export {
+  calculerEcart,
+  calculerSensEcart,
+  couleurPourSensEcart,
+  SEUILS_ECART_PAR_DEFAUT,
+  construireLigneRapprochement,
+  reconcilierPrevuEtReel,
+  extraireBacNonRapproche,
+  agregerParMois,
+  agregerCumule,
+  agregerParPoste,
+  topEcartsDuMois,
+} from "./rapprochement";
+export type {
+  EcartCalcule,
+  SeuilsEcart,
+  ConstruireLigneRapprochementInput,
+  EntreePrevueRapprochement,
+  EntreeReelleAgregee,
+  MappingRapprochementActif,
+  AgregatEcart,
+  AgregatMois,
+  AgregatPoste,
+} from "./rapprochement";

@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { Permission } from "@/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 const mockRequirePermission = vi.fn();
 vi.mock("@/lib/permissions", () => ({
@@ -37,7 +38,8 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("@/lib/errors", () => ({
-  ValidationError: class ValidationError extends Error {},
+  ValidationError: class ValidationError extends Error { constructor(message: string, public status: number = 400) { super(message); } },
+  BusinessRuleError: class BusinessRuleError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } },
 }));
 
 const mockApercuGenerationPlan = vi.fn();
@@ -182,7 +184,7 @@ describe("GET /api/previsions/scenarios/[id]/vagues/generer — aperçu", () => 
   it("422 si ParametresPrevision est absent pour ce scenario", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockApercuGenerationPlan.mockRejectedValue(
-      new Error("ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.")
+      new BusinessRuleError("ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.", 422)
     );
 
     const res = await GET(
@@ -283,7 +285,7 @@ describe("POST /api/previsions/scenarios/[id]/vagues/generer — generation", ()
   it("422 si ParametresPrevision est absent pour ce scenario", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockGenererPlanVaguesPrevues.mockRejectedValue(
-      new Error("ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.")
+      new BusinessRuleError("ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.", 422)
     );
 
     const res = await POST(

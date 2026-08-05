@@ -7974,3 +7974,51 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR2-octies-*.md` n'existe* — le sui
 **Livrables :** `docs/decisions/ADR-053-module-previsions.md` §14 ; `docs/analysis/pre-analysis-story-PR2oct.2.md`, `.3.md`, `.4.md` ; `docs/analysis/snapshot-avant-sprint-PR2-octies.md` ; `docs/reviews/review-story-PR2oct.2.md`, `.3.md`, `.4.md`, `docs/reviews/review-sprint-PR2-octies.md` ; `docs/tests/rapport-story-PR2oct.3.md`, `rapport-story-PR2oct.4.md`, `rapport-sprint-PR2-octies.md` ; `docs/knowledge/ERRORS-AND-FIXES.md` (ERR-170).
 
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR3 — Rapprochement prévu/réel
+Voir : *aucun fichier `docs/sprints/SPRINT-PR3-PREVISIONS.md` n'existe* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`. Livrables : [ADR-053 §15](decisions/ADR-053-module-previsions.md), [pre-analysis-sprint-PR3.md](analysis/pre-analysis-sprint-PR3.md), [review-sprint-PR3.md](reviews/review-sprint-PR3.md), [rapport-falsification-sprint-PR3.md](tests/rapport-falsification-sprint-PR3.md), [rapport-verification-sprint-PR3.md](tests/rapport-verification-sprint-PR3.md).
+
+**Statut :** `FAIT` (**9 stories** — **8 `FAIT`**, **1 `REPORTÉE`**) — **review de sprint `VALIDÉ AVEC RÉSERVES`, périmètre backend ; la review UI est distincte et non couverte par ce rapport**
+
+| Story | Type | Sujet | Statut |
+|-------|------|-------|--------|
+| PR3.0 | ADR | Amendement ADR-053 §15 : périmètre des encaissements hors vente, gel du budget initial, historisation du mapping, remplacement d'ERR-165, convention de sens des écarts, discipline de test sans jeu d'or | `FAIT` |
+| PR3.1a | SCHEMA | `ParametresPrevision.tresorerieInitialeFCFA` (peut être négatif) + branchement dans `route-orchestration.ts` (fin du `new Decimal(0)` en dur) | `FAIT` |
+| PR3.1b | BUGFIX | **ERR-162** — validation de couverture des mois de `RepartitionMoisAliment` | `FAIT` |
+| PR3.2 | BUGFIX | **ERR-165** — `PREVISIONS_STATUS_MAP` remplacé par une `BusinessRuleError` typée ; plus aucun statut HTTP déduit d'un texte de message | `FAIT` |
+| PR3.3 | SCHEMA | `SnapshotBudgetInitial` + `ClotureMois.versionMapping` + queries de mapping versionné et de snapshot | `FAIT` |
+| PR3.4 | QUERIES | Moteur pur de calcul des écarts (`src/lib/previsions/rapprochement.ts`) : sens favorable/défavorable, `prevu=0` → écart % `null`, bac `NON_RAPPROCHE`, agrégations, top écarts | `FAIT` |
+| PR3.5 | QUERIES | Lecture agrégée du réel (`Depense`/`Vente`/`MouvementStock`) + résolution de la version de mapping par mois (immuabilité de l'historique) | `FAIT` |
+| PR3.6 | API | Routes mapping-rapprochement (GET/POST/non-mappees) et clôtures de mois (GET/POST) avec permissions | `FAIT` |
+| PR3.7 | UI | Onglet Rapprochement, 4 vues (mensuelle, cumulée, par vague avec libellé de cohorte, top écarts) | `FAIT` |
+| PR3.8 | UI | Vue Trésorerie à 3 séries (BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL) et reprévision glissante | `REPORTÉ` — **hors périmètre PR3, acté en ADR-053 §15.8** |
+
+**Review de sprint — `VALIDÉ AVEC RÉSERVES`** (`docs/reviews/review-sprint-PR3.md`) : checklist **R1-R11** conforme (R5/R6 non applicables, périmètre backend ; **R9 non vérifié directement** par le reviewer, faute d'outil d'exécution — la preuve d'exécution est portée par les rapports du @tester) ; **13 points de contrôle tous conformes** (sens unique strict ADR §5.1(a), pureté du moteur, règles d'écart §15.5, exclusion de `SANS_SOURCE_REELLE` du total réel, immuabilité du mapping prouvée par test DB-gated, ERR-165 et ERR-162 soldés, pas de N+1). Constat **Haute #1** (preuve par falsification chiffrée absente du dépôt) : **RÉSOLU** par la production de `docs/tests/rapport-falsification-sprint-PR3.md`, qui fait partie intégrante de la clôture.
+
+**Vérification de fin de sprint — mesures réelles** (`docs/tests/rapport-verification-sprint-PR3.md`) :
+- `npx prisma migrate deploy` : **170 migrations**, aucune en attente.
+- `npx vitest run` : **3 passages consécutifs strictement identiques** — **292 fichiers passés / 10 skipped (302)**, **9 339 tests passés** / 35 skipped / 26 todo, **0 échec**. Aucune instabilité détectée.
+- Recette isolée : **2 709 tests / 0 écart** (seuil exigé ≥ 2 709).
+- `npm run build` : **succès**, aucune ligne d'erreur dans la sortie complète.
+- **Plan de référence `EXCEL-V12` : INTÈGRE.** Diff d'empreinte avant/après clé par clé — **une seule différence, celle attendue** : apparition de `parametres.tresorerieInitialeFCFA = 0` (migration avec `DEFAULT 0`). `ScenarioPrevision.updatedAt` **n'a pas bougé** ; 19 vagues / 602 500 alevins, 3 calibres, 4 paliers, 7 apports = 30 000 000, 5 lignes de journal = 34 400 000, 84 lignes de charges = 20 580 000 — **tous inchangés**.
+- **Vérification navigateur réelle** (Playwright, ERR-157) à **375 px** et **1280 px** : aucun débordement (`scrollWidth === clientWidth`), onglet Rapprochement présent parmi les 9 onglets, aucune erreur console, aucun `NaN`/`Infinity`/`undefined` à l'écran.
+
+**Angle mort levé après coup — vérification navigateur sur données peuplées** (`docs/tests/rapport-verification-sprint-PR3.md` **§8**) : l'angle mort initialement déclaré par le @tester (les **4 vues** non observables faute de donnée de rapprochement en base) a été **comblé par une vérification complémentaire**. Un scénario de démonstration **jetable** (`TMP-PR3-DEMO`) a été monté sur un **site isolé** — **jamais celui d'`EXCEL-V12`**, `MappingRapprochement` étant scopé au site — puis **intégralement nettoyé** : comptages avant/après **identiques sur 8 tables**, recherche de résidus sur **18 tables à 0**, empreinte `EXCEL-V12` **inchangée** (seule différence : le champ attendu `tresorerieInitialeFCFA = 0`).
+- **Les 4 vues ont été observées rendues avec données**, en **Chromium réel**, à **375 px** et **1280 px** : mensuelle, cumulée, par vague, top écarts.
+- Points confirmés visuellement : **sélecteur de mois fonctionnel** ; **inversion de convention correcte** — une entrée ou un tonnage **dépassé** s'affiche en **VERT** (« Revenu de vente prévu » **+71,3 %** et « Tonnage récolté » **+68,8 %**, tous deux en vert, « Favorable ») ; bac « **Non rapproché** » **visible et peuplé** (3 catégories) ; `prévu = 0` affiché « **N/A** » et non « 0 % » ; `SANS_SOURCE_REELLE` affiché « **Pas de source réelle disponible pour ce poste** » et non « 0 » ; **bandeau de fraîcheur présent** ; **aucun** `NaN`/`Infinity`/`undefined`/`null` dans le DOM ; à 375 px `scrollWidth === clientWidth` (**aucun débordement horizontal**).
+
+**Réserves ouvertes — à porter comme dette du sprint suivant (PAS des stories de ce sprint) :**
+
+| Sévérité | Réserve |
+|---|---|
+| Moyenne | `getCategoriesReellesNonMappees` (`src/lib/queries/previsions-rapprochement-mapping.ts:163-209`) **exclut `MOUVEMENT_STOCK`** : une granulométrie non mappée n'apparaît **jamais** dans l'écran d'administration « catégories à mapper », alors qu'elle apparaît bien en `NON_RAPPROCHE` dans le calcul. Correctif attendu : trancher la sémantique de `sourceCle` pour `MOUVEMENT_STOCK` (par `TailleGranule`) et étendre la fonction. **À traiter en priorité au sprint suivant.** |
+| Moyenne | `getDepensesAlimentReellesParGranulometrie` (`previsions-rapprochement.ts:526-530`) produit une nature `DEPENSE` sous une clé `SourceRapprochement.MOUVEMENT_STOCK` : **collision de namespace** possible si une story future la branche dans l'orchestration principale (sans effet aujourd'hui, la fonction n'y étant pas branchée). Correctif attendu : distinguer la clé, ou ajouter un test de non-contamination. |
+| Basse | Décalage `MODULE_NAV` (ADR-053 §6 vs onglets réels) — **déjà acté en §15.7/§15.8e**, pas un défaut introduit par ce sprint, signalé pour mémoire. |
+| Basse/Moyenne | « **Total du mois** » et « **Top écarts** » **mélangent des grandeurs en FCFA et en kg** sous une étiquette et un tri uniques (le code documente déjà cette limite en commentaire de `previsions-vue-rapprochement.ts`). Rien n'empêche structurellement un écart de tonnage de squatter une place du Top 5 à côté d'écarts FCFA. **Candidat à un `BUG-XXX`.** |
+| Angle mort résiduel déclaré | Le chemin de mapping `ALIMENT_PREVISION` (**par granulométrie**) et le comportement d'un mois **clôturé** (`ClotureMois`) **n'ont pas été exercés en navigateur**. |
+
+**Livrables :** `docs/decisions/ADR-053-module-previsions.md` **§15** (amendement) ; `docs/analysis/pre-analysis-sprint-PR3.md` ; `docs/reviews/review-sprint-PR3.md` (**VALIDÉ AVEC RÉSERVES**) ; `docs/tests/rapport-falsification-sprint-PR3.md` ; `docs/tests/rapport-verification-sprint-PR3.md`.
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**

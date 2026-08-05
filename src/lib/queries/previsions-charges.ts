@@ -15,6 +15,7 @@
  */
 import { prisma } from "@/lib/db";
 import { CategorieJournalPrevu, TypeApportCapital, TypePostePrevision } from "@/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 /**
  * Garde applicative — colonnes Prisma `Int` de ce module (`PostePrevision.ordre`,
@@ -29,12 +30,13 @@ import { CategorieJournalPrevu, TypeApportCapital, TypePostePrevision } from "@/
  * donc une valeur fractionnaire tronquee peut faire collisionner deux mois
  * distincts et, via `upsert`, ecraser silencieusement la charge du mauvais mois.
  *
- * @throws {Error} si `valeur` n'est pas un entier.
+ * @throws {BusinessRuleError} (status 400) si `valeur` n'est pas un entier — ERR-165
  */
 function assertEntierColonneInt(valeur: number, nomChamp: string): void {
   if (!Number.isInteger(valeur)) {
-    throw new Error(
-      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`
+    throw new BusinessRuleError(
+      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`,
+      400
     );
   }
 }

@@ -280,6 +280,7 @@ export type {
   ApportCapital,
   MappingRapprochement,
   ClotureMois,
+  SnapshotBudgetInitial,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)

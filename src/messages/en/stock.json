@@ -74,7 +74,8 @@
       "G2": "G2 — Pellet 3mm",
       "G3": "G3 — Pellet 4mm",
       "G4": "G4 — Pellet 6mm",
-      "G5": "G5 — Pellet 8mm"
+      "G5": "G5 — Pellet 8mm",
+      "INCONNU": "Unknown pellet size"
     },
     "formesAliment": {
       "FLOTTANT": "Floating",

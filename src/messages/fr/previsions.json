@@ -112,7 +112,8 @@
     "vagues": "Plan des vagues",
     "charges": "Charges",
     "journal": "Journal",
-    "apports": "Apports"
+    "apports": "Apports",
+    "rapprochement": "Rapprochement"
   },
   "parametresTab": {
     "sectionTitle": "Paramètres du scénario",
@@ -737,5 +738,127 @@
   },
   "valeurCalculee": {
     "defaultAriaLabel": "Voir le détail du calcul"
+  },
+  "rapprochementTab": {
+    "title": "Rapprochement prévu / réel",
+    "freshnessNote": "Le « réel » affiché reflète l'état des données au moment de cette consultation ({date}), pas une photo figée d'un import passé.",
+    "monthSelectorLabel": "Mois",
+    "views": {
+      "mensuelle": "Vue mensuelle",
+      "cumulee": "Vue cumulée",
+      "parVague": "Par vague",
+      "topEcarts": "Top écarts",
+      "mapping": "Mapping"
+    },
+    "noData": "Aucun rapprochement disponible pour ce scénario (aucun mois dans l'horizon, ou la projection n'a pas pu être calculée).",
+    "columns": {
+      "libelle": "Poste",
+      "prevu": "Prévu",
+      "reel": "Réel",
+      "ecartAbsolu": "Écart",
+      "ecartPct": "Écart %",
+      "sens": "Sens"
+    },
+    "sens": {
+      "FAVORABLE": "Favorable",
+      "DEFAVORABLE": "Défavorable",
+      "NEUTRE": "Neutre",
+      "NON_APPLICABLE": "Non applicable"
+    },
+    "statutRapprochement": {
+      "RAPPROCHE": "Rapproché",
+      "NON_RAPPROCHE": "Non rapproché",
+      "SANS_SOURCE_REELLE": "Pas de source réelle"
+    },
+    "sansSourceReelle": "Pas de source réelle disponible pour ce poste",
+    "nonBudgete": "Dépense non budgétée",
+    "nonApplicable": "N/A",
+    "totalRow": "Total du mois",
+    "vueMensuelle": {
+      "title": "Vue mensuelle — {mois}",
+      "description": "Une ligne par poste : montant prévu, montant réel et écart pour le mois sélectionné."
+    },
+    "vueCumulee": {
+      "title": "Vue cumulée — depuis le début de l'horizon jusqu'à {mois}",
+      "description": "Cumul du début de l'horizon jusqu'au mois sélectionné, inclus.",
+      "totalGlobal": "Total cumulé",
+      "parPoste": "Détail par poste"
+    },
+    "nonRapproche": {
+      "title": "Non rapproché",
+      "description": "Catégories réelles sans mapping actif — comptées dans le total réel, jamais masquées.",
+      "empty": "Aucune catégorie non rapprochée ce mois."
+    },
+    "vueParVague": {
+      "title": "Coût, marge et coût au kg — par vague",
+      "description": "Coût complet, marge et coût au kg, prévu vs réel, pour chaque vague planifiée du scénario.",
+      "codeReelLabel": "Vague réelle : {code}",
+      "nonRealisee": "Non réalisée",
+      "coutComplet": "Coût complet",
+      "marge": "Marge",
+      "coutAuKg": "Coût / kg",
+      "indisponible": "Indisponible"
+    },
+    "topEcarts": {
+      "title": "Top 5 des écarts — {mois}",
+      "description": "Les 5 postes expliquant le plus grand écart (en valeur absolue) du mois sélectionné.",
+      "empty": "Aucun écart chiffrable ce mois-ci."
+    },
+    "mapping": {
+      "scopeBanner": "Ce mapping s'applique à TOUT LE SITE, pas seulement à ce scénario ({scenario}) — il sert potentiellement plusieurs scénarios successifs du même site.",
+      "loadError": "Impossible de charger le mapping de rapprochement.",
+      "cibleIntrouvable": "Cible introuvable dans ce scénario",
+      "cibleNonChargee": "Cible non chargée",
+      "sourceTypes": {
+        "DEPENSE_CATEGORIE": "Catégorie de dépense",
+        "PRODUIT_CATEGORIE": "Catégorie de produit",
+        "VENTE": "Vente",
+        "MOUVEMENT_STOCK": "Sortie de stock (granulométrie)"
+      },
+      "venteLabel": "Ventes",
+      "cibleTypes": {
+        "POSTE_PREVISION": "Poste de charge prévisionnel",
+        "ALIMENT_PREVISION": "Calibre d'aliment prévisionnel",
+        "VENTE_PREVUE": "Revenu de vente prévu",
+        "NON_RAPPROCHE": "Non rapproché (aucune cible)"
+      },
+      "nonMappees": {
+        "title": "Catégories réelles non mappées",
+        "description": "Ces catégories existent dans vos données réelles mais n'ont aucune correspondance active — elles tombent dans le bac « Non rapproché » de tous les scénarios de ce site.",
+        "empty": "Tout est mappé : aucune catégorie réelle sans correspondance sur ce site.",
+        "mapButton": "Mapper"
+      },
+      "mappingActif": {
+        "title": "Mapping actif",
+        "description": "Version {version} — la version en vigueur pour tous les mois non clôturés de ce site.",
+        "empty": "Aucun mapping actif sur ce site pour le moment.",
+        "editButton": "Modifier"
+      },
+      "form": {
+        "dialogTitleCreate": "Créer un mapping",
+        "dialogTitleEdit": "Modifier un mapping",
+        "sourceLabel": "Catégorie réelle",
+        "fields": {
+          "cibleType": {
+            "label": "Cible"
+          },
+          "cibleId": {
+            "label": "Cible précise",
+            "placeholder": "Choisir…",
+            "empty": "Aucune option disponible dans ce scénario",
+            "horsScenario": "Cible actuelle hors de ce scénario"
+          }
+        },
+        "scenarioWarning": "Cette liste est peuplée depuis le scénario « {scenario} ». Si ce scénario est archivé ou remplacé, ce mapping cessera de fonctionner correctement pour un nouveau scénario tant qu'il n'est pas remis à jour.",
+        "cibleHorsScenarioWarning": "La cible actuelle de ce mapping n'appartient pas au scénario « {scenario} » — elle a été enregistrée pour un autre scénario. Choisir une nouvelle cible ci-dessous remplacera cette cible existante.",
+        "versioningNote": "Enregistrer ce formulaire crée une nouvelle version du mapping : l'historique des mois déjà clôturés n'est jamais réécrit, seuls les mois encore ouverts suivront la nouvelle version.",
+        "errors": {
+          "cibleIdRequired": "Choisissez une cible précise pour ce type."
+        },
+        "submit": "Créer",
+        "submitEdit": "Enregistrer",
+        "submitting": "Enregistrement…"
+      }
+    }
   }
 }

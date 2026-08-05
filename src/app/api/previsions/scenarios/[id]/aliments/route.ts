@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { createAlimentPrevisionSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /** GET /api/previsions/scenarios/[id]/aliments — liste les AlimentPrevision d'un scenario. PREVISIONS_VOIR. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -21,8 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/aliments",
       error,
-      "Erreur serveur lors de la recuperation des aliments previsionnels.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation des aliments previsionnels."
     );
   }
 }
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  * Validation bloquante §8(a) (somme des repartitions mensuelles = 100%) si
  * des `repartitions` sont fournies a la creation : levee par
  * `createAlimentPrevisionAvecArticle` (meme transaction que l'ecriture, R4) —
- * mappee ici a 422 via PREVISIONS_STATUS_MAP.
+ * levee en `BusinessRuleError(msg, 422)` (ERR-165).
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -55,8 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/aliments",
       error,
-      "Erreur serveur lors de la creation de l'aliment previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la creation de l'aliment previsionnel."
     );
   }
 }

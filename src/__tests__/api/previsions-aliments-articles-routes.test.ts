@@ -24,6 +24,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { Permission, TailleGranule } from "@/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 const mockRequirePermission = vi.fn();
 vi.mock("@/lib/permissions", () => ({
@@ -46,7 +47,8 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("@/lib/errors", () => ({
-  ValidationError: class ValidationError extends Error {},
+  ValidationError: class ValidationError extends Error { constructor(message: string, public status: number = 400) { super(message); } },
+  BusinessRuleError: class BusinessRuleError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } },
 }));
 
 const mockCreateAlimentPrevisionAvecArticle = vi.fn();
@@ -180,11 +182,12 @@ describe("POST /api/previsions/scenarios/[id]/aliments", () => {
     expect(response.status).toBe(404);
   });
 
-  it("422 — repartitions initiales fournies dont la somme != 100% (PREVISIONS_STATUS_MAP, 'doit valoir 100')", async () => {
+  it("422 — repartitions initiales fournies dont la somme != 100% (BusinessRuleError, ERR-165)", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockCreateAlimentPrevisionAvecArticle.mockRejectedValue(
-      new Error(
-        "La somme des pourcentages de repartition mensuelle d'un aliment previsionnel doit valoir 100 (obtenu : 60)."
+      new BusinessRuleError(
+        "La somme des pourcentages de repartition mensuelle d'un aliment previsionnel doit valoir 100 (obtenu : 60).",
+        422
       )
     );
     const response = await scenarioAlimentsPOST(
@@ -195,6 +198,30 @@ describe("POST /api/previsions/scenarios/[id]/aliments", () => {
       idParams()
     );
     expect(response.status).toBe(422);
+  });
+
+  it("422 — repartitions initiales fournies mais ne couvrant pas tout le cycle (ERR-162, ValidationError typee statut 422)", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    const { ValidationError } = await import("@/lib/errors");
+    mockCreateAlimentPrevisionAvecArticle.mockRejectedValue(
+      new ValidationError(
+        "La repartition mensuelle d'un aliment previsionnel doit couvrir tous les mois du cycle (1..3) — mois manquant(s) : 3.",
+        422
+      )
+    );
+    const response = await scenarioAlimentsPOST(
+      jsonRequest("/api/previsions/scenarios/id-1/aliments", "POST", {
+        ...payloadValideUnArticle,
+        repartitions: [
+          { moisCycle: 1, pourcentage: 60 },
+          { moisCycle: 2, pourcentage: 40 },
+        ],
+      }),
+      idParams()
+    );
+    expect(response.status).toBe(422);
+    const data = await response.json();
+    expect(data.message).toContain("mois manquant(s) : 3");
   });
 });
 
@@ -345,7 +372,10 @@ describe("POST /api/previsions/aliments/[id]/articles", () => {
   it("422 — la somme des parts d'approvisionnement (calibre + article) != 100% (ADR-053 §12.2 arbitrage 3)", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockAddAlimentArticlePrevision.mockRejectedValue(
-      new Error("La somme des parts d'approvisionnement des articles d'un aliment previsionnel doit valoir 100 (obtenu : 90).")
+      new BusinessRuleError(
+        "La somme des parts d'approvisionnement des articles d'un aliment previsionnel doit valoir 100 (obtenu : 90).",
+        422
+      )
     );
     const response = await articlesPOST(
       jsonRequest("/api/previsions/aliments/id-1/articles", "POST", payloadValide),

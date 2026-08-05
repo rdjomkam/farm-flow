@@ -73,6 +73,7 @@ function seedScenario(siteId: string, tauxEpargnePct: string) {
     coutTransportPoissonsFCFA: "30000",
     capaciteTransportAlevinsNb: "5000",
     coutTransportAlevinsFCFA: "15000",
+    tresorerieInitialeFCFA: "0",
   });
   stores.alimentPrevision.push({
     id: "a1",

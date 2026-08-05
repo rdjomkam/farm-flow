@@ -73,6 +73,14 @@ export interface ParametresPourCalcul {
   transportAliments: ParametresTransportInput;
   transportPoissons: ParametresTransportInput;
   transportAlevins: ParametresTransportInput;
+  /**
+   * Tresorerie d'ouverture du scenario (§4.1 des exigences, jeu d'or
+   * "Parametres!B37") — LIBRE, peut etre negative. Consomme par
+   * `calculerProjectionScenario` (route-orchestration.ts) comme solde
+   * initial de `genererSerieTresorerie`, jamais un `new Decimal(0)` fige
+   * (dette 3, pre-analyse PR3 ; ERR-171/ERR-142).
+   */
+  tresorerieInitialeFCFA: Decimal;
 }
 
 /**
@@ -296,6 +304,7 @@ export async function chargerScenarioPourMoteur(
         capacite: new Decimal(parametres.capaciteTransportAlevinsNb),
         coutUnitaireFCFA: prismaDecimalToEngine(parametres.coutTransportAlevinsFCFA),
       },
+      tresorerieInitialeFCFA: prismaDecimalToEngine(parametres.tresorerieInitialeFCFA),
     },
     paliersRemise: paliers.map((p) => ({
       ordre: p.ordre,

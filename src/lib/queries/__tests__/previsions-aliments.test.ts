@@ -31,8 +31,8 @@ beforeEach(() => {
   Object.assign(stores, createEmptyStores());
 });
 
-function seedScenario(id: string, siteId: string) {
-  stores.scenarioPrevision.push({ id, code: `C-${id}`, nom: "S", siteId });
+function seedScenario(id: string, siteId: string, dureeCycleMois = 3) {
+  stores.scenarioPrevision.push({ id, code: `C-${id}`, nom: "S", siteId, dureeCycleMois });
 }
 
 function seedAliment(id: string, scenarioId: string, siteId: string) {
@@ -144,7 +144,10 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
 
   it("cree le calibre + son unique article (partApprovisionnementPct = 100 ecrit par le serveur) + repartitions (somme = 100%) dans la meme transaction", async () => {
     const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
-    seedScenario("s1", "site-A");
+    // dureeCycleMois=2 explicite : ce test fournit 2 mois de repartition
+    // (ERR-162, validerCouvertureMoisRepartition exige desormais que la
+    // couverture corresponde exactement a scenario.dureeCycleMois).
+    seedScenario("s1", "site-A", 2);
 
     const result = await createAlimentPrevisionAvecArticle("s1", "site-A", {
       tailleGranule: TailleGranule.G1,
@@ -179,6 +182,31 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
 
     expect(result.repartitions).toHaveLength(0);
     expect(result.articles).toHaveLength(1);
+  });
+
+  it("ERR-162 — repartitions FOURNIES mais incompletes (2 mois sur un cycle de 3, somme=100%) rejetees -> AUCUN AlimentPrevision NI article crees", async () => {
+    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+    seedScenario("s1", "site-A", 3);
+
+    // Somme = 100% (validerSommeRepartitionMoisAliment seule ne detecterait
+    // RIEN ici) mais le moisCycle=3 est absent — c'est exactement le bug
+    // ERR-162 : sans validerCouvertureMoisRepartition, ce mois vaudrait 0%
+    // silencieusement.
+    await expect(
+      createAlimentPrevisionAvecArticle("s1", "site-A", {
+        tailleGranule: TailleGranule.G1,
+        ordre: 0,
+        article: articleValide,
+        repartitions: [
+          { moisCycle: 1, pourcentage: 60 },
+          { moisCycle: 2, pourcentage: 40 },
+        ],
+      })
+    ).rejects.toThrow(/mois manquant/);
+
+    expect(stores.alimentPrevision).toHaveLength(0);
+    expect(stores.alimentArticlePrevision).toHaveLength(0);
+    expect(stores.repartitionMoisAliment).toHaveLength(0);
   });
 
   it("le payload de creation n'accepte jamais partApprovisionnementPct — elle vaut toujours 100 (§12.6)", async () => {
@@ -333,6 +361,40 @@ describe("replaceRepartitionsMoisAliment — R4 atomicite + R8 isolation", () =>
     ).rejects.toThrow("Aliment previsionnel introuvable");
 
     expect(stores.repartitionMoisAliment.filter((r) => r.alimentPrevisionId === "a1")).toHaveLength(2);
+  });
+
+  it("ERR-162 — mois manquant (somme=100% sur 2 mois d'un cycle de 3) rejete -> anciennes repartitions intactes", async () => {
+    const { replaceRepartitionsMoisAliment } = await import("@/lib/queries/previsions-aliments");
+    seedScenario("s1", "site-A", 3);
+    seedAliment("a1", "s1", "site-A");
+    seedRepartitions("a1", "site-A");
+
+    await expect(
+      replaceRepartitionsMoisAliment("a1", "site-A", [
+        { moisCycle: 1, pourcentage: 60 },
+        { moisCycle: 2, pourcentage: 40 },
+      ])
+    ).rejects.toThrow(/mois manquant/);
+
+    const remaining = stores.repartitionMoisAliment.filter((r) => r.alimentPrevisionId === "a1");
+    expect(remaining.map((r) => r.id).sort()).toEqual(["rr1", "rr2"]);
+  });
+
+  it("ERR-162 — mois en double rejete -> anciennes repartitions intactes", async () => {
+    const { replaceRepartitionsMoisAliment } = await import("@/lib/queries/previsions-aliments");
+    seedScenario("s1", "site-A", 2);
+    seedAliment("a1", "s1", "site-A");
+    seedRepartitions("a1", "site-A");
+
+    await expect(
+      replaceRepartitionsMoisAliment("a1", "site-A", [
+        { moisCycle: 1, pourcentage: 50 },
+        { moisCycle: 1, pourcentage: 50 },
+      ])
+    ).rejects.toThrow(/double/);
+
+    const remaining = stores.repartitionMoisAliment.filter((r) => r.alimentPrevisionId === "a1");
+    expect(remaining.map((r) => r.id).sort()).toEqual(["rr1", "rr2"]);
   });
 });
 

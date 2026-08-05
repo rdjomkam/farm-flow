@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { updateParametresPrevisionSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PUT /api/previsions/scenarios/[id]/parametres — met a jour les
@@ -26,8 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/scenarios/[id]/parametres",
       error,
-      "Erreur serveur lors de la mise a jour des parametres.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour des parametres."
     );
   }
 }

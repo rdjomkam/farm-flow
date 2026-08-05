@@ -1,7 +1,7 @@
 /**
- * Tests unitaires — Mapping HTTP des trois validations bloquantes du §8 de
- * l'ADR-053 (Sprint PR2, story PR2.2) : elles doivent produire un 4xx, jamais
- * un 500 (risque n°1 identifie par la pre-analyse PR2.2, §8 point 1).
+ * Tests unitaires — Mapping HTTP des validations bloquantes du module
+ * Previsions (Sprint PR2, story PR2.2 ; mecanisme remplace Sprint PR3, story
+ * PR3.2, ERR-165).
  *
  *  a. somme des pourcentages de repartition != 100% -> 422
  *  b. seuils de remise non strictement croissants -> 422
@@ -9,79 +9,126 @@
  *  d. `sacsParTonneStandard` null pour une granulometrie utilisee -> 422
  *     (ADR-053 amendement Sprint PR2 §11 ; revrification story PR2.2 post-fix)
  *
- * Verifie a la fois le contrat de `PREVISIONS_STATUS_MAP` (_shared.ts) et son
- * cablage reel sur une route representative de chaque cas (pas seulement le
- * mapping en isolation).
+ * ERR-165 (docs/knowledge/ERRORS-AND-FIXES.md) : le mecanisme historique
+ * (`PREVISIONS_STATUS_MAP`, `_shared.ts`) deduisait le statut HTTP d'une
+ * SOUS-CHAINE du message utilisateur — accentuer un message (correction
+ * legitime dans une UI francaise) cassait silencieusement le lien et faisait
+ * retomber le cas en 500. Remplace (ADR-053 §15.4, sprint PR3, story PR3.2)
+ * par `BusinessRuleError` (`src/lib/errors.ts`), qui porte son `status` comme
+ * DONNEE. `PREVISIONS_STATUS_MAP` est supprime — ce fichier verifie desormais
+ * le contrat du nouveau mecanisme (section 1) puis son cablage reel sur une
+ * route representative de chaque cas (section 2), et enfin, par
+ * falsification, que le statut HTTP ne depend plus du texte du message
+ * (section 3).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { Permission } from "@/types";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 import { handleApiError } from "@/lib/api-utils";
+import { BusinessRuleError } from "@/lib/errors";
 import { Decimal } from "@/lib/previsions/decimal-config";
 
 // ---------------------------------------------------------------------------
-// 1. Le contrat du statusMap partage, en isolation (rapide, sans routes)
+// 1. Le contrat de BusinessRuleError + handleApiError, en isolation (rapide,
+//    sans routes) — couvre les 7 sites de levee migres depuis
+//    PREVISIONS_STATUS_MAP (ERR-165).
 // ---------------------------------------------------------------------------
 
-describe("PREVISIONS_STATUS_MAP — contrat de mapping HTTP", () => {
-  it("mappe 'doit valoir 100' a 422 (repartition != 100%)", () => {
+describe("BusinessRuleError + handleApiError — contrat de statut HTTP (ERR-165)", () => {
+  it("BusinessRuleError(422) — somme des pourcentages de repartition != 100%", () => {
     const response = handleApiError(
       "test",
-      new Error("La somme des pourcentages de repartition doit valoir 100 pour ce mois de cycle."),
-      "fallback",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      new BusinessRuleError(
+        "La somme des pourcentages de repartition doit valoir 100 pour ce mois de cycle.",
+        422
+      ),
+      "fallback"
     );
     expect(response.status).toBe(422);
   });
 
-  it("mappe 'seuils strictement croissants' a 422 (paliers de remise non croissants)", () => {
+  it("BusinessRuleError(422) — seuils de remise non strictement croissants", () => {
     const response = handleApiError(
       "test",
-      new Error("Les paliers de remise doivent avoir des seuils strictement croissants."),
-      "fallback",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      new BusinessRuleError(
+        "Les paliers de remise doivent avoir des seuils strictement croissants.",
+        422
+      ),
+      "fallback"
     );
     expect(response.status).toBe(422);
   });
 
-  it("mappe 'doit etre un entier (colonne Prisma Int)' a 400 (garde assertEntierColonneInt)", () => {
+  it("BusinessRuleError(400) — valeur fractionnaire sur une colonne Prisma Int (assertEntierColonneInt)", () => {
     const response = handleApiError(
       "test",
-      new Error("La valeur 3.7 doit etre un entier (colonne Prisma Int) pour sacsCalcules."),
-      "fallback",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      new BusinessRuleError("La valeur 3.7 doit etre un entier (colonne Prisma Int) pour sacsCalcules.", 400),
+      "fallback"
     );
     expect(response.status).toBe(400);
   });
 
-  it("mappe 'sacsParTonneStandard non configure' a 422 (rejet explicite GAP 1, ADR-053 amendement §11)", () => {
+  it("BusinessRuleError(422) — sacsParTonneStandard non configure (rejet explicite GAP 1, ADR-053 amendement §11)", () => {
     const response = handleApiError(
       "test",
-      new Error(
-        'Impossible de calculer le besoin en aliment : sacsParTonneStandard non configure pour la granulometrie "2mm".'
+      new BusinessRuleError(
+        'Impossible de calculer le besoin en aliment : sacsParTonneStandard non configure pour la granulometrie "2mm".',
+        422
       ),
-      "fallback",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "fallback"
     );
     expect(response.status).toBe(422);
   });
 
-  it("sans statusMap, un Error nu tomberait en 500 (preuve du risque documente par la pre-analyse)", () => {
-    // Verifie explicitement que le risque etait reel : sans statusMap, le
-    // meme message qui produit un 422 ci-dessus retombe en 500.
+  it("BusinessRuleError(422) — ParametresPrevision absent pour le scenario", () => {
+    const response = handleApiError(
+      "test",
+      new BusinessRuleError(
+        "ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.",
+        422
+      ),
+      "fallback"
+    );
+    expect(response.status).toBe(422);
+  });
+
+  it("BusinessRuleError(422) — produit(s) sans tailleGranule lors de la copie des aliments previsionnels", () => {
+    const response = handleApiError(
+      "test",
+      new BusinessRuleError(
+        "Impossible de copier les aliments previsionnels : produit(s) sans tailleGranule : Granule (id-1).",
+        422
+      ),
+      "fallback"
+    );
+    expect(response.status).toBe(422);
+  });
+
+  it("BusinessRuleError(400) — deux paliers de remise partagent le meme ordre d'evaluation", () => {
+    const response = handleApiError(
+      "test",
+      new BusinessRuleError(
+        "Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=2 apparait plusieurs fois).",
+        400
+      ),
+      "fallback"
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("un Error nu (jamais une BusinessRuleError) retombe toujours en 500 — le filet de dernier recours reste actif", () => {
     const response = handleApiError(
       "test",
       new Error("La somme des pourcentages de repartition doit valoir 100 pour ce mois de cycle."),
       "fallback"
-      // pas de statusMap
     );
     expect(response.status).toBe(500);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 2. Cablage reel sur des routes representatives
+// 2. Cablage reel sur des routes representatives — les queries levent
+//    desormais BusinessRuleError, plus une Error nue.
 // ---------------------------------------------------------------------------
 
 const mockRequirePermission = vi.fn();
@@ -90,7 +137,6 @@ vi.mock("@/lib/permissions", () => ({
   ForbiddenError: class ForbiddenError extends Error {},
 }));
 vi.mock("@/lib/auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/errors", () => ({ ValidationError: class ValidationError extends Error {} }));
 
 const mockReplaceRepartitionsMoisAliment = vi.fn();
 const mockCreateAlimentPrevision = vi.fn();
@@ -153,9 +199,9 @@ describe("Cablage reel — somme des pourcentages != 100% -> 422, pas 500", () =
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
-  it("PUT /aliments/[id]/repartitions renvoie 422 quand la query rejette avec le message metier", async () => {
+  it("PUT /aliments/[id]/repartitions renvoie 422 quand la query rejette avec une BusinessRuleError", async () => {
     mockReplaceRepartitionsMoisAliment.mockRejectedValue(
-      new Error("La somme des pourcentages de repartition doit valoir 100 pour cet aliment.")
+      new BusinessRuleError("La somme des pourcentages de repartition doit valoir 100 pour cet aliment.", 422)
     );
 
     const response = await repartitionsPUT(
@@ -177,9 +223,9 @@ describe("Cablage reel — seuils de remise non strictement croissants -> 422, p
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
-  it("PUT /scenarios/[id]/paliers-remise renvoie 422 quand la query rejette avec le message metier", async () => {
+  it("PUT /scenarios/[id]/paliers-remise renvoie 422 quand la query rejette avec une BusinessRuleError", async () => {
     mockReplacePaliersRemise.mockRejectedValue(
-      new Error("Les paliers de remise doivent avoir des seuils strictement croissants.")
+      new BusinessRuleError("Les paliers de remise doivent avoir des seuils strictement croissants.", 422)
     );
 
     const response = await paliersPUT(
@@ -198,25 +244,17 @@ describe("Cablage reel — seuils de remise non strictement croissants -> 422, p
   });
 
   /**
-   * Ajout @tester (sprint PR2-septies) — trou de couverture reel : l'entree
-   * `{ match: "meme ordre d'evaluation", status: 422 }` de
-   * `PREVISIONS_STATUS_MAP` n'etait exercee par AUCUN test. La garde metier de
-   * `replacePaliersRemise` est bien testee au niveau query
-   * (`previsions-scenarios.test.ts`), et la garde zod au niveau route (test
-   * suivant), mais rien ne verifiait que l'erreur de la garde metier, quand
-   * elle remonte a la route (chemin reel des appelants HORS route, et filet de
-   * securite si la garde zod venait a etre relachee), sort bien en 4xx avec le
-   * message metier — sans cette entree de map, elle sortirait en 500.
-   *
-   * Statut attendu : 400, pas 422 (correctif reserve M3, review PR2sept.4).
-   * Le meme refus metier passe par zod sur le chemin HTTP reel et y sort en
-   * 400 (test suivant) : un unique refus ne peut pas avoir deux codes selon
-   * le chemin emprunte. `PREVISIONS_STATUS_MAP` a donc ete aligne sur 400.
+   * Doublon d'`ordre` entre deux paliers — filet METIER de `replacePaliersRemise`
+   * (query), pour les appelants NON-HTTP et si la garde zod venait a etre
+   * relachee. Statut : 400 (correctif reserve M3, review PR2sept.4) — un
+   * meme refus ne doit pas avoir deux codes selon le chemin emprunte, celui-ci
+   * est aligne sur le chemin HTTP reel (garde zod, test suivant).
    */
   it("PUT /scenarios/[id]/paliers-remise renvoie 400 (jamais 500) quand la garde METIER de la query rejette un doublon d'ordre", async () => {
     mockReplacePaliersRemise.mockRejectedValue(
-      new Error(
-        "Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=2 apparait plusieurs fois)."
+      new BusinessRuleError(
+        "Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=2 apparait plusieurs fois).",
+        400
       )
     );
 
@@ -279,7 +317,7 @@ describe("Cablage reel — valeur fractionnaire sur colonne Int -> 400, pas 500"
 
   it("PUT /vagues-prevues/[id]/aliments renvoie 400 quand la garde assertEntierColonneInt rejette", async () => {
     mockReplaceAlimentsParVaguePrevue.mockRejectedValue(
-      new Error("La valeur 3.7 doit etre un entier (colonne Prisma Int) pour sacsCalcules.")
+      new BusinessRuleError("La valeur 3.7 doit etre un entier (colonne Prisma Int) pour sacsCalcules.", 400)
     );
 
     const response = await vaguePrevueAlimentsPUT(
@@ -389,4 +427,101 @@ describe("Cablage reel — GET /scenarios/[id]/calculer, sacsParTonneStandard nu
       expect(data.message).toContain("G1");
     }
   );
+});
+
+// ---------------------------------------------------------------------------
+// 3. Preuve par falsification (ERR-165, ADR-053 §15.4) : le statut HTTP ne
+//    depend plus du texte du message. Meme protocole que les preuves par
+//    falsification deja etablies dans ce module (ERR-142, ERR-160, ERR-171,
+//    docs/knowledge/ERRORS-AND-FIXES.md) — on prouve l'absence de couplage en
+//    MUTANT le message (ici : l'accentuer / le reformuler) et en verifiant
+//    que le statut produit reste identique. Avec l'ANCIEN mecanisme
+//    (`message.includes(...)` sur un texte sans accents), cette meme mutation
+//    aurait fait retomber chacun de ces cas en 500 — c'est precisement le bug
+//    ERR-165.
+// ---------------------------------------------------------------------------
+
+describe("Falsification — le statut HTTP ne depend plus du texte du message (ERR-165)", () => {
+  it("statut 422 inchange quand le message 'doit valoir 100' est accentue et reformule", () => {
+    const original = handleApiError(
+      "test",
+      new BusinessRuleError("La somme des pourcentages de repartition mensuelle doit valoir 100.", 422),
+      "fallback"
+    );
+    const accentue = handleApiError(
+      "test",
+      // Message volontairement mute : accents ajoutés + reformulation ("mappage" au lieu de
+      // "repartition", "%" ajouté) — exactement le type de correction légitime d'UI française
+      // qui cassait silencieusement l'ancien PREVISIONS_STATUS_MAP.
+      new BusinessRuleError("La somme des pourcentages de mappage mensuel doit valoir 100 %.", 422),
+      "fallback"
+    );
+
+    expect(original.status).toBe(422);
+    expect(accentue.status).toBe(422);
+    expect(accentue.status).toBe(original.status);
+  });
+
+  it("statut 422 inchange quand le message 'non configure' est accentue en 'non configuré'", () => {
+    const original = handleApiError(
+      "test",
+      new BusinessRuleError(
+        'Impossible de calculer le besoin en aliment : sacsParTonneStandard non configure pour la granulometrie "2mm".',
+        422
+      ),
+      "fallback"
+    );
+    const accentue = handleApiError(
+      "test",
+      new BusinessRuleError(
+        'Impossible de calculer le besoin en aliment : le coefficient sacsParTonneStandard n\'est pas configuré pour la granulométrie "2mm".',
+        422
+      ),
+      "fallback"
+    );
+
+    expect(original.status).toBe(422);
+    expect(accentue.status).toBe(422);
+    expect(accentue.status).toBe(original.status);
+  });
+
+  it("statut 400 inchange quand le message 'meme ordre d'evaluation' est accentue en 'même ordre d'évaluation'", () => {
+    const original = handleApiError(
+      "test",
+      new BusinessRuleError(
+        "Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=2 apparait plusieurs fois).",
+        400
+      ),
+      "fallback"
+    );
+    const accentue = handleApiError(
+      "test",
+      new BusinessRuleError(
+        "Deux paliers de remise ne peuvent pas avoir le même ordre d'évaluation (ordre=2 apparaît plusieurs fois).",
+        400
+      ),
+      "fallback"
+    );
+
+    expect(original.status).toBe(400);
+    expect(accentue.status).toBe(400);
+    expect(accentue.status).toBe(original.status);
+  });
+
+  it("statut 400 inchange quand le message 'doit etre un entier' est accentue en 'doit être un entier'", () => {
+    const original = handleApiError(
+      "test",
+      new BusinessRuleError("ordre doit etre un entier (colonne Prisma Int) — valeur recue : 3.7.", 400),
+      "fallback"
+    );
+    const accentue = handleApiError(
+      "test",
+      new BusinessRuleError("ordre doit être un entier (colonne Prisma Int) — valeur reçue : 3.7.", 400),
+      "fallback"
+    );
+
+    expect(original.status).toBe(400);
+    expect(accentue.status).toBe(400);
+    expect(accentue.status).toBe(original.status);
+  });
 });

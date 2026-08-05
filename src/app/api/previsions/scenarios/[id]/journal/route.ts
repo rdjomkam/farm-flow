@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieJournalPrevu } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { createJournalDepensePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 const VALID_CATEGORIES = new Set(Object.values(CategorieJournalPrevu));
 
@@ -40,8 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/journal",
       error,
-      "Erreur serveur lors de la recuperation du journal de depenses.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation du journal de depenses."
     );
   }
 }
@@ -66,8 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/journal",
       error,
-      "Erreur serveur lors de la creation de la ligne de journal.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la creation de la ligne de journal."
     );
   }
 }

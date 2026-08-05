@@ -4275,6 +4275,12 @@ export interface ParametresPrevision {
    * VaguePrevue.alevinsAchetes l'est — ADR-053 §14.
    */
   alevinsAchetesParDefaut: boolean;
+  /**
+   * Tresorerie d'ouverture du scenario (§4.1 des exigences, jeu d'or
+   * "Parametres!B37"). LIBRE : peut etre negative (dette 3, pre-analyse
+   * PR3 ; ERR-171/ERR-142). NOT NULL avec defaut 0 (R7).
+   */
+  tresorerieInitialeFCFA: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -4588,4 +4594,51 @@ export interface ClotureMois {
   clotureeParId: string;
   dateCloture: Date;
   siteId: string;
+  /**
+   * ADR-053 §15.3 (amendement Sprint PR3, story PR3.3) — version de
+   * MappingRapprochement en vigueur au moment de la cloture (max(version)
+   * actif au moment T, PAS forcement la version la plus recente en base au
+   * moment de la lecture). NOT NULL : chaque creation de ClotureMois DOIT
+   * fournir cette valeur explicitement, lue dans la meme transaction que
+   * l'ecriture (R4). Le rapprochement d'un mois clos relit TOUJOURS
+   * MappingRapprochement filtre sur `version = versionMapping`, jamais le
+   * mapping `actif` courant.
+   */
+  versionMapping: number;
+}
+
+/**
+ * SnapshotBudgetInitial — gel materialise du "BUDGET INITIAL" au moment de
+ * l'activation d'un ScenarioPrevision (ADR-053 §15.2, amendement Sprint
+ * PR3, story PR3.3). Immuable apres creation (aucune route ne doit exposer
+ * d'UPDATE/DELETE en dehors de la suppression en cascade du scenario).
+ * Granularite : par mois (moisAbsolu, meme referentiel que
+ * ChargeMensuellePrevue) x poste — une ligne "poste=null" porte une
+ * grandeur globale du mois (aliment, alevins, apports, revenu de vente,
+ * solde de tresorerie projete) qui ne correspond a aucun PostePrevision
+ * precis.
+ */
+export interface SnapshotBudgetInitial {
+  id: string;
+  scenarioId: string;
+  /** meme referentiel que ChargeMensuellePrevue.moisAbsolu */
+  moisAbsolu: number;
+  /** nullable (R7) : seules les lignes issues de ChargeMensuellePrevue
+   * portent un posteId non nul — une ligne agregee au niveau du mois
+   * (aliment, alevins, apports, revenu, tresorerie) n'a pas de
+   * PostePrevision precis a porter */
+  posteId: string | null;
+  /**
+   * libelle fige au moment du snapshot (ex. "ALIMENT", "ALEVINS",
+   * "TRANSPORT", "APPORT_CAPITAL", "REVENU_VENTE", "TRESORERIE_SOLDE", ou
+   * le PostePrevision.libelle copie pour une ligne de charge) — jamais
+   * recalcule depuis une relation vivante, pour rester lisible meme si le
+   * PostePrevision source est ensuite supprime (onDelete SetNull sur
+   * posteId).
+   */
+  categorie: string;
+  /** valeur figee a l'activation, jamais recalculee */
+  montantFCFA: number;
+  siteId: string;
+  createdAt: Date;
 }

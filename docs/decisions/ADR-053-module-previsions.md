@@ -2166,3 +2166,422 @@ schéma (cette story), mais il ne doit en aucun cas être considéré comme couv
 que la suite reste verte après le fix : la story qui branchera le moteur sur ce drapeau doit ajouter
 l'assertion manquante dans le même mouvement, faute de quoi une régression future sur ce terme
 resterait, comme aujourd'hui, invisible.
+
+## 15. Amendement (Sprint PR3, story PR3.0, 2026-08-04) — le rapprochement prévu/réel devient une décision d'architecture
+
+**Origine.** `MappingRapprochement` et `ClotureMois` (section 3.9, 3.10) existent en base et au
+schéma depuis le sprint PR2 (`20260803120100_add_previsions_module`), mais sont des **modèles
+morts** : aucune query, aucune route API, aucune UI ne les consomme (confirmé par
+`docs/analysis/pre-analysis-sprint-PR3.md`, grep exhaustif). Le §6 des exigences fonctionnelles
+(non repris littéralement dans cet ADR — l'ADR ne détaillait jusqu'ici que le modèle et le principe
+de sens unique, section 5) exige cinq vues (mensuelle, cumulée, par vague, top écarts, trésorerie à
+trois séries BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL) et une clôture de mois. La pré-analyse
+d'entrée de sprint a identifié six points que l'ADR-053 actuel ne tranche pas, et dont l'absence de
+décision explicite reproduirait le patron déjà vu deux fois dans ce module (ERR-142/ERR-171 : un
+choix de modèle pris en cours d'implémentation plutôt qu'avant lui). Cette section les tranche tous
+les six. Elle ne modifie aucun texte antérieur — elle s'ajoute.
+
+### 15.1 Périmètre du rapprochement des « encaissements hors vente »
+
+**Constat.** Aucun modèle réel n'existe côté domaine opérationnel pour les apports/subventions/
+prêts. `ApportCapital` (section 3.8) est un modèle du module **Prévisions**, scopé à un
+`ScenarioPrevision` — ce n'est pas une table du réel. Une recherche exhaustive
+(`Apport*`/`Subvention*`/`Pret*`/`Emprunt*` dans `prisma/schema.prisma`) ne remonte aucun équivalent
+réel.
+
+**Options envisagées.**
+- (a) Élargir le domaine réel : créer une table `EncaissementHorsVente` (ou étendre `Depense`/un
+  concept de dépôt non catégorisé) pour capturer apports, subventions et prêts réellement encaissés.
+- (b) Assumer que le MVP PR3 ne rapproche que dépenses et ventes ; les apports réels restent hors
+  périmètre, documentés comme tels et rendus visibles dans l'UI comme **« non rapprochable »**,
+  jamais comme un zéro trompeur.
+
+**Décision : (b).** Créer un nouveau modèle du domaine réel pour un seul besoin de rapprochement,
+sans qu'aucune autre partie du produit n'en ait exprimé le besoin, inverserait l'ordre de conception
+que ce module a déjà payé cher deux fois — un modèle de domaine se conçoit pour le domaine, pas pour
+faire tenir une vue. Le MVP PR3 rapproche **dépenses** (`Depense`/`LigneDepense` → `PostePrevision`/
+`AlimentPrevision`) et **ventes** (`Vente` → revenu prévu) au réel. Les apports/subventions/prêts
+**prévus** (`ApportCapital`) restent affichés (ils font déjà partie de la série prévue existante),
+mais leur colonne « réel » n'est **jamais un `0`** — c'est un état distinct, explicite.
+
+**Conséquence sur le type de sortie.** Toute ligne de rapprochement porte un statut de
+rapprochabilité distinct du montant lui-même :
+
+```typescript
+// src/lib/previsions/types.ts (extension)
+type StatutRapprochement = "RAPPROCHE" | "NON_RAPPROCHE" | "SANS_SOURCE_REELLE";
+```
+
+- `RAPPROCHE` : une source réelle existe et un mapping actif la relie à la cible prévue — `reel` est
+  un montant, potentiellement `0`.
+- `NON_RAPPROCHE` : une source réelle existe (une `CategorieDepense`/`CategorieProduit` réellement
+  utilisée sur le site) mais aucun `MappingRapprochement` actif ne la couvre — cas déjà décrit
+  section 5, bac `CibleRapprochement.NON_RAPPROCHE`.
+- `SANS_SOURCE_REELLE` : **nouveau**, propre à cette décision — la ligne prévue (ex. un
+  `ApportCapital` de type `SUBVENTION`) n'a structurellement aucune table réelle à lire. `reel` vaut
+  `null`, jamais `0`. L'UI affiche un libellé explicite (« Pas de suivi réel disponible pour ce
+  poste ») plutôt qu'un montant ou un tiret ambigu.
+
+Ce troisième état est ce qui empêche l'UI d'afficher « réel = 0 » là où la vérité est « aucune
+source ». Une agrégation qui sommerait les lignes `SANS_SOURCE_REELLE` comme `0` fausserait
+silencieusement tout total « réel » incluant des apports — la fonction d'agrégation (section 15.5)
+doit exclure ces lignes de toute somme « réel », pas les traiter comme un zéro additif.
+
+**Conséquence sur le schéma.** Aucune. `SourceRapprochement`/`CibleRapprochement` (section 3.1)
+restent inchangés — `SANS_SOURCE_REELLE` est un statut calculé à la lecture (aucune source réelle
+trouvée pour ce type de cible), pas une valeur stockée en base.
+
+**Conséquence sur la vue trésorerie (§6 des exigences, 3 séries).** La série RÉEL de trésorerie
+n'agrège que les mouvements pour lesquels une source existe (dépenses, ventes) ; les apports prévus
+restent visibles sur les séries BUDGET INITIAL et PRÉVISION ACTUALISÉE, marqués `SANS_SOURCE_REELLE`
+sur la série RÉEL. Documenter ce choix de façon visible dans l'UI (légende ou infobulle) est un
+prérequis de livraison de la vue trésorerie, pas un détail cosmétique reportable.
+
+### 15.2 Mécanisme de gel du « BUDGET INITIAL »
+
+**Constat.** Les trois séries BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL doivent coexister. Aucun
+mécanisme de gel n'existe aujourd'hui : `ScenarioPrevision.statut = ACTIF` (section 3.2) ne fige
+aucune copie de valeur — les lignes de `PostePrevision`, `ChargeMensuellePrevue`,
+`JournalDepensePrevue`, `ApportCapital`, `AlimentPrevision`/`RepartitionMoisAliment` sont éditées en
+place (`updatedAt` mis à jour), sans version antérieure conservée.
+
+**Options envisagées.**
+- (a) **Snapshot matérialisé à l'activation** : une table dédiée qui copie, au moment où
+  `ScenarioPrevision.statut` passe à `ACTIF`, l'état de toutes les lignes qui alimentent le budget.
+- (b) **Convention de filtrage** : « le budget initial = les lignes créées avant la date
+  d'activation », sans nouvelle table, en filtrant `createdAt < scenario.dateActivation` à la lecture.
+
+**Analyse de (b), honnêtement.** Cette convention n'est **pas tenable**. Les lignes existantes sont
+éditées **en place** : `ChargeMensuellePrevue.montantFCFA` d'un poste peut être corrigé après
+activation sans créer de nouvelle ligne — seul `updatedAt` change, la ligne garde son `createdAt`
+d'origine, antérieur à l'activation. Un filtre sur `createdAt` inclurait donc cette ligne modifiée
+dans le « budget initial », alors que sa valeur courante **est** la valeur modifiée, pas la valeur
+figée au moment de l'activation. La convention confond « ancienneté de la ligne » avec « valeur au
+moment T » — deux notions que seul un versionnement ou une copie explicite peuvent distinguer. Sans
+ligne immuable, il n'existe tout simplement **aucune donnée** en base qui porte la valeur « telle
+qu'elle était à l'activation » une fois qu'une édition ultérieure a eu lieu.
+
+**Décision : (a), snapshot matérialisé.**
+
+```prisma
+model SnapshotBudgetInitial {
+  id            String            @id @default(cuid())
+  scenarioId    String
+  scenario      ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  moisAbsolu    Int               // même référentiel que ChargeMensuellePrevue.moisAbsolu
+  posteId       String?           // nullable : ligne "trésorerie" (soldeInitial, apports) peut ne
+                                   // porter aucun PostePrevision
+  poste         PostePrevision?   @relation(fields: [posteId], references: [id], onDelete: SetNull)
+  categorie     String            // libellé figé au moment du snapshot ("ALIMENT", "TRANSPORT",
+                                   // "APPORT_CAPITAL", "REVENU_VENTE", ...) — jamais recalculé
+                                   // depuis une relation vivante, pour rester lisible même si le
+                                   // PostePrevision source est ensuite supprimé (SetNull)
+  montantFCFA   Decimal           // valeur figée, jamais recalculée
+  siteId        String
+  site          Site              @relation(fields: [siteId], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@unique([scenarioId, moisAbsolu, posteId, categorie])
+  @@index([siteId, scenarioId])
+}
+```
+
+- **Granularité : par mois × poste**, pas par mois × vague. Raison : le budget initial est une
+  grandeur de pilotage global (« combien avait-on prévu de dépenser en Alimentation en mois 7 »), pas
+  une grandeur par cohorte — le §6 des exigences demande une vue « par vague » distincte (section
+  15.6), qui reste calculée dynamiquement contre `VaguePrevue` (jamais gelée, une vague prévue n'a pas
+  de raison de porter un « budget initial » propre, seul le scénario en porte un). La série
+  trésorerie **est incluse** dans le snapshot (une ligne par mois, `posteId = null`,
+  `categorie = "TRESORERIE_SOLDE"` portant le solde cumulé projeté à l'activation) — c'est
+  précisément la série que la vue trésorerie à 3 séries doit pouvoir comparer, elle ne peut pas être
+  omise du gel sous peine de rendre cette vue-là impossible à construire.
+- **Moment de création : à l'activation du scénario**, dans la même transaction que le passage de
+  `ScenarioPrevision.statut` à `ACTIF` (route `scenarios/[id]/activer`, déjà existante) — jamais un
+  job différé, jamais une création paresseuse au premier accès à la vue rapprochement (le §4.1 des
+  exigences veut un gel décidé, pas un gel accidentel du premier consultant). Le calcul source du
+  snapshot appelle **le moteur de production** (`calculerProjectionScenario` et non une
+  réimplémentation) — cohérent avec la discipline de test de la section 15.6 : le snapshot n'est pas
+  un nouveau calcul, c'est une capture de la sortie du calcul existant.
+- **Immuabilité : stricte.** Aucune route ne doit exposer d'UPDATE ni de DELETE sur
+  `SnapshotBudgetInitial` en dehors de la suppression en cascade du scénario lui-même
+  (`onDelete: Cascade`). Toute tentative de correction d'un budget initial déjà figé est refusée —
+  c'est la garantie centrale que cette section vient combler.
+- **Réactivation / duplication.** Un scénario ne peut être réactivé après archivage sans repasser par
+  `activer` (comportement déjà existant, section 3.2 — hors périmètre de cette section de le
+  changer) : si cela se produit, un **nouveau** snapshot est créé pour la nouvelle période
+  d'activation, l'ancien restant intact (contrainte `@@unique([scenarioId, moisAbsolu, posteId,
+  categorie])` empêcherait un second snapshot au même triplet — la story d'implémentation doit donc
+  soit refuser une deuxième activation tant qu'un snapshot existe déjà pour ce scénario, soit
+  distinguer les deux snapshots par une génération explicite (`versionActivation Int`, incrémenté).
+  **Tranché ici : un scénario ne peut être activé qu'une seule fois dans son cycle de vie** (cohérent
+  avec la section 2 de l'ADR — activer n'est pas une action répétable aujourd'hui) ; si un besoin de
+  réactivation apparaît plus tard, il devra être conçu avec sa propre story ADR, pas déduit
+  implicitement de ce schéma. La duplication d'un scénario (« dupliquer le scénario », mentionnée
+  section 4 comme hors MVP) créerait un nouveau `ScenarioPrevision` avec son propre cycle d'activation
+  et son propre snapshot le jour venu — sans conséquence sur le snapshot du scénario source.
+
+**PRÉVISION ACTUALISÉE — définition tranchée, distincte du budget initial.** PRÉVISION ACTUALISÉE
+n'est **ni** l'état courant recalculé du scénario **ni** une substitution du réel sur les mois clos —
+ces deux notions ne doivent pas être confondues, et l'ADR tranche explicitement en faveur de la
+première :
+
+- **PRÉVISION ACTUALISÉE = l'état courant du scénario, recalculé à la demande** via
+  `calculerProjectionScenario` sur les valeurs **actuelles** de `PostePrevision`/
+  `ChargeMensuellePrevue`/`JournalDepensePrevue`/`ApportCapital`/`AlimentPrevision` — c'est
+  strictement la même fonction que celle qui produit déjà l'onglet « tableau de bord » existant
+  (section 4), appliquée sans filtre de date. Elle bouge à chaque édition post-activation, par
+  construction — c'est précisément ce qui la distingue de BUDGET INITIAL (figé) et justifie que les
+  deux séries divergent visuellement dans la vue.
+- La **reprévision glissante** décrite au §6.5 des exigences (« substituer le réel sur les mois clos,
+  garder la prévision sur les mois futurs ») est une **vue dérivée distincte**, calculée en
+  fusionnant la série RÉEL (mois clôturés, `ClotureMois`) avec la série PRÉVISION ACTUALISÉE (mois non
+  clôturés) au moment de l'affichage — elle ne modifie **aucune** donnée en base, ni de
+  `ScenarioPrevision`, ni de `SnapshotBudgetInitial`. Elle n'a pas de nom de type propre dans le
+  moteur ; elle vit dans la couche de présentation (fonction pure de fusion des deux séries, testable
+  isolément), pas dans le moteur ni le schéma. Si une story PR3 l'implémente, elle doit être nommée
+  distinctement de « PRÉVISION ACTUALISÉE » dans le code et l'UI (ex. « Reprévision glissante », pas
+  un synonyme de la prévision actualisée) pour éviter que les deux notions se confondent au premier
+  refactor.
+
+### 15.3 Historisation du mapping et immuabilité des écarts figés
+
+**Constat.** `MappingRapprochement` (section 3.9) est versionné (`version Int`,
+`@@unique([siteId, version, sourceType, sourceCle])`). La garantie annoncée section 5 (« changer un
+mapping ne doit pas réécrire l'historique des écarts figés ») n'a aujourd'hui aucun mécanisme
+d'application : rien ne lie un mois donné à la version du mapping utilisée pour le calculer.
+
+**Décision.**
+- **Mois clôturé (`ClotureMois` existe pour ce scénario/mois) : la version du mapping est figée au
+  moment de la clôture, jamais recalculée dynamiquement.** Champ ajouté :
+
+```prisma
+model ClotureMois {
+  // ... champs existants (section 3.10), inchangés ...
+  versionMapping Int  // version de MappingRapprochement en vigueur (max(version) actif au
+                       // moment de la clôture, PAS forcément la version la plus récente en
+                       // base au moment de la lecture) — fige la liaison mois ↔ mapping
+}
+```
+
+  Le rapprochement affiché pour un mois clôturé relit toujours `MappingRapprochement` **filtré sur
+  `version = ClotureMois.versionMapping`**, quelle que soit la version `actif` courante au moment de
+  la consultation. Une lecture qui ignorerait ce filtre et relirait systématiquement le mapping
+  `actif` du moment recalculerait silencieusement l'historique — c'est exactement le défaut que la
+  fixture (d) de la pré-analyse (section 15.6 ci-dessous) doit détecter.
+- **Mois non clôturé : recalcul dynamique avec la version active du moment — légitime, à énoncer
+  explicitement.** Tant qu'un mois n'est pas clôturé, il n'y a pas d'« historique figé » à protéger :
+  le rapprochement affiché reflète le mapping `actif` courant, et change si l'administrateur modifie
+  le mapping avant la clôture. C'est le comportement attendu, pas une fuite — la clôture est
+  précisément l'acte qui transforme un calcul dynamique en fait figé.
+- **Conséquence sur l'API.** L'endpoint de clôture (`ClotureMois`, PR3.5 indicative) doit lire la
+  version active du mapping du site **dans la même transaction** que la création de `ClotureMois`
+  (cohérence R4 — pas de fenêtre entre « lire la version active » et « écrire la clôture » où un
+  changement de mapping concurrent pourrait glisser).
+
+### 15.4 Remplacement d'ERR-165 (`PREVISIONS_STATUS_MAP` par `message.includes()`)
+
+**Constat.** `src/app/api/previsions/_shared.ts:59-93` porte 9 entrées `{ match: string, status:
+number }` couplant le statut HTTP au texte exact (non accentué) d'un message utilisateur — signalé
+par trois reviews consécutives avant d'être fiché (ERR-165). Un précédent de retypage existe déjà
+dans le même fichier (`_shared.ts:40-52`) : la query `previsions-aliments.ts` lève désormais une
+`ValidationError` (`src/lib/errors.ts`), interceptée par `handleApiError`
+(`src/lib/api-utils.ts:106-108`) **avant** tout examen du `statusMap` — mais `ValidationError` ne
+porte qu'un statut fixe (400), insuffisant pour couvrir les 422 et 409 déjà présents dans la map.
+
+**Décision : suivre et généraliser ce précédent, pas un troisième mécanisme.** Ajouter une classe
+`BusinessRuleError` dans `src/lib/errors.ts`, portant elle-même son statut :
+
+```typescript
+// src/lib/errors.ts (extension)
+export class BusinessRuleError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,       // 400 | 409 | 422 — jamais déduit du message
+    public readonly code?: string,        // identifiant machine stable, optionnel (ex. futur i18n)
+  ) {
+    super(message);
+    this.name = "BusinessRuleError";
+  }
+}
+```
+
+Et dans `handleApiError` (`src/lib/api-utils.ts`), une branche interceptant `BusinessRuleError`
+**avant** l'examen de `opts?.statusMap` (même position que `ValidationError` aujourd'hui) :
+`if (error instanceof BusinessRuleError) return apiError(error.status, error.message, error.code ?
+{ code: error.code } : undefined);`.
+
+**Exigences pour la story qui implémente ce remplacement (hors périmètre de PR3.0, à assigner en
+PR3.1 ou une story dédiée « PR3.0bis ») :**
+1. **Migrer les 9 entrées existantes** de `PREVISIONS_STATUS_MAP` : chaque site de levée
+   (`validation.ts`, `previsions-scenarios.ts`) qui lève aujourd'hui une `Error` nue destinée à l'une
+   de ces 9 entrées doit lever une `BusinessRuleError(message, status)` à la place, avec le même
+   statut que l'entrée qu'elle remplace. Une fois les 9 sites migrés, `PREVISIONS_STATUS_MAP` doit
+   être **supprimé** du fichier, pas laissé vide « au cas où ».
+2. **Interdiction formelle d'ajouter une 10e entrée `match`** dans `PREVISIONS_STATUS_MAP` pendant
+   PR3 — toute nouvelle validation bloquante du sprint (mapping non couvert, mois clôturé, snapshot
+   déjà existant à l'activation) est créée directement en `BusinessRuleError`, jamais ajoutée à la
+   map par sous-chaîne. Un mapping qui grossit pendant le sprint même où son remplacement est décidé
+   serait une contradiction relevée à la review.
+3. **Test de non-dépendance au texte du message, par falsification** : un test qui construit une
+   `BusinessRuleError("Le mapping doit valoir 100", 422)`, vérifie le statut 422 en sortie de
+   `handleApiError`, puis reconstruit la **même** erreur avec un message accentué et/ou reformulé
+   (`"Le mappage doit valoir 100 %"`) et vérifie que le statut produit reste **strictement
+   identique** (422) — c'est la preuve par falsification qui manque aujourd'hui : elle ne peut être
+   satisfaite que si le statut est lu depuis `error.status`, jamais depuis une comparaison de
+   sous-chaîne. Ce test doit vivre à côté des tests de `handleApiError`/`api-utils` existants.
+
+### 15.5 Convention de lecture des écarts (sens favorable/défavorable)
+
+**Formules, tranchées :**
+
+```typescript
+// src/lib/previsions/types.ts (extension)
+type SensEcart = "FAVORABLE" | "DEFAVORABLE" | "NEUTRE" | "NON_APPLICABLE";
+
+interface LigneRapprochement {
+  // ... identifiants (mois, poste/catégorie, source) ...
+  prevu: Decimal;
+  reel: Decimal | null;             // null ssi statutRapprochement === "SANS_SOURCE_REELLE" (15.1)
+  statutRapprochement: StatutRapprochement; // 15.1
+  ecartAbsolu: Decimal | null;      // reel - prevu, null si reel est null
+  ecartPct: Decimal | null;         // (reel - prevu) / |prevu|, null si prevu === 0 ou reel === null
+                                     // — JAMAIS Infinity, JAMAIS NaN, JAMAIS 0 par convention
+  sens: SensEcart;                  // porté par la ligne, jamais déduit dans l'UI
+}
+```
+
+- `ecartAbsolu = reel − prevu` (jamais `prevu − reel` — le signe positif signifie « le réel dépasse
+  le prévu », uniformément, quelle que soit la nature de la grandeur).
+- `ecartPct = prevu === 0 ? null : (reel − prevu) / |prevu|`. `prevu = 0` avec `reel > 0` produit
+  **toujours** un écart affiché (`ecartAbsolu = reel`, non nul) — c'est le cas « dépense non
+  budgétée », qui ne doit jamais disparaître silencieusement — mais `ecartPct` reste `null` (aucune
+  base de comparaison relative n'existe pour une division par 0).
+- **Le signe seul ne détermine pas `sens` — la nature de la grandeur (portée par la ligne, pas
+  déduite) le détermine aussi :**
+  - Sur une **dépense** (`cibleType = POSTE_PREVISION` ou `ALIMENT_PREVISION`, nature `DEPENSE`) :
+    `reel > prevu` → `DEFAVORABLE` (rouge) ; `reel < prevu` → `FAVORABLE` (vert) ; `reel === prevu` →
+    `NEUTRE`.
+  - Sur une **entrée** (`cibleType = VENTE_PREVUE`, nature `ENTREE`) ou un **tonnage/quantité**
+    (nature `QUANTITE`) : `reel > prevu` → `FAVORABLE` (vert) ; `reel < prevu` → `DEFAVORABLE`
+    (rouge) ; égalité → `NEUTRE`.
+  - Ligne `SANS_SOURCE_REELLE` (15.1) : `sens = "NON_APPLICABLE"`, jamais un des trois autres.
+- **Type discriminant explicite, emplacement tranché.** `SensEcart` et la fonction pure qui le
+  calcule (`calculerSensEcart(natureGrandeur: "DEPENSE" | "ENTREE" | "QUANTITE", ecartAbsolu: Decimal
+  | null): SensEcart`) vivent dans `src/lib/previsions/rapprochement.ts` (nouveau fichier, moteur pur,
+  section 15.6), **jamais** dans un composant `src/components/previsions/*`. Le signe n'est jamais
+  déduit ad hoc dans l'UI — un composant ne fait que lire `ligne.sens` et choisir une couleur, il ne
+  recalcule jamais de comparaison `>`/`<` lui-même.
+- **Couleur : fonction pure séparée**, `couleurPourSensEcart(sens: SensEcart, seuilPct: Decimal |
+  null): "vert" | "orange" | "rouge" | "neutre"`, dans le même fichier
+  `src/lib/previsions/rapprochement.ts` — jamais dans le composant. Elle prend `sens` (déjà tranché
+  favorable/défavorable) et l'amplitude `|ecartPct|` pour choisir l'intensité :
+  - `sens === "NEUTRE"` ou `sens === "NON_APPLICABLE"` → `"neutre"`.
+  - `ecartPct === null` (cas `prevu = 0`, `reel > 0`) → **toujours signalé au niveau maximal**
+    (`"rouge"` si `sens === "DEFAVORABLE"`, ce qui est nécessairement le cas puisqu'une dépense non
+    budgétée est par nature défavorable — pas de neutralité possible ici) : le seuil pourcentuel ne
+    s'applique jamais quand il n'existe pas de base de comparaison relative.
+  - Sinon, seuils appliqués à `|ecartPct|`, **configurables par site** (nouveau champ sur
+    `ParametresPrevision`, ex. `seuilEcartVertPct Decimal @default(5)`, `seuilEcartOrangePct Decimal
+    @default(15)` — décision de schéma laissée à la story SCHEMA de PR3, pas figée ici au-delà des
+    valeurs par défaut) : `|ecartPct| ≤ seuilVert` → `"vert"`/`"rouge"` selon `sens` (favorable =
+    vert, défavorable = rouge, à ce niveau de faible amplitude les deux restent de faible intensité
+    mais gardent leur teinte) ; `seuilVert < |ecartPct| ≤ seuilOrange` → intensité orange ; `>
+    seuilOrange` → intensité rouge/vert saturé selon `sens`. Le détail exact de la palette
+    (« vert clair vs vert saturé ») est un choix d'implémentation UI, pas un choix d'architecture —
+    ce qui est tranché ici est que **la fonction qui décide, pas le composant, possède le seuil et la
+    règle**.
+
+### 15.6 Discipline de test imposée en l'absence de jeu d'or
+
+Actée comme **règle d'architecture**, pas comme recommandation optionnelle laissée à l'appréciation
+de l'implémenteur — conforme à la section 4 (« le moteur vit exclusivement dans
+`src/lib/previsions/`, fonctions pures ») et au précédent direct ERR-142/ERR-171 (récidive du même
+défaut dans ce module, découverte le jour même de la pré-analyse de ce sprint) :
+
+1. **Le moteur de rapprochement vit dans `src/lib/previsions/rapprochement.ts` (et fichiers
+   frères du même dossier si nécessaire), en fonctions pures sans I/O.** Aucun `prisma.*` à
+   l'intérieur. Les agrégats réels (`Depense`/`LigneDepense`/`Vente`/`MouvementStock` déjà groupés
+   par mois/catégorie) sont chargés en amont par une query (`src/lib/queries/previsions-
+   rapprochement.ts`, nouveau) et passés en argument ; le résultat (liste de `LigneRapprochement`,
+   15.5) est retourné en valeur. C'est ce découplage, et lui seul, qui rend le moteur testable par
+   simple comparaison de sorties, sans base de données dans la boucle de test unitaire — exactement
+   le principe déjà énoncé section 4 pour le reste du moteur, étendu ici sans exception.
+2. **Tout test de rapprochement appelle exclusivement le code de production**, jamais une
+   réimplémentation locale de la formule (`ecartAbsolu`/`ecartPct`/`sens`/`couleurPourSensEcart`)
+   dans le fichier de test — c'est littéralement le défaut nommé par ERR-171 (récidive d'ERR-142),
+   découvert dans ce module précisément, la veille de ce sprint. Un test qui recompose l'identité
+   `reel - prevu` dans son propre corps au lieu d'appeler `calculerEcart(...)` produit une suite
+   verte qui ne prouve rien sur la production.
+3. **Toute story de rapprochement livrée est accompagnée d'une preuve par falsification chiffrée** :
+   casser volontairement une règle de production (inverser un signe, ignorer un mapping, ignorer une
+   clôture, permuter `sens` favorable/défavorable) → constater et documenter le nombre exact
+   d'assertions qui tombent → restaurer, suite repassée à 0 échec. Un nombre brut d'assertions vertes
+   n'est jamais, à lui seul, une preuve suffisante dans ce module (ERR-160, ERR-168, ERR-171).
+4. **Les fixtures doivent être construites pour FAIRE DIVERGER les implémentations candidates**
+   (ERR-160 : un jeu d'or peut être structurellement incapable de discriminer deux formules), en
+   couvrant explicitement au minimum :
+   - **(a) Signe de l'écart.** Au moins un cas `réel > prévu` et un cas `réel < prévu`, sur les
+     **deux** familles de grandeur (dépense FCFA où dépasser est défavorable ; entrée/tonnage où
+     dépasser est favorable) — un test qui ne vérifie que `|écart| == constante` ne peut pas
+     distinguer `reel - prevu` d'un `prevu - reel` inversé par erreur.
+   - **(b) `prevu = 0` et `reel > 0`.** Une catégorie réelle jamais mappée à un `PostePrevision` mais
+     avec des dépenses réelles non nulles — doit produire un écart affiché et `sens = DEFAVORABLE`,
+     jamais une division par zéro silencieuse, jamais `NaN`/`Infinity` sur `ecartPct` (qui doit valoir
+     `null`, jamais `0`).
+   - **(c) Le bac `NON_RAPPROCHE`.** Au moins une `CategorieDepense`/`CategorieProduit` réellement
+     utilisée sur le site testé mais sans `MappingRapprochement` actif correspondant — doit apparaître
+     dans `NON_RAPPROCHE`, jamais absorbée silencieusement dans un total ni ignorée. Une fixture qui
+     ne construit que des mappings complets ne peut jamais détecter une régression qui ferait
+     disparaître ce bac.
+   - **(d) Immuabilité de l'historique.** Séquence explicite : calculer un rapprochement pour un mois
+     M clôturé avec mapping version N (15.3) ; créer une nouvelle version N+1 du mapping (jamais un
+     UPDATE en place) ; revérifier que le rapprochement déjà figé pour M reste identique — pas
+     recalculé avec la version N+1. La fixture doit être écrite pour **faire échouer** une
+     implémentation naïve qui relirait toujours le mapping `actif` du moment sans respecter
+     `ClotureMois.versionMapping`.
+
+**Rappel explicite de la règle du §5.1(a).** Le module Prévisions n'appelle **jamais**
+`create`/`update`/`delete` sur `Depense`, `Vente`, `MouvementStock`, ni aucune table du domaine réel
+— la garantie du sens unique strict énoncée section 5.1(a) s'applique intégralement au module de
+rapprochement construit ce sprint, portée par revue de code (aucun mécanisme technique ne l'empêche,
+c'est un point de checklist obligatoire à chaque review de sprint PR3, au même titre que R1-R11).
+
+### 15.7 Décalage documentaire — `MODULE_NAV` (section 6) vs implémentation réelle
+
+La pré-analyse de ce sprint confirme un décalage déjà connu et non corrigé : le `MODULE_NAV` décrit
+section 6 (7 routes séparées : `/previsions`, `/previsions/scenarios`, `/previsions/plan`,
+`/previsions/aliments`, `/previsions/charges`, `/previsions/tresorerie`,
+`/previsions/rapprochement`) **ne correspond pas** à l'implémentation réelle. Le module est organisé
+en **onglets** sous `/previsions/scenarios/[id]` (`scenario-detail-client.tsx` :
+`plan-vagues-tab.tsx`, `aliments-tab.tsx`, `charges-tab.tsx`, `journal-tab.tsx`, `apports-tab.tsx`,
+`previsions-mensuelles-tab.tsx`, `tableau-bord-tab.tsx`) ; seules `/previsions/scenarios` et
+`/previsions/scenarios/[id]` existent réellement comme routes buildées (`npm run build` fait foi).
+
+**Décision : acter la réalité, pas corriger la section 6 rétroactivement** (cohérent avec la
+discipline d'amendement append-only de cet ADR — la section 6 n'est pas réécrite, ce paragraphe fait
+foi pour tout développement futur). Le rapprochement (ce sprint) sera un **onglet de plus**
+(`rapprochement-tab.tsx`) dans le même patron déjà en place, pas une route séparée
+`/previsions/rapprochement`. Le `MODULE_NAV` décrit section 6 doit être traité comme un document
+d'intention non réalisé pour les items `dashboard`/`plan`/`aliments`/`charges`/`tresorerie`/
+`rapprochement` — seul l'item `scenarios` (et son détail par onglets) reflète l'implémentation
+réelle. Une correction formelle de la section 6 elle-même (biffer/annoter les 6 routes non
+construites) est laissée à une story de nettoyage documentaire ultérieure, hors périmètre de PR3.0.
+
+### 15.8 Ce qui est explicitement reporté hors du sprint PR3
+
+- **(a)** Un modèle de domaine réel pour les encaissements hors vente (option (a) de 15.1) — reporté
+  sine die, à reconsidérer seulement si un besoin indépendant du rapprochement l'exige.
+- **(b)** Le mécanisme de réactivation d'un scénario déjà activé (15.2) — hors MVP, cohérent avec la
+  section 2 existante ; un scénario ne s'active qu'une fois dans ce sprint.
+- **(c)** La granularité hebdomadaire, les prix par calibre, l'échéancier de remboursement des prêts,
+  les délais de paiement — déjà reportés section 9, non rouverts par cette section.
+- **(d)** La palette exacte de couleurs (nuances vert/orange/rouge au-delà de la classe
+  discrète) — choix d'implémentation UI, pas d'architecture.
+- **(e)** La correction rétroactive du `MODULE_NAV` de la section 6 (15.7) — reportée à une story de
+  nettoyage documentaire dédiée.
+- **(f)** La vue trésorerie à 3 séries (§6 des exigences) doit être livrée en dernier dans le
+  découpage de sprint, après que 15.2 (snapshot) soit implémenté et testé isolément — si le calendrier
+  du sprint est sous tension, mieux vaut livrer les vues mensuelle/cumulée/par vague/top écarts
+  solidement et reporter la vue trésorerie à un sprint suivant que de forcer le snapshot sous pression
+  (cf. ERR-160/ERR-171 : un modèle bâclé sous pression, dans ce module précisément, a déjà coûté deux
+  sprints de récidive).

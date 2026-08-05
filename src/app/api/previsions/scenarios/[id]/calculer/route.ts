@@ -5,7 +5,6 @@ import type { Decimal } from "@/lib/previsions/decimal-config";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /** `decimal.js` (moteur) -> `number`, a la frontiere JSON — jamais un Decimal brut dans NextResponse.json. */
 function n(value: Decimal): number {
@@ -104,8 +103,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/calculer",
       error,
-      "Erreur serveur lors du calcul de la projection.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors du calcul de la projection."
     );
   }
 }

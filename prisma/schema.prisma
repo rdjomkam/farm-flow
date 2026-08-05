@@ -803,6 +803,7 @@ model Site {
   /**
    * /**
    * /**
+   * /**
    * Propriétaire du site — administrateur principal responsable de l'abonnement.
    */
   ownerId                  String
@@ -813,6 +814,7 @@ model Site {
   isBlocked                Boolean                    @default(false)
   // Sprint BL — Bon de livraison signé : assets promoteur pour le PDF
   /**
+   * /**
    * /**
    * Signature du promoteur du site — image PNG encodée en base64 (data URL),
    * apposée sur chaque bon de livraison généré.
@@ -828,6 +830,7 @@ model Site {
   nomPromoteur             String?
   // ADR-021 — Cycle de vie & audit
   /**
+   * /**
    * /**
    * /**
    * /** Null si non suspendu. Non-null = site suspendu (accès restreint).
@@ -858,6 +861,7 @@ model Site {
   apportsCapital           ApportCapital[]
   mappingsRapprochement    MappingRapprochement[]
   cloturesMois             ClotureMois[]
+  snapshotsBudgetInitial   SnapshotBudgetInitial[]
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
 
@@ -887,6 +891,7 @@ model ConfigElevage {
   /**
    * /**
    * /**
+   * /**
    * /** Poids cible par poisson a la recolte (g) — ex: 800
    */
   poidsObjectif      Float
@@ -901,6 +906,7 @@ model ConfigElevage {
 
   // ── Phases de croissance (seuils de poids en g) ─
   /**
+   * /**
    * /**
    * /**
    * /** 0 → seuilAcclimatation g
@@ -926,6 +932,7 @@ model ConfigElevage {
 
   // ── Alimentation : taille de granule par poids ──
   /**
+   * /**
    * /**
    * /**
    * /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}]
@@ -991,6 +998,7 @@ model ConfigElevage {
   /**
    * /**
    * /**
+   * /**
    * /** % morts/jour → investigation
    */
   mortaliteQuotidienneAlerte   Float @default(1.0)
@@ -1001,6 +1009,7 @@ model ConfigElevage {
 
   // ── Alimentation : seuils d'alerte ──────────────
   /**
+   * /**
    * /**
    * /**
    * /** FCR au-dela de ce seuil → reduire dose
@@ -1033,6 +1042,7 @@ model ConfigElevage {
   /**
    * /**
    * /**
+   * /**
    * /** Bac béton / plastique — seuil alerte orange
    */
   densiteBacBetonAlerte   Float @default(150)
@@ -1061,6 +1071,7 @@ model ConfigElevage {
   /**
    * /**
    * /**
+   * /**
    * /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours)
    */
   fenetreRenouvellementJours Int @default(7)
@@ -1072,6 +1083,7 @@ model ConfigElevage {
   // ── Cout de production ──────────────────────────
   /**
    * /**
+   * /**
    * Poids d'un sac d'aliment en kg pour ce profil (ex. 15 pour Skretting).
    * Prioritaire sur Produit.contenance dans le calcul du nombre de sacs
    * du cout de production. Null = fallback sur le produit.
@@ -1080,6 +1092,7 @@ model ConfigElevage {
 
   // ── Calibrage Gompertz : parametres initiaux par defaut ─────────────────
   /**
+   * /**
    * /**
    * /**
    * /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200
@@ -1100,6 +1113,7 @@ model ConfigElevage {
 
   // ── Metadonnees ─────────────────────────────────
   /**
+   * /**
    * /**
    * /**
    * /** Profil par defaut du site (un seul isDefault=true par site)
@@ -1234,6 +1248,7 @@ model User {
   platformAuditLogs      PlatformAuditLog[]
   // ADR-020 — Subscription refactoring
   /**
+   * /**
    * /**
    * /**
    * Solde de crédit prépayé (FCFA) — utilisé pour les plans EXONERATION ou crédits offerts.
@@ -1571,43 +1586,43 @@ model Fournisseur {
 }
 
 model Produit {
-  id                    String               @id @default(cuid())
-  nom                   String
-  categorie             CategorieProduit
-  unite                 UniteStock
-  uniteAchat            UniteStock?
-  contenance            Float?
-  prixUnitaire          Float
-  stockActuel           Float                @default(0)
-  seuilAlerte           Float                @default(0)
-  fournisseurId         String?
-  fournisseur           Fournisseur?         @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
-  isActive              Boolean              @default(true)
+  id                       String                    @id @default(cuid())
+  nom                      String
+  categorie                CategorieProduit
+  unite                    UniteStock
+  uniteAchat               UniteStock?
+  contenance               Float?
+  prixUnitaire             Float
+  stockActuel              Float                     @default(0)
+  seuilAlerte              Float                     @default(0)
+  fournisseurId            String?
+  fournisseur              Fournisseur?              @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
+  isActive                 Boolean                   @default(true)
   // Feed Analytics (Sprint FA) — caractéristiques nutritionnelles aliment
-  tailleGranule         TailleGranule?
-  formeAliment          FormeAliment?
-  tauxProteines         Float?
-  tauxLipides           Float?
-  tauxFibres            Float?
-  phasesCibles          PhaseElevage[]
-  siteId                String
-  site                  Site                 @relation(fields: [siteId], references: [id])
-  mouvements            MouvementStock[]
-  lignesCommande        LigneCommande[]
-  consommations         ReleveConsommation[]
-  lignesBesoins         LigneBesoin[]
+  tailleGranule            TailleGranule?
+  formeAliment             FormeAliment?
+  tauxProteines            Float?
+  tauxLipides              Float?
+  tauxFibres               Float?
+  phasesCibles             PhaseElevage[]
+  siteId                   String
+  site                     Site                      @relation(fields: [siteId], references: [id])
+  mouvements               MouvementStock[]
+  lignesCommande           LigneCommande[]
+  consommations            ReleveConsommation[]
+  lignesBesoins            LigneBesoin[]
   // ADR-027 — LigneDepense
-  lignesDepense         LigneDepense[]
+  lignesDepense            LigneDepense[]
   // Sprint 20 — Packs & Provisioning
-  packProduits          PackProduit[]
+  packProduits             PackProduit[]
   // Sprint 21 — Moteur d'activités
-  activitesRecommandees Activite[]           @relation("ActiviteProduitRecommande")
+  activitesRecommandees    Activite[]                @relation("ActiviteProduitRecommande")
   // Sprint PR1 — Prévisions
   // ADR-053 §12.3 (amendement PR2-quater) : produitId descend au niveau article — le
   // rapprochement se fait par article acheté, pas par calibre abstrait.
   alimentsArticlePrevision AlimentArticlePrevision[]
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
 
   @@index([siteId])
   @@index([fournisseurId])
@@ -3392,6 +3407,7 @@ model Abonnement {
   /**
    * /**
    * /**
+   * /**
    * Motif de l'exonération (obligatoire si typePlan = EXONERATION).
    */
   motifExoneration           String?
@@ -3817,6 +3833,7 @@ model HistoriqueNutritionnel {
 
   // Métriques agrégées pour cette phase
   /**
+   * /**
    * /**
    * /**
    * /** FCR moyen sur la phase (kg aliment / kg gain)
@@ -4371,15 +4388,16 @@ model ScenarioPrevision {
   siteId         String
   site           Site                    @relation(fields: [siteId], references: [id])
 
-  parametres        ParametresPrevision?
-  paliersRemise     PalierRemise[]
-  aliments          AlimentPrevision[]
-  vaguesPrevues     VaguePrevue[]
-  postes            PostePrevision[]
-  chargesMensuelles ChargeMensuellePrevue[]
-  journal           JournalDepensePrevue[]
-  apports           ApportCapital[]
-  clotures          ClotureMois[]
+  parametres             ParametresPrevision?
+  paliersRemise          PalierRemise[]
+  aliments               AlimentPrevision[]
+  vaguesPrevues          VaguePrevue[]
+  postes                 PostePrevision[]
+  chargesMensuelles      ChargeMensuellePrevue[]
+  journal                JournalDepensePrevue[]
+  apports                ApportCapital[]
+  clotures               ClotureMois[]
+  snapshotsBudgetInitial SnapshotBudgetInitial[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4450,6 +4468,21 @@ model ParametresPrevision {
    */
   alevinsAchetesParDefaut Boolean @default(false)
 
+  /**
+   * Tresorerie d'ouverture du scenario (§4.1 des exigences, jeu d'or
+   * "Parametres!B37", extraite dans les fixtures depuis la story PR2 mais
+   * jamais portee par le schema jusqu'ici — dette 3 de la pre-analyse
+   * PR3, ERR-171/ERR-142 : le harnais de recette appliquait deja cette
+   * valeur, le moteur de production la figeait a 0
+   * (route-orchestration.ts). LIBRE : peut etre negative (un scenario peut
+   * demarrer decouvert) — AUCUNE contrainte CHECK >= 0, contrairement aux
+   * champs de transport ci-dessus. NOT NULL avec @default(0) (R7) : jamais
+   * de calcul de tresorerie silencieusement base sur un null ; 0 est
+   * neutre et reproduit exactement le comportement actuel (EXCEL-V12 porte
+   * 0 pour ce champ, donc son resultat de calcul ne bouge pas).
+   */
+  tresorerieInitialeFCFA Decimal @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -4481,15 +4514,15 @@ model PalierRemise {
  * deux niveaux et le tableau champ par champ de ce qui a migré vers l'article.
  */
 model AlimentPrevision {
-  id         String            @id @default(cuid())
-  scenarioId String
-  scenario   ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  id                   String            @id @default(cuid())
+  scenarioId           String
+  scenario             ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   /**
    * Taille de granulé — porte désormais l'identité du calibre. NOT NULL (amendement PR2-quater) :
    * une granulométrie non identifiée ne peut plus être créée ni persister — R7, décision explicite,
    * pas une nullabilité par défaut. Cf. migration 20260803160000 pour le garde-fou de précondition.
    */
-  tailleGranule TailleGranule
+  tailleGranule        TailleGranule
   /**
    * Coefficient de besoin en aliment : sacs de cette granulométrie par tonne de POISSON produit.
    * Inchangé depuis l'amendement Sprint PR2 (§11) — reste au niveau calibre, jamais à l'article :
@@ -4497,9 +4530,9 @@ model AlimentPrevision {
    * null = non configuré, tout calcul qui en dépend rejette explicitement (§11.2).
    */
   sacsParTonneStandard Decimal?
-  ordre         Int // ordre d'affichage des calibres dans le scénario
-  siteId        String
-  site          Site              @relation(fields: [siteId], references: [id])
+  ordre                Int // ordre d'affichage des calibres dans le scénario
+  siteId               String
+  site                 Site              @relation(fields: [siteId], references: [id])
 
   articles      AlimentArticlePrevision[]
   repartitions  RepartitionMoisAliment[] // grain calibre, inchangé (§12.2, arbitrage 2)
@@ -4528,18 +4561,18 @@ model AlimentArticlePrevision {
    * Nullable : un article prévisionnel peut ne correspondre à aucun produit réel du catalogue
    * (ex. produit pas encore créé, ou scénario prospectif).
    */
-  produitId          String?
-  produit            Produit?         @relation(fields: [produitId], references: [id], onDelete: SetNull)
-  libelle            String // copié depuis Produit.nom à la création, puis libre (ex. "Marque A —
+  produitId                 String?
+  produit                   Produit?         @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  libelle                   String // copié depuis Produit.nom à la création, puis libre (ex. "Marque A —
   // sac 15kg") — descend depuis le calibre (§12.1)
-  poidsSacKg         Decimal // copié depuis Produit.contenance à la création — descend depuis le calibre
-  prixSacFCFA        Decimal // copié depuis Produit.prixUnitaire à la création — descend depuis le calibre
+  poidsSacKg                Decimal // copié depuis Produit.contenance à la création — descend depuis le calibre
+  prixSacFCFA               Decimal // copié depuis Produit.prixUnitaire à la création — descend depuis le calibre
   /**
    * Pur ratio d'unité de poids (1000 / poidsSacKg) — descend depuis le calibre avec poidsSacKg,
    * dont il est dérivé (ERR-138 : ne doit jamais entrer dans un calcul de besoin par tonne de
    * poisson, cf. sacsParTonneStandard qui lui reste au calibre).
    */
-  sacsParTonneUnitaire Decimal
+  sacsParTonneUnitaire      Decimal
   /**
    * Part de cet article dans l'approvisionnement du calibre, en pourcentage (0..100). La somme des
    * partApprovisionnementPct de tous les articles d'un même calibre doit valoir exactement 100 —
@@ -4547,11 +4580,11 @@ model AlimentArticlePrevision {
    * Non nullable : le cas nominal (un seul article) écrit 100 côté serveur sans le demander à
    * l'utilisateur (§12.6) — aucune sémantique null = 100 à inventer.
    */
-  partApprovisionnementPct Decimal
-  ordre  Int // ordre d'affichage des articles au sein du calibre — sert aussi de départage
+  partApprovisionnementPct  Decimal
+  ordre                     Int // ordre d'affichage des articles au sein du calibre — sert aussi de départage
   // déterministe des ex æquo dans la répartition des sacs (§12.2 arbitrage 1, étape 5)
-  siteId String
-  site   Site @relation(fields: [siteId], references: [id])
+  siteId                    String
+  site                      Site             @relation(fields: [siteId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4668,7 +4701,8 @@ model PostePrevision {
   siteId                String
   site                  Site               @relation(fields: [siteId], references: [id])
 
-  chargesMensuelles ChargeMensuellePrevue[]
+  chargesMensuelles      ChargeMensuellePrevue[]
+  snapshotsBudgetInitial SnapshotBudgetInitial[]
 
   @@unique([scenarioId, libelle])
   @@index([siteId])
@@ -4751,16 +4785,69 @@ model MappingRapprochement {
 }
 
 model ClotureMois {
-  id            String            @id @default(cuid())
-  scenarioId    String
-  scenario      ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  moisAbsolu    Int // même référentiel que ChargeMensuellePrevue.moisAbsolu
-  clotureeParId String
-  clotureePar   User              @relation(fields: [clotureeParId], references: [id])
-  dateCloture   DateTime          @default(now())
-  siteId        String
-  site          Site              @relation(fields: [siteId], references: [id])
+  id             String            @id @default(cuid())
+  scenarioId     String
+  scenario       ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  moisAbsolu     Int // même référentiel que ChargeMensuellePrevue.moisAbsolu
+  clotureeParId  String
+  clotureePar    User              @relation(fields: [clotureeParId], references: [id])
+  dateCloture    DateTime          @default(now())
+  siteId         String
+  site           Site              @relation(fields: [siteId], references: [id])
+  // ADR-053 §15.3 (amendement Sprint PR3, story PR3.3) — fige la version de
+  // MappingRapprochement en vigueur au moment de la cloture (max(version)
+  // actif au moment T, PAS forcement la version la plus recente en base au
+  // moment de la lecture). NOT NULL, sans default : 0 ligne ClotureMois en
+  // base au moment de cet ajout (verifie, site de reference EXCEL-V12 inclus)
+  // donc aucune donnee existante a retro-remplir — chaque creation future de
+  // ClotureMois DOIT lire et fournir explicitement cette valeur dans la meme
+  // transaction que l'ecriture (R4), jamais un calcul silencieux a la
+  // lecture. Le rapprochement d'un mois clos relit TOUJOURS
+  // MappingRapprochement filtre sur `version = ClotureMois.versionMapping`,
+  // jamais le mapping `actif` courant.
+  versionMapping Int
 
   @@unique([scenarioId, moisAbsolu])
   @@index([siteId])
+}
+
+/// ADR-053 §15.2 (amendement Sprint PR3, story PR3.3) — gel materialise du
+/// "BUDGET INITIAL" au moment de l'activation d'un ScenarioPrevision.
+/// Immuable apres creation (aucune route ne doit exposer d'UPDATE/DELETE en
+/// dehors de la suppression en cascade du scenario). Granularite : par mois
+/// (moisAbsolu, meme referentiel que ChargeMensuellePrevue) x poste — une
+/// ligne "poste=null" porte les grandeurs globales du mois qui ne
+/// correspondent a aucun PostePrevision precis (aliment, alevins, apports,
+/// revenu de vente, solde de tresorerie projete), voir `categorie` ci-dessous.
+/// Un scenario ne s'active qu'une seule fois dans son cycle de vie (ADR-053
+/// section 2, confirme §15.2) : la contrainte @@unique ci-dessous, combinee
+/// a une creation transactionnelle avec le passage ACTIF (R4), empeche
+/// structurellement un second snapshot d'ecraser le premier.
+model SnapshotBudgetInitial {
+  id          String            @id @default(cuid())
+  scenarioId  String
+  scenario    ScenarioPrevision @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  moisAbsolu  Int // même référentiel que ChargeMensuellePrevue.moisAbsolu
+  // Nullable (R7) : une ligne "trésorerie"/"aliment"/"apport" agrégée au
+  // niveau du mois n'a pas de PostePrevision précis à porter — seules les
+  // lignes issues de ChargeMensuellePrevue portent un posteId non nul.
+  // onDelete SetNull (pas Restrict/Cascade) : la suppression d'un
+  // PostePrevision après activation ne doit jamais faire disparaître ni
+  // corrompre le budget déjà figé — seul le lien vivant vers le poste se
+  // perd, la valeur et le libellé (`categorie`) restent lisibles.
+  posteId     String?
+  poste       PostePrevision?   @relation(fields: [posteId], references: [id], onDelete: SetNull)
+  // Libellé figé au moment du snapshot (ex. "ALIMENT", "ALEVINS",
+  // "TRANSPORT", "APPORT_CAPITAL", "REVENU_VENTE", "TRESORERIE_SOLDE", ou
+  // le PostePrevision.libelle copié pour une ligne de charge) — JAMAIS
+  // recalculé depuis une relation vivante, pour rester lisible même si le
+  // PostePrevision source est ensuite supprimé (SetNull ci-dessus).
+  categorie   String
+  montantFCFA Decimal // valeur figée à l'activation, jamais recalculée
+  siteId      String
+  site        Site              @relation(fields: [siteId], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@unique([scenarioId, moisAbsolu, posteId, categorie])
+  @@index([siteId, scenarioId])
 }

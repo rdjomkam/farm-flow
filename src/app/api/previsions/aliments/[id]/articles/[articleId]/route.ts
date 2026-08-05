@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { updateAlimentArticlePrevisionSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PATCH /api/previsions/aliments/[id]/articles/[articleId] — modifie un
@@ -35,8 +35,7 @@ export async function PATCH(
     return handleApiError(
       "PATCH /api/previsions/aliments/[id]/articles/[articleId]",
       error,
-      "Erreur serveur lors de la mise a jour de l'article previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de l'article previsionnel."
     );
   }
 }

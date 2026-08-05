@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { rattacherVaguePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/vagues-prevues/[id]/rattacher — rattache une vague
@@ -71,8 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/vagues-prevues/[id]/rattacher",
       error,
-      "Erreur serveur lors du rattachement de la vague.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors du rattachement de la vague."
     );
   }
 }

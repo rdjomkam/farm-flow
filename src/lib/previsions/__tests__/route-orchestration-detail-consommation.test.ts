@@ -118,6 +118,7 @@ function buildScenarioMinimal(
       transportAliments: { capacite: new Decimal(60), coutUnitaireFCFA: new Decimal(15000) },
       transportPoissons: { capacite: new Decimal(1500), coutUnitaireFCFA: new Decimal(25000) },
       transportAlevins: { capacite: new Decimal(20000), coutUnitaireFCFA: new Decimal(30000) },
+      tresorerieInitialeFCFA: new Decimal(0),
     },
     // Aucun palier : ce fichier n'asserte QUE des nombres de sacs CONSOMMES
     // (`detailParVagueSacs`, un ROUND d'entiers), jamais un montant — la

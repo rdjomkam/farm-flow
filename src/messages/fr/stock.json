@@ -7,7 +7,7 @@
   "categories": {
     "ALIMENT": "Aliment",
     "INTRANT": "Intrant",
-    "EQUIPEMENT": "Equipement"
+    "EQUIPEMENT": "Équipement"
   },
   "unites": {
     "GRAMME": "g",
@@ -74,7 +74,8 @@
       "G2": "G2 — Granulé 3mm",
       "G3": "G3 — Granulé 4mm",
       "G4": "G4 — Granulé 6mm",
-      "G5": "G5 — Granulé 8mm"
+      "G5": "G5 — Granulé 8mm",
+      "INCONNU": "Granulométrie inconnue"
     },
     "formesAliment": {
       "FLOTTANT": "Flottant",

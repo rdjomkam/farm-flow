@@ -10,6 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { Permission } from "@/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 const mockRequirePermission = vi.fn();
 vi.mock("@/lib/permissions", () => ({
@@ -32,7 +33,8 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("@/lib/errors", () => ({
-  ValidationError: class ValidationError extends Error {},
+  ValidationError: class ValidationError extends Error { constructor(message: string, public status: number = 400) { super(message); } },
+  BusinessRuleError: class BusinessRuleError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } },
 }));
 
 const mockReporterChargeMensuelle = vi.fn();
@@ -189,7 +191,7 @@ describe("POST /api/previsions/postes/[id]/charges/reporter", () => {
   it("propage en erreur (mappee 400) la garde assertEntierColonneInt levee cote query", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockReporterChargeMensuelle.mockRejectedValue(
-      new Error("moisDebutAbsolu doit etre un entier (colonne Prisma Int) — valeur recue : 1.5.")
+      new BusinessRuleError("moisDebutAbsolu doit etre un entier (colonne Prisma Int) — valeur recue : 1.5.", 400)
     );
 
     const res = await POST(

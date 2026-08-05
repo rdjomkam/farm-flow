@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { replacePaliersRemiseSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PUT /api/previsions/scenarios/[id]/paliers-remise — remplace en bloc les
@@ -13,7 +13,7 @@ import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
  *
  * Validation bloquante §8(b) (seuils strictement croissants) : levee par
  * `replacePaliersRemise` (moteur, dans la meme transaction que l'ecriture,
- * R4) — mappee ici a 422 via PREVISIONS_STATUS_MAP, jamais un 500.
+ * R4) — levee en `BusinessRuleError(msg, 422)`, jamais un 500 (ERR-165).
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,8 +30,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/scenarios/[id]/paliers-remise",
       error,
-      "Erreur serveur lors de la mise a jour des paliers de remise.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour des paliers de remise."
     );
   }
 }

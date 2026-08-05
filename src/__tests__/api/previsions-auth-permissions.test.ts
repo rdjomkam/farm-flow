@@ -48,7 +48,8 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 vi.mock("@/lib/errors", () => ({
-  ValidationError: class ValidationError extends Error {},
+  ValidationError: class ValidationError extends Error { constructor(message: string, public status: number = 400) { super(message); } },
+  BusinessRuleError: class BusinessRuleError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } },
 }));
 
 // previsions-scenarios
@@ -67,6 +68,16 @@ vi.mock("@/lib/queries/previsions-scenarios", () => ({
   replacePaliersRemise: (...a: unknown[]) => mockReplacePaliersRemise(...a),
   archiverScenario: (...a: unknown[]) => mockArchiverScenario(...a),
   activerScenario: (...a: unknown[]) => mockActiverScenario(...a),
+}));
+
+// previsions-snapshot-budget (Sprint PR3, story PR3.3) — la route
+// `scenarios/[id]/activer` appelle desormais `activerScenarioAvecSnapshot`
+// (ADR-053 §15.2 : gel du budget initial dans la MEME transaction que le
+// passage a ACTIF), plus `activerScenario` (conserve dans previsions-scenarios.ts
+// pour retro-compatibilite eventuelle, mais plus branche sur cette route).
+const mockActiverScenarioAvecSnapshot = vi.fn();
+vi.mock("@/lib/queries/previsions-snapshot-budget", () => ({
+  activerScenarioAvecSnapshot: (...a: unknown[]) => mockActiverScenarioAvecSnapshot(...a),
 }));
 
 // previsions-aliments
@@ -279,7 +290,7 @@ function buildCases(): RouteCase[] {
       permission: Permission.PREVISIONS_GERER,
       successStatus: 200,
       invoke: () => activerPOST(makeRequest("/api/previsions/scenarios/id-1/activer", { method: "POST" }), idParams()),
-      setupSuccess: () => mockActiverScenario.mockResolvedValue({ id: "id-1", statut: "ACTIF" }),
+      setupSuccess: () => mockActiverScenarioAvecSnapshot.mockResolvedValue({ id: "id-1", statut: "ACTIF" }),
     },
     {
       name: "GET /scenarios/[id]/aliments",

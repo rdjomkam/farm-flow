@@ -3,7 +3,6 @@ import { archiverScenario } from "@/lib/queries/previsions-scenarios";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/scenarios/[id]/archiver — transition de statut
@@ -29,8 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/archiver",
       error,
-      "Erreur serveur lors de l'archivage du scenario.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de l'archivage du scenario."
     );
   }
 }

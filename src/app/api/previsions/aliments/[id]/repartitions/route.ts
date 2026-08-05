@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { replaceRepartitionsMoisAlimentSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PUT /api/previsions/aliments/[id]/repartitions — remplace en bloc les
@@ -12,7 +12,7 @@ import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
  *
  * Validation bloquante §8(a) (somme des pourcentages = 100%) : levee par
  * `replaceRepartitionsMoisAliment` (moteur, meme transaction que l'ecriture,
- * R4) — mappee ici a 422 via PREVISIONS_STATUS_MAP, jamais un 500.
+ * R4) — levee en `BusinessRuleError(msg, 422)`, jamais un 500 (ERR-165).
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,8 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/aliments/[id]/repartitions",
       error,
-      "Erreur serveur lors de la mise a jour des repartitions mensuelles.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour des repartitions mensuelles."
     );
   }
 }

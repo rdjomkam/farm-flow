@@ -57,6 +57,8 @@ import type {
   VagueCandidateDTO,
 } from "@/components/previsions/api-types";
 import type { ProjectionScenarioDTO } from "@/components/previsions/projection-types";
+import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
+import { RapprochementTab } from "@/components/previsions/rapprochement-tab";
 import { ParametresTab } from "@/components/previsions/parametres-tab";
 import { AlimentsTab } from "@/components/previsions/aliments-tab";
 import { PlanVaguesTab } from "@/components/previsions/plan-vagues-tab";
@@ -87,6 +89,8 @@ interface ScenarioDetailClientProps {
    * est trompeur quant a la cause reelle).
    */
   erreurProjection: string | null;
+  /** Rapprochement prevu/reel pre-calcule sur tout l'horizon (story PR3.7, ADR-053 section 15). */
+  rapprochement: RapprochementScenarioDTO;
 }
 
 export function ScenarioDetailClient({
@@ -101,6 +105,7 @@ export function ScenarioDetailClient({
   permissions,
   projection,
   erreurProjection,
+  rapprochement,
 }: ScenarioDetailClientProps) {
   const t = useTranslations("previsions");
   const router = useRouter();
@@ -159,6 +164,7 @@ export function ScenarioDetailClient({
         <TabsTrigger value="charges">{t("tabs.charges")}</TabsTrigger>
         <TabsTrigger value="journal">{t("tabs.journal")}</TabsTrigger>
         <TabsTrigger value="apports">{t("tabs.apports")}</TabsTrigger>
+        <TabsTrigger value="rapprochement">{t("tabs.rapprochement")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="tableau-de-bord">
@@ -238,6 +244,15 @@ export function ScenarioDetailClient({
           initialApports={initialApports}
           permissions={permissions}
           onDataChanged={handleDataChanged}
+        />
+      </TabsContent>
+
+      <TabsContent value="rapprochement">
+        <RapprochementTab
+          rapprochement={rapprochement}
+          scenarioId={scenario.id}
+          scenarioNom={scenario.nom}
+          permissions={permissions}
         />
       </TabsContent>
     </Tabs>

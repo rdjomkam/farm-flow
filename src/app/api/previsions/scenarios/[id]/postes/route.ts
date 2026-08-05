@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { createPostePrevisionSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /** GET /api/previsions/scenarios/[id]/postes — liste les PostePrevision d'un scenario. PREVISIONS_VOIR. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/postes",
       error,
-      "Erreur serveur lors de la recuperation des postes previsionnels.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation des postes previsionnels."
     );
   }
 }
@@ -45,8 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/postes",
       error,
-      "Erreur serveur lors de la creation du poste previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la creation du poste previsionnel."
     );
   }
 }

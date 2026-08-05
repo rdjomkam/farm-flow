@@ -3,7 +3,6 @@ import { annulerVaguePrevue } from "@/lib/queries/previsions-vagues";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/vagues-prevues/[id]/annuler — statut -> ANNULEE.
@@ -26,8 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/vagues-prevues/[id]/annuler",
       error,
-      "Erreur serveur lors de l'annulation de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de l'annulation de la vague prevue."
     );
   }
 }

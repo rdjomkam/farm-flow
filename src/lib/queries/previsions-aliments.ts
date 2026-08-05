@@ -23,10 +23,11 @@ import { TailleGranule } from "@/types";
 import {
   validerSommeRepartitionMoisAliment,
   validerSommeApprovisionnementArticles,
+  validerCouvertureMoisRepartition,
 } from "@/lib/previsions/validation";
 import { Decimal } from "@/lib/previsions/decimal-config";
 import type { RepartitionMoisInput } from "@/lib/previsions/types";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, BusinessRuleError } from "@/lib/errors";
 
 /**
  * Garde applicative — colonnes Prisma `Int` de ce module (`ordre`,
@@ -37,12 +38,13 @@ import { ValidationError } from "@/lib/errors";
  * `previsions-int-fractional-integration.test.ts`) — cette garde est la
  * seule protection reelle contre une corruption silencieuse.
  *
- * @throws {Error} si `valeur` n'est pas un entier.
+ * @throws {BusinessRuleError} (status 400) si `valeur` n'est pas un entier — ERR-165
  */
 function assertEntierColonneInt(valeur: number, nomChamp: string): void {
   if (!Number.isInteger(valeur)) {
-    throw new Error(
-      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`
+    throw new BusinessRuleError(
+      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`,
+      400
     );
   }
 }
@@ -157,18 +159,27 @@ export async function createAlimentPrevisionAvecArticle(
 
     const scenario = await tx.scenarioPrevision.findFirst({
       where: { id: scenarioId, siteId },
-      select: { id: true },
+      select: { id: true, dureeCycleMois: true },
     });
     if (!scenario) {
       throw new Error("Scenario introuvable");
     }
 
-    if (data.repartitions && data.repartitions.length > 0) {
+    // ERR-162 : `repartitions` reste optionnelle a la creation (docstring
+    // CreateAlimentPrevisionDTO — un calibre peut etre cree sans planning
+    // mensuel, rempli ensuite via `replaceRepartitionsMoisAliment`), donc un
+    // champ ABSENT (`undefined`) continue de sauter la validation. Mais des
+    // qu'un tableau est FOURNI (meme vide, meme partiel), il doit etre
+    // complet et valide — jamais seulement "somme = 100%" (ce qui laissait
+    // passer un mois de cycle omis, cf. ERR-162), desormais aussi "couvre
+    // 1..dureeCycleMois" (validerCouvertureMoisRepartition).
+    if (data.repartitions !== undefined) {
       const repartitionsInput: RepartitionMoisInput[] = data.repartitions.map((r) => ({
         moisCycle: r.moisCycle,
         pourcentage: new Decimal(r.pourcentage),
       }));
       validerSommeRepartitionMoisAliment(repartitionsInput);
+      validerCouvertureMoisRepartition(repartitionsInput, scenario.dureeCycleMois);
     }
 
     const calibre = await tx.alimentPrevision.create({
@@ -277,8 +288,9 @@ export async function addAlimentArticlePrevision(
       // ce cas est une malformation du payload client (ex: "repartition" sans
       // aucun element sans articleId, ou avec plusieurs) et doit produire un
       // 4xx, jamais un 500 — handleApiError mappe ValidationError -> 400 sans
-      // dependre d'un pattern de sous-chaine dans PREVISIONS_STATUS_MAP (bug
-      // signale par le @tester, story PR2q.4, cf. ADR-053 §12).
+      // dependre d'un pattern de sous-chaine (bug signale par le @tester,
+      // story PR2q.4, cf. ADR-053 §12 ; meme famille que BusinessRuleError,
+      // ERR-165, ADR-053 §15.4).
       throw new ValidationError(
         `La repartition doit contenir exactement un element sans articleId (le nouvel article) — obtenu : ${sansArticleId.length}.`
       );
@@ -377,10 +389,21 @@ export async function replaceRepartitionsMoisAliment(
 
     const aliment = await tx.alimentPrevision.findFirst({
       where: { id: alimentPrevisionId, siteId },
-      select: { id: true },
+      select: { id: true, scenarioId: true },
     });
     if (!aliment) {
       throw new Error("Aliment previsionnel introuvable");
+    }
+    // Requete separee plutot qu'un select imbrique (`scenario: { select: {...} }`)
+    // — meme style que `createAlimentPrevisionAvecArticle` ci-dessus, qui
+    // charge deja le scenario dans un appel distinct pour la meme raison
+    // (garder chaque requete a un seul niveau de relation).
+    const scenario = await tx.scenarioPrevision.findFirst({
+      where: { id: aliment.scenarioId },
+      select: { dureeCycleMois: true },
+    });
+    if (!scenario) {
+      throw new Error("Scenario introuvable");
     }
 
     const repartitionsInput: RepartitionMoisInput[] = repartitions.map((r) => ({
@@ -388,6 +411,12 @@ export async function replaceRepartitionsMoisAliment(
       pourcentage: new Decimal(r.pourcentage),
     }));
     validerSommeRepartitionMoisAliment(repartitionsInput);
+    // ERR-162 : remplacer les repartitions est une action explicite et
+    // complete (contrairement a la creation, `repartitions` n'est pas
+    // optionnelle ici, cf. signature) — toujours verifiee, y compris pour un
+    // tableau vide (deja rejete par la validation de somme ci-dessus, mais la
+    // couverture donne un message qui nomme les mois manquants).
+    validerCouvertureMoisRepartition(repartitionsInput, scenario.dureeCycleMois);
 
     await tx.repartitionMoisAliment.deleteMany({ where: { alimentPrevisionId } });
 

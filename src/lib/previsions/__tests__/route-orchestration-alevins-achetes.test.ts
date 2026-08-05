@@ -98,6 +98,7 @@ function buildScenario(vaguesPrevues: VaguePrevuePourCalcul[]): ScenarioPourCalc
         capacite: new Decimal(CAPACITE_TRANSPORT_ALEVINS),
         coutUnitaireFCFA: new Decimal(COUT_UNITAIRE_TRANSPORT_ALEVINS_FCFA),
       },
+      tresorerieInitialeFCFA: new Decimal(0),
     },
     paliersRemise: [],
     aliments: [], // aucun aliment : coutAlimentFCFA neutre, hors sujet de ce fichier

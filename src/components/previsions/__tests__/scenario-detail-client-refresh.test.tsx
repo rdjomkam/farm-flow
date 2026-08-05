@@ -29,6 +29,7 @@ import { ScenarioDetailClient } from "@/components/previsions/scenario-detail-cl
 import { Permission, StatutVaguePrevue, StatutScenarioPrevision } from "@/types";
 import type { VaguePrevueListItemDTO, ScenarioPrevisionDetailDTO } from "@/components/previsions/api-types";
 import type { ProjectionScenarioDTO } from "@/components/previsions/projection-types";
+import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
 import frPrevisions from "@/messages/fr/previsions.json";
 import frCommon from "@/messages/fr/common.json";
 import frStock from "@/messages/fr/stock.json";
@@ -105,6 +106,20 @@ const PROJECTION_VIDE: ProjectionScenarioDTO = {
   },
 };
 
+const RAPPROCHEMENT_VIDE: RapprochementScenarioDTO = {
+  horizonMois: 0,
+  dateDebutPlan: "2026-09-01T00:00:00.000Z",
+  moisDisponibles: [],
+  lignesParMois: {},
+  totalMoisParMois: {},
+  nonRapprocheParMois: {},
+  cumuleGlobalParMois: {},
+  cumuleParPosteParMois: {},
+  topEcartsParMois: {},
+  vagues: [],
+  calculeLe: "2026-09-01T00:00:00.000Z",
+};
+
 function makeVague(overrides: Partial<VaguePrevueListItemDTO> = {}): VaguePrevueListItemDTO {
   return {
     id: "vp1",
@@ -148,6 +163,7 @@ const baseProps = {
   vaguesCandidates: [],
   permissions: [Permission.PREVISIONS_GERER, Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER],
   projection: PROJECTION_VIDE,
+  rapprochement: RAPPROCHEMENT_VIDE,
   erreurProjection: null,
 };
 

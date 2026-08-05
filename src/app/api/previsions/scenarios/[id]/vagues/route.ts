@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutVaguePrevue } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { createVaguePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 const VALID_STATUTS = new Set(Object.values(StatutVaguePrevue));
 
@@ -34,8 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/vagues",
       error,
-      "Erreur serveur lors de la recuperation des vagues prevues.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation des vagues prevues."
     );
   }
 }
@@ -60,8 +59,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/vagues",
       error,
-      "Erreur serveur lors de la creation de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la creation de la vague prevue."
     );
   }
 }

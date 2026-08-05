@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { upsertChargeMensuelleSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PUT /api/previsions/postes/[id]/charges — cree ou met a jour le montant
@@ -29,8 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/postes/[id]/charges",
       error,
-      "Erreur serveur lors de la mise a jour de la charge mensuelle.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de la charge mensuelle."
     );
   }
 }

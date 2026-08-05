@@ -3,7 +3,6 @@ import { getScenarioById } from "@/lib/queries/previsions-scenarios";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /** GET /api/previsions/scenarios/[id] — detail d'un scenario (parametres + paliers). PREVISIONS_VOIR. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -21,8 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]",
       error,
-      "Erreur serveur lors de la recuperation du scenario.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation du scenario."
     );
   }
 }

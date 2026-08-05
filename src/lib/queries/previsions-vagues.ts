@@ -24,6 +24,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { StatutVaguePrevue } from "@/types";
 import { genererPlanEmpoissonnement } from "@/lib/previsions";
 import { prismaDecimalToEngine } from "@/lib/previsions/decimal-io";
+import { BusinessRuleError } from "@/lib/errors";
 
 /**
  * Garde applicative — colonnes Prisma `Int` de ce module.
@@ -47,13 +48,13 @@ import { prismaDecimalToEngine } from "@/lib/previsions/decimal-io";
  * en tete de fonction sinon (`updateSacsSaisis`) : jamais un check-then-write
  * qui laisserait une fenetre entre la validation et l'ecriture.
  *
- * @throws {Error} si `valeur` n'est pas un entier — message exploitable tel
- *   quel par la couche API (PR2.2) pour une reponse 400.
+ * @throws {BusinessRuleError} (status 400) si `valeur` n'est pas un entier — ERR-165
  */
 function assertEntierColonneInt(valeur: number, nomChamp: string): void {
   if (!Number.isInteger(valeur)) {
-    throw new Error(
-      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`
+    throw new BusinessRuleError(
+      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`,
+      400
     );
   }
 }
@@ -544,8 +545,9 @@ async function chargerPourGenerationPlan(
     throw new Error("Scenario introuvable");
   }
   if (!scenario.parametres) {
-    throw new Error(
-      "ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan."
+    throw new BusinessRuleError(
+      "ParametresPrevision absent pour ce scenario. Renseignez l'onglet Parametres avant de generer un plan.",
+      422
     );
   }
 

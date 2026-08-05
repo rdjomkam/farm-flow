@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { updateSacsSaisisSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * PATCH /api/previsions/aliments-par-vague-prevue/[id]/sacs-saisis — met a
@@ -28,8 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return handleApiError(
       "PATCH /api/previsions/aliments-par-vague-prevue/[id]/sacs-saisis",
       error,
-      "Erreur serveur lors de la mise a jour de la surcharge sacsSaisis.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de la surcharge sacsSaisis."
     );
   }
 }

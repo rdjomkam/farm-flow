@@ -16,6 +16,7 @@ import { StatutScenarioPrevision, CategorieProduit, TailleGranule } from "@/type
 import { Decimal } from "@/lib/previsions/decimal-config";
 import { validerPaliersRemiseCroissants } from "@/lib/previsions/validation";
 import type { PalierRemiseInput } from "@/lib/previsions/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 /**
  * Garde applicative — colonnes Prisma `Int` de ce module (`dureeCycleMois`,
@@ -27,12 +28,13 @@ import type { PalierRemiseInput } from "@/lib/previsions/types";
  * `previsions-int-fractional-integration.test.ts`) — cette garde est la
  * seule protection reelle contre une corruption silencieuse.
  *
- * @throws {Error} si `valeur` n'est pas un entier.
+ * @throws {BusinessRuleError} (status 400) si `valeur` n'est pas un entier — ERR-165
  */
 function assertEntierColonneInt(valeur: number, nomChamp: string): void {
   if (!Number.isInteger(valeur)) {
-    throw new Error(
-      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`
+    throw new BusinessRuleError(
+      `${nomChamp} doit etre un entier (colonne Prisma Int) — valeur recue : ${valeur}.`,
+      400
     );
   }
 }
@@ -68,6 +70,8 @@ export interface CreateScenarioPrevisionDTO {
     tauxEpargnePct?: number;
     /** ADR-053 §14 / ERR-170 — defaut applique a la creation des VaguePrevue */
     alevinsAchetesParDefaut?: boolean;
+    /** §4.1 des exigences — LIBRE, peut etre negative. Optionnel, retombe sur @default(0). */
+    tresorerieInitialeFCFA?: number;
   };
 }
 
@@ -88,6 +92,7 @@ export interface UpdateParametresPrevisionDTO {
   coutTransportAlevinsFCFA?: number;
   tauxEpargnePct?: number;
   alevinsAchetesParDefaut?: boolean;
+  tresorerieInitialeFCFA?: number;
 }
 
 export interface PalierRemiseInputDTO {
@@ -223,6 +228,9 @@ export async function createScenario(siteId: string, data: CreateScenarioPrevisi
         ...(data.parametres.alevinsAchetesParDefaut !== undefined && {
           alevinsAchetesParDefaut: data.parametres.alevinsAchetesParDefaut,
         }),
+        ...(data.parametres.tresorerieInitialeFCFA !== undefined && {
+          tresorerieInitialeFCFA: data.parametres.tresorerieInitialeFCFA,
+        }),
       },
     });
 
@@ -291,10 +299,11 @@ async function copierAlimentsPrevisionDepuisProduits(
 
   const sansTailleGranule = produits.filter((p) => !p.tailleGranule);
   if (sansTailleGranule.length > 0) {
-    throw new Error(
+    throw new BusinessRuleError(
       `Impossible de copier les aliments previsionnels : produit(s) sans tailleGranule : ` +
         sansTailleGranule.map((p) => `${p.nom} (${p.id})`).join(", ") +
-        `. Renseignez la granulometrie de ce(s) produit(s) avant de creer un scenario.`
+        `. Renseignez la granulometrie de ce(s) produit(s) avant de creer un scenario.`,
+      422
     );
   }
 
@@ -441,6 +450,9 @@ export async function updateParametresPrevision(
       ...(data.alevinsAchetesParDefaut !== undefined && {
         alevinsAchetesParDefaut: data.alevinsAchetesParDefaut,
       }),
+      ...(data.tresorerieInitialeFCFA !== undefined && {
+        tresorerieInitialeFCFA: data.tresorerieInitialeFCFA,
+      }),
     },
   });
 }
@@ -491,19 +503,21 @@ export async function replacePaliersRemise(
      * toute facon, mais on ne demarre pas une suppression qu'on sait vouee a
      * echouer.
      *
-     * AVERTISSEMENT — le message ci-dessous est COUPLE par sous-chaine :
-     * `PREVISIONS_STATUS_MAP` (`src/app/api/previsions/_shared.ts`) matche
-     * "meme ordre d'evaluation" pour traduire cette Error nue en 400. Le
-     * message est volontairement SANS ACCENTS : l'accentuer (correction
-     * pourtant legitime dans une UI francaise) casserait ce matching en
-     * silence et ferait retomber ce cas en 500. Toute retouche du libelle
-     * doit etre repercutee dans `_shared.ts`.
+     * ERR-165 (corrige) : le statut 400 de ce refus etait auparavant derive
+     * d'une sous-chaine du message ("meme ordre d'evaluation") dans
+     * `PREVISIONS_STATUS_MAP` (`src/app/api/previsions/_shared.ts`) — toute
+     * accentuation legitime du message aurait casse le matching en silence
+     * et fait retomber ce cas en 500. `BusinessRuleError(msg, 400)` porte
+     * desormais son statut comme DONNEE (ADR-053 §15.4) : le message peut
+     * etre reformule ou accentue librement, `_shared.ts` n'a plus rien a
+     * tenir a jour.
      */
     const ordresVus = new Set<number>();
     for (const p of paliersInput) {
       if (ordresVus.has(p.ordre)) {
-        throw new Error(
-          `Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=${p.ordre} apparait plusieurs fois).`
+        throw new BusinessRuleError(
+          `Deux paliers de remise ne peuvent pas avoir le meme ordre d'evaluation (ordre=${p.ordre} apparait plusieurs fois).`,
+          400
         );
       }
       ordresVus.add(p.ordre);

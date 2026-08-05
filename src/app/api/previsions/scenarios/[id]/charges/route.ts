@@ -3,7 +3,6 @@ import { getChargesMensuellesParScenario } from "@/lib/queries/previsions-charge
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
-import { PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
 
 /**
  * GET /api/previsions/scenarios/[id]/charges — liste les ChargeMensuellePrevue
@@ -36,8 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/charges",
       error,
-      "Erreur serveur lors de la recuperation des charges mensuelles.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation des charges mensuelles."
     );
   }
 }

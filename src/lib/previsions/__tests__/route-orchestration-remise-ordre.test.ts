@@ -129,6 +129,7 @@ function buildScenario(): ScenarioPourCalcul {
       transportAliments: { capacite: new Decimal(60), coutUnitaireFCFA: new Decimal(15000) },
       transportPoissons: { capacite: new Decimal(1500), coutUnitaireFCFA: new Decimal(25000) },
       transportAlevins: { capacite: new Decimal(20000), coutUnitaireFCFA: new Decimal(30000) },
+      tresorerieInitialeFCFA: new Decimal(0),
     },
     // Palier atteint EXACTEMENT par la vague (1 t >= 1 t) -> 7 %. Les paliers
     // sont bien exerces ici : ce fichier mesure un MONTANT remise.

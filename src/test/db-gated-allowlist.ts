@@ -108,4 +108,86 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
       "AlimentArticlePrevision) quand un Produit ALIMENT actif n'a pas de tailleGranule.",
     adr: "ADR-052",
   },
+  {
+    file: "src/lib/queries/__tests__/previsions-rapprochement-mapping-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres (contrainte réelle " +
+      "@@unique([siteId, version, sourceType, sourceCle]) et transaction Prisma réelle " +
+      "updateMany+createMany) le versionnement de MappingRapprochement (ADR-053 §3.9/§15.3, " +
+      "Sprint PR3 story PR3.3) : v1 reste lisible ET INCHANGÉE après création de v2, " +
+      "getMappingActif ne renvoie que la version courante — un mock JS n'exerce ni la " +
+      "contrainte d'unicité ni l'atomicité de la transaction.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-rapprochement-mapping-non-mappees-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres (JOIN MouvementStock/Produit + COALESCE sur " +
+      "tailleGranule via $queryRaw) le correctif de la review du sprint PR3 (Moyenne #2, " +
+      "docs/reviews/review-sprint-PR3.md) : getCategoriesReellesNonMappees couvre désormais " +
+      "SourceRapprochement.MOUVEMENT_STOCK au même titre que DEPENSE_CATEGORIE/" +
+      "PRODUIT_CATEGORIE/VENTE, avec la même sémantique de clé que " +
+      "getSortiesAlimentReellesParGranulometrie (COALESCE(tailleGranule::text,'INCONNU'), " +
+      "filtre type=SORTIE et catégorie=ALIMENT) — un mock JS n'exerce ni le JOIN SQL réel " +
+      "ni le COALESCE, et ne peut prouver par falsification (ERR-172, aucun jeu d'or pour " +
+      "le rapprochement) que la détection discrimine bien MOUVEMENT_STOCK inclus/exclu.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-snapshot-budget-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres (contrainte réelle @@unique([scenarioId, " +
+      "moisAbsolu, posteId, categorie]) et transaction Prisma réelle) le gel transactionnel " +
+      "du SnapshotBudgetInitial à l'activation d'un scénario (ADR-053 §15.2, Sprint PR3 " +
+      "story PR3.3) : le snapshot et le passage à ACTIF sont écrits dans la MÊME " +
+      "transaction, une seconde tentative d'activation est refusée (409) et NE MODIFIE " +
+      "PAS le snapshot déjà figé même si les données sources ont été éditées entre-temps " +
+      "— un mock JS n'exerce ni la contrainte d'unicité ni l'atomicité réelle.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-rapprochement-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres les agrégations SQL brutes du rapprochement " +
+      "prévu/réel (ADR-053 §5/§15, Sprint PR3 story PR3.5) : GROUP BY + EXTRACT(YEAR/MONTH) " +
+      "sur Depense/Vente/MouvementStock, JOIN LigneDepense→Produit pour le bucket " +
+      "GRANULOMETRIE_INCONNUE, et surtout l'immuabilité réelle d'un mois clôturé (lecture " +
+      "de ClotureMois.versionMapping figée en base malgré la création d'une nouvelle " +
+      "version active de MappingRapprochement ensuite, contrainte @@unique réelle sur le " +
+      "versionnement) — un mock JS ne peut exercer ni un vrai GROUP BY/JOIN SQL, ni la " +
+      "contrainte d'unicité versionnée, ni la persistance réelle de la clôture.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-cloture-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres (contrainte réelle @@unique([scenarioId, " +
+      "moisAbsolu]) et transaction Prisma réelle lecture-version-active + create) le " +
+      "figeage de ClotureMois.versionMapping à la clôture d'un mois (ADR-053 §3.10/§15.3, " +
+      "Sprint PR3 story PR3.6) : la version figée à la clôture reste inchangée même après " +
+      "création d'une nouvelle version du mapping, une seconde clôture du même mois est " +
+      "refusée (409), une clôture hors de l'horizon du plan est refusée (422), et " +
+      "l'isolation siteId du mapping actif est vérifiée entre deux sites — un mock JS " +
+      "n'exerce ni la contrainte d'unicité ni l'atomicité de la transaction.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-vagues-couts-reels-integration.test.ts",
+    linePattern:
+      'describe.runIf(requireDatabaseUrl())("PR3.7 — previsions-vagues-couts-reels : agregation reelle par vague", () => {',
+    justification:
+      "Prouve contre un vrai schéma Postgres les deux agrégations SQL brutes ($queryRaw, " +
+      "SUM, GROUP BY, IN (...) via Prisma.join) de getCoutsReelsParVagues (ADR-053 §15, " +
+      "Sprint PR3 story PR3.7, onglet Rapprochement — vue par vague) : plusieurs lignes de " +
+      "Depense/Vente pour la même Vague s'agrègent correctement (SUM réel), une Vague sans " +
+      "aucun mouvement ressort quand même avec des totaux à 0 (jamais absente), et le " +
+      "filtre siteId (R8) isole deux sites — un mock JS ne peut prouver qu'un vrai GROUP " +
+      "BY/SUM Postgres agrège correctement plusieurs lignes réelles pour une même vague.",
+    adr: "ADR-053",
+  },
 ];

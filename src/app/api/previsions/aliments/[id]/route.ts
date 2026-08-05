@@ -8,7 +8,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { updateAlimentPrevisionSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /** GET /api/previsions/aliments/[id] — detail d'un AlimentPrevision avec ses repartitions. PREVISIONS_VOIR. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,8 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/aliments/[id]",
       error,
-      "Erreur serveur lors de la recuperation de l'aliment previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation de l'aliment previsionnel."
     );
   }
 }
@@ -53,8 +52,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return handleApiError(
       "PATCH /api/previsions/aliments/[id]",
       error,
-      "Erreur serveur lors de la mise a jour de l'aliment previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de l'aliment previsionnel."
     );
   }
 }
@@ -79,8 +77,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return handleApiError(
       "DELETE /api/previsions/aliments/[id]",
       error,
-      "Erreur serveur lors de la suppression de l'aliment previsionnel.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la suppression de l'aliment previsionnel."
     );
   }
 }

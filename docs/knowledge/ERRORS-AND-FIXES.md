@@ -819,6 +819,154 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-178 — Un message de repli confond « la donnée n'existe pas » avec « la donnée n'a pas pu être chargée »
+**Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/mapping-form-dialog.tsx`, `src/messages/{fr,en}/previsions.json`
+
+**Symptôme :**
+Le libellé de repli « Cible introuvable dans ce scénario » s'affichait aussi bien quand la cible
+n'existait réellement pas dans le scénario affiché **que** quand le chargement réseau des cibles
+(`GET /api/previsions/scenarios/[id]/postes` / `.../aliments`) avait simplement échoué — deux causes
+distinctes, un seul message, qui pointait l'utilisateur vers un mauvais diagnostic (croire un mapping
+cassé alors que c'est un problème réseau transitoire).
+
+**Cause racine :**
+Un état d'affichage de repli avait été codé pour un seul scénario de cause (absence réelle) sans que
+le chemin d'échec de chargement soit distingué en amont.
+
+**Fix :**
+Deux libellés distincts introduits (`cibleIntrouvable` / `cibleNonChargee`), le composant distingue
+désormais explicitement les deux cas avant de choisir le message affiché.
+
+**Leçon / Règle :**
+Un état de repli d'affichage doit toujours distinguer « la donnée n'existe pas » de « la donnée n'a
+pas pu être chargée » — les confondre dans un seul message générique fait diagnostiquer un faux
+problème à l'utilisateur (et, potentiellement, à l'agent qui investiguera le rapport de bug qui en
+découlera). Vérifier systématiquement, pour tout message de repli, s'il couvre plusieurs branches de
+cause distinctes en amont.
+
+**Références :** `docs/analysis/pre-analysis-sprint-PR3-bis.md`, `docs/tests/rapport-sprint-PR3-bis.md`
+
+---
+
+### ERR-177 — Un `Select` Radix affiche son placeholder quand la valeur portée par l'état n'est pas dans la liste d'options chargée, laissant croire à une absence de sélection
+**Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/components/previsions/mapping-form-dialog.tsx`
+
+**Symptôme :**
+En édition d'un mapping dont la cible (`PostePrevision`/`AlimentPrevision`) appartenait à un **autre**
+scénario que celui affiché, la liste des options du `Select` (peuplée depuis le scénario
+actuellement affiché uniquement) ne contenait pas la valeur courante de `cibleId`. Radix affiche dans
+ce cas son placeholder (« Choisir… ») **alors qu'une valeur réelle est bien portée par l'état React**.
+L'administrateur pouvait donc croire qu'aucune cible n'était sélectionnée, et resoumettre le
+formulaire — écrasant silencieusement la cible existante par `NON_RAPPROCHE` ou par une nouvelle
+sélection involontaire.
+
+**Cause racine :**
+`MappingRapprochement.cibleId` est **site-scopé**, mais référence des entités
+(`PostePrevision`/`AlimentPrevision`) qui sont **scénario-scopées** (ADR-053 §3.9) — un mapping créé
+sous un scénario peut donc légitimement pointer vers une cible d'un scénario différent (par exemple un
+scénario archivé et remplacé). Le formulaire ne peuple ses options que depuis le scénario affiché,
+donc la valeur courante peut être structurellement absente de la liste sans qu'aucune erreur ne soit
+levée — c'est un comportement standard, silencieux, de tout composant `Select` piloté par une liste
+d'options chargée séparément de la valeur.
+
+**Fix (correctif C1 du sprint) :**
+Détection explicite (`cibleActuelleHorsScenario`) + bandeau d'alerte visible quand la cible existante
+n'appartient pas au scénario affiché, plutôt que de laisser le placeholder faire croire à une absence
+de valeur. Testé par falsification : neutraliser la détection (`= false`) fait tomber 1 test dédié.
+
+**Leçon / Règle :**
+Quand la valeur courante d'un `Select` (ou de tout composant piloté par une liste d'options chargée
+séparément de l'état) peut structurellement ne pas figurer dans les options disponibles, rendre cet
+état **explicite** (bandeau d'alerte, option de repli désactivée, libellé dédié) — ne jamais laisser
+le comportement par défaut du composant (affichage du placeholder) faire croire à une absence de
+valeur là où une vraie valeur est portée. Cause structurelle sous-jacente à surveiller pour tout futur
+travail sur `MappingRapprochement` : son scope site vs le scope scénario de ses cibles n'est pas
+corrigé par ce sprint, seulement rendu visible à l'utilisateur.
+
+**Références :** ADR-053 §3.9, `docs/analysis/pre-analysis-sprint-PR3-bis.md` (risque R1), `docs/tests/rapport-sprint-PR3-bis.md`, ERR-178 (même story, cause de repli distincte)
+
+---
+
+### ERR-176 — Un référentiel i18n partagé non accentué se propage à chaque nouvel écran qui l'expose ; un dictionnaire de libellés codé en dur dans un composant reste une dette non traitée à la source
+**Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/messages/fr/depenses.json`, `src/messages/fr/stock.json` (`categories.*`), `src/components/ventes/vente-detail-client.tsx`, `src/components/ventes/depense-vente-dialog.tsx`
+
+**Symptôme :**
+La vérification navigateur du nouvel écran d'administration du mapping a montré les libellés
+« Reparation », « Electricite », « Equipement », « Veterinaire » — sans accent, alors que l'UI est en
+français (CLAUDE.md, « Langue de l'UI : français »). Cause identifiée : ces valeurs étaient déjà
+présentes, non accentuées, dans le référentiel partagé `src/messages/fr/depenses.json` et
+`src/messages/fr/stock.json` (`categories.*`), **antérieures au sprint PR3-bis**. Le nouvel écran ne
+faisait que les exposer une fois de plus, sur un support qui n'existait pas avant.
+
+**Fix (correctif C4 du sprint) :**
+Corrigé **à la source du référentiel partagé** — valeurs accentuées uniquement, aucune clé renommée,
+mises à jour des assertions de test qui portaient sur les anciennes valeurs non accentuées. Vérifié
+par grep exhaustif post-fix : 0 occurrence des valeurs non accentuées dans les assertions de test.
+
+**Dette signalée et explicitement non corrigée dans ce sprint :**
+`src/components/ventes/vente-detail-client.tsx` et `src/components/ventes/depense-vente-dialog.tsx`
+portent chacun une table `CATEGORIE_LABELS`/`CATEGORIE_DEPENSE_LABELS` **codée en dur** (« Equipements »,
+« Electricite », « Veterinaire », « Reparation », sans accent), indépendante du référentiel i18n
+`depenses.categories.*` — bien que ces deux fichiers utilisent déjà `next-intl` par ailleurs, pour
+d'autres namespaces. Ce n'est pas une régression causée par ce sprint (ces fichiers n'ont jamais
+consommé `depenses.categories`), mais un doublon de référentiel préexistant qui contredit le principe
+« un seul référentiel » — le module Ventes affiche désormais les catégories sans accent pendant que le
+module Prévisions/Dépenses les affiche accentuées, pour la même donnée métier.
+
+**Leçon / Règle :**
+Corriger un libellé fautif **à la source du référentiel partagé**, jamais en créant un référentiel
+parallèle accentué propre au nouvel écran qui l'a révélé. Un dictionnaire de libellés codé en dur dans
+un composant (`CATEGORIE_LABELS` local) est une **dette à remonter explicitement au PM**, jamais un
+patron à imiter dans un nouveau composant — même s'il semble plus rapide à écrire qu'un appel
+`useTranslations`.
+
+**Références :** `docs/tests/rapport-sprint-PR3-bis.md` §11.1, ERR-164 (autre limite structurelle des tests i18n, même famille de risque)
+
+---
+
+### ERR-175 — Une API de remplacement en bloc lue comme une API d'ajout unitaire : un POST naïf de la seule ligne ajoutée désactive silencieusement tout le reste
+**Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Critique
+**Fichier(s) :** `src/app/api/previsions/mapping-rapprochement/route.ts`, `src/lib/queries/previsions-rapprochement-mapping.ts` (`creerVersionMapping`), `src/components/previsions/mapping-form-dialog.tsx`
+
+**Symptôme :**
+`POST /api/previsions/mapping-rapprochement` **remplace tout le mapping actif du site** et crée une
+nouvelle version : `creerVersionMapping` désactive (`actif=false`) **toutes** les lignes actives du
+site avant de créer la nouvelle version. Il n'existe **aucun** endpoint d'ajout incrémental d'une
+seule ligne. Un POST naïf de la seule ligne fraîchement ajoutée (le geste le plus intuitif pour un
+formulaire « ajouter un mapping ») aurait **désactivé silencieusement toutes les autres lignes actives
+du site** — perte de données invisible, sans erreur HTTP, sans avertissement.
+
+**Cause racine :**
+La sémantique « remplacement en bloc, nouvelle version » n'est pas nommée par la forme de l'API
+(`POST` sur une collection ressemble par défaut à une création additive) — rien dans la signature ne
+signale au client qu'un tableau partiel sera interprété comme l'état complet voulu.
+
+**Fix :**
+Le dialog de formulaire (`mapping-form-dialog.tsx`) **relit le mapping actif complet juste avant de
+POSTer** (jamais l'état reçu en props, potentiellement périmé), fusionne par clé
+`sourceType`+`sourceCle` (ajout ou remplacement de la ligne concernée), et **n'envoie rien du tout si
+la relecture échoue** (garde explicite, testé par falsification — retirer la garde fait tomber le test
+dédié « aucun POST n'est envoyé si le GET du mapping actif échoue »).
+
+**Leçon / Règle :**
+Avant de câbler une UI sur une route d'écriture, déterminer explicitement si sa sémantique est
+« remplacement en bloc » ou « ajout unitaire » — ne jamais le déduire de la forme HTTP (`POST`) seule.
+Un POST en bloc exige (1) une **relecture fraîche** de l'état actuel juste avant l'écriture, jamais un
+état potentiellement périmé reçu en props, et (2) un **garde qui annule la soumission entière** si
+cette relecture échoue, plutôt que de poster un sous-ensemble partiel qui serait interprété comme
+l'état complet voulu.
+
+**Références :** `docs/analysis/pre-analysis-sprint-PR3-bis.md` (section 1, « POST existe déjà — mais c'est un remplacement en bloc »), `docs/tests/rapport-sprint-PR3-bis.md` (falsification (a) et (f)), R4 (opérations atomiques)
+
+---
+
 ### ERR-164 — Deux tests de parité structurelle fr/en ne protègent contre **aucun libellé faux** : « Seuil (sacs) » / "Threshold (bags)" passe la parité sans broncher
 **Sprint :** PR2-septies (constat du @tester, §B6 du rapport de sprint) | **Date :** 2026-08-04
 **Sévérité :** Moyenne (garantie apparente qui ne discrimine pas)
@@ -862,8 +1010,20 @@ ERR-127 et ERR-148 : une garantie apparente qui ne discrimine pas.
 
 ### ERR-165 — Un mapping HTTP fondé sur `message.includes(...)` transforme un texte d'UI en contrat d'API : signalé par **trois reviews consécutives** sans jamais avoir été fiché
 **Sprint :** PR2-septies (fiché enfin ; signalé en PR2-quinquies, PR2-sexies et PR2-septies) | **Date :** 2026-08-04
-**Sévérité :** Moyenne — **ouvert** (correction de fond hors périmètre, @architect)
+**Sévérité :** Moyenne — **[RÉSOLU — soldé en PR3.2, 2026-08-05, sur le périmètre du module Prévisions]**
 **Fichier(s) :** `src/app/api/previsions/_shared.ts` (`PREVISIONS_STATUS_MAP`), `src/lib/queries/previsions-scenarios.ts` (`replacePaliersRemise`, message de garde métier)
+
+**Mise à jour PR3.2 (2026-08-05) :**
+Soldé pour `src/app/api/previsions/**`. La classe `BusinessRuleError extends Error { status: number;
+code?: string }` proposée dans la pré-analyse a été introduite dans `src/lib/errors.ts` et interceptée
+directement par `handleApiError` (`api-utils.ts`) — plus aucun `statusMap`/`match:` de sous-chaîne dans
+le périmètre des routes de prévisions. Chaque validation métier du sprint (couverture des mois, mapping
+actif, mois clôturé, permissions) lève désormais une `BusinessRuleError` typée à la source, plutôt que
+d'ajouter une entrée `match` de plus à `PREVISIONS_STATUS_MAP`. Preuve par falsification : commenter
+l'interception `if (error instanceof BusinessRuleError)` dans `api-utils.ts` fait tomber **23 tests sur
+6 fichiers** (voir `docs/tests/rapport-falsification-sprint-PR3.md`, story PR3.2). Le résidu de ce
+pattern **ailleurs dans le dépôt** (ventes, dépenses, calibrages) est hors du module Prévisions et hors
+du périmètre de ce fix — reste une dette dans ces autres modules, non fichée à nouveau ici.
 
 **Symptôme :**
 Le statut HTTP d'une erreur métier est décidé en cherchant une **sous-chaîne** dans le message
@@ -1526,6 +1686,20 @@ une fois n'est pas un filet de sécurité pérenne tant que la condition de déc
 elle-même garantie à chaque run.
 
 **Références :** [rapport-story-BD.3](../tests/rapport-story-BD.3.md), [review-sprint-BD](../reviews/review-sprint-BD.md)
+
+**Récidive locale confirmée (Sprint PR3-bis, 2026-08-05) — [attendu, pas une régression du fix ADR-052] :**
+Le @tester a mesuré la différence exacte : `npx vitest run` **sans** `DATABASE_URL` exportée dans le
+shell local → 295 fichiers / 9366 tests, 0 échec visible, **11 fichiers / 39 tests skippés
+silencieusement** — dont précisément le test DB-gated qui prouve l'immuabilité du mapping face à la
+clôture d'un mois (ADR-053 §15.3), la preuve centrale du sprint. Après export de `DATABASE_URL` depuis
+`.env` (`set -a; source .env; set +a`) → 306 fichiers / 9405 tests, 0 skip, 0 échec. Le garde CI
+bruyant introduit par ADR-052 (`ci-db-guard.setup.ts`, `requireDatabaseUrl()`) protège bien le
+pipeline CI, mais **en local, hors CI, le skip silencieux reste le comportement par défaut** — ce
+n'est pas un défaut du fix ADR-052, c'est la limite structurelle documentée ici depuis l'origine.
+Règle confirmée, à répéter à chaque sprint touchant un test DB-gated : toute vérification de fin de
+sprint exporte `DATABASE_URL` **avant** `npx vitest run`, et rapporte le nombre de fichiers/tests **et
+le nombre de skips** — un skip silencieux est un échec masqué, y compris pour un agent qui exécute la
+suite manuellement en local avec Docker déjà démarré.
 
 **Mise à jour (Sprint CI, 2026-07-27) — [RÉSOLU pour les 3 fichiers cités] :** le Sprint CI a
 traité structurellement ce point (ADR-052) : `describe.runIf(!!DATABASE_URL)` a été remplacé par
@@ -3170,6 +3344,127 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-174 — Une route API livrée, testée et corrigée, mais jamais consommée par aucun écran : une story « à moitié terminée » verte de bout en bout
+**Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/previsions/mapping-rapprochement/route.ts`, `src/app/api/previsions/mapping-rapprochement/non-mappees/route.ts`, `src/components/previsions/rapprochement-non-rapproche.tsx`
+
+**Symptôme :**
+`GET /api/previsions/mapping-rapprochement/non-mappees` et `POST /api/previsions/mapping-rapprochement`
+existaient depuis le sprint PR3, entièrement testés côté route (`route.test.ts`), et même étendus par
+un correctif ultérieur pour couvrir les granulométries (`MOUVEMENT_STOCK`). Grep exhaustif sur
+`src/components/previsions/` : **aucun composant n'appelait ces routes**. L'exploitant voyait un
+montant « Non rapproché » dans `rapprochement-non-rapproche.tsx` (alimenté par un calcul serveur,
+`nonRapprocheParMois`) sans aucun moyen d'agir dessus — le §6.2 des exigences fonctionnelles n'était
+satisfait qu'à moitié : la lecture existait, l'administration non.
+
+**Cause racine :**
+Une route API verte en tests (statut HTTP correct, payload correct, permission correcte) mesure la
+correction de la route elle-même, pas son intégration dans un parcours utilisateur. Rien dans le
+processus de clôture de la story PR3 n'exigeait de vérifier qu'un chemin UI réel consommait la route
+livrée — la story a été déclarée terminée sur la seule foi des tests de route.
+
+**Fix :**
+PR3-bis a ajouté un sous-onglet `rapprochement-mapping-tab.tsx` + `mapping-form-dialog.tsx` qui
+consomment effectivement les deux routes : liste des catégories non mappées, formulaire de
+création/modification de mapping.
+
+**Leçon / Règle :**
+À la clôture de toute story qui livre une route API, vérifier explicitement qu'**au moins un chemin
+utilisateur réel** la consomme — grep du chemin de route (ex. `mapping-rapprochement`) dans
+`src/components/` et `src/app/` (hors le fichier de test de la route elle-même). Si le grep ne
+remonte que la route et son propre test, la story n'est pas terminée, quel que soit l'état de la
+suite de tests.
+
+**Références :** `docs/analysis/pre-analysis-sprint-PR3-bis.md` (constat de départ, confirmé), `docs/tests/rapport-sprint-PR3-bis.md`
+
+---
+
+### ERR-173 — Le piège du `0` qui ment : trois états distincts d'une vue de rapprochement ne doivent jamais se confondre en un seul « 0 » affiché
+**Sprint :** PR3 (Rapprochement prévu/réel) | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/rapprochement.ts`, `src/lib/queries/previsions-rapprochement*.ts`, `src/components/previsions/rapprochement-*.tsx`
+
+**Symptôme (risque, mitigé par construction dans PR3) :**
+Une vue de rapprochement prévu/réel manipule trois états qu'un rendu naïf réduit facilement à un seul
+« 0 » ou un seul « — », effaçant une distinction métier essentielle :
+1. **`prevu = 0` et `reel > 0`** — une dépense (ou entrée) réelle existe mais n'était budgétée nulle
+   part : c'est un signal à part entière (dépense non prévue), pas une absence de donnée. L'écart
+   relatif (`ecartPct`) doit rester `null` — jamais `Infinity` ni `NaN` faute de division par zéro
+   gardée.
+2. **Catégorie réelle non mappée** — une donnée réelle existe (`Depense`, `MouvementStock`, `Vente`)
+   mais aucune entrée `MappingRapprochement` active ne la rattache à un poste prévu : elle doit
+   apparaître dans le bac `NON_RAPPROCHE`, être **comptée dans le total réel**, jamais filtrée en
+   silence avant d'atteindre le moteur ou l'écran d'administration.
+3. **`SANS_SOURCE_REELLE`** — aucune source réelle n'existe du tout pour cette ligne (ni dépense, ni
+   mouvement, ni vente) : `reel = null`, exclu des agrégats. Afficher `reel = 0` pour ce cas précis est
+   un **mensonge** — ce n'est pas une donnée manquante silencieuse à zéro, c'est l'absence structurelle
+   d'une source, que l'UI doit rendre visible comme telle (`—`, pas `0`).
+
+**Cause racine :**
+Les trois états produisent, une fois réduits à un affichage naïf, la même apparence superficielle
+(« rien à signaler », « 0 »). Un moteur ou une UI qui ne distingue pas explicitement les trois
+(`ecartPct: Decimal | null`, `StatutRapprochement.NON_RAPPROCHE` vs `SANS_SOURCE_REELLE` comme valeurs
+d'enum séparées) rend les trois indiscernables du point de vue de l'utilisateur, alors qu'ils appellent
+trois actions différentes (rien à faire / mapper une catégorie / rien à afficher).
+
+**Fix :**
+`agregerLignes` (moteur) exclut explicitement `SANS_SOURCE_REELLE` du total réel et compte les
+`NON_RAPPROCHE` dedans ; `ecartPct` reste `null` par construction quand `prevu.isZero()`. Fixtures
+dédiées écrites pour chacun des trois cas (précaution imposée par la pré-analyse PR3, section C,
+points b et c) — un jeu de données réel « normal » n'a aucune raison de contenir spontanément ces cas,
+même famille qu'ERR-155 (une série jamais non nulle dans le jeu par défaut est un angle mort).
+
+**Leçon / Règle :**
+Dans toute vue de rapprochement prévu/réel (ou plus généralement toute vue qui combine une valeur
+attendue et une valeur observée), traiter explicitement comme des **valeurs distinctes**, jamais
+convergentes vers un affichage commun : « valeur observée non prévue », « donnée observée mais non
+rattachée », et « aucune donnée observée ». Ne jamais combler le troisième cas par un `?? 0` — c'est le
+geste qui transforme une absence de donnée en une fausse mesure de zéro. Écrire une fixture dédiée pour
+chacun des trois cas avant de considérer la couverture de tests suffisante.
+
+**Références :** ERR-155 (série jamais non nulle = angle mort), `docs/analysis/pre-analysis-sprint-PR3.md` section C points (b)-(c), ADR-053 §15.5, `docs/tests/rapport-falsification-sprint-PR3.md` (PR3.4 moteur, PR3.7 UI)
+
+---
+
+### ERR-172 — Développer sans jeu d'or : quand aucune référence externe n'existe, le nombre de tests verts ne prouve rien
+**Sprint :** PR3 (Rapprochement prévu/réel) | **Date :** 2026-08-05
+**Sévérité :** — (entrée de **pratique reproductible**, pas d'erreur isolée)
+**Fichier(s) :** méthode transverse — appliquée à `src/lib/previsions/rapprochement.ts`, `src/lib/queries/previsions-rapprochement*.ts`, `src/app/api/previsions/**` (rapprochement/mapping/clôture)
+
+**Le problème que cette pratique résout :**
+Le rapprochement prévu/réel n'a, structurellement, **aucun classeur Excel de référence** : les tables
+du domaine réel (`Depense`, `Vente`, `MouvementStock`) ne sont modélisées dans aucune feuille du
+classeur `Previsions_Elevage_Silure_v12.xlsx`. Contrairement au reste du module Prévisions (protégé par
+EXCEL-V12/annexe B), PR3 ne peut s'appuyer sur **aucun** « 0 écart contre un classeur » comme filet.
+ERR-160 a montré qu'un jeu d'or peut rester structurellement incapable de discriminer deux formules ;
+ERR-171 (récidive d'ERR-142) a montré qu'une recette peut ne jamais appeler le code de production. Sans
+classeur externe, ces deux risques ne sont plus des cas limites à surveiller — ils sont la **seule**
+chose contre laquelle se prémunir, faute d'alternative.
+
+**La pratique, telle qu'elle a été exécutée dans PR3 :**
+1. **Fixtures construites pour FAIRE DIVERGER les implémentations candidates**, pas pour décorer un
+   scénario plausible — au sens strict d'ERR-160 (un cas de divergence explicite entre deux formules
+   candidates, ex. signe de l'écart, présence/absence d'un mapping, mois clôturé vs actif).
+2. **Tests qui appellent exclusivement le code de production**, jamais une réimplémentation locale de
+   la formule dans le test lui-même — au sens strict d'ERR-171/ERR-142.
+3. **Falsification chiffrée systématique par règle** : chaque règle du §6 de l'ADR-053 mutée
+   délibérément dans le code de production, la suite relancée, le nombre de tests tombés consigné avant
+   restauration. Consolidé dans `docs/tests/rapport-falsification-sprint-PR3.md`, cité ici comme
+   **précédent réutilisable** pour tout futur module sans jeu d'or externe.
+
+**Leçon / Règle :**
+Quand un module (ou une partie d'un module) n'a **aucune référence externe** vérifiable, ne jamais
+présenter le nombre de tests verts comme une preuve de correction — ce nombre ne distingue pas « le
+code est juste » de « les tests sont indifférents à ce que fait le code ». La seule preuve disponible
+dans ce cas est une **falsification chiffrée systématique**, documentée dans un rapport dédié
+(cf. `docs/tests/rapport-falsification-sprint-PR3.md`), produite **avant** qu'une story ou un sprint
+sans jeu d'or ne soit considéré comme terminé — pas après coup, sur demande.
+
+**Références :** ERR-160, ERR-168 (pratique de falsification), ERR-171, ERR-142, ADR-053 §15.6 point 3, `docs/analysis/pre-analysis-sprint-PR3.md` section C, `docs/tests/rapport-falsification-sprint-PR3.md`
+
+---
+
 ### ERR-168 — **[PRATIQUE — ce qui a fonctionné]** Valider une recette **par falsification** : muter délibérément le code et compter les assertions qui tombent
 **Sprint :** PR2-septies (méthode employée par le @tester sur tout le sprint) | **Date :** 2026-08-04
 **Sévérité :** — (entrée de **pratique reproductible**, pas d'erreur)
@@ -3225,6 +3520,21 @@ d'inégalité (`≥` vs `>`), arrondis, et toute règle qu'une recette prétend 
 
 **Références :** ERR-143 (le défaut que cette pratique aurait détecté deux sprints plus tôt), ERR-127, ERR-148, ERR-155, ERR-160, [rapport-sprint-PR2-septies](../tests/rapport-sprint-PR2-septies.md) §4, [rapport-story-PR2sept.3](../tests/rapport-story-PR2sept.3.md) §B.1 et §B.3
 
+**Récidive confirmée, principe non violé (Sprint PR3-bis, correctif C5, 2026-08-05) :**
+Sur le correctif C5 (message d'état vide réaffiché deux fois), la falsification (réafficher
+inconditionnellement le sous-titre `CardHeader` en supprimant sa garde `version !== null`) a fait
+tomber **0 test** — le test existant n'assertait que sur le message d'état vide du **contenu**
+(« Aucun mapping actif sur ce site pour le moment. »), jamais sur l'**absence du sous-titre**
+lui-même, qui affichait un texte distinct (« Version {version} — … », interpolation vide). Conforme au
+protocole prescrit ci-dessus : le trou a été comblé (nouveau test
+`rapprochement-mapping-tab.test.tsx` : « aucun sous-titre de version n'est affiché quand version est
+null », `queryByText(...).not.toBeInTheDocument()`), puis la falsification a été rejouée et a
+correctement mordu (1 test tombé). Aucun nouveau principe ici — cette occurrence est consignée comme
+preuve supplémentaire que le protocole « un compte de 0 oblige à écrire le test manquant puis à
+refalsifier » continue de fonctionner tel quel, sprint après sprint, plutôt que d'être traité comme
+une formalité de fin de sprint. Détail complet : `docs/tests/rapport-sprint-PR3-bis.md` §11.2-11.3
+(falsification (i), tableau (a)→(i)).
+
 ---
 
 ### ERR-169 — Un ADR append-only peut nommer une fonction qui n'existe sous aucun nom dans le code : `mettreAJourPaliersRemise` vs `replacePaliersRemise`
@@ -3266,8 +3576,20 @@ sur le code, il faut aller vérifier le call site réel).
 
 ### ERR-162 — `RepartitionMoisAliment` peut ne pas couvrir `1..dureeCycleMoisFigee` sans qu'aucune validation ne le détecte : un mois de cycle absent est traité silencieusement comme 0 %
 **Sprint :** PR2-sexies (story PR2sex.2, réserve ouverte par @code-reviewer) | **Date :** 2026-08-04
-**Sévérité :** Moyenne — **ouvert, à solder avant PR3**
+**Sévérité :** Moyenne — **[RÉSOLU — soldé en PR3.1b, 2026-08-05]**
 **Fichier(s) :** `src/lib/previsions/validation.ts` (fonction de couverture absente), `src/lib/previsions/aliments.ts:60-61`
+
+**Mise à jour PR3.1b (2026-08-05) :**
+Soldé. `validerCouvertureMoisRepartition(repartitions, dureeCycleMois)` ajoutée dans
+`src/lib/previsions/validation.ts` et appelée à **tous** les sites d'écriture d'une
+`RepartitionMoisAliment`, y compris le cas d'un tableau **vide** (le site d'appel
+`src/lib/queries/previsions-aliments.ts:152-172` ne sautait plus la validation dans ce cas). Preuve par
+falsification : neutraliser la fonction en no-op fait tomber **8 tests** (voir
+`docs/tests/rapport-falsification-sprint-PR3.md`, story PR3.1b). Piège vérifié explicitement par les
+tests : un `pourcentage = 0` sur un mois **PRÉSENT** dans la répartition reste valide (cas EXCEL-V12 :
+répartitions 80/20/0, 20/80/0, 0/40/60) — ne pas confondre « part nulle pour un mois déclaré » (valide)
+et « mois absent de la répartition » (rejeté). C'est exactement la distinction que la validation de
+couverture doit préserver, et c'est la confusion entre les deux qui aurait fait régresser le fix.
 
 **Symptôme :**
 `validation.ts` porte `validerSommeRepartitionMoisAliment` (vérifie que la somme des pourcentages de

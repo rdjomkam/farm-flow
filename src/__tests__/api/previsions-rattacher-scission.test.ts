@@ -18,7 +18,10 @@ vi.mock("@/lib/permissions", () => ({
   ForbiddenError: class ForbiddenError extends Error {},
 }));
 vi.mock("@/lib/auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/errors", () => ({ ValidationError: class ValidationError extends Error {} }));
+vi.mock("@/lib/errors", () => ({
+  ValidationError: class ValidationError extends Error { constructor(message: string, public status: number = 400) { super(message); } },
+  BusinessRuleError: class BusinessRuleError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } },
+}));
 
 const mockRattacherVaguePrevue = vi.fn();
 const mockScinderVaguePrevue = vi.fn();

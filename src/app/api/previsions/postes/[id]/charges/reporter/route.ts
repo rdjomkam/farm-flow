@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { reporterChargeMensuelleSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * POST /api/previsions/postes/[id]/charges/reporter — reporte un meme
@@ -46,8 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/postes/[id]/charges/reporter",
       error,
-      "Erreur serveur lors du report de la charge mensuelle.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors du report de la charge mensuelle."
     );
   }
 }

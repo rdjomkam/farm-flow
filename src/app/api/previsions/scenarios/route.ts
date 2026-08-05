@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutScenarioPrevision, parsePaginationQuery } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { createScenarioSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 const VALID_STATUTS = new Set(Object.values(StatutScenarioPrevision));
 
@@ -44,8 +44,7 @@ export async function GET(request: NextRequest) {
     return handleApiError(
       "GET /api/previsions/scenarios",
       error,
-      "Erreur serveur lors de la recuperation des scenarios.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation des scenarios."
     );
   }
 }
@@ -80,8 +79,7 @@ export async function POST(request: NextRequest) {
     return handleApiError(
       "POST /api/previsions/scenarios",
       error,
-      "Erreur serveur lors de la creation du scenario.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la creation du scenario."
     );
   }
 }

@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { updateVaguePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * GET /api/previsions/vagues-prevues/[id] — detail d'une VaguePrevue (aliments
@@ -26,8 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/vagues-prevues/[id]",
       error,
-      "Erreur serveur lors de la recuperation de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la recuperation de la vague prevue."
     );
   }
 }
@@ -60,8 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/vagues-prevues/[id]",
       error,
-      "Erreur serveur lors de la mise a jour de la vague prevue.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de la vague prevue."
     );
   }
 }

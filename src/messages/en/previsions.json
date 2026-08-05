@@ -112,7 +112,8 @@
     "vagues": "Batch plan",
     "charges": "Expenses",
     "journal": "Journal",
-    "apports": "Contributions"
+    "apports": "Contributions",
+    "rapprochement": "Reconciliation"
   },
   "parametresTab": {
     "sectionTitle": "Scenario parameters",
@@ -737,5 +738,127 @@
   },
   "valeurCalculee": {
     "defaultAriaLabel": "See calculation detail"
+  },
+  "rapprochementTab": {
+    "title": "Planned vs actual reconciliation",
+    "freshnessNote": "The \"actual\" figures shown reflect the data as of this view ({date}), not a frozen snapshot of a past import.",
+    "monthSelectorLabel": "Month",
+    "views": {
+      "mensuelle": "Monthly view",
+      "cumulee": "Cumulative view",
+      "parVague": "By batch",
+      "topEcarts": "Top variances",
+      "mapping": "Mapping"
+    },
+    "noData": "No reconciliation available for this scenario (no month in the horizon, or the projection could not be calculated).",
+    "columns": {
+      "libelle": "Line",
+      "prevu": "Planned",
+      "reel": "Actual",
+      "ecartAbsolu": "Variance",
+      "ecartPct": "Variance %",
+      "sens": "Direction"
+    },
+    "sens": {
+      "FAVORABLE": "Favorable",
+      "DEFAVORABLE": "Unfavorable",
+      "NEUTRE": "Neutral",
+      "NON_APPLICABLE": "Not applicable"
+    },
+    "statutRapprochement": {
+      "RAPPROCHE": "Reconciled",
+      "NON_RAPPROCHE": "Not reconciled",
+      "SANS_SOURCE_REELLE": "No actual source"
+    },
+    "sansSourceReelle": "No actual data source available for this line",
+    "nonBudgete": "Unbudgeted expense",
+    "nonApplicable": "N/A",
+    "totalRow": "Month total",
+    "vueMensuelle": {
+      "title": "Monthly view — {mois}",
+      "description": "One row per line item: planned amount, actual amount, and variance for the selected month."
+    },
+    "vueCumulee": {
+      "title": "Cumulative view — from the start of the horizon through {mois}",
+      "description": "Cumulative total from the start of the horizon through the selected month, inclusive.",
+      "totalGlobal": "Cumulative total",
+      "parPoste": "Detail by line item"
+    },
+    "nonRapproche": {
+      "title": "Not reconciled",
+      "description": "Actual categories with no active mapping — counted in the actual total, never hidden.",
+      "empty": "No unreconciled category this month."
+    },
+    "vueParVague": {
+      "title": "Cost, margin and cost per kg — by batch",
+      "description": "Full cost, margin and cost per kg, planned vs actual, for each planned batch of the scenario.",
+      "codeReelLabel": "Actual batch: {code}",
+      "nonRealisee": "Not yet realized",
+      "coutComplet": "Full cost",
+      "marge": "Margin",
+      "coutAuKg": "Cost / kg",
+      "indisponible": "Unavailable"
+    },
+    "topEcarts": {
+      "title": "Top 5 variances — {mois}",
+      "description": "The 5 line items explaining the largest variance (absolute value) of the selected month.",
+      "empty": "No measurable variance this month."
+    },
+    "mapping": {
+      "scopeBanner": "This mapping applies to the WHOLE SITE, not just this scenario ({scenario}) — it potentially serves several successive scenarios of the same site.",
+      "loadError": "Unable to load the reconciliation mapping.",
+      "cibleIntrouvable": "Target not found in this scenario",
+      "cibleNonChargee": "Target not loaded",
+      "sourceTypes": {
+        "DEPENSE_CATEGORIE": "Expense category",
+        "PRODUIT_CATEGORIE": "Product category",
+        "VENTE": "Sale",
+        "MOUVEMENT_STOCK": "Stock outflow (pellet size)"
+      },
+      "venteLabel": "Sales",
+      "cibleTypes": {
+        "POSTE_PREVISION": "Forecast expense line",
+        "ALIMENT_PREVISION": "Forecast feed grade",
+        "VENTE_PREVUE": "Forecast sales revenue",
+        "NON_RAPPROCHE": "Not reconciled (no target)"
+      },
+      "nonMappees": {
+        "title": "Unmapped real categories",
+        "description": "These categories exist in your real data but have no active mapping — they fall into the \"Not reconciled\" bucket for every scenario of this site.",
+        "empty": "Everything is mapped: no real category is missing a mapping on this site.",
+        "mapButton": "Map"
+      },
+      "mappingActif": {
+        "title": "Active mapping",
+        "description": "Version {version} — the version in effect for every month not yet closed on this site.",
+        "empty": "No active mapping on this site yet.",
+        "editButton": "Edit"
+      },
+      "form": {
+        "dialogTitleCreate": "Create a mapping",
+        "dialogTitleEdit": "Edit a mapping",
+        "sourceLabel": "Real category",
+        "fields": {
+          "cibleType": {
+            "label": "Target"
+          },
+          "cibleId": {
+            "label": "Precise target",
+            "placeholder": "Choose…",
+            "empty": "No option available in this scenario",
+            "horsScenario": "Current target outside this scenario"
+          }
+        },
+        "scenarioWarning": "This list is populated from the scenario \"{scenario}\". If this scenario is archived or replaced, this mapping will stop working correctly for a new scenario until it is updated.",
+        "cibleHorsScenarioWarning": "The current target of this mapping does not belong to the scenario \"{scenario}\" — it was saved for another scenario. Choosing a new target below will replace this existing target.",
+        "versioningNote": "Saving this form creates a new mapping version: the history of already-closed months is never rewritten, only the still-open months will follow the new version.",
+        "errors": {
+          "cibleIdRequired": "Choose a precise target for this type."
+        },
+        "submit": "Create",
+        "submitEdit": "Save",
+        "submitting": "Saving…"
+      }
+    }
   }
 }

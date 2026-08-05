@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { handleApiError } from "@/lib/api-utils";
 import { updateJournalDepensePrevueSchema } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /** PUT /api/previsions/journal/[id] — met a jour une ligne de journal de depenses prevues. PREVISIONS_GERER. */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,8 +22,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "PUT /api/previsions/journal/[id]",
       error,
-      "Erreur serveur lors de la mise a jour de la ligne de journal.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la mise a jour de la ligne de journal."
     );
   }
 }
@@ -40,8 +39,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return handleApiError(
       "DELETE /api/previsions/journal/[id]",
       error,
-      "Erreur serveur lors de la suppression de la ligne de journal.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la suppression de la ligne de journal."
     );
   }
 }

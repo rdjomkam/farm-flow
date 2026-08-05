@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiErrorResponse } from "@/types";
 import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, BusinessRuleError } from "@/lib/errors";
 
 /**
  * Options supplementaires pour le helper apiError.
@@ -73,6 +73,13 @@ export interface HandleApiErrorOptions {
  *
  * 1. AuthError  → 401 (no log — normal auth flow)
  * 2. ForbiddenError → 403 (no log — normal permission flow)
+ * 2bis. ValidationError → `error.status` (default 400; a throw site can pass
+ *    422 for a business-rule violation, e.g. ERR-162 coverage validation)
+ * 2ter. BusinessRuleError → `error.status` (no default — every throw site
+ *    picks 400/409/422 explicitly), with `error.code` forwarded if present.
+ *    Replacement for ERR-165 (`PREVISIONS_STATUS_MAP` by `message.includes()`,
+ *    `docs/knowledge/ERRORS-AND-FIXES.md`) — checked before any statusMap so
+ *    the HTTP status never depends on message text (ADR-053 §15.4).
  * 3. Route-specific statusMap matches (checked first)
  * 4. Common message patterns:
  *    - "introuvable" / "n'existe pas" → 404
@@ -104,7 +111,10 @@ export function handleApiError(
     return apiError(403, error.message);
   }
   if (error instanceof ValidationError) {
-    return apiError(400, error.message);
+    return apiError(error.status, error.message);
+  }
+  if (error instanceof BusinessRuleError) {
+    return apiError(error.status, error.message, error.code ? { code: error.code } : undefined);
   }
 
   const message = error instanceof Error ? error.message : "Erreur serveur.";

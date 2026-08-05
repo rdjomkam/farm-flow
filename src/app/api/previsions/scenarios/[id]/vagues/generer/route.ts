@@ -7,7 +7,7 @@ import {
   apercuGenerationPlanQuerySchema,
   genererPlanVaguesPrevuesSchema,
 } from "@/lib/validation/previsions.schema";
-import { parseBody, PREVISIONS_STATUS_MAP } from "@/app/api/previsions/_shared";
+import { parseBody } from "@/app/api/previsions/_shared";
 
 /**
  * GET /api/previsions/scenarios/[id]/vagues/generer — apercu (dry-run,
@@ -50,8 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return handleApiError(
       "GET /api/previsions/scenarios/[id]/vagues/generer",
       error,
-      "Erreur serveur lors du calcul de l'apercu du plan.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors du calcul de l'apercu du plan."
     );
   }
 }
@@ -86,8 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return handleApiError(
       "POST /api/previsions/scenarios/[id]/vagues/generer",
       error,
-      "Erreur serveur lors de la generation du plan d'empoissonnement.",
-      { statusMap: PREVISIONS_STATUS_MAP }
+      "Erreur serveur lors de la generation du plan d'empoissonnement."
     );
   }
 }

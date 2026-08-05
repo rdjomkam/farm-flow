@@ -43,11 +43,10 @@
  *   besoinTotalCycleKg = tonnageCibleTonnes * aliment.sacsParTonneStandard * aliment.poidsSacKg
  *
  * Si `aliment.sacsParTonneStandard` est `null` pour une granulometrie
- * effectivement utilisee par le scenario : rejet EXPLICITE (une `Error` dont
- * le message est mappe vers 422 par `PREVISIONS_STATUS_MAP`,
- * `src/app/api/previsions/_shared.ts`), jamais un defaut silencieux (ADR-053
- * amendement §11.2, point 2 — meme proscription que le gap historique
- * `dashboard.ts:218`).
+ * effectivement utilisee par le scenario : rejet EXPLICITE (une
+ * `BusinessRuleError(msg, 422)`, `src/lib/errors.ts` — ERR-165, ADR-053
+ * §15.4), jamais un defaut silencieux (ADR-053 amendement §11.2, point 2 —
+ * meme proscription que le gap historique `dashboard.ts:218`).
  *
  * ---------------------------------------------------------------------------
  * GAP 3 — `margeSecuriteAlevinsPct` jamais lue (ERR-141/ERR-142) — CORRIGE
@@ -165,6 +164,7 @@ import { calculerBudgetTotalPlan } from "./budget";
 import type { BudgetTotalPlanResult } from "./budget";
 import type { ScenarioPourCalcul, VaguePrevuePourCalcul } from "@/lib/queries/previsions-scenario-loader";
 import { StatutVaguePrevue, CategorieJournalPrevu } from "@/types";
+import { BusinessRuleError } from "@/lib/errors";
 
 /** Index (0-based) du mois calendaire de `date` par rapport a `dateDebutPlan`. */
 export function moisAbsoluDepuis(dateDebutPlan: Date, date: Date): number {
@@ -413,11 +413,13 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
     for (const aliment of scenario.aliments) {
       // GAP 1 — CORRIGE (ADR-053, amendement Sprint PR2 §11, voir JSDoc d'en-tete de fichier).
       // `sacsParTonneStandard` nullable = "non configure" : rejet explicite, jamais un defaut
-      // silencieux. Le message est mappe vers 422 par PREVISIONS_STATUS_MAP (`_shared.ts`).
+      // silencieux. `BusinessRuleError(msg, 422)` porte son statut lui-meme (ERR-165,
+      // ADR-053 §15.4) — plus de couplage par sous-chaine sur le message.
       if (aliment.sacsParTonneStandard === null) {
-        throw new Error(
+        throw new BusinessRuleError(
           `Impossible de calculer le besoin en aliment : sacsParTonneStandard non configure pour ` +
-            `la granulometrie "${aliment.tailleGranule}".`
+            `la granulometrie "${aliment.tailleGranule}".`,
+          422
         );
       }
       // ADR-053 §12.2 arbitrage 1 (amendement Sprint PR2-quater) : le nombre
@@ -797,7 +799,16 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
   // ---------------------------------------------------------------------
   // 5. Tresorerie cumulee + point bas (Etapes 10-11 du moteur).
   // ---------------------------------------------------------------------
-  const serieTresorerie = genererSerieTresorerie(moisOrdonnesPourTresorerie, new Decimal(0));
+  // Solde d'ouverture (§4.1 des exigences) — LIBRE, peut etre negatif ;
+  // dette 3 de la pre-analyse PR3 (ERR-171/ERR-142) : cette ligne figeait
+  // `new Decimal(0)` jusqu'a la story PR3.1a, rendant tout scenario a
+  // tresorerie initiale non nulle inexprimable malgre le champ existant
+  // au schema. EXCEL-V12 porte 0 pour ce champ (voir ParametresPrevision),
+  // donc ce changement ne modifie AUCUN resultat du jeu d'or.
+  const serieTresorerie = genererSerieTresorerie(
+    moisOrdonnesPourTresorerie,
+    scenario.parametres.tresorerieInitialeFCFA
+  );
   for (let m = 0; m < horizonMois; m++) {
     moisResults[m].soldeFCFA = serieTresorerie[m].soldeFCFA;
   }
