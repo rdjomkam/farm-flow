@@ -22,6 +22,7 @@ import { GET as GET_ACTIF } from "@/app/api/abonnements/actif/route";
 import { POST as POST_ANNULER } from "@/app/api/abonnements/[id]/annuler/route";
 import { POST as POST_RENOUVELER } from "@/app/api/abonnements/[id]/renouveler/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import {
   Permission,
   StatutAbonnement,

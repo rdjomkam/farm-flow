@@ -36,9 +36,18 @@ import { cn } from "@/lib/utils";
 interface TresorerieTabProps {
   dateDebutPlan: string;
   tresorerie: TresorerieTroisSeriesDTO;
+  /**
+   * Message d'erreur reel si le calcul de la tresorerie a 3 series a echoue
+   * (reserve R4, PR2non.4, ADR-053 §15.6) — `null` si `tresorerie` est vide
+   * parce que le scenario n'a reellement aucun mois dans l'horizon. Un echec
+   * de CE calcul ne remet JAMAIS en cause la projection deja calculee avec
+   * succes (bandeau distinct ci-dessous, jamais confondu avec l'etat
+   * "aucune donnee de tresorerie" legitime).
+   */
+  erreurTresorerie: string | null;
 }
 
-export function TresorerieTab({ dateDebutPlan, tresorerie }: TresorerieTabProps) {
+export function TresorerieTab({ dateDebutPlan, tresorerie, erreurTresorerie }: TresorerieTabProps) {
   const t = useTranslations("previsions");
   const [reprevisionActive, setReprevisionActive] = useState(false);
 
@@ -47,6 +56,17 @@ export function TresorerieTab({ dateDebutPlan, tresorerie }: TresorerieTabProps)
 
   return (
     <div className="space-y-4">
+      {erreurTresorerie && (
+        <div className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-danger">{t("tresorerieTab.errors.title")}</p>
+            <p className="mt-1 text-sm text-danger/90">{erreurTresorerie}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("tresorerieTab.errors.hint")}</p>
+          </div>
+        </div>
+      )}
+
       {!sansHorizon && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
           <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -54,17 +74,21 @@ export function TresorerieTab({ dateDebutPlan, tresorerie }: TresorerieTabProps)
         </div>
       )}
 
-      {/* Caveat NON FILTRABLE (ADR-053 §15.1(b)) : la serie RÉEL est structurellement incomplete. */}
-      <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/5 p-4">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
-        <div>
-          <p className="text-sm font-semibold text-warning">{t("tresorerieTab.caveatReel.title")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{t("tresorerieTab.caveatReel.description")}</p>
+      {/* Caveat NON FILTRABLE (ADR-053 §15.1(b)) : la serie RÉEL est structurellement incomplete.
+          Non pertinent quand le calcul lui-meme a echoue (erreurTresorerie) — le bandeau d'erreur
+          ci-dessus suffit, un second bandeau parlant de "serie incomplete" serait trompeur. */}
+      {!erreurTresorerie && (
+        <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-warning">{t("tresorerieTab.caveatReel.title")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("tresorerieTab.caveatReel.description")}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Budget initial jamais fige -> le dire explicitement, jamais une courbe a zero. */}
-      {!budgetInitialDisponible && (
+      {!erreurTresorerie && !budgetInitialDisponible && (
         <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div>
@@ -75,7 +99,9 @@ export function TresorerieTab({ dateDebutPlan, tresorerie }: TresorerieTabProps)
       )}
 
       {sansHorizon ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">{t("tresorerieTab.noData")}</p>
+        erreurTresorerie ? null : (
+          <p className="py-8 text-center text-sm text-muted-foreground">{t("tresorerieTab.noData")}</p>
+        )
       ) : (
         <Card>
           <CardHeader className="flex flex-col gap-3 pb-0 sm:flex-row sm:items-center sm:justify-between">

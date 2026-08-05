@@ -22,6 +22,7 @@ import {
   PUT as PUT_NOTE,
 } from "@/app/api/ingenieur/notes/[id]/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, VisibiliteNote } from "@/types";
 
 // ---------------------------------------------------------------------------

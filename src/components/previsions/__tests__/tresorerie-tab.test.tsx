@@ -75,43 +75,51 @@ function fixture(overrides: Partial<TresorerieTroisSeriesDTO> = {}): TresorerieT
   };
 }
 
+function renderTab(
+  tresorerie: TresorerieTroisSeriesDTO = fixture(),
+  erreurTresorerie: string | null = null
+) {
+  return render(
+    <TresorerieTab
+      dateDebutPlan="2026-01-01T00:00:00.000Z"
+      tresorerie={tresorerie}
+      erreurTresorerie={erreurTresorerie}
+    />
+  );
+}
+
 describe("TresorerieTab", () => {
   it("affiche TOUJOURS le caveat de la serie REEL incomplete (jamais filtre)", () => {
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture()} />);
+    renderTab();
     expect(
       screen.getByText(/Le « réel » de trésorerie est structurellement incomplet/)
     ).toBeInTheDocument();
   });
 
   it("budgetInitialDisponible=true -> AUCUN bandeau 'budget initial indisponible'", () => {
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture({ budgetInitialDisponible: true })} />);
+    renderTab(fixture({ budgetInitialDisponible: true }));
     expect(screen.queryByText(/Aucun budget initial figé pour ce scénario/)).not.toBeInTheDocument();
   });
 
   it("budgetInitialDisponible=false -> le bandeau explicite est affiche, JAMAIS masque en silence", () => {
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture({ budgetInitialDisponible: false })} />);
+    renderTab(fixture({ budgetInitialDisponible: false }));
     expect(screen.getByText(/Aucun budget initial figé pour ce scénario/)).toBeInTheDocument();
     expect(screen.getByText(/ce n'est pas un budget initial nul/)).toBeInTheDocument();
   });
 
   it("affiche le bandeau de fraicheur avec l'instant du calcul", () => {
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture()} />);
+    renderTab();
     expect(screen.getByText(/pas une photo figée d'un import passé/)).toBeInTheDocument();
   });
 
   it("etat vide : aucun mois dans l'horizon -> message explicite, pas de crash, pas de graphique", () => {
-    render(
-      <TresorerieTab
-        dateDebutPlan="2026-01-01T00:00:00.000Z"
-        tresorerie={fixture({ series: [], horizonMois: 0 })}
-      />
-    );
+    renderTab(fixture({ series: [], horizonMois: 0 }));
     expect(screen.getByText(/Aucune donnée de trésorerie disponible/)).toBeInTheDocument();
     expect(screen.queryByTestId("tresorerie-chart-mock")).not.toBeInTheDocument();
   });
 
   it("bascule Reprevision : etat initial OFF (aria-pressed=false), le graphique recoit reprevisionActive=false", () => {
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture()} />);
+    renderTab();
     const toggle = screen.getByRole("button", { name: "Reprévision" });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("tresorerie-chart-mock")).toHaveAttribute("data-reprevision-active", "false");
@@ -119,7 +127,7 @@ describe("TresorerieTab", () => {
 
   it("bascule Reprevision : un clic passe a ON (aria-pressed=true), le graphique recoit reprevisionActive=true, et la legende change de texte", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture()} />);
+    renderTab();
 
     const toggle = screen.getByRole("button", { name: "Reprévision" });
     await user.click(toggle);
@@ -134,7 +142,7 @@ describe("TresorerieTab", () => {
 
   it("un second clic repasse la bascule a OFF (toggle veritable, pas un bouton a sens unique)", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<TresorerieTab dateDebutPlan="2026-01-01T00:00:00.000Z" tresorerie={fixture()} />);
+    renderTab();
 
     const toggle = screen.getByRole("button", { name: "Reprévision" });
     await user.click(toggle);
@@ -142,5 +150,42 @@ describe("TresorerieTab", () => {
 
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("tresorerie-chart-mock")).toHaveAttribute("data-reprevision-active", "false");
+  });
+});
+
+/* ==================================================================== *
+ * Reserve R4 (PR2non.4) : distinction "echec du calcul" / "absence
+ * legitime de donnees" — meme discipline que RapprochementTab.
+ * ==================================================================== */
+describe("TresorerieTab — distinction echec de calcul / absence legitime", () => {
+  const MESSAGE_ERREUR = "Erreur simulee : snapshot budget initial indisponible.";
+  const FIXTURE_VIDE = fixture({ series: [], horizonMois: 0, budgetInitialDisponible: false });
+
+  it("erreurTresorerie renseigne : affiche un bandeau d'erreur dedie avec le message reel, jamais le message 'aucune donnee' generique", () => {
+    renderTab(FIXTURE_VIDE, MESSAGE_ERREUR);
+
+    expect(screen.getByText("Calcul de la trésorerie indisponible")).toBeInTheDocument();
+    expect(screen.getByText(MESSAGE_ERREUR)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ce n'est pas une absence réelle de données de trésorerie/)
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText(/Aucune donnée de trésorerie disponible/)).not.toBeInTheDocument();
+  });
+
+  it("erreurTresorerie renseigne : n'affiche NI le caveat 'serie REEL incomplete' NI le bandeau 'budget initial indisponible' (redondants avec le bandeau d'erreur)", () => {
+    renderTab(FIXTURE_VIDE, MESSAGE_ERREUR);
+
+    expect(
+      screen.queryByText(/Le « réel » de trésorerie est structurellement incomplet/)
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun budget initial figé pour ce scénario/)).not.toBeInTheDocument();
+  });
+
+  it("erreurTresorerie = null, aucun mois disponible : affiche le message d'absence legitime, jamais le bandeau d'erreur", () => {
+    renderTab(FIXTURE_VIDE, null);
+
+    expect(screen.getByText(/Aucune donnée de trésorerie disponible/)).toBeInTheDocument();
+    expect(screen.queryByText("Calcul de la trésorerie indisponible")).not.toBeInTheDocument();
   });
 });

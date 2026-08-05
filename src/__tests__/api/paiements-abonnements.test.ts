@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "@/app/api/abonnements/[id]/paiements/route";
 import { GET as GET_VERIFIER } from "@/app/api/paiements/[id]/verifier/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import {
   Permission,
   StatutPaiementAbo,

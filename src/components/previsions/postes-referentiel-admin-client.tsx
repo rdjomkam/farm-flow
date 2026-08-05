@@ -180,6 +180,22 @@ function StatutToggleDialog({
           <DialogTitle>{dialogTexts.title}</DialogTitle>
           <DialogDescription>{dialogTexts.description}</DialogDescription>
         </DialogHeader>
+        {entry.actif ? (
+          <DialogBody>
+            <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+              <li>
+                {t("posteReferentielAdmin.desactiverDialog.impact.postes", {
+                  count: entry.nbPostesRattaches,
+                })}
+              </li>
+              <li>
+                {t("posteReferentielAdmin.desactiverDialog.impact.mappings", {
+                  count: entry.nbMappingsRattaches,
+                })}
+              </li>
+            </ul>
+          </DialogBody>
+        ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
             {tCommon("buttons.cancel")}

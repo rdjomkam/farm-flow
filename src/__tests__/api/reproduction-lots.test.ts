@@ -23,6 +23,7 @@ import { PATCH as PATCH_PHASE } from "@/app/api/reproduction/lots/[id]/phase/rou
 import { POST as POST_SPLIT } from "@/app/api/reproduction/lots/[id]/split/route";
 import { PATCH as PATCH_SORTIE } from "@/app/api/reproduction/lots/[id]/sortie/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import {
   Permission,
   PhaseLot,

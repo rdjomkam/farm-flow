@@ -110,8 +110,20 @@ export function isLegitimateMigrationFile(relPath: string): boolean {
  * à une conversion en migration un jour) : `prisma/seed.sql` est le seed
  * canonique du projet (dev/test), exécuté via `npm run db:seed` — une
  * convention établie et documentée (ERR-003), pas un correctif de production.
+ *
+ * `scripts/typecheck-budget.sh` (sprint de résorption des réserves du module
+ * Prévisions, réserve R6) : garde-fou de CI qui lance `npx tsc --noEmit` et
+ * compare le compte d'erreurs à un seuil versionné (`typecheck-budget.txt`).
+ * Aucune écriture de données, aucune requête SQL, aucune connexion DB — ce
+ * n'est structurellement pas un correctif au sens ADR-049 (rien à convertir
+ * en migration un jour), simplement un outil de développement qui se trouve
+ * être un `.sh` sous `scripts/`, la même situation que `prisma/seed.sql` pour
+ * les `.sql`.
  */
-const KNOWN_NON_DATAFIX_FILES = new Set<string>(["prisma/seed.sql"]);
+const KNOWN_NON_DATAFIX_FILES = new Set<string>([
+  "prisma/seed.sql",
+  "scripts/typecheck-budget.sh",
+]);
 
 /**
  * Un audit qualifié au sens ADR-050 : sous scripts/audits/, ET le nom de

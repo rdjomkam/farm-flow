@@ -9,6 +9,7 @@ import {
 import { GET as GET_ACTIVATIONS } from "@/app/api/activations/route";
 import { POST as POST_ACTIVER } from "@/app/api/packs/[id]/activer/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutActivation } from "@/types";
 
 // ---------------------------------------------------------------------------

@@ -94,8 +94,24 @@ interface ScenarioDetailClientProps {
   erreurProjection: string | null;
   /** Rapprochement prevu/reel pre-calcule sur tout l'horizon (story PR3.7, ADR-053 section 15). */
   rapprochement: RapprochementScenarioDTO;
+  /**
+   * Message d'erreur reel si le calcul du rapprochement a echoue (reserve
+   * R4, PR2non.4) — `null` si `rapprochement` est vide parce que le
+   * scenario n'a reellement aucun mois dans l'horizon. Distingue les deux
+   * causes pour `RapprochementTab`, meme discipline qu'`erreurProjection` :
+   * un echec de CE calcul ne doit jamais se faire passer pour une absence
+   * legitime de donnees, ni invalider la projection deja calculee.
+   */
+  erreurRapprochement: string | null;
   /** Vue tresorerie a 3 series pre-calculee sur tout l'horizon (Sprint PR3-ter, story B.5, ADR-053 §6.5). */
   tresorerie: TresorerieTroisSeriesDTO;
+  /**
+   * Message d'erreur reel si le calcul de la tresorerie a 3 series a echoue
+   * (reserve R4, PR2non.4) — `null` si `tresorerie` est vide parce que le
+   * scenario n'a reellement aucun mois dans l'horizon. Meme discipline
+   * qu'`erreurRapprochement`.
+   */
+  erreurTresorerie: string | null;
 }
 
 export function ScenarioDetailClient({
@@ -111,7 +127,9 @@ export function ScenarioDetailClient({
   projection,
   erreurProjection,
   rapprochement,
+  erreurRapprochement,
   tresorerie,
+  erreurTresorerie,
 }: ScenarioDetailClientProps) {
   const t = useTranslations("previsions");
   const router = useRouter();
@@ -281,6 +299,7 @@ export function ScenarioDetailClient({
         <TabsContent value="rapprochement">
           <RapprochementTab
             rapprochement={rapprochement}
+            erreurRapprochement={erreurRapprochement}
             scenarioId={scenario.id}
             scenarioNom={scenario.nom}
             permissions={permissions}
@@ -289,7 +308,11 @@ export function ScenarioDetailClient({
         </TabsContent>
 
         <TabsContent value="tresorerie">
-          <TresorerieTab dateDebutPlan={scenario.dateDebutPlan} tresorerie={tresorerie} />
+          <TresorerieTab
+            dateDebutPlan={scenario.dateDebutPlan}
+            tresorerie={tresorerie}
+            erreurTresorerie={erreurTresorerie}
+          />
         </TabsContent>
       </Tabs>
     </>

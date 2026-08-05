@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/releves/route";
 import { GET as GET_ACTIVITES } from "@/app/api/activites/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import {
   Permission,
   TypeReleve,

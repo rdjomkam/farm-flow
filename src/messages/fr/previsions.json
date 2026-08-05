@@ -564,7 +564,11 @@
     "desactiverDialog": {
       "confirmTitle": "Désactiver cette entrée ?",
       "confirmDescription": "Les postes déjà rattachés ne sont jamais affectés — seule la création de nouveaux rattachements sera bloquée. Réversible à tout moment.",
-      "confirmButton": "Désactiver"
+      "confirmButton": "Désactiver",
+      "impact": {
+        "postes": "{count, plural, one {# poste de charge rattaché} other {# postes de charge rattachés}}",
+        "mappings": "{count, plural, one {# rapprochement rattaché} other {# rapprochements rattachés}}"
+      }
     },
     "reactiverDialog": {
       "confirmTitle": "Réactiver cette entrée ?",
@@ -834,7 +838,11 @@
       "topEcarts": "Top écarts",
       "mapping": "Mapping"
     },
-    "noData": "Aucun rapprochement disponible pour ce scénario (aucun mois dans l'horizon, ou la projection n'a pas pu être calculée).",
+    "noData": "Aucun rapprochement disponible pour ce scénario (aucun mois dans l'horizon).",
+    "errors": {
+      "title": "Calcul du rapprochement indisponible",
+      "hint": "Ce n'est pas une absence réelle de données de rapprochement — la projection de ce scénario reste valide. Rechargez cette page ; si le problème persiste, signalez-le."
+    },
     "columns": {
       "libelle": "Poste",
       "prevu": "Prévu",
@@ -950,7 +958,8 @@
         "scenarioWarning": "Cette liste est peuplée depuis le scénario « {scenario} ». Si ce scénario est archivé ou remplacé, ce mapping cessera de fonctionner correctement pour un nouveau scénario tant qu'il n'est pas remis à jour.",
         "cibleHorsScenarioWarning": "La cible actuelle de ce mapping n'appartient pas au scénario « {scenario} » — elle a été enregistrée pour un autre scénario. Choisir une nouvelle cible ci-dessous remplacera cette cible existante.",
         "siteScopedNote": "Cette liste provient du référentiel des postes du site — stable d'un scénario à l'autre, elle ne dépend plus du scénario « {scenario} » (ADR-053 §16).",
-        "cibleReferentielIntrouvableWarning": "La cible actuelle de ce mapping ne correspond à aucune entrée active du référentiel des postes du site — elle a peut-être été désactivée. Choisir une nouvelle cible ci-dessous remplacera cette cible existante.",
+        "cibleReferentielAbsenteWarning": "La cible actuelle de ce mapping ne correspond à aucune entrée du référentiel des postes du site — elle n'existe plus. Choisissez une nouvelle cible ci-dessous pour la remplacer.",
+        "cibleReferentielDesactiveeWarning": "La cible actuelle de ce mapping correspond à une entrée désactivée du référentiel des postes, « {libelle} ». Réactivez-la depuis l'administration du référentiel avant de continuer à l'utiliser, ou choisissez une nouvelle cible ci-dessous pour la remplacer.",
         "versioningNote": "Enregistrer ce formulaire crée une nouvelle version du mapping : l'historique des mois déjà clôturés n'est jamais réécrit, seuls les mois encore ouverts suivront la nouvelle version.",
         "errors": {
           "cibleIdRequired": "Choisissez une cible précise pour ce type."
@@ -974,7 +983,11 @@
   },
   "tresorerieTab": {
     "freshnessNote": "Le « réel » affiché reflète l'état des données au moment de cette consultation ({date}), pas une photo figée d'un import passé.",
-    "noData": "Aucune donnée de trésorerie disponible pour ce scénario (aucun mois dans l'horizon, ou la projection n'a pas pu être calculée).",
+    "noData": "Aucune donnée de trésorerie disponible pour ce scénario (aucun mois dans l'horizon).",
+    "errors": {
+      "title": "Calcul de la trésorerie indisponible",
+      "hint": "Ce n'est pas une absence réelle de données de trésorerie — la projection de ce scénario reste valide. Rechargez cette page ; si le problème persiste, signalez-le."
+    },
     "reprevisionToggle": "Reprévision",
     "caveatReel": {
       "title": "Le « réel » de trésorerie est structurellement incomplet",

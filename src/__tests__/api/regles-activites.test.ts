@@ -8,6 +8,7 @@ import {
 import { PATCH } from "@/app/api/regles-activites/[id]/toggle/route";
 import { POST as POST_reset } from "@/app/api/regles-activites/[id]/reset/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypeDeclencheur, TypeActivite } from "@/types";
 
 // ---------------------------------------------------------------------------

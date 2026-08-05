@@ -1,18 +1,40 @@
 /**
- * Test de PARITE — `sluggifierLibellePoste` (TypeScript, get-or-create) vs le backfill SQL
- * de la migration `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql`
- * (ADR-053 §16.11, review PR3-quater — mineur recommande).
+ * DOCUMENTATION HISTORIQUE, FIGEE AU 2026-08-05 — PAS UNE GARANTIE VIVANTE.
  *
- * Contexte : le SQL du backfill ne peut pas appeler la fonction TypeScript (il tourne dans
- * `psql`, avant que le code applicatif existe). Il reimplemente donc la meme regle de
+ * Statut (ADR-053 §17, ERR-184) : ce fichier N'EST PLUS un test de parite qui doit rester
+ * vert si `sluggifierLibellePoste` evolue. L'architecte a tranche (ADR-053 §17.1.1) qu'aucune
+ * dependance vivante a la normalisation de `PosteReferentiel.code` n'existe en base — le SQL
+ * de backfill de la migration `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql`
+ * s'est execute une seule fois, a l'application de cette migration, et R10 interdit de le
+ * reexecuter ou de le faire evoluer. Comparer une implementation vivante (le TypeScript) a un
+ * texte SQL gele qui ne s'executera plus jamais n'est donc plus une garantie d'integrite : les
+ * 36 assertions ci-dessous restent factuellement exactes (elles decrivent une divergence
+ * reellement prouvee a cette date, pas une affirmation de parite universelle), mais elles sont
+ * a lire comme un compte-rendu date, pas comme un filet de securite contre une regression
+ * future de `sluggifierLibellePoste`. Preuve factuelle complementaire (aucune dependance
+ * vivante en base) : `src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts`.
+ * Reference complete de l'arbitrage et de sa justification : ADR-053 §17 (notamment §17.4,
+ * qui specifie ce recommentage) et ERR-184.
+ *
+ * Ce que ce fichier teste reellement (a ne pas presenter comme plus qu'il n'est) : il
+ * REIMPLEMENTE litteralement l'algorithme du SQL de backfill en JavaScript
+ * (`sluggifierViaAlgorithmeSQL` ci-dessous, meme table de caracteres source/cible copiee
+ * verbatim de la migration) et compare cette reimplementation a `sluggifierLibellePoste`. Il
+ * n'execute a aucun moment le SQL reel de la migration — c'est une TROISIEME copie de
+ * l'algorithme (TypeScript applicatif, SQL de la migration, et cette reimplementation JS),
+ * pas une execution du SQL lui-meme contre un moteur Postgres. Ce fait est etabli des la
+ * pre-analyse d'origine et ne doit pas etre masque : un desaccord entre ce fichier et le SQL
+ * reel de la migration resterait indetectable par ce test.
+ *
+ * Ancien contexte (toujours exact, conserve pour comprendre pourquoi cette reimplementation
+ * existe) : le SQL du backfill ne pouvait pas appeler la fonction TypeScript (il tournait dans
+ * `psql`, avant que le code applicatif existe). Il reimplementait donc la meme regle de
  * normalisation via une table fixe de translitteration d'accents francais (`translate()`)
- * plutot que la normalisation Unicode NFD utilisee cote TypeScript. Ce test REIMPLEMENTE
- * litteralement l'algorithme SQL en JS (meme table de caracteres source/cible, copiee
- * verbatim de la migration) et le compare a `sluggifierLibellePoste` sur un jeu de
- * caracteres elargi, pour transformer une verification manuelle en garantie qui se rejoue.
+ * plutot que la normalisation Unicode NFD utilisee cote TypeScript. Origine : ADR-053 §16.11,
+ * review PR3-quater — mineur recommande.
  *
- * PERIMETRE DE PARITE GARANTI PAR CE TEST — a lire avant de faire confiance a un slug produit
- * par l'un ou l'autre chemin :
+ * PERIMETRE DE DIVERGENCE CONSTATE A LA DATE CI-DESSUS — a lire comme un instantane historique,
+ * pas comme une propriete garantie pour tout futur changement de l'un ou l'autre cote :
  *
  *   - GARANTI : alphabet francais standard (voyelles accentuees a/e/i/o/u/y + cedille c) qui
  *     sont a la fois presentes dans `src_chars`/`tgt_chars` du SQL ET decomposables par NFD

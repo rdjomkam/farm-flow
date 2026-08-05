@@ -1,12 +1,25 @@
 /**
- * Regle de normalisation pour `PosteReferentiel.code` (ADR-053 §16.11, story A.4).
+ * Regle de normalisation pour `PosteReferentiel.code` (ADR-053 §16.11, story A.4 ; statut
+ * corrige par ADR-053 §17, story PR2non.5, ERR-184).
  *
- * Seul point de verite de la normalisation : utilisee aux DEUX seuls endroits qui produisent
- * un `code` — le get-or-create de `createPostePrevision`
- * (`src/lib/queries/previsions-charges.ts`) et le backfill de la migration
- * `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql` (implemente en SQL,
- * doit produire strictement le meme resultat que cette fonction — verifie par test sur les
- * libelles reellement presents en base, cf. pre-analyse §8).
+ * SEULE autorite vivante pour cette normalisation, a l'execution : appelee aux deux seuls
+ * endroits qui ecrivent un `code` en base a l'execution (`resoudreBrancheNouveauPosteReferentiel`
+ * et son rattrapage de collision concurrente, dans `src/lib/queries/previsions-charges.ts`).
+ *
+ * ATTENTION — corrige une affirmation fausse de l'en-tete d'origine : cette fonction n'est PAS
+ * le seul point de verite de la normalisation dans le depot. Le backfill de la migration
+ * `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql` (deja appliquee, R10 —
+ * ne sera JAMAIS reecrite ni pour corriger ni pour aligner son algorithme sur celui-ci)
+ * reimplemente independamment la meme regle en SQL (`translate()` sur une table figee de
+ * caracteres latins accentues), et diverge PROUVABLEMENT de cette fonction sur `Ø`/`ø` et les
+ * diacritiques d'Europe centrale/Baltique (ERR-184, test de parite
+ * `src/lib/previsions/__tests__/sluggifier-poste-parite-sql.test.ts`). ADR-053 §17 tranche que
+ * cette divergence n'a plus a etre resorbee : le SQL de cette migration est un artefact
+ * historique fige (aucune fonction/trigger/DEFAULT/colonne GENERATED/CHECK vivant n'en depend en
+ * base, verifie par
+ * `src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts`),
+ * pas un invariant de parite a maintenir avec cette fonction. Toute evolution future de cette
+ * fonction n'a donc AUCUNE obligation de rester en phase avec le texte de cette migration.
  *
  * Etapes (dans cet ordre, ADR-053 §16.11) :
  *   1. Normalisation Unicode NFD puis suppression des marques diacritiques combinantes

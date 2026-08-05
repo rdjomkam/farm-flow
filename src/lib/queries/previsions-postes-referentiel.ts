@@ -24,14 +24,16 @@
  */
 import { prisma } from "@/lib/db";
 import { BusinessRuleError } from "@/lib/errors";
+import { CibleRapprochement } from "@/types";
 
 /**
- * Liste les entrees `PosteReferentiel` ACTIVES d'un site — consommee par
- * `mapping-form-dialog.tsx` (cibleType = POSTE_PREVISION) et par l'onglet "Rechercher" du
- * parcours de creation d'un `PostePrevision` (ADR-053 §16.12 "Design du parcours a deux temps")
- * pour choisir un `posteReferentielId` site-scope. Filtrage `actif: true` : c'est la SEULE
- * fonction (avec le get-or-create de `createPostePrevision`) qui doit filtrer sur `actif` — un
- * NOUVEAU rattachement ne doit jamais proposer une entree desactivee.
+ * Liste les entrees `PosteReferentiel` ACTIVES d'un site — consommee par l'onglet
+ * "Rechercher" du parcours de creation d'un `PostePrevision` (ADR-053 §16.12 "Design du
+ * parcours a deux temps") pour choisir un `posteReferentielId` site-scope. Depuis R2,
+ * `mapping-form-dialog.tsx` ne consomme plus cette fonction : il consomme desormais la route
+ * admin (`listerPostesReferentielAdmin`). Filtrage `actif: true` : c'est la SEULE fonction (avec
+ * le get-or-create de `createPostePrevision`) qui doit filtrer sur `actif` — un NOUVEAU
+ * rattachement ne doit jamais proposer une entree desactivee.
  */
 export async function listerPostesReferentielActifs(siteId: string) {
   return prisma.posteReferentiel.findMany({
@@ -50,10 +52,91 @@ export async function listerPostesReferentielActifs(siteId: string) {
  * defaut implicite.
  */
 export async function listerPostesReferentielAdmin(siteId: string) {
-  return prisma.posteReferentiel.findMany({
-    where: { siteId },
-    orderBy: { libelle: "asc" },
+  // Deux requetes FIXES pour toute la liste, jamais N (une par entree) — c'est
+  // l'exigence explicite de la reserve R3 (PR2non.3) :
+  //
+  // (1) `nbPostesRattaches` : `PostePrevision.posteReferentielId` est une VRAIE
+  //     FK Prisma (`onDelete: Restrict`, cf. `PostePrevision.posteReferentielId`
+  //     ci-dessus) -> `_count` relationnel natif, fusionne par Prisma dans la
+  //     MEME requete SQL que le `findMany` (une jointure, pas une requete a part).
+  //
+  // (2) `nbMappingsRattaches` : `MappingRapprochement.cibleId` n'est PAS une FK
+  //     (litteral polymorphe, ADR-053 §16.3/ERR-183) -> aucun `_count` relationnel
+  //     possible. Une seule requete d'agregation `groupBy` couvre TOUS les
+  //     `PosteReferentiel` du site en un coup, fusionnee en memoire ensuite.
+  const [entries, mappingCounts] = await Promise.all([
+    prisma.posteReferentiel.findMany({
+      where: { siteId },
+      orderBy: { libelle: "asc" },
+      include: { _count: { select: { postes: true } } },
+    }),
+    prisma.mappingRapprochement.groupBy({
+      by: ["cibleId"],
+      where: { siteId, cibleType: CibleRapprochement.POSTE_PREVISION, actif: true },
+      _count: true,
+    }),
+  ]);
+
+  const nbMappingsParCible = new Map<string, number>(
+    mappingCounts
+      .filter((m): m is typeof m & { cibleId: string } => m.cibleId !== null)
+      .map((m) => [m.cibleId, m._count])
+  );
+
+  return entries.map(({ _count, ...entry }) => ({
+    ...entry,
+    nbPostesRattaches: _count.postes,
+    // `?? 0` legitime ICI seulement : le `groupBy` ci-dessus couvre 100% des
+    // MappingRapprochement ACTIFS du site (meme `siteId` que `entries`, meme
+    // `cibleType`) — une entree absente de `nbMappingsParCible` est donc
+    // PROUVEE a zero mapping, ce n'est pas un echec de resolution masque en 0
+    // (l'anti-pattern ERR-173/ERR-179). Ne jamais reproduire ce `?? 0` pour un
+    // decompte qui ne serait pas issu d'une requete couvrant l'univers complet.
+    nbMappingsRattaches: nbMappingsParCible.get(entry.id) ?? 0,
+  }));
+}
+
+/**
+ * Recharge UNE entree `PosteReferentiel` enrichie des deux decomptes
+ * (`nbPostesRattaches`, `nbMappingsRattaches`) — meme forme que
+ * `listerPostesReferentielAdmin`, mais pour un seul `id`. C'est le SEUL point
+ * de sortie utilise par les trois mutations ci-dessous (renommer/desactiver/
+ * reactiver), y compris leurs retours idempotents : `PosteReferentielDTO`
+ * n'a QUE des champs non-optionnels pour ces deux decomptes (reserve R3,
+ * PR2non.3) — un retour de mutation qui ne les fournit pas n'est pas juste
+ * incomplet, il rend `undefined` un champ que le contrat promet toujours
+ * present, et `Intl.PluralRules.select(NaN)` degrade silencieusement en
+ * "NaN postes de charge rattaches" cote client (ERR-188).
+ *
+ * R8 : site-scope strict — `findFirst` filtre sur `siteId`, jamais un simple
+ * `findUnique({ where: { id } })`.
+ *
+ * @throws {Error} "PosteReferentiel introuvable" si absente ou d'un autre site.
+ */
+async function getPosteReferentielAdmin(id: string, siteId: string) {
+  const entry = await prisma.posteReferentiel.findFirst({
+    where: { id, siteId },
+    include: { _count: { select: { postes: true } } },
   });
+  if (!entry) {
+    throw new Error("PosteReferentiel introuvable");
+  }
+
+  const nbMappingsRattaches = await prisma.mappingRapprochement.count({
+    where: { siteId, cibleType: CibleRapprochement.POSTE_PREVISION, actif: true, cibleId: id },
+  });
+
+  const { _count, ...rest } = entry;
+  return {
+    ...rest,
+    nbPostesRattaches: _count.postes,
+    // `?? 0` n'est PAS applique ici : `count()` renvoie deja 0 nativement
+    // quand aucune ligne ne correspond (pas de resolution masquee a
+    // justifier) — a la difference du `Map.get(...) ?? 0` de
+    // `listerPostesReferentielAdmin`, ou l'absence d'entree dans la Map
+    // devait etre distinguee explicitement d'un echec de resolution.
+    nbMappingsRattaches,
+  };
 }
 
 /**
@@ -81,7 +164,7 @@ export async function renommerPosteReferentiel(id: string, siteId: string, libel
   if (count === 0) {
     throw new Error("PosteReferentiel introuvable");
   }
-  return prisma.posteReferentiel.findUniqueOrThrow({ where: { id } });
+  return getPosteReferentielAdmin(id, siteId);
 }
 
 /**
@@ -101,7 +184,7 @@ export async function desactiverPosteReferentiel(id: string, siteId: string) {
     throw new Error("PosteReferentiel introuvable");
   }
   if (!existant.actif) {
-    return existant; // idempotent — pas de 409
+    return getPosteReferentielAdmin(id, siteId); // idempotent — pas de 409
   }
   const { count } = await prisma.posteReferentiel.updateMany({
     where: { id, siteId, actif: true },
@@ -110,9 +193,9 @@ export async function desactiverPosteReferentiel(id: string, siteId: string) {
   if (count === 0) {
     // Course concurrente : desactivee entre le findFirst et le updateMany — l'etat final
     // (desactivee) est de toute facon celui vise, relire pour repondre 200 idempotent.
-    return prisma.posteReferentiel.findUniqueOrThrow({ where: { id } });
+    return getPosteReferentielAdmin(id, siteId);
   }
-  return prisma.posteReferentiel.findUniqueOrThrow({ where: { id } });
+  return getPosteReferentielAdmin(id, siteId);
 }
 
 /**
@@ -130,14 +213,14 @@ export async function reactiverPosteReferentiel(id: string, siteId: string) {
     throw new Error("PosteReferentiel introuvable");
   }
   if (existant.actif) {
-    return existant; // idempotent — pas de 409
+    return getPosteReferentielAdmin(id, siteId); // idempotent — pas de 409
   }
   const { count } = await prisma.posteReferentiel.updateMany({
     where: { id, siteId, actif: false },
     data: { actif: true },
   });
   if (count === 0) {
-    return prisma.posteReferentiel.findUniqueOrThrow({ where: { id } });
+    return getPosteReferentielAdmin(id, siteId);
   }
-  return prisma.posteReferentiel.findUniqueOrThrow({ where: { id } });
+  return getPosteReferentielAdmin(id, siteId);
 }

@@ -40,6 +40,8 @@ export default async function PrevisionsPostesReferentielPage() {
     actif: entry.actif,
     createdAt: entry.createdAt.toISOString(),
     updatedAt: entry.updatedAt.toISOString(),
+    nbPostesRattaches: entry.nbPostesRattaches,
+    nbMappingsRattaches: entry.nbMappingsRattaches,
   }));
 
   return (

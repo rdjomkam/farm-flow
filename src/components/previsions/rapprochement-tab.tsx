@@ -36,7 +36,7 @@
  */
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Clock } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/format";
@@ -51,6 +51,15 @@ import type { Permission } from "@/types";
 
 interface RapprochementTabProps {
   rapprochement: RapprochementScenarioDTO;
+  /**
+   * Message d'erreur reel si le calcul du rapprochement a echoue (reserve
+   * R4, PR2non.4, ADR-053 §15.6) — `null` si `rapprochement` est vide parce
+   * que le scenario n'a reellement aucun mois dans l'horizon. Un echec de CE
+   * calcul ne remet JAMAIS en cause la projection deja calculee avec succes
+   * (bandeau distinct ci-dessous, jamais confondu avec l'etat "aucun
+   * rapprochement" legitime).
+   */
+  erreurRapprochement: string | null;
   scenarioId: string;
   scenarioNom: string;
   permissions: Permission[];
@@ -75,6 +84,7 @@ function moisParDefaut(dateDebutPlan: Date, moisDisponibles: number[]): number {
 
 export function RapprochementTab({
   rapprochement,
+  erreurRapprochement,
   scenarioId,
   scenarioNom,
   permissions,
@@ -94,6 +104,22 @@ export function RapprochementTab({
 
   return (
     <div className="space-y-4">
+      {/* Reserve R4 (PR2non.4) : bandeau distinct de l'etat "aucun
+          rapprochement" legitime — un echec du CALCUL du rapprochement
+          n'est jamais une absence reelle de donnees, et ne remet jamais en
+          cause la projection deja calculee avec succes ailleurs sur cette
+          page (ADR-053 §15.6). */}
+      {erreurRapprochement && (
+        <div className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-danger">{t("rapprochementTab.errors.title")}</p>
+            <p className="mt-1 text-sm text-danger/90">{erreurRapprochement}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("rapprochementTab.errors.hint")}</p>
+          </div>
+        </div>
+      )}
+
       {!sansHorizon && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
           <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -127,7 +153,9 @@ export function RapprochementTab({
 
         <TabsContent value="mensuelle">
           {sansHorizon ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            erreurRapprochement ? null : (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            )
           ) : (
             <RapprochementVueMensuelle
               dateDebutPlan={dateDebutPlan}
@@ -143,7 +171,9 @@ export function RapprochementTab({
 
         <TabsContent value="cumulee">
           {sansHorizon ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            erreurRapprochement ? null : (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            )
           ) : (
             <RapprochementVueCumulee
               dateDebutPlan={dateDebutPlan}
@@ -158,7 +188,9 @@ export function RapprochementTab({
 
         <TabsContent value="parVague">
           {sansHorizon ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            erreurRapprochement ? null : (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            )
           ) : (
             <RapprochementVueVagues vagues={rapprochement.vagues} />
           )}
@@ -166,7 +198,9 @@ export function RapprochementTab({
 
         <TabsContent value="topEcarts">
           {sansHorizon ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            erreurRapprochement ? null : (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("rapprochementTab.noData")}</p>
+            )
           ) : (
             <RapprochementVueTopEcarts
               dateDebutPlan={dateDebutPlan}

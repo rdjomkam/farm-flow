@@ -37,10 +37,26 @@
  * `cibleActuelleHorsScenario` detecte ce cas et rend la situation explicite
  * par un bandeau + une option de repli desactivee dans la liste — pour
  * ALIMENT_PREVISION cela signifie toujours "cible d'un autre scenario"
- * (`cibleHorsScenarioWarning`), pour POSTE_PREVISION cela signifie
- * desormais "entree referentiel introuvable/desactivee"
- * (`cibleReferentielIntrouvableWarning`) — le scope site elimine la cause
- * scenario, pas la possibilite qu'une entree ait ete desactivee entre-temps.
+ * (`cibleHorsScenarioWarning`).
+ *
+ * PR2non.2 (resorption reserve R2, ERR-178 meme famille) : pour
+ * POSTE_PREVISION, "introuvable" recouvrait en realite DEUX etats distincts
+ * (absente du referentiel vs desactivee) confondus dans un seul message qui
+ * s'avouait lui-meme flou ("elle a peut-etre ete desactivee"). Le fetch a
+ * ete rebranche sur `GET /api/previsions/postes-referentiel/admin`
+ * (`listerPostesReferentielAdmin`, TOUTES les entrees, actives ET
+ * inactives, permission `PREVISIONS_PARAMETRER`) au lieu de `GET
+ * /api/previsions/postes-referentiel` (`listerPostesReferentielActifs`, qui
+ * ne renvoyait jamais l'info "desactive" au client). `postesActifs` (derive
+ * localement) reste la SEULE source des `SelectItem` proposables comme
+ * NOUVELLE cible (ADR-053 §16.12 Arbitrage 2 : la desactivation bloque tout
+ * nouveau rattachement) ; `postes` (toutes entrees) sert uniquement a
+ * determiner le statut de la cible EXISTANTE : absente (aucune entree,
+ * quel que soit `actif`), desactivee (entree trouvee, `actif === false`,
+ * libelle affiche pour un message actionnable), ou introuvable dans cette
+ * branche (trouvee et active => hors bandeau). Ce dialog n'est rendu que
+ * pour `peutParametrer` (`rapprochement-mapping-tab.tsx`), meme permission
+ * que la nouvelle route — aucun utilisateur ne perd l'acces.
  *
  * Sprint PR3-ter, story A.2 : le `cibleId` d'un mapping `ALIMENT_PREVISION`
  * porte desormais le format compose `tailleGranule::alimentPrevisionId`
@@ -144,6 +160,10 @@ export function MappingFormDialog({
   // ci-dessous — evite de reecraser un choix utilisateur deja fait si l'effet
   // se redeclenche (ex. `aliments` change de reference sans changer de valeur).
   const [alimentInitialResolu, setAlimentInitialResolu] = useState(false);
+  // PR2non.2 : TOUTES les entrees du referentiel (actives ET inactives) —
+  // `GET .../admin`, jamais `GET /api/previsions/postes-referentiel` (actifs
+  // seuls, qui masquerait la distinction absente/desactivee au client). Voir
+  // `postesActifs` ci-dessous pour la liste effectivement selectionnable.
   const [postes, setPostes] = useState<PosteReferentielDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D1 (contre-review PR3-bis) : `chargementCibles` n'est plus un
@@ -173,7 +193,10 @@ export function MappingFormDialog({
     let cancelled = false;
     (async () => {
       const [postesResult, alimentsResult] = await Promise.all([
-        get<{ data: PosteReferentielDTO[] }>(`/api/previsions/postes-referentiel`, {
+        // PR2non.2 : route admin (TOUTES les entrees) — voir en-tete de
+        // fichier. Permission `PREVISIONS_PARAMETRER`, identique a la
+        // condition de rendu de ce dialog (`peutParametrer`).
+        get<{ data: PosteReferentielDTO[] }>(`/api/previsions/postes-referentiel/admin`, {
           silentError: true,
           silentLoading: true,
         }),
@@ -239,12 +262,61 @@ export function MappingFormDialog({
   // il n'est POSE par l'effet de resolution ci-dessus QUE si la resolution a
   // echoue, jamais apres un choix utilisateur (`touched` interrompt l'effet
   // avant qu'il ne pose le sentinel).
+  // PR2non.2 : `postes` porte desormais TOUTES les entrees (actives ET
+  // inactives, route admin). `postesActifs` est la SEULE liste proposable
+  // pour un NOUVEAU rattachement (`SelectItem`, ADR-053 §16.12 Arbitrage 2)
+  // — une entree desactivee n'y figure jamais.
+  const postesActifs = postes.filter((p) => p.actif);
   const listePertinente =
     cibleType === CibleRapprochement.POSTE_PREVISION
-      ? postes
+      ? postesActifs
       : cibleType === CibleRapprochement.ALIMENT_PREVISION
         ? aliments
         : [];
+  // PR2non.2 : statut de la cible EXISTANTE (POSTE_PREVISION uniquement),
+  // recherche dans `postes` (TOUTES les entrees, pas `postesActifs`) pour
+  // distinguer "absente" (aucune entree, quel que soit `actif`) de
+  // "desactivee" (entree trouvee, `actif === false`) — la meme distinction
+  // qu'ERR-178 (« n'existe pas » vs « n'a pas pu etre charge »), ici pour un
+  // troisieme etat de la meme famille (« existe mais desactivee »). `null`
+  // si la cible n'a pas change depuis `existant` (garde `!touched`, comme
+  // CORRECTIF C1) ou si elle est trouvee ET active (cas nominal, hors
+  // bandeau).
+  const cibleReferentielPertinente =
+    exigeCibleId &&
+    !chargementCibles &&
+    !touched &&
+    cibleType === CibleRapprochement.POSTE_PREVISION &&
+    cibleType === existant?.cibleType &&
+    !!existant?.cibleId &&
+    cibleId === existant.cibleId;
+  const cibleReferentielExistante = cibleReferentielPertinente
+    ? postes.find((p) => p.id === existant!.cibleId)
+    : undefined;
+  const cibleReferentielStatut: "absente" | "desactivee" | null = !cibleReferentielPertinente
+    ? null
+    : cibleReferentielExistante === undefined
+      ? "absente"
+      : cibleReferentielExistante.actif
+        ? null
+        : "desactivee";
+  // CORRECTIF C1 : la cible ACTUELLE du formulaire (pas encore modifiee par
+  // l'utilisateur) n'appartient a aucune des cibles chargees pour ce
+  // scenario => elle appartient a un AUTRE scenario. Ne se declenche que
+  // pour la valeur d'origine (`existant.cibleId`), jamais apres un choix
+  // volontaire de l'utilisateur (une cible fraichement choisie est toujours
+  // dans la liste puisqu'elle en est issue).
+  //
+  // Story A.2 : pour ALIMENT_PREVISION, `cibleId === existant.cibleId` ne
+  // marche plus (format compose vs id brut resolu, voir plus haut) — le
+  // sentinel `CIBLE_ALIMENT_ORPHELINE_SENTINEL` remplace cette comparaison :
+  // il n'est POSE par l'effet de resolution ci-dessus QUE si la resolution a
+  // echoue, jamais apres un choix utilisateur (`touched` interrompt l'effet
+  // avant qu'il ne pose le sentinel).
+  //
+  // PR2non.2 : pour POSTE_PREVISION, ce bandeau couvre desormais DEUX
+  // sous-etats distincts (`cibleReferentielStatut`, absente/desactivee) —
+  // voir le rendu ci-dessous pour le choix du message.
   const cibleActuelleHorsScenario =
     exigeCibleId &&
     !chargementCibles &&
@@ -253,7 +325,7 @@ export function MappingFormDialog({
     cibleType === existant.cibleType &&
     (cibleType === CibleRapprochement.ALIMENT_PREVISION
       ? cibleId === CIBLE_ALIMENT_ORPHELINE_SENTINEL
-      : cibleId === existant.cibleId && !listePertinente.some((item) => item.id === cibleId));
+      : cibleReferentielStatut !== null);
   // CORRECTIF C2 : cable la cle i18n `fields.cibleId.empty` (auparavant
   // morte) — distincte du cas ci-dessus, elle couvre l'absence totale
   // d'options pour ce `cibleType` dans ce scenario.
@@ -395,7 +467,11 @@ export function MappingFormDialog({
                 {cibleActuelleHorsScenario && (
                   <div role="alert" className="rounded-lg border border-warning/40 bg-accent-amber-muted p-3 text-xs text-warning">
                     {cibleType === CibleRapprochement.POSTE_PREVISION
-                      ? t("rapprochementTab.mapping.form.cibleReferentielIntrouvableWarning")
+                      ? cibleReferentielStatut === "desactivee"
+                        ? t("rapprochementTab.mapping.form.cibleReferentielDesactiveeWarning", {
+                            libelle: cibleReferentielExistante?.libelle ?? "",
+                          })
+                        : t("rapprochementTab.mapping.form.cibleReferentielAbsenteWarning")
                       : t("rapprochementTab.mapping.form.cibleHorsScenarioWarning", { scenario: scenarioNom })}
                   </div>
                 )}
@@ -420,7 +496,11 @@ export function MappingFormDialog({
                       </SelectItem>
                     )}
                     {cibleType === CibleRapprochement.POSTE_PREVISION &&
-                      postes.map((p) => (
+                      // PR2non.2 : `postesActifs` (jamais `postes`, qui
+                      // porte aussi les entrees desactivees) — une entree
+                      // desactivee n'est JAMAIS proposable comme NOUVELLE
+                      // cible (ADR-053 §16.12 Arbitrage 2).
+                      postesActifs.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.libelle}
                         </SelectItem>

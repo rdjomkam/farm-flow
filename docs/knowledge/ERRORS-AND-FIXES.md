@@ -819,6 +819,58 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-190 — Un champ de DTO non optionnel non fourni par tous ses producteurs, masqué par un `state.replace` et deux mocks trop généreux, affichait « NaN postes de charge rattachés »
+**Sprint :** PR2-nonies (stories PR2non.1-6) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/previsions/api-types.ts` (`PosteReferentielDTO`), 3 routes de mutation (`PATCH`/désactivation/réactivation du référentiel), `src/components/previsions/*` (`handleUpdated`), helper de test ICU
+
+**Symptôme :**
+`PosteReferentielDTO.nbPostesRattaches`/`.nbMappingsRattaches` sont non optionnels dans le type
+TypeScript, mais les 3 routes de mutation renvoyaient l'objet Prisma brut, qui ne porte pas ces champs
+calculés. `handleUpdated`, côté client, **remplace** l'entrée correspondante dans le state React (pas de
+merge partiel) : après un renommage via une de ces routes, rouvrir la boîte de dialogue « Désactiver »
+sur la même entrée affichait « **NaN** postes de charge rattachés » — `Intl.PluralRules.select(NaN)`
+retombe sur la branche `other`, et l'interpolation `#` du message ICU affiche littéralement `NaN`.
+
+**Cause racine :**
+`post<PosteReferentielDTO>(...)` est un **cast** TypeScript sur un JSON désérialisé au runtime — `tsc`
+ne peut détecter aucune absence de champ à cet endroit, contrairement à un objet construit littéralement
+dans le code. Le contrat du type (non optionnel) n'était donc vérifié nulle part entre la route et
+l'écran consommateur.
+
+Le défaut est resté invisible aux tests existants pour **deux raisons de mock, indépendantes et
+cumulatives** — dans les deux cas le mock était strictement plus généreux que la production réelle :
+1. Les mocks de réponse des 3 routes faisaient `{ ...entries[0], actif: false }` : le spread de
+   `entries[0]` **réinjectait** les décomptes que la vraie route ne renvoie jamais.
+2. Le helper de test qui simule la résolution de message ICU faisait `Number(values[key] ?? 0)` :
+   `undefined` (champ absent) devenait silencieusement `0` côté test — affichant « 0 postes rattachés »
+   là où la production affiche « NaN » — donc aucune assertion sur un texte affiché ne pouvait jamais
+   révéler l'écart.
+
+**Fix :**
+Introduction d'un helper unique `getPosteReferentielAdmin` par lequel transitent désormais les **7**
+points de retour des 3 routes de mutation (dont les 2 chemins idempotents — réactiver un poste déjà
+actif, désactiver un poste déjà inactif), garantissant que les champs calculés sont toujours présents
+dans la réponse HTTP. Les mocks de test corrigés pour refléter fidèlement la forme réelle de la réponse
+(sans spread masquant), et le helper ICU corrigé pour ne plus convertir `undefined` en `0`. Falsification
+à 1 test (retirer l'appel au helper dans une des 3 routes fait tomber le test dédié à cette route).
+
+**Leçon / Règle :**
+Même famille qu'ERR-188 (« champ optionnel pour ne pas casser les tests » côté schéma) : ici c'est un
+champ **non optionnel côté type mais non garanti côté runtime** par tous ses producteurs. Pour tout DTO
+consommé via un cast (`post<T>`, `fetch(...).then(r => r.json() as T)`), vérifier que **chaque** route qui
+produit ce type le fait passer par un point de construction commun (helper, fonction de sérialisation),
+jamais par un renvoi ad hoc de l'objet Prisma brut à chaque route indépendamment. Et pour les mocks de
+test : un mock qui utilise le spread d'une fixture existante (`{ ...entries[0], champ: nouvelleValeur }`)
+peut réinjecter des champs que la route réelle ne renvoie jamais — préférer construire explicitement
+l'objet attendu plutôt que de partir d'une fixture plus complète que la réalité. Un helper de test qui
+convertit une valeur absente en valeur par défaut (`?? 0`) avant assertion masque exactement le défaut
+qu'il devrait révéler.
+
+**Références :** ERR-188, `docs/tests/rapport-sprint-PR2non.md` (ou équivalent du sprint PR2-nonies)
+
+---
+
 ### ERR-187 — Un `.refine()` Zod placé en amont rend une branche d'erreur métier — et son mapping i18n client — inatteignable, sans faire baisser aucun compteur de test
 **Sprint :** PR3-quinquies (story A.5, review — Écart Moyenne #1) | **Date :** 2026-08-05
 **Sévérité :** Moyenne
@@ -868,6 +920,18 @@ découlera). Vérifier systématiquement, pour tout message de repli, s'il couvr
 cause distinctes en amont.
 
 **Références :** `docs/analysis/pre-analysis-sprint-PR3-bis.md`, `docs/tests/rapport-sprint-PR3-bis.md`
+
+**Mise à jour — sprint PR2-nonies (réserve R2, `mapping-form-dialog.tsx`), vérifiée le 2026-08-05 :**
+Un **troisième** état de la même famille est apparu, distinct des deux précédents (« la donnée n'existe
+pas » / « la donnée n'a pas pu être chargée ») : « la donnée existe mais est **désactivée** »
+(`PosteReferentiel.actif = false`). Une cible désactivée n'est ni absente (elle figure toujours en
+base, avec un id valide et un libellé) ni en échec de chargement (le fetch réussit) — c'est un troisième
+statut à part entière, qui appelait son propre libellé plutôt que d'être absorbé par l'un des deux
+existants. Généralisation à retenir : un état de repli d'affichage binaire (« ok » / « erreur ») a
+tendance à recevoir de nouveaux statuts au fil des sprints à mesure que le modèle de données se
+complexifie (ici : l'ajout d'un flag `actif` sur l'entité cible) — chaque nouveau statut métier introduit
+sur une entité référencée par un `Select` doit être revérifié contre l'ensemble des messages de repli qui
+en dépendent, pas seulement contre le formulaire de création.
 
 ---
 
@@ -3334,6 +3398,62 @@ Toujours utiliser le champ métier (`date`) pour le tri et l'affichage, pas les 
 
 ## Catégorie : Build
 
+### ERR-191 — Une dette de typage sur les fichiers de test croît sans détection tant qu'aucune étape `tsc` ne tourne en CI ; un compteur agrégé masque des bugs de domaine réels sous des erreurs de globals non importés
+**Sprint :** PR2-nonies (stories PR2non.1-6) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `tsconfig.json` (`types: ["vitest/globals"]`), fichiers `__tests__/**` du dépôt (nombreux)
+
+**Symptôme :**
+`tsc --noEmit` comptait **1 423** erreurs (mesuré en PR2-octies) → **1 449** en début de ce sprint →
+**178** après corrections mécaniques (**-87,7 %**). Cette dette avait crû sans être détectée entre les
+deux mesures parce qu'aucun des mécanismes de garantie existants ne la couvre : `next build` ne
+type-check pas les fichiers `__tests__` (ERR-186), `vitest` exécute sans avoir besoin d'un typage
+correct, et **aucune étape `tsc` ne tournait en CI** avant ce sprint.
+
+**Cause racine :**
+**81,8 % (1 186 erreurs sur 1 449) concentrées sur 11 fichiers seulement** — les globals Vitest
+(`describe`/`it`/`expect`/`vi`) utilisés sans import explicite. `vitest.config` porte `globals: true`
+(les fournit bel et bien au runtime), mais `tsconfig.json` ne déclarait pas `"types": ["vitest/globals"]`
+— le compilateur ne connaissait donc pas ces identifiants alors que l'exécution, elle, les résout sans
+problème. Une seule ligne de configuration ajoutée a fait chuter le compteur de 1 449 à 178 sans toucher
+un seul fichier de test.
+
+**Fix :**
+Ajout de `"types": ["vitest/globals"]` dans `tsconfig.json`. Les **178** erreurs restantes n'ont **pas**
+été corrigées ce sprint (arbitrage explicite de l'utilisateur : traitement différé) mais ont été
+**caractérisées** — elles ne sont pas homogènes, une partie révèle des bugs de domaine réels, préexistants
+et jusqu'ici invisibles :
+- `TypeRemise.POURCENTAGE`/`.FIXE` référencés alors que l'enum réel ne porte que
+  `EARLY_ADOPTER|SAISONNIERE|PARRAINAGE|COOPERATIVE|VOLUME|MANUELLE`, plus 5 appels à une fonction à 4
+  arguments alors qu'elle en attend 3 — touche de la **logique de remises facturée**, retenue comme
+  priorité d'investigation ultérieure ;
+- `TypePlan.PRO` référencé alors que la valeur réelle est `PROFESSIONNEL` — utilisé comme défaut d'un
+  helper de fixture, contamine silencieusement tout test qui ne le surcharge pas explicitement ;
+- `TypeSystemeBac.BASSIN` référencé, valeur inexistante dans l'enum ;
+- `LigneRapprochement.previsionnel` référencé alors que le champ réel s'appelle `prevu` → une assertion
+  qui compare `undefined === undefined`, donc **toujours vraie**, jamais reliée à la vraie donnée ;
+- `PhaseLot === "LARVE"` / `"ALEVIN"` alors que l'enum réel porte `LARVAIRE`/`ALEVINAGE` : le mock
+  **injecte la même valeur fausse** que celle vérifiée par l'assertion — le test est auto-cohérent,
+  passe, mais est **complètement découplé** du domaine réel qu'il prétend couvrir ;
+- une comparaison `Decimal === number` qui ne passe que parce que le fake Prisma utilisé en test stocke
+  des `number` bruts là où le client réel renvoie des `Decimal` — le fake est **infidèle** au comportement
+  réel de la dépendance qu'il simule.
+
+**Leçon / Règle :**
+Un compteur global de dette de typage (« N erreurs `tsc`, en baisse ») protège uniquement contre une
+régression **quantitative** — il ne dit rien sur la nature qualitative des erreurs qui composent le
+solde restant. Ne jamais traiter un tel compteur comme une preuve de correction : décomposer par fichier
+et par famille d'erreur avant de conclure. Plusieurs des erreurs ici révélées ne sont pas des erreurs de
+frappe mais des tests dont le mock **ment** — soit en injectant la même valeur fausse que celle testée
+(auto-cohérence trompeuse), soit en simulant une dépendance de façon plus permissive que sa vraie
+implémentation (`Decimal` vs `number`). Un test qui passe parce que son mock ment n'est pas un test ; le
+typage strict des fichiers de test est un des seuls mécanismes capables de le révéler mécaniquement,
+d'où l'intérêt de l'exécuter en CI plutôt que de compter sur `next build`/`vitest` seuls (cf. ERR-186).
+
+**Références :** ERR-186, ADR-052
+
+---
+
 ### ERR-186 — `next build` ne type-check pas les fichiers `__tests__` : un build vert ne prouve pas que les tests compilent
 **Sprint :** PR3-quinquies (story A.5, second passage de test §8.1) | **Date :** 2026-08-05
 **Sévérité :** Moyenne
@@ -3422,6 +3542,103 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-193 — [PRATIQUE — ce qui a fonctionné] Une falsification à 0 test tombé est une découverte, pas un détail : deux mutations non couvertes retrouvées par ce seul mécanisme
+**Sprint :** PR2-nonies (stories PR2non.1-6) | **Date :** 2026-08-05
+**Sévérité :** — (entrée de **pratique reproductible**, complète ERR-160/ERR-168/ERR-172/ERR-189)
+**Fichier(s) :** Server Component de la story R4 (retrait de `console.error` et de la propagation de deux props d'erreur), `src/components/previsions/__tests__/*` (route non-admin de la story R2)
+
+**Symptôme :**
+Deux mutations de production distinctes, appliquées ce sprint dans le cadre de la pratique de
+falsification systématique (ERR-189), ont fait tomber **0 test** au premier passage :
+- **R4** : retrait des deux appels `console.error` du Server Component, ainsi que de la non-propagation
+  de deux props d'erreur vers l'enfant — le composant n'était couvert par **aucun** test direct, ce que
+  la falsification a révélé plutôt qu'une lecture de code (le fichier existait, la fonctionnalité
+  semblait couverte par transitivité via des tests d'un composant enfant).
+- **R2** : le fetch a été rebranché sur la route non-admin (au lieu de la route admin) sans faire tomber
+  **aucun** des 14 tests concernés, parce que le mock HTTP de test matchait sur `url.includes("/postes")`
+  — un prédicat vrai pour la route admin **et** pour la route non-admin, donc incapable de distinguer
+  laquelle des deux était réellement appelée.
+
+**Cause racine :**
+Dans les deux cas, l'absence de tout test tombé ne signifiait pas « le comportement est correct », mais
+« aucun test présent n'est en mesure de le distinguer d'un comportement incorrect ». Pour R4, c'est une
+absence pure de test direct sur le Server Component. Pour R2, c'est un mock dont le matcher (`includes`
+partiel sur une sous-chaîne d'URL) est plus permissif que la distinction que le test prétend vérifier.
+
+**Fix :**
+- R4 : 4 tests page + 2 tests de relais ajoutés, falsification rejouée → 2/2 puis 1/1 tombent
+  correctement sur les mutations correspondantes.
+- R2 : assertion ajoutée sur l'URL **réellement** appelée (comparaison exacte, pas un `includes` partiel)
+  → 1/14 tombe désormais correctement quand le fetch est rebranché sur la mauvaise route.
+
+**Leçon / Règle :**
+Une falsification à 0 test tombé n'est jamais un signal neutre — c'est soit une preuve que le code
+falsifié n'est couvert par aucun test, soit une preuve qu'un mock existant est trop permissif pour
+distinguer le comportement correct du comportement cassé. Dans les deux cas, la falsification doit être
+traitée comme une **découverte** de trou de couverture à combler (test ajouté, mock resserré) puis
+**rejouée** pour prouver que le trou est effectivement comblé — jamais acceptée telle quelle comme un
+« pas de régression détectée ». Cas particulier à surveiller pour les mocks HTTP de test : un matcher
+d'URL par sous-chaîne (`url.includes(...)`) qui matche plusieurs routes distinctes du système sous test
+rend indétectable tout changement de route — préférer une comparaison exacte de l'URL/chemin appelé.
+
+**Références :** ERR-160, ERR-168, ERR-172, ERR-189, `docs/tests/rapport-sprint-PR2non.md` (ou équivalent du sprint PR2-nonies)
+
+---
+
+### ERR-192 — Un faux vert `catch { dbAvailable = false; return }` sur un test DB-gated réintroduit exactement le motif interdit par ADR-052 §6, non détecté par le test méta qui ne repère que des motifs syntaxiques
+**Sprint :** PR2-nonies (stories PR2non.1-6) | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** nouveau test DB-gated de R5 (voir référence de mise à jour ERR-184), `src/test/require-database-url.ts`, ADR-052 §1/§4/§6
+
+**Symptôme :**
+Le nouveau test DB-gated écrit pour la story R5 (portant sur la parité SQL/TypeScript de
+`sluggifierLibellePoste`, cf. mise à jour ERR-184) était structuré ainsi : un `try`/`catch` autour de la
+connexion à la base, où le `catch` faisait `dbAvailable = false` puis chaque test faisait
+`if (!dbAvailable) { console.warn(...); return; }`. Ce motif est **vert sans rien prouver** dès que
+`DATABASE_URL` est définie dans l'environnement mais que la base elle-même est injoignable (connexion
+refusée, base arrêtée, mauvais port) — le test « passe » alors qu'il n'a exécuté aucune des assertions
+qu'il prétend porter.
+
+**Cause racine :**
+ADR-052 §1 nomme **explicitement** ce motif — « un faux vert, pire qu'un skip visible » — et §6
+l'**interdit** formellement pour tout nouveau test DB-gated du dépôt. Le contrat de
+`requireDatabaseUrl()` (`src/test/require-database-url.ts`) précise qu'un échec de connexion à une base
+dont l'URL est pourtant définie **doit faire échouer les tests bruyamment**, jamais se replier
+silencieusement sur un skip déguisé en `warn` + `return`. Le nouveau test a réintroduit ce motif malgré
+la règle déjà écrite, dans un fichier nouveau créé après ADR-052.
+
+**Fix :**
+Le test lève désormais une erreur actionnable en cas d'échec de connexion (via `requireDatabaseUrl()`,
+sans `catch` muet ni retour anticipé). Falsifié par exécution dans les deux conditions : base
+injoignable → **4/4 tests échouent** bruyamment (au lieu de « passer » silencieusement) ; base
+joignable → **8/8 tests verts**.
+
+**Leçon / Règle — l'angle mort qu'ADR-052 avait déjà anticipé :**
+ADR-052 §4 avait explicitement prévu ce scénario : « un nouveau fichier pourrait réintroduire un motif
+équivalent sans se faire attraper par ce mécanisme — la checklist de @code-reviewer reste la deuxième
+ligne de défense ». C'est exactement ce qui s'est produit : le test méta d'ADR-052 ne détecte que des
+motifs **syntaxiques** connus à l'avance (ex. `describe.runIf`, certains appels nommés) — il ne peut pas
+repérer un `catch` muet suivi d'un flag booléen et d'un `return` anticipé, qui est une combinaison
+arbitraire de constructions JavaScript ordinaires, invisible à une détection par motif fixe.
+
+**Portée mesurée, non corrigée dans son ensemble ce sprint :** **15 des 16 fichiers de tests DB-gated du
+dépôt portent encore ce défaut** au moment de la rédaction de cette entrée. Seul
+`scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` applique déjà le patron correct
+décrit par ADR-052 §3.3 (échec bruyant, pas de repli silencieux). Ce chiffre doit être traité comme une
+dette connue et non close — tout agent qui touche un fichier de test DB-gated existant devrait vérifier
+s'il porte ce motif avant de le considérer comme fiable.
+
+**Leçon / Règle — actionnable pour tout nouveau test DB-gated :** ne jamais écrire de `try`/`catch` autour
+de la connexion qui aboutit à un skip silencieux (`console.warn` + `return`) en cas d'échec — utiliser
+systématiquement `requireDatabaseUrl()` (ou le patron équivalent d'ADR-052 §3.3) qui fait échouer le test
+bruyamment. Un mécanisme automatique de détection (test méta) protège seulement contre les motifs qu'il
+connaît déjà — il ne remplace pas une vérification humaine explicite en review de tout nouveau fichier de
+test DB-gated contre ce motif précis.
+
+**Références :** ADR-052 §1, §4, §6, ERR-184 (mise à jour du 2026-08-05, story R5), `src/test/require-database-url.ts`, `scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` (patron correct de référence)
+
+---
 
 ### ERR-189 — [PRATIQUE — ce qui a fonctionné] La falsification systématique a révélé un trou de couverture réel qu'aucune lecture de code n'aurait trouvé : le sous-cas « entrée inactive + libellé coïncident » sur 3 vues de rapprochement
 **Sprint :** PR3-quinquies (story A.5, second passage §8.4) | **Date :** 2026-08-05
@@ -3556,6 +3773,28 @@ qui énumère le périmètre de caractères réellement garanti — jamais suppo
 énoncée avec son périmètre, pas généralisée en « bit-exact » tout court.
 
 **Références :** ERR-171, ERR-179, ADR-053 §16.3, `docs/analysis/pre-analysis-story-A4-mapping-poste-prevision.md`, `docs/tests/rapport-story-A4-mapping-poste-prevision.md`
+
+**Mise à jour — sprint PR2-nonies (stories PR2non.1-6), vérifiée le 2026-08-05 :**
+L'arbitrage laissé ouvert ci-dessus (« centraliser dans un point de vérité unique » vs « test de parité
+qui borne le périmètre ») est désormais **tranché**, pas seulement testé : ADR-053 §17 déclare le SQL
+de backfill de la migration `20260805120000_add_poste_referentiel` **artefact historique** — il a
+produit le référentiel une fois, au moment de la migration, et n'est plus jamais réexécuté. Il n'existe
+qu'**une seule** autorité vivante pour ce calcul : `sluggifierLibellePoste` (TypeScript, NFD), appelée à
+chaque écriture ultérieure. La divergence documentée ci-dessus sur `Ø`/`ø` et les diacritiques centre-
+européens/baltes reste donc réelle en tant que fait historique du backfill, mais n'a plus de canal par
+lequel se reproduire : aucun code de production ne recalcule plus jamais le slug en SQL.
+Cette décision est rendue **vérifiable**, pas seulement déclarée dans un ADR : test DB-gated
+`src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts`, 4
+assertions distinctes — absence de fonction SQL de sluggification vivante en base (`pg_proc`), absence
+de trigger qui la déclencherait (`pg_trigger`), colonne `code` de `PosteReferentiel` en écriture
+applicative seule (`information_schema.columns`, pas de valeur par défaut calculée côté base), et
+contrainte d'unicité (`pg_constraint`) portée par la table plutôt que recalculée. Un test de parité
+(comme celui d'origine, ERR-184) prouve que deux implémentations coïncident sur un périmètre donné ; un
+test comme celui-ci prouve en plus qu'une des deux implémentations n'est **plus jamais exécutée** —
+distinction utile pour toute future divergence de ce type : la question n'est pas seulement « les deux
+calculs sont-ils d'accord ? » mais « l'un des deux calculs a-t-il encore un pouvoir d'écriture réel ? ».
+
+**Références (mise à jour) :** ADR-053 §17, `src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts`
 
 ---
 

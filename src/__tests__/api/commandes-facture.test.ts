@@ -6,6 +6,7 @@ import {
 } from "@/app/api/commandes/[id]/facture/route";
 import { POST as POST_RECEVOIR } from "@/app/api/commandes/[id]/recevoir/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------

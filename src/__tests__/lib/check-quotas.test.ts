@@ -129,6 +129,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(0);
 
     const result = await getQuotasUsage("site-1");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.bacs.actuel).toBe(3);
     expect(result.bacs.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs);
@@ -144,6 +145,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(0);
 
     const result = await getQuotasUsage("site-1");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.bacs.actuel).toBe(1);
     expect(isQuotaAtteint(result.bacs)).toBe(false);
@@ -159,6 +161,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(1);
 
     const result = await getQuotasUsage("site-2");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.bacs.actuel).toBe(2);
     expect(result.bacs.limite).toBe(PLAN_LIMITES[TypePlan.ELEVEUR].limitesBacs);
@@ -177,6 +180,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(50);
 
     const result = await getQuotasUsage("site-3");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.bacs.limite).toBeNull();
     expect(result.vagues.limite).toBeNull();
@@ -204,6 +208,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(1);
 
     const result = await getQuotasUsage("site-1");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.sites.actuel).toBe(1);
   });
@@ -217,6 +222,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(4);
 
     const result = await getQuotasUsage("site-pro");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.bacs.limite).toBe(30);
     expect(result.vagues.limite).toBe(10);
@@ -233,6 +239,7 @@ describe("getQuotasUsage", () => {
     mockPrismaVagueCount.mockResolvedValue(1);
 
     const result = await getQuotasUsage("site-dec");
+    if (!result) throw new Error("expected non-null result");
 
     expect(result.vagues.actuel).toBe(1);
     expect(result.vagues.limite).toBe(1);

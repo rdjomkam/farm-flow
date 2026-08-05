@@ -331,6 +331,142 @@ describe("PosteFormDialog — Bug B : reinitialisation du libelle ET du type", (
   });
 });
 
+/**
+ * Fabrique une promesse "en vol" pour `mockPost`, controlee depuis le test
+ * (resolue explicitement apres avoir simule un changement d'onglet pendant
+ * la soumission).
+ */
+function deferredPost(): { resolve: (value: unknown) => void } {
+  let resolveFn!: (value: unknown) => void;
+  const promise = new Promise((r) => {
+    resolveFn = r;
+  });
+  mockPost.mockImplementationOnce(() => promise);
+  return { resolve: resolveFn };
+}
+
+describe("PosteFormDialog — garde de soumission concurrente (changement d'onglet en vol, bug corrige)", () => {
+  it("pendant la soumission, les deux onglets (TabsTrigger) sont desactives", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PosteFormDialog scenarioId="s1" ordreSuivant={1} onCreated={vi.fn()} />);
+    await ouvrirEtCreer(user, "Carburant");
+
+    const deferred = deferredPost();
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Rechercher dans le référentiel" })).toBeDisabled();
+      expect(screen.getByRole("tab", { name: "Créer une nouvelle entrée" })).toBeDisabled();
+    });
+
+    deferred.resolve({ ok: true, data: { id: "p1", libelle: "Carburant", type: "LOGISTIQUE", posteReferentielId: "ref-9", reutilise: false, posteReferentiel: { libelle: "Carburant", actif: true } } });
+    await waitFor(() => expect(mockPost).toHaveBeenCalled());
+  });
+
+  it("pendant la soumission, un clic sur l'onglet inactif ne change PAS l'onglet affiche", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PosteFormDialog scenarioId="s1" ordreSuivant={1} onCreated={vi.fn()} />);
+    await ouvrirEtCreer(user, "Carburant");
+
+    const deferred = deferredPost();
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Rechercher dans le référentiel" })).toBeDisabled());
+
+    // Tentative de clic sur l'onglet inactif : reste sur "Creer" (le contenu
+    // de creation, notamment le champ libelle de creation, est toujours la).
+    await user.click(screen.getByRole("tab", { name: "Rechercher dans le référentiel" }));
+    expect(screen.getByLabelText(/^Libellé de la nouvelle entrée/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Créer une nouvelle entrée", selected: true })).toBeInTheDocument();
+
+    deferred.resolve({ ok: true, data: { id: "p1", libelle: "Carburant", type: "LOGISTIQUE", posteReferentielId: "ref-9", reutilise: false, posteReferentiel: { libelle: "Carburant", actif: true } } });
+    await waitFor(() => expect(mockPost).toHaveBeenCalled());
+  });
+
+  it("manifestation 1 : collision arrivant apres une tentative de changement d'onglet en vol reste visible (role=alert, dans l'onglet Creer)", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PosteFormDialog scenarioId="s1" ordreSuivant={1} onCreated={vi.fn()} />);
+    await ouvrirEtCreer(user, "Salaires");
+
+    const deferred = deferredPost();
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+    // Synchronisation sur l'etat `submitting` via le bouton de soumission
+    // (toujours desactive pendant l'envoi, independamment des deux
+    // falsifications visees ici) plutot que sur l'etat des TabsTrigger, pour
+    // ne pas coupler cette assertion a la garde testee plus bas.
+    await waitFor(() => expect(screen.getByRole("button", { name: /Créer|Création/ })).toBeDisabled());
+
+    // Tentative de changement d'onglet EN VOL, y compris en contournant le
+    // clic natif (Radix Tabs desactive deja le trigger sur mousedown) via un
+    // evenement clavier envoye directement sur l'element : c'est le seul
+    // chemin qui exerce reellement la garde `if (submitting) return` du
+    // gestionnaire `onValueChange`, independamment de `disabled` sur les
+    // TabsTrigger (voir sanity check : le handler onKeyDown de Radix
+    // TabsTrigger n'a pas de garde `disabled` propre).
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Rechercher dans le référentiel" }), { key: "Enter" });
+
+    deferred.resolve({
+      ok: false,
+      code: "POSTE_REFERENTIEL_CODE_COLLISION",
+      error: "collision",
+      details: { posteReferentielExistant: { id: "ref-1", libelle: "Salaires" } },
+    });
+
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText(/existe déjà dans le référentiel/)).toBeInTheDocument();
+    // Toujours sur l'onglet Creer : le role=alert vit dans TabsContent value="CREER".
+    expect(screen.getByRole("tab", { name: "Créer une nouvelle entrée", selected: true })).toBeInTheDocument();
+  });
+
+  it("manifestation 2 : message d'erreur generique (INACTIF) arrivant apres une tentative de changement d'onglet en vol reste visible (etape 2 pas masquee)", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PosteFormDialog scenarioId="s1" ordreSuivant={1} onCreated={vi.fn()} />);
+    await ouvrirEtCreer(user, "Loyer");
+
+    const deferred = deferredPost();
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Créer|Création/ })).toBeDisabled());
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Rechercher dans le référentiel" }), { key: "Enter" });
+
+    deferred.resolve({ ok: false, code: "POSTE_REFERENTIEL_INACTIF", error: "inactif" });
+
+    await waitFor(() =>
+      expect(screen.getAllByText(/Une entrée désactivée existe déjà pour ce libellé/).length).toBeGreaterThan(0)
+    );
+    // L'etape 2 (le champ libelle qui porte l'erreur) n'a pas ete masquee :
+    // si `mode` etait passe a "RECHERCHER" sans selection, `etape2Visible`
+    // serait devenu faux et ce champ aurait disparu avec son message.
+    expect(screen.getByLabelText(/^Libellé\*?$/)).toBeInTheDocument();
+  });
+
+  it("non-regression : hors soumission, changer d'onglet efface toujours error/collision, et la navigation redevient possible apres la fin de la requete", async () => {
+    mockPost.mockResolvedValueOnce({
+      ok: false,
+      code: "POSTE_REFERENTIEL_CODE_COLLISION",
+      error: "collision",
+      details: { posteReferentielExistant: { id: "ref-1", libelle: "Salaires" } },
+    });
+    const user = userEvent.setup({ delay: null });
+    render(<PosteFormDialog scenarioId="s1" ordreSuivant={1} onCreated={vi.fn()} />);
+    await ouvrirEtCreer(user, "Salaires");
+
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toBeInTheDocument();
+
+    // Hors soumission (la requete precedente est terminee) : changer
+    // d'onglet efface bien error/collision, comportement volontaire
+    // preexistant a preserver.
+    await user.click(screen.getByRole("tab", { name: "Rechercher dans le référentiel" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    // La navigation entre onglets redevient possible : retour sur "Creer".
+    await user.click(screen.getByRole("tab", { name: "Créer une nouvelle entrée" }));
+    expect(screen.getByRole("tab", { name: "Créer une nouvelle entrée", selected: true })).toBeInTheDocument();
+  });
+});
+
 describe("PosteFormDialog — Bug A : garde de fermeture quand le formulaire est touche", () => {
   it("un dialogue non touche se ferme normalement par Echap", async () => {
     const user = userEvent.setup({ delay: null });

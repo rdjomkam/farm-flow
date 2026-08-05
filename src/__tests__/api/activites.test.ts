@@ -11,6 +11,7 @@ import { POST as POST_COMPLETE } from "@/app/api/activites/[id]/complete/route";
 import { GET as GET_MES_TACHES } from "@/app/api/activites/mes-taches/route";
 import { GET as GET_MES_TACHES_COUNT } from "@/app/api/activites/mes-taches/count/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypeActivite, StatutActivite, Recurrence } from "@/types";
 
 // ---------------------------------------------------------------------------

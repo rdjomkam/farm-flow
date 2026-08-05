@@ -3,6 +3,7 @@ import { GET, POST } from "@/app/api/alertes/config/route";
 import { PUT, DELETE } from "@/app/api/alertes/config/[id]/route";
 import { GET as GET_CHECK } from "@/app/api/alertes/check/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypeAlerte } from "@/types";
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { GET as GET_COUNT } from "@/app/api/notifications/count/route";
 import { PUT } from "@/app/api/notifications/[id]/route";
 import { POST as POST_MARK_ALL } from "@/app/api/notifications/mark-all-read/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutAlerte, TypeAlerte } from "@/types";
 
 // ---------------------------------------------------------------------------

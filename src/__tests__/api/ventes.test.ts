@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET as GET_list, POST } from "@/app/api/ventes/route";
 import { GET as GET_detail } from "@/app/api/ventes/[id]/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------

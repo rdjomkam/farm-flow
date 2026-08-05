@@ -3,6 +3,7 @@ import { GET as GET_comparaison } from "@/app/api/analytics/aliments/route";
 import { GET as GET_detail } from "@/app/api/analytics/aliments/[produitId]/route";
 import { POST as POST_simulation } from "@/app/api/analytics/aliments/simulation/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------

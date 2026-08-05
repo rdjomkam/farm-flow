@@ -29,9 +29,33 @@ function deepGet(obj: unknown, path: string): unknown {
   }, obj);
 }
 
+// `Intl.PluralRules("fr")` — pas `n === 1` — car le francais classe 0 dans la categorie
+// "one" (singulier : "0 poste"), a la difference de l'anglais ("other" : "0 posts"). Un mock
+// naif sur `n === 1` ferait mentir le test sur le rendu reel a `count = 0` (cas EXCEL-V12).
+const pluralRulesFr = new Intl.PluralRules("fr");
+
 function interpolate(template: string, values?: Record<string, unknown>): string {
   if (!values) return template;
-  return template.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
+  let result = template;
+  // ICU plural minimal : `{name, plural, one {...} other {...}}` (patron utilise par
+  // `posteReferentielAdmin.desactiverDialog.impact.*`, cf. `src/messages/fr/stock.json:37`).
+  result = result.replace(
+    /\{(\w+),\s*plural,\s*one\s*\{([^}]*)\}\s*other\s*\{([^}]*)\}\}/g,
+    (_, key: string, one: string, other: string) => {
+      // PAS de `?? 0` ici : `Number(undefined)` doit rester `NaN`, exactement
+      // comme le vrai `next-intl`/`Intl.PluralRules` en production. Un mock
+      // qui "repare" silencieusement une valeur de decompte absente en 0
+      // masquerait precisement le defaut que ce fichier de test doit pouvoir
+      // detecter (ERR-188, reserve PR2non.3) : `Intl.PluralRules.select(NaN)`
+      // retombe sur la categorie "other", et `#` formate en la chaine "NaN"
+      // — donc "NaN postes de charge rattaches" si `count` est jamais fourni
+      // `undefined` par un des 7 points de retour de mutation.
+      const n = Number(values[key]);
+      const chosen = pluralRulesFr.select(n) === "one" ? one : other;
+      return chosen.replace(/#/g, String(n));
+    }
+  );
+  return result.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
 }
 
 vi.mock("next-intl", () => ({
@@ -67,6 +91,8 @@ const entries: PosteReferentielDTO[] = [
     actif: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    nbPostesRattaches: 3,
+    nbMappingsRattaches: 2,
   },
   {
     id: "ref-2",
@@ -76,6 +102,8 @@ const entries: PosteReferentielDTO[] = [
     actif: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    nbPostesRattaches: 0,
+    nbMappingsRattaches: 0,
   },
 ];
 
@@ -116,9 +144,25 @@ describe("PostesReferentielAdminClient — R5 (DialogTrigger asChild)", () => {
 describe("PostesReferentielAdminClient — renommer", () => {
   it("ouvre le dialogue, soumet un nouveau libellé, et reflète la mise à jour dans la liste", async () => {
     const user = userEvent.setup({ delay: null });
+    // Objet EXPLICITE, pas un spread de `entries[0]` : le mock doit refleter
+    // la forme REELLE de la reponse `PATCH .../[id]` en production (les deux
+    // decomptes sont TOUJOURS presents, y compris sur ce point de retour non
+    // idempotent — cf. `renommerPosteReferentiel` -> `getPosteReferentielAdmin`).
+    // Un spread masquerait un regression silencieuse si ce point de retour
+    // cessait un jour de les fournir (ERR-188).
     patchMock.mockResolvedValue({
       ok: true,
-      data: { ...entries[0], libelle: "Électricité générale" },
+      data: {
+        id: "ref-1",
+        siteId: "site-1",
+        code: "electricite",
+        libelle: "Électricité générale",
+        actif: true,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        nbPostesRattaches: 3,
+        nbMappingsRattaches: 2,
+      },
     });
 
     render(<PostesReferentielAdminClient initialEntries={[entries[0]]} />);
@@ -136,6 +180,43 @@ describe("PostesReferentielAdminClient — renommer", () => {
     });
     expect(await screen.findByText("Électricité générale")).toBeInTheDocument();
     expect(screen.queryByText("Electricite")).not.toBeInTheDocument();
+  });
+
+  it("apres un renommage, rouvrir 'Désactiver' affiche des decomptes NUMERIQUES (jamais NaN) — regression du defaut PR2non.3", async () => {
+    const user = userEvent.setup({ delay: null });
+    // Le point critique du defaut original : la reponse de renommage doit
+    // porter les decomptes pour que `handleUpdated` (remplacement complet de
+    // l'entree en state, pas un merge) ne les efface pas avant la reouverture
+    // du dialogue de desactivation.
+    patchMock.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "ref-1",
+        siteId: "site-1",
+        code: "electricite",
+        libelle: "Électricité renommée",
+        actif: true,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        nbPostesRattaches: 3,
+        nbMappingsRattaches: 2,
+      },
+    });
+
+    render(<PostesReferentielAdminClient initialEntries={[entries[0]]} />);
+
+    await user.click(screen.getByRole("button", { name: "Renommer" }));
+    const input = screen.getByLabelText(/^Libellé\*?$/);
+    await user.clear(input);
+    await user.type(input, "Électricité renommée");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByText("Électricité renommée")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Désactiver" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("3 postes de charge rattachés")).toBeInTheDocument();
+    expect(within(dialog).getByText("2 rapprochements rattachés")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
   it("rejette la soumission d'un libellé vide sans appeler l'API", async () => {
@@ -180,7 +261,23 @@ describe("PostesReferentielAdminClient — désactiver / réactiver", () => {
 
   it("désactiver : confirme via le dialogue, appelle POST .../desactiver, et met à jour le badge", async () => {
     const user = userEvent.setup({ delay: null });
-    postMock.mockResolvedValue({ ok: true, data: { ...entries[0], actif: false } });
+    // Objet EXPLICITE (pas un spread) — meme justification que le test de
+    // renommage ci-dessus : la reponse `POST .../desactiver` porte TOUJOURS
+    // les deux decomptes en production.
+    postMock.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "ref-1",
+        siteId: "site-1",
+        code: "electricite",
+        libelle: "Electricite",
+        actif: false,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        nbPostesRattaches: 3,
+        nbMappingsRattaches: 2,
+      },
+    });
 
     render(<PostesReferentielAdminClient initialEntries={[entries[0]]} />);
 
@@ -196,7 +293,20 @@ describe("PostesReferentielAdminClient — désactiver / réactiver", () => {
 
   it("réactiver : confirme via le dialogue, appelle POST .../reactiver, et met à jour le badge", async () => {
     const user = userEvent.setup({ delay: null });
-    postMock.mockResolvedValue({ ok: true, data: { ...entries[1], actif: true } });
+    postMock.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "ref-2",
+        siteId: "site-1",
+        code: "salaires",
+        libelle: "Salaires équipe",
+        actif: true,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        nbPostesRattaches: 0,
+        nbMappingsRattaches: 0,
+      },
+    });
 
     render(<PostesReferentielAdminClient initialEntries={[entries[1]]} />);
 
@@ -208,6 +318,88 @@ describe("PostesReferentielAdminClient — désactiver / réactiver", () => {
 
     expect(postMock).toHaveBeenCalledWith("/api/previsions/postes-referentiel/ref-2/reactiver", {});
     expect(await screen.findByText("Actif")).toBeInTheDocument();
+  });
+
+  it("cycle désactiver -> réactiver -> désactiver : les decomptes restent NUMERIQUES (jamais NaN) a chaque reouverture du dialogue", async () => {
+    const user = userEvent.setup({ delay: null });
+    // Le point idempotent lui-meme (server-side) est couvert par les tests
+    // de route et le test d'integration DB — ce test-ci verifie uniquement
+    // que `handleUpdated` (remplacement complet de l'entree en state) ne
+    // fait JAMAIS regresser les decomptes affiches d'un cycle a l'autre,
+    // quelle que soit la reponse simulee ici.
+    postMock.mockImplementation((url: unknown) => {
+      const actif = String(url).endsWith("/reactiver");
+      return Promise.resolve({
+        ok: true,
+        data: {
+          id: "ref-1",
+          siteId: "site-1",
+          code: "electricite",
+          libelle: "Electricite",
+          actif,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          nbPostesRattaches: 3,
+          nbMappingsRattaches: 2,
+        },
+      });
+    });
+
+    render(<PostesReferentielAdminClient initialEntries={[entries[0]]} />);
+
+    await user.click(screen.getByRole("button", { name: "Désactiver" }));
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Désactiver" }));
+    await screen.findByText("Désactivé");
+
+    await user.click(screen.getByRole("button", { name: "Réactiver" }));
+    const dialog2 = screen.getByRole("dialog");
+    await user.click(within(dialog2).getByRole("button", { name: "Réactiver" }));
+    await screen.findByText("Actif");
+
+    await user.click(screen.getByRole("button", { name: "Désactiver" }));
+    const dialog3 = screen.getByRole("dialog");
+    expect(within(dialog3).getByText("3 postes de charge rattachés")).toBeInTheDocument();
+    expect(within(dialog3).getByText("2 rapprochements rattachés")).toBeInTheDocument();
+    expect(within(dialog3).queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it("désactiver une entrée rattachée affiche le décompte des postes et mappings rattachés (R3) — valeurs non nulles", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PostesReferentielAdminClient initialEntries={[entries[0]]} />);
+
+    await user.click(screen.getByRole("button", { name: "Désactiver" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("3 postes de charge rattachés")).toBeInTheDocument();
+    expect(within(dialog).getByText("2 rapprochements rattachés")).toBeInTheDocument();
+  });
+
+  it("désactiver une entrée sans aucun rattachement affiche '0 poste...' / '0 rapprochement...' de façon lisible (cas réel EXCEL-V12 : 0 mapping)", async () => {
+    const user = userEvent.setup({ delay: null });
+    const entreeSansRattachement: PosteReferentielDTO = {
+      ...entries[0],
+      id: "ref-3",
+      nbPostesRattaches: 0,
+      nbMappingsRattaches: 0,
+    };
+    render(<PostesReferentielAdminClient initialEntries={[entreeSansRattachement]} />);
+
+    await user.click(screen.getByRole("button", { name: "Désactiver" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("0 poste de charge rattaché")).toBeInTheDocument();
+    expect(within(dialog).getByText("0 rapprochement rattaché")).toBeInTheDocument();
+  });
+
+  it("réactiver n'affiche AUCUN décompte (le décompte ne concerne que la désactivation)", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PostesReferentielAdminClient initialEntries={[entries[1]]} />);
+
+    await user.click(screen.getByRole("button", { name: "Réactiver" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByText(/rattaché/)).not.toBeInTheDocument();
   });
 
   it("un échec de l'API sur désactiver laisse le badge 'Actif' inchangé", async () => {
@@ -244,6 +436,8 @@ describe("PostesReferentielAdminClient — i18n (aucune chaîne en dur)", () => 
       "posteReferentielAdmin.desactiverDialog.confirmTitle",
       "posteReferentielAdmin.desactiverDialog.confirmDescription",
       "posteReferentielAdmin.desactiverDialog.confirmButton",
+      "posteReferentielAdmin.desactiverDialog.impact.postes",
+      "posteReferentielAdmin.desactiverDialog.impact.mappings",
       "posteReferentielAdmin.reactiverDialog.confirmTitle",
       "posteReferentielAdmin.reactiverDialog.confirmDescription",
       "posteReferentielAdmin.reactiverDialog.confirmButton",

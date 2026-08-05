@@ -103,7 +103,7 @@ describe("PATCH /api/previsions/postes-referentiel/[id]", () => {
     expect(mockRenommerPosteReferentiel).not.toHaveBeenCalled();
   });
 
-  it("200 : renomme via activeSiteId (R8, jamais un siteId du body), retourne l'entree renommee", async () => {
+  it("200 : renomme via activeSiteId (R8, jamais un siteId du body), retourne l'entree renommee avec ses decomptes (R3, ERR-188)", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockRenommerPosteReferentiel.mockResolvedValue({
       id: "ref-1",
@@ -111,6 +111,8 @@ describe("PATCH /api/previsions/postes-referentiel/[id]", () => {
       code: "salaires",
       libelle: "Salaires equipe",
       actif: true,
+      nbPostesRattaches: 2,
+      nbMappingsRattaches: 1,
     });
 
     const res = await PATCH(patchRequest({ libelle: "Salaires equipe" }), idParams());
@@ -121,6 +123,8 @@ describe("PATCH /api/previsions/postes-referentiel/[id]", () => {
     const body = await res.json();
     expect(body.libelle).toBe("Salaires equipe");
     expect(body.code).toBe("salaires"); // code inchange
+    expect(body.nbPostesRattaches).toBe(2);
+    expect(body.nbMappingsRattaches).toBe(1);
   });
 
   it("404 (jamais 403) si l'entree est introuvable ou d'un autre site", async () => {

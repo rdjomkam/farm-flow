@@ -564,7 +564,11 @@
     "desactiverDialog": {
       "confirmTitle": "Disable this entry?",
       "confirmDescription": "Cost items already attached are never affected — only creating new attachments will be blocked. Reversible at any time.",
-      "confirmButton": "Disable"
+      "confirmButton": "Disable",
+      "impact": {
+        "postes": "{count, plural, one {# cost item attached} other {# cost items attached}}",
+        "mappings": "{count, plural, one {# reconciliation mapping attached} other {# reconciliation mappings attached}}"
+      }
     },
     "reactiverDialog": {
       "confirmTitle": "Reactivate this entry?",
@@ -834,7 +838,11 @@
       "topEcarts": "Top variances",
       "mapping": "Mapping"
     },
-    "noData": "No reconciliation available for this scenario (no month in the horizon, or the projection could not be calculated).",
+    "noData": "No reconciliation available for this scenario (no month in the horizon).",
+    "errors": {
+      "title": "Reconciliation calculation unavailable",
+      "hint": "This is not a real absence of reconciliation data — this scenario's projection remains valid. Reload this page; if the issue persists, report it."
+    },
     "columns": {
       "libelle": "Line",
       "prevu": "Planned",
@@ -950,7 +958,8 @@
         "scenarioWarning": "This list is populated from the scenario \"{scenario}\". If this scenario is archived or replaced, this mapping will stop working correctly for a new scenario until it is updated.",
         "cibleHorsScenarioWarning": "The current target of this mapping does not belong to the scenario \"{scenario}\" — it was saved for another scenario. Choosing a new target below will replace this existing target.",
         "siteScopedNote": "This list comes from the site's reference table of postes — stable across scenarios, it no longer depends on the scenario \"{scenario}\" (ADR-053 §16).",
-        "cibleReferentielIntrouvableWarning": "The current target of this mapping does not match any active entry in the site's reference table of postes — it may have been deactivated. Choosing a new target below will replace this existing target.",
+        "cibleReferentielAbsenteWarning": "The current target of this mapping does not match any entry in the site's reference table of postes — it no longer exists. Choose a new target below to replace it.",
+        "cibleReferentielDesactiveeWarning": "The current target of this mapping matches a deactivated entry in the site's reference table of postes, \"{libelle}\". Reactivate it from the reference table admin screen before continuing to use it, or choose a new target below to replace it.",
         "versioningNote": "Saving this form creates a new mapping version: the history of already-closed months is never rewritten, only the still-open months will follow the new version.",
         "errors": {
           "cibleIdRequired": "Choose a precise target for this type."
@@ -974,7 +983,11 @@
   },
   "tresorerieTab": {
     "freshnessNote": "The \"actual\" figures shown reflect the state of the data at the time of this view ({date}), not a frozen snapshot of a past import.",
-    "noData": "No cash flow data available for this scenario (no month in the horizon, or the projection could not be computed).",
+    "noData": "No cash flow data available for this scenario (no month in the horizon).",
+    "errors": {
+      "title": "Cash flow calculation unavailable",
+      "hint": "This is not a real absence of cash flow data — this scenario's projection remains valid. Reload this page; if the issue persists, report it."
+    },
     "reprevisionToggle": "Reforecast",
     "caveatReel": {
       "title": "Actual cash flow is structurally incomplete",

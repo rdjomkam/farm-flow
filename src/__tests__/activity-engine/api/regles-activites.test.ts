@@ -10,6 +10,7 @@
  */
 
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { TypeActivite, TypeDeclencheur, Permission } from "@/types";
 
 // ---------------------------------------------------------------------------

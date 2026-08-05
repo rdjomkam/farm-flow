@@ -16,6 +16,7 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck:budget": "bash scripts/typecheck-budget.sh",
     "test:gompertz": "npx tsx scripts/test-gompertz-lm.ts"
   },
   "dependencies": {

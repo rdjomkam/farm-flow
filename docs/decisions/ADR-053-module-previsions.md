@@ -3750,3 +3750,187 @@ Namespace `previsions` (`src/messages/{fr,en}/previsions.json`), nouvelles clés
      du dialog à deux temps — à couvrir par @tester avant que la story soit considérée close,
      cohérent avec R9 et avec le risque 2 déjà identifié par la pré-analyse (chemin 409 dormant
      sans test HTTP réel).
+
+## 17. Amendement (Sprint de résorption des réserves, story PR2non.5 — réserve R5, ERR-184,
+2026-08-05) — le SQL de backfill est un artefact historique, pas un invariant de parité
+
+**Contexte de l'amendement.** ERR-184 documente une divergence réelle, prouvée par test, entre
+deux implémentations indépendantes d'une même règle de normalisation (`libellé → code`, slug) :
+`sluggifierLibellePoste` (TypeScript, NFD, appelée à l'exécution) et le bloc `DO $$ ... $$` du
+backfill de `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql` (SQL,
+`translate()` sur une table de 56 caractères latins accentués, exécuté une seule fois au
+`migrate deploy`). Elles coïncident sur l'alphabet français et divergent sur `Ø`/`ø` et les
+diacritiques d'Europe centrale/Baltique — divergence non atteinte par les données réelles du
+produit, mais réelle. **§16.11 (ci-dessus, ligne « un seul point de vérité, jamais deux
+implémentations qui pourraient diverger ») affirmait à tort qu'il n'existait qu'une seule
+implémentation. C'était faux au moment même où c'était écrit** — la présente section corrige
+cette affirmation sans réécrire §16.11 (l'historique de cet ADR n'est jamais réécrit, cf. le
+patron déjà suivi par §16.6/§16.10/§16.12, « Ce que devient le get-or-create silencieux de
+§16.11 »), et tranche l'arbitrage que §16.11 avait laissé implicite : la parité entre les deux
+implémentations doit-elle être maintenue comme un invariant vivant, ou peut-on cesser de
+l'exiger ?
+
+### 17.1 Faits établis (pré-analyse, vérifiés en base de dev, à ne pas revérifier)
+
+1. **Le SQL ne laisse rien de vivant en base.** Le bloc de backfill est un `DO $$ ... $$`
+   anonyme : ni `CREATE FUNCTION`, ni trigger, ni `DEFAULT`, ni colonne `GENERATED`, ni `CHECK`
+   sur `PosteReferentiel`/`PostePrevision`. Vérifié par requête aux catalogues système
+   (`pg_proc`, `pg_trigger`, `information_schema.columns`, `pg_constraint`) : zéro résultat pour
+   toute trace de cette normalisation en dehors du texte de la migration elle-même.
+2. **Seul le TypeScript écrit `code` à l'exécution**, aux deux seuls sites d'appel de
+   `sluggifierLibellePoste` : `resoudreBrancheNouveauPosteReferentiel` et le rattrapage de
+   collision concurrente, tous deux dans `src/lib/queries/previsions-charges.ts` (branche (b) du
+   contrat XOR, §16.12 « Contrat des routes »). Aucune fonction SQL n'est appelée à l'exécution —
+   ni par cette route, ni par aucune autre.
+3. **La migration est déjà appliquée (R10) : elle ne peut plus être réécrite**, ni pour élargir sa
+   table de caractères jusqu'à faire coïncider les deux algorithmes, ni pour toute autre raison —
+   y compris un commentaire. Même une parité totale sur les caractères observés aujourd'hui ne
+   serait qu'une coïncidence figée : rien ne garantirait qu'un futur élargissement de
+   `sluggifierLibellePoste` (ex. décomposer `Ø`/`ø` à la main, ajouter un jeu de translittération
+   pour les diacritiques centre-européens) resterait aligné avec le texte gelé de la migration.
+4. **Le test de parité existant ne teste pas le SQL réel.** `sluggifier-poste-parite-sql.test.ts`
+   réimplémente l'algorithme du backfill en JavaScript (`sluggifierViaAlgorithmeSQL`, table de
+   caractères recopiée verbatim) et compare cette réimplémentation à `sluggifierLibellePoste` — une
+   **troisième** copie de la même règle. Il détecte une dérive entre le TypeScript et sa propre
+   copie figée du SQL, jamais une dérive avec la migration réellement exécutée en base.
+
+### 17.2 Décision : option B — le SQL de backfill est un artefact historique, non un invariant
+
+**La parité SQL/TypeScript n'est plus exigée comme garantie vivante.** `sluggifierLibellePoste`
+est déclarée seule autorité faisant foi pour toute normalisation de `PosteReferentiel.code` à
+compter de cet amendement. Le SQL de `20260805120000_add_poste_referentiel` reste exactement ce
+qu'il a toujours été au sens strict — le compte-rendu, gelé par R10, de ce qu'une exécution unique
+a fait un jour donné, sur les données qui existaient ce jour-là — mais cesse d'être traité comme
+une seconde implémentation qu'il faudrait maintenir « en phase » avec le code vivant.
+
+**Options écartées et pourquoi :**
+
+- **Option A (parité = invariant vivant)** exigerait soit (i) une fonction PostgreSQL persistante
+  (`CREATE FUNCTION`) reproduisant l'algorithme de `sluggifierLibellePoste`, ce qui introduit une
+  **nouvelle** surface de duplication permanente à la place d'un artefact déjà gelé — le même mal
+  déplacé, jamais résorbé — soit (ii) re-dupliquer le SQL dans un test, ce qui décrit exactement le
+  défaut qu'ERR-184 documente déjà (`sluggifier-poste-parite-sql.test.ts` en est la preuve vivante :
+  une troisième copie qui ne teste rien de réel). Aucune des deux variantes ne réduit la
+  duplication ; les deux la perpétuent.
+- **Option C (hybride)** a été considérée mais rejetée comme distinction sans différence : le fond
+  de C est identique à B (le SQL cesse de faire autorité) ; sa seule variation est de garder les 36
+  assertions existantes comme documentation. C'est exactement ce que fait B aussi (§17.4) — il n'y
+  avait pas de troisième position substantiellement distincte.
+
+**Justification par les faits, pas par principe :** le fait déterminant est 17.1.1 — aucune
+dépendance vivante n'existe en base. « Parité » n'a de sens comme garantie que si les deux
+implémentations comparées s'exécutent effectivement, sur un chemin réel, l'une contre l'autre. Ce
+n'est plus le cas ici : une seule s'exécute (le TypeScript). Comparer une implémentation vivante à
+un texte SQL gelé qui ne s'exécutera plus jamais n'est pas une garantie d'intégrité — c'est un
+exercice de style qui invite à retoucher (ou à dupliquer encore) le TypeScript pour satisfaire un
+texte que R10 interdit par ailleurs de faire évoluer.
+
+### 17.3 Ce que cette décision rend IMPOSSIBLE — et le risque résiduel accepté
+
+1. **Il devient impossible d'affirmer que rejouer un backfill équivalent contre des données futures
+   produirait les mêmes slugs que `sluggifierLibellePoste`.** La table de caractères du SQL est
+   gelée par R10 ; elle ne suivra plus jamais les extensions futures de la fonction TypeScript (par
+   exemple si un jour `sluggifierLibellePoste` apprend à traiter `Ø`/`ø` comme une lettre plutôt
+   qu'un séparateur). Personne n'est plus tenu de vérifier que le texte gelé « suivrait » un tel
+   changement, parce qu'il n'est plus censé suivre quoi que ce soit.
+2. **Il devient impossible de considérer un futur changement de `sluggifierLibellePoste` comme
+   devant être répercuté quelque part dans `prisma/migrations/`.** R10 l'interdisait déjà en
+   pratique (une migration appliquée ne se réécrit jamais) ; cette section retire en plus
+   l'obligation de raisonnement — un développeur qui fait évoluer la fonction n'a plus à se
+   demander « est-ce que ça casse la parité avec le backfill ? », parce que cette question n'a
+   plus de réponse exigée.
+3. **Il devient impossible de s'appuyer sur `sluggifier-poste-parite-sql.test.ts` comme filet de
+   sécurité contre une régression future de la normalisation.** Ses 36 assertions cessent d'être
+   une garantie qui doit rester verte à chaque changement de `sluggifierLibellePoste` pour continuer
+   à prouver quelque chose d'utile — elles deviennent un compte-rendu daté (§17.4).
+4. **Risque résiduel explicitement accepté :** si un mécanisme extérieur à cette application
+   rejouait un jour un backfill SQL équivalent contre un jeu de données futur qui contient des
+   libellés hors alphabet français (`Ø`/`ø`, diacritiques centre-européens/baltes) — ce qui
+   suppose déjà une entorse à R10/R11 (aucun script de correctif de données n'a de raison
+   d'exister hors d'une migration Prisma versionnée) — les slugs produits pourraient diverger de
+   ceux que `sluggifierLibellePoste` aurait produits pour les mêmes libellés. Ce risque est accepté
+   parce que (a) aucun chemin de code actuel ou planifié ne fait cela — les deux seuls écrivains de
+   `code` sont la branche (b) de `createPostePrevision` et la migration déjà figée (17.1.2) ; (b)
+   tout futur backfill de cette nature serait lui-même une **nouvelle** migration (R10), qui devrait
+   dériver et auditer sa propre normalisation plutôt que de faire confiance à un texte gelé de 2026 —
+   la migration `20260805120000_add_poste_referentiel` n'est pas une bibliothèque de référence, c'est
+   un procès-verbal.
+
+### 17.4 Sort du test de parité existant — recommenté, jamais supprimé, jamais réécrit en assertions
+
+`sluggifier-poste-parite-sql.test.ts` **reste en place, avec ses 36 assertions inchangées** —
+elles restent factuellement exactes (elles décrivent une divergence réellement prouvée, pas une
+affirmation de parité universelle, cf. leur en-tête déjà honnête sur ce point). Seul son en-tête
+de fichier doit être recommenté par @tester (jamais son corps exécutable, cohérent avec l'esprit
+de cette section — on ne réécrit pas un historique, on l'annote) pour :
+
+- retirer toute formulation qui laisserait entendre que ce test protège contre une dérive future
+  entre le TypeScript et un SQL encore « vivant » ;
+- affirmer explicitement que ce fichier documente le résultat, figé au 2026-08-05, d'une
+  comparaison entre `sluggifierLibellePoste` (tel qu'il existait à cette date) et une
+  réimplémentation JS de l'algorithme de la migration `20260805120000_add_poste_referentiel`
+  (elle-même gelée par R10) — pas une garantie qui doit rester vraie si `sluggifierLibellePoste`
+  évolue ;
+- référencer cette section (§17) et ERR-184 comme la décision qui fixe ce statut.
+
+**Pourquoi ni suppression ni réécriture des assertions :** supprimer perdrait une documentation
+vérifiée et vérifiable du périmètre exact de divergence (utile si la question resurgit) ; réécrire
+les 36 assertions transformerait un historique honnête en une nouvelle affirmation à maintenir —
+exactement la classe d'erreur que cette section corrige. Recommenter est le seul geste qui rend le
+fichier honnête sans lui faire porter une garantie qu'il n'a plus vocation à porter.
+
+### 17.5 Spécification du test qui rend la décision falsifiable (à écrire par @tester, pas ici)
+
+**Fichier (nouveau) :**
+`src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts`
+— placé dans `src/lib/queries/__tests__/` (jamais dans `src/lib/previsions/`, périmètre gelé pour
+cette story) aux côtés des autres tests d'intégration DB-gated du module Prévisions, même patron
+que `previsions-postes-referentiel-admin-integration.test.ts` (import `Pool`/`PoolClient` de `pg`,
+`requireDatabaseUrl` de `@/test/require-database-url`).
+
+**Gate DB (ADR-052) :** `describe.runIf(requireDatabaseUrl())(...)`. Sans `DATABASE_URL` :
+- en local (hors CI), le bloc est simplement sauté par vitest — comportement attendu, déjà couvert
+  par le garde global d'ADR-052 §3.1 pour tout run CI ;
+- en CI, le garde global (`setupFiles`, ADR-052 §3.1) fait échouer bruyamment tout `npx vitest run`
+  si `CI` est défini sans `DATABASE_URL` — ce test ne peut donc jamais être silencieusement ignoré
+  en CI, conformément à la mise en garde de la story (« un test silencieusement ignoré est pire que
+  pas de test »).
+- **Ajout obligatoire à l'allowlist** `src/test/db-gated-allowlist.ts` (une entrée,
+  `linePattern: "describe.runIf(requireDatabaseUrl())("`, `adr: "ADR-053"`), sans quoi
+  `src/__tests__/meta/db-gated-tests-registry.test.ts` fait échouer la suite (ADR-052 §3.4) —
+  justification à fournir : « prouve, par introspection des catalogues système Postgres réels
+  (`pg_proc`, `pg_trigger`, `information_schema.columns`, `pg_constraint`), qu'aucune dépendance
+  vivante à la normalisation de `PosteReferentiel.code` n'existe en base — condition factuelle sur
+  laquelle repose la décision ADR-053 §17 (ERR-184) de traiter le SQL du backfill comme un artefact
+  historique plutôt qu'un invariant à maintenir en parité avec `sluggifierLibellePoste` ».
+
+**Assertions exactes, quatre requêtes SQL brutes contre les catalogues système, une transaction en
+lecture seule (`BEGIN READ ONLY` ou simple `SELECT`, aucune écriture) :**
+
+1. `SELECT proname FROM pg_proc WHERE proname ILIKE '%slug%' OR proname ILIKE '%poste%' OR proname ILIKE '%referentiel%'`
+   → `expect(rows).toHaveLength(0)`.
+2. `SELECT tgname FROM pg_trigger WHERE tgrelid IN ('"PosteReferentiel"'::regclass, '"PostePrevision"'::regclass) AND NOT tgisinternal`
+   → `expect(rows).toHaveLength(0)`.
+3. `SELECT column_name, column_default, is_generated FROM information_schema.columns WHERE table_name IN ('PosteReferentiel','PostePrevision') AND (column_default IS NOT NULL OR is_generated <> 'NEVER')`
+   → `expect(rows).toHaveLength(0)` (le `@default(true)` de `actif` sur `PosteReferentiel` est un
+   défaut PRISMA, matérialisé en base par `DEFAULT true` — **exclusion explicite attendue et
+   documentée dans le test**, ce n'est pas une normalisation de `code`, filtrer cette ligne par
+   `column_name <> 'actif'` ou l'assertion échouera à tort dès le premier run).
+4. `SELECT conname FROM pg_constraint WHERE conrelid IN ('"PosteReferentiel"'::regclass, '"PostePrevision"'::regclass) AND contype = 'c'`
+   → `expect(rows).toHaveLength(0)` (aucun `CHECK` — la contrainte `UNIQUE(siteId, code)` est
+   `contype = 'u'`, hors périmètre de cette assertion, à ne pas confondre).
+
+**Ce qui fait tomber ce test — la falsification qui le rend réel, pas décoratif :** ajouter, dans
+une **nouvelle** migration (jamais dans celle déjà appliquée, R10), n'importe lequel des éléments
+suivants sur `PosteReferentiel`/`PostePrevision` : une `CREATE FUNCTION` dont le nom contient
+`slug`/`poste`/`referentiel`, un trigger non interne, un `DEFAULT`/colonne `GENERATED` sur `code`,
+ou un `CHECK` portant sur `code`. N'importe lequel de ces ajouts fait échouer une des quatre
+assertions ci-dessus — c'est le signal que la prémisse factuelle de §17.2 (« aucune dépendance
+vivante ») ne tient plus, et que l'arbitrage de cette section doit être rouvert avant d'aller plus
+loin, pas contourné.
+
+**Ce que ce test NE fait PAS et ne doit PAS faire :** il ne compare aucune valeur de slug, ni SQL
+ni JS — il n'y a plus de comparaison à faire (§17.2). Un test qui recalculerait une nouvelle table
+de caractères ou une nouvelle table de vérité serait une régression vers l'option A écartée.
+
+**Références :** ERR-184, R10, R11, ADR-052 §3.1/§3.4, ADR-053 §16.11, §16.12.

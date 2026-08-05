@@ -6,6 +6,7 @@ import {
 } from "@/app/api/factures/[id]/route";
 import { POST as POST_paiement } from "@/app/api/factures/[id]/paiements/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutFacture, ModePaiement } from "@/types";
 
 // ---------------------------------------------------------------------------

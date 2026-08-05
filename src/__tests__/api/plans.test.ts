@@ -23,6 +23,7 @@ import {
 } from "@/app/api/plans/[id]/route";
 import { PATCH as PATCH_TOGGLE } from "@/app/api/plans/[id]/toggle/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypePlan } from "@/types";
 
 // ---------------------------------------------------------------------------

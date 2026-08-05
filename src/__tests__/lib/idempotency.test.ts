@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { hashBody } from "@/lib/idempotency";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypeMouvement, StatutCommande } from "@/types";
 import type { NextResponse } from "next/server";
 

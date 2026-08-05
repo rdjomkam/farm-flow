@@ -9,12 +9,12 @@ import { handleApiError } from "@/lib/api-utils";
  * ACTIVES du site (ADR-053 §16, story A.4 : correction structurelle du
  * mapping `POSTE_PREVISION`, ERR-179/ERR-180).
  *
- * Site-scope (R8), PAS scenario-scope : consomme par `mapping-form-dialog.tsx`
- * pour choisir la cible `POSTE_PREVISION` d'un `MappingRapprochement`
- * (§16.8 point 6) — la liste des postes du site, stable dans le temps,
- * remplace la liste scenario-scopee (`GET /scenarios/[id]/postes`) qui etait
- * la source du defaut ERR-179 (une cible qui devient orpheline des qu'un
- * nouveau scenario est cree ou l'ancien supprime).
+ * Site-scope (R8), PAS scenario-scope : consommee par l'onglet "Rechercher" du parcours de
+ * creation d'un `PostePrevision` (ADR-053 §16.12) — la liste des postes du site, stable dans
+ * le temps, remplace la liste scenario-scopee (`GET /scenarios/[id]/postes`) qui etait la
+ * source du defaut ERR-179 (une cible qui devient orpheline des qu'un nouveau scenario est
+ * cree ou l'ancien supprime). Depuis R2, `mapping-form-dialog.tsx` ne consomme plus cette
+ * route : il consomme desormais `GET /api/previsions/postes-referentiel/admin`.
  *
  * Permission : PREVISIONS_VOIR (lecture).
  */

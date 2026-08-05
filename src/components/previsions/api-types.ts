@@ -242,7 +242,53 @@ export interface PosteReferentielDTO {
   actif: boolean;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Nombre de `PostePrevision` rattaches a cette entree (tous scenarios du
+   * site confondus) — decompte relationnel natif (`_count`), FK reelle
+   * `PostePrevision.posteReferentielId`. Non optionnel : voir ERR-188 (un
+   * champ de decompte optionnel n'est qu'un silence organise). Renvoye par
+   * `listerPostesReferentielAdmin` ET par les trois mutations (renommer/
+   * desactiver/reactiver, via le helper prive `getPosteReferentielAdmin`,
+   * y compris leurs retours idempotents) — ADR-053 §16, reserve PR2non.3/R3.
+   * Jamais renvoye par `listerPostesReferentielActifs` (route "actifs seuls",
+   * consommee par `poste-form-dialog.tsx`/`rapprochement-mapping-tab.tsx` —
+   * ces deux ecrans ne lisent pas ces deux champs aujourd'hui).
+   */
+  nbPostesRattaches: number;
+  /**
+   * Nombre de `MappingRapprochement` ACTIFS ciblant cette entree
+   * (`cibleType = POSTE_PREVISION`) — decompte par agregation (`groupBy`),
+   * `cibleId` n'etant pas une FK Prisma (ADR-053 §16.3). Non optionnel,
+   * meme justification que `nbPostesRattaches`.
+   */
+  nbMappingsRattaches: number;
 }
+
+/**
+ * Forme reellement produite par `GET /api/previsions/postes-referentiel`
+ * (route "actifs seuls", `listerPostesReferentielActifs`) — PR2non.3/R3,
+ * resorption de la reserve R3 signalee en review.
+ *
+ * Ce n'est PAS un oubli : ADR-053 §16.12 pose la distinction actifs/admin
+ * comme VOLONTAIRE, et `listerPostesReferentielActifs` ne calcule pas les
+ * decomptes `nbPostesRattaches`/`nbMappingsRattaches` (cout de 2 requetes
+ * supplementaires sur un chemin de simple SELECTION, sans usage d'affichage
+ * pour ces decomptes). `PosteReferentielDTO` restait pourtant non optionnel
+ * sur ces deux champs pour CE producteur — un mensonge de contrat (ERR-188,
+ * la meme famille de defaut qui s'est deja materialisee une fois dans ce
+ * module) que `tsc` ne pouvait pas detecter puisque les deux champs
+ * n'etaient jamais lus par les consommateurs de cette route.
+ *
+ * Utilise par les DEUX consommateurs de la route "actifs seuls" :
+ * `poste-form-dialog.tsx` et `rapprochement-mapping-tab.tsx`. NE PAS
+ * utiliser pour `listerPostesReferentielAdmin` ni pour les trois routes de
+ * mutation (renommer/desactiver/reactiver) : celles-ci produisent bien les
+ * deux decomptes et restent typees `PosteReferentielDTO`.
+ */
+export type PosteReferentielOptionDTO = Omit<
+  PosteReferentielDTO,
+  "nbPostesRattaches" | "nbMappingsRattaches"
+>;
 
 /**
  * Payload de `PATCH /api/previsions/postes-referentiel/[id]` (ADR-053

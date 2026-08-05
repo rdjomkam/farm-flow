@@ -341,10 +341,11 @@ const FIXTURE: RapprochementScenarioDTO = {
   calculeLe: "2026-08-05T10:30:00.000Z",
 };
 
-function renderTab(fixture: RapprochementScenarioDTO = FIXTURE) {
+function renderTab(fixture: RapprochementScenarioDTO = FIXTURE, erreurRapprochement: string | null = null) {
   return render(
     <RapprochementTab
       rapprochement={fixture}
+      erreurRapprochement={erreurRapprochement}
       scenarioId="scenario-1"
       scenarioNom="Scenario Test"
       permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
@@ -534,5 +535,43 @@ describe("RapprochementTab", () => {
       .closest(".rounded-xl") as HTMLElement;
     expect(within(sectionQuantite).getAllByText("Tonnage récolté").length).toBeGreaterThan(0);
     expect(within(sectionQuantite).getAllByText("1,2 t").length).toBeGreaterThan(0);
+  });
+});
+
+/* ==================================================================== *
+ * Reserve R4 (PR2non.4) : distinction "echec du calcul" / "absence
+ * legitime de donnees" — meme discipline qu'`erreur-projection-fallback.test.tsx`.
+ * ==================================================================== */
+describe("RapprochementTab — distinction echec de calcul / absence legitime", () => {
+  const MESSAGE_ERREUR = "Erreur simulee : mapping de rapprochement introuvable pour ce site.";
+  const FIXTURE_VIDE: RapprochementScenarioDTO = { ...FIXTURE, moisDisponibles: [] };
+
+  it("erreurRapprochement renseigne : affiche un bandeau d'erreur dedie avec le message reel, jamais le message 'aucun rapprochement' generique", () => {
+    renderTab(FIXTURE_VIDE, MESSAGE_ERREUR);
+
+    expect(screen.getByText("Calcul du rapprochement indisponible")).toBeInTheDocument();
+    expect(screen.getByText(MESSAGE_ERREUR)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ce n'est pas une absence réelle de données de rapprochement/)
+    ).toBeInTheDocument();
+
+    // Le message d'absence legitime ne doit JAMAIS apparaitre en meme temps
+    // que le bandeau d'erreur — sinon les deux causes se confondent.
+    expect(screen.queryByText(/Aucun rapprochement disponible/)).not.toBeInTheDocument();
+  });
+
+  it("erreurRapprochement = null, aucun mois disponible : affiche le message d'absence legitime, jamais le bandeau d'erreur", () => {
+    renderTab(FIXTURE_VIDE, null);
+
+    expect(screen.getByText(/Aucun rapprochement disponible/)).toBeInTheDocument();
+    expect(screen.queryByText("Calcul du rapprochement indisponible")).not.toBeInTheDocument();
+  });
+
+  it("erreurRapprochement renseigne mais rapprochement present (theoriquement impossible en prod, mais le bandeau ne doit jamais masquer les donnees reellement calculees) : les deux coexistent sans crash", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderTab(FIXTURE, MESSAGE_ERREUR);
+    expect(screen.getByText("Calcul du rapprochement indisponible")).toBeInTheDocument();
+    await selectMonth(user, /janv\.? 2026/i);
+    expect(screen.getAllByText("Électricité").length).toBeGreaterThan(0);
   });
 });

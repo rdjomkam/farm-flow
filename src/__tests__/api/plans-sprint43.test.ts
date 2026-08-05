@@ -22,6 +22,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/plans/route";
 import { PUT } from "@/app/api/plans/[id]/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, TypePlan, SiteModule } from "@/types";
 
 // ---------------------------------------------------------------------------

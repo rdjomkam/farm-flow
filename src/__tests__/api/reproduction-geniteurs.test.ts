@@ -19,6 +19,7 @@ import {
 } from "@/app/api/reproduction/geniteurs/[id]/route";
 import { POST as POST_UTILISER_MALE } from "@/app/api/reproduction/geniteurs/[id]/utiliser-male/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, SexeReproducteur, StatutReproducteur } from "@/types";
 
 // ---------------------------------------------------------------------------

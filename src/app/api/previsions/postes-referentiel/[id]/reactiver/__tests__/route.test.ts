@@ -87,7 +87,7 @@ describe("POST /api/previsions/postes-referentiel/[id]/reactiver", () => {
     expect(res.status).toBe(403);
   });
 
-  it("200 : reactive via activeSiteId (R8), retourne l'entree reactivee", async () => {
+  it("200 : reactive via activeSiteId (R8), retourne l'entree reactivee avec ses decomptes (R3, ERR-188)", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockReactiverPosteReferentiel.mockResolvedValue({
       id: "ref-1",
@@ -95,6 +95,8 @@ describe("POST /api/previsions/postes-referentiel/[id]/reactiver", () => {
       code: "salaires",
       libelle: "Salaires",
       actif: true,
+      nbPostesRattaches: 2,
+      nbMappingsRattaches: 1,
     });
 
     const res = await POST(postRequest(), idParams());
@@ -104,9 +106,11 @@ describe("POST /api/previsions/postes-referentiel/[id]/reactiver", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.actif).toBe(true);
+    expect(body.nbPostesRattaches).toBe(2);
+    expect(body.nbMappingsRattaches).toBe(1);
   });
 
-  it("200 (idempotent, JAMAIS 409) si l'entree est deja active", async () => {
+  it("200 (idempotent, JAMAIS 409) si l'entree est deja active — decomptes toujours presents (pas undefined)", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockReactiverPosteReferentiel.mockResolvedValue({
       id: "ref-1",
@@ -114,10 +118,15 @@ describe("POST /api/previsions/postes-referentiel/[id]/reactiver", () => {
       code: "salaires",
       libelle: "Salaires",
       actif: true,
+      nbPostesRattaches: 2,
+      nbMappingsRattaches: 1,
     });
 
     const res = await POST(postRequest(), idParams());
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.nbPostesRattaches).toBe(2);
+    expect(body.nbMappingsRattaches).toBe(1);
   });
 
   it("404 (jamais 403) si l'entree est introuvable ou d'un autre site", async () => {

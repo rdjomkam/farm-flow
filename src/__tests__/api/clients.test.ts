@@ -6,6 +6,7 @@ import {
   DELETE,
 } from "@/app/api/clients/[id]/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------

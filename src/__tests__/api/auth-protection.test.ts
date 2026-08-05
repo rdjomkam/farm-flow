@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 
 // ---------------------------------------------------------------------------
 // Mocks — requirePermission lance AuthError ou ForbiddenError

@@ -250,4 +250,17 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
       "même résultat après un UPDATE réel en base.",
     adr: "ADR-053",
   },
+  {
+    file: "src/lib/queries/__tests__/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve, par introspection des catalogues système Postgres réels (pg_proc, pg_trigger, " +
+      "information_schema.columns, pg_constraint), qu'aucune dépendance vivante à la " +
+      "normalisation de PosteReferentiel.code n'existe en base — condition factuelle sur " +
+      "laquelle repose la décision ADR-053 §17 (ERR-184) de traiter le SQL du backfill de la " +
+      "migration 20260805120000_add_poste_referentiel comme un artefact historique plutôt " +
+      "qu'un invariant à maintenir en parité avec sluggifierLibellePoste — un mock JS ne " +
+      "peut interroger aucun catalogue système Postgres réel.",
+    adr: "ADR-053",
+  },
 ];

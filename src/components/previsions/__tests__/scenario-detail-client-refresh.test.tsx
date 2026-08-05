@@ -178,7 +178,9 @@ const baseProps = {
   permissions: [Permission.PREVISIONS_GERER, Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER],
   projection: PROJECTION_VIDE,
   rapprochement: RAPPROCHEMENT_VIDE,
+  erreurRapprochement: null,
   tresorerie: TRESORERIE_VIDE,
+  erreurTresorerie: null,
   erreurProjection: null,
 };
 
@@ -255,5 +257,49 @@ describe("ScenarioDetailClient — refresh de la projection apres mutation", () 
 
     await waitFor(() => expect(mockPut).toHaveBeenCalled());
     expect(mockRefresh).not.toHaveBeenCalled();
+  });
+});
+
+/* ==================================================================== *
+ * Reserve R4 (PR2non.4) : `erreurRapprochement`/`erreurTresorerie` sont
+ * bien RELAYES tels quels a `RapprochementTab`/`TresorerieTab` — jamais
+ * absorbes ni forces a `null` en route. Une falsification qui coupe ce
+ * relais (`erreurRapprochement={null}` en dur dans le JSX de
+ * `scenario-detail-client.tsx`) n'est detectee par AUCUN test de
+ * `rapprochement-tab.test.tsx`/`tresorerie-tab.test.tsx` (ils exercent les
+ * onglets directement, jamais via ce composant parent) : c'est ce trou de
+ * couverture precis que ces deux tests comblent.
+ * ==================================================================== */
+describe("ScenarioDetailClient — relais erreurRapprochement/erreurTresorerie (reserve R4)", () => {
+  it("relaie erreurRapprochement (non null) jusqu'a l'onglet Rapprochement, jamais absorbe en null", async () => {
+    const user = userEvent.setup({ delay: null });
+    const MESSAGE = "Erreur simulee : mapping de rapprochement introuvable pour ce site.";
+
+    render(
+      <ScenarioDetailClient
+        {...baseProps}
+        initialVaguesPrevues={[]}
+        erreurRapprochement={MESSAGE}
+      />
+    );
+    await user.click(screen.getByRole("tab", { name: "Rapprochement" }));
+
+    expect(screen.getByText(MESSAGE)).toBeInTheDocument();
+  });
+
+  it("relaie erreurTresorerie (non null) jusqu'a l'onglet Tresorerie, jamais absorbe en null", async () => {
+    const user = userEvent.setup({ delay: null });
+    const MESSAGE = "Erreur simulee : snapshot budget initial indisponible.";
+
+    render(
+      <ScenarioDetailClient
+        {...baseProps}
+        initialVaguesPrevues={[]}
+        erreurTresorerie={MESSAGE}
+      />
+    );
+    await user.click(screen.getByRole("tab", { name: "Trésorerie" }));
+
+    expect(screen.getByText(MESSAGE)).toBeInTheDocument();
   });
 });

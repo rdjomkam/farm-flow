@@ -82,7 +82,7 @@ import {
   type MappingRapprochementAvecOrphelinite,
 } from "@/components/previsions/mapping-rapprochement-helpers";
 import type { CategorieReelleNonMappee } from "@/lib/queries/previsions-rapprochement-mapping";
-import type { PosteReferentielDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
+import type { PosteReferentielOptionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
 
 /** Valeur sentinelle du `Select` pour "version active" — distincte de toute valeur numerique reelle. */
 const VERSION_ACTIVE_SENTINEL = "actif";
@@ -103,7 +103,7 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
   const [nonMappees, setNonMappees] = useState<CategorieReelleNonMappee[]>([]);
   const [mappingAffiche, setMappingAffiche] = useState<MappingRapprochementAvecOrphelinite[]>([]);
   const [version, setVersion] = useState<number | null>(null);
-  const [postes, setPostes] = useState<PosteReferentielDTO[]>([]);
+  const [postes, setPostes] = useState<PosteReferentielOptionDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D2 (contre-review PR3-bis) : `postes`/`aliments` peuvent
   // echouer SEULS (le `Promise.all` ci-dessous ne declenche l'erreur
@@ -140,7 +140,7 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
       get<{ data: MappingRapprochementAvecOrphelinite[]; version: number | null }>(urlMapping, {
         silentError: true,
       }),
-      get<{ data: PosteReferentielDTO[] }>(`/api/previsions/postes-referentiel`, {
+      get<{ data: PosteReferentielOptionDTO[] }>(`/api/previsions/postes-referentiel`, {
         silentError: true,
       }),
       get<{ data: AlimentPrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/aliments`, {

@@ -30,6 +30,8 @@ import {
 import {
   renommerPosteReferentiel,
   desactiverPosteReferentiel,
+  reactiverPosteReferentiel,
+  listerPostesReferentielAdmin,
 } from "@/lib/queries/previsions-postes-referentiel";
 import { creerVersionMapping } from "@/lib/queries/previsions-rapprochement-mapping";
 import { calculerRapprochementScenario } from "@/lib/queries/previsions-rapprochement";
@@ -308,6 +310,101 @@ describe.runIf(requireDatabaseUrl())(
             (l) => l.statutRapprochement === "RAPPROCHE" && l.reel?.toNumber() === 15000
           );
           expect(ligneEncoreRapprochee).toBeDefined();
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(d) listerPostesReferentielAdmin expose nbPostesRattaches/nbMappingsRattaches en 2 requetes fixes, jamais N (reserve PR2non.3/R3)",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[A5.admin.d] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "decomptes");
+        try {
+          const scenario = await createScenario(siteId, {
+            code: "A5-ADMIN-DECOMPTES",
+            nom: "Scenario decomptes",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+
+          // Poste A : 1 PostePrevision rattache + 1 MappingRapprochement actif.
+          const { poste: posteA } = await createPostePrevision(scenario.id, siteId, {
+            libelle: "Salaires",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+            nouveauPosteReferentielLibelle: "Salaires",
+          });
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "SALAIRE",
+              cibleType: CibleRapprochement.POSTE_PREVISION,
+              cibleId: posteA.posteReferentielId,
+            },
+          ]);
+
+          // Poste B : 1 PostePrevision rattache, AUCUN MappingRapprochement —
+          // c'est le cas qui prouve que le `?? 0` du groupBy est legitime
+          // (entree absente du groupBy, pas un echec de resolution).
+          const { poste: posteB } = await createPostePrevision(scenario.id, siteId, {
+            libelle: "Loyer",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 1,
+            nouveauPosteReferentielLibelle: "Loyer",
+          });
+
+          const entries = await listerPostesReferentielAdmin(siteId);
+          const entreeA = entries.find((e) => e.id === posteA.posteReferentielId);
+          const entreeB = entries.find((e) => e.id === posteB.posteReferentielId);
+
+          expect(entreeA).toBeDefined();
+          expect(entreeA?.nbPostesRattaches).toBe(1);
+          expect(entreeA?.nbMappingsRattaches).toBe(1);
+
+          expect(entreeB).toBeDefined();
+          expect(entreeB?.nbPostesRattaches).toBe(1);
+          expect(entreeB?.nbMappingsRattaches).toBe(0);
+
+          // Extension du defaut PR2non.3 (reserve R3, defaut confirme severite
+          // Haute) : les TROIS mutations (renommer/desactiver/reactiver)
+          // doivent renvoyer les MEMES decomptes que `listerPostesReferentielAdmin`
+          // pour la meme entree — jamais `undefined` sur AUCUN de leurs points
+          // de retour, y compris les retours idempotents (desactiver un
+          // inactif, reactiver un actif). C'est le helper prive
+          // `getPosteReferentielAdmin` qui garantit cette parite.
+          const renomme = await renommerPosteReferentiel(posteA.posteReferentielId, siteId, "Salaires equipe");
+          expect(renomme.nbPostesRattaches).toBe(1);
+          expect(renomme.nbMappingsRattaches).toBe(1);
+
+          const desactive = await desactiverPosteReferentiel(posteA.posteReferentielId, siteId);
+          expect(desactive.actif).toBe(false);
+          expect(desactive.nbPostesRattaches).toBe(1);
+          expect(desactive.nbMappingsRattaches).toBe(1);
+
+          // Retour idempotent (desactiver un DEJA-desactive) — le point le
+          // plus facile a oublier lors de l'enrichissement.
+          const desactiveIdempotent = await desactiverPosteReferentiel(posteA.posteReferentielId, siteId);
+          expect(desactiveIdempotent.actif).toBe(false);
+          expect(desactiveIdempotent.nbPostesRattaches).toBe(1);
+          expect(desactiveIdempotent.nbMappingsRattaches).toBe(1);
+
+          const reactive = await reactiverPosteReferentiel(posteA.posteReferentielId, siteId);
+          expect(reactive.actif).toBe(true);
+          expect(reactive.nbPostesRattaches).toBe(1);
+          expect(reactive.nbMappingsRattaches).toBe(1);
+
+          // Retour idempotent (reactiver un DEJA-actif) — meme piege.
+          const reactiveIdempotent = await reactiverPosteReferentiel(posteA.posteReferentielId, siteId);
+          expect(reactiveIdempotent.actif).toBe(true);
+          expect(reactiveIdempotent.nbPostesRattaches).toBe(1);
+          expect(reactiveIdempotent.nbMappingsRattaches).toBe(1);
         } finally {
           await cleanup(client, siteId, userId);
         }

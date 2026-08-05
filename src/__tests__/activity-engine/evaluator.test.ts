@@ -11,7 +11,16 @@
  */
 
 import { evaluateRules } from "@/lib/activity-engine/evaluator";
-import { TypeDeclencheur, PhaseElevage, TypeActivite, StatutActivite, LogiqueCondition } from "@/types";
+import {
+  TypeDeclencheur,
+  PhaseElevage,
+  TypeActivite,
+  StatutActivite,
+  LogiqueCondition,
+  TypeReleve,
+  CategorieProduit,
+  UniteStock,
+} from "@/types";
 import type { RuleEvaluationContext } from "@/types/activity-engine";
 import type { RegleActivite } from "@/types";
 
@@ -239,7 +248,7 @@ describe("SEUIL_QUALITE — evalSeuilQualite", () => {
     const ctx = makeContext({
       derniersReleves: [{
         id: "rel-1",
-        typeReleve: "QUALITE_EAU",
+        typeReleve: TypeReleve.QUALITE_EAU,
         date: new Date(),
         poidsMoyen: null,
         tailleMoyenne: null,
@@ -264,7 +273,7 @@ describe("SEUIL_QUALITE — evalSeuilQualite", () => {
     const ctx = makeContext({
       derniersReleves: [{
         id: "rel-1",
-        typeReleve: "QUALITE_EAU",
+        typeReleve: TypeReleve.QUALITE_EAU,
         date: new Date(),
         poidsMoyen: null,
         tailleMoyenne: null,
@@ -291,7 +300,7 @@ describe("SEUIL_QUALITE — evalSeuilQualite", () => {
     const ctx = makeContext({
       derniersReleves: [{
         id: "rel-1",
-        typeReleve: "QUALITE_EAU",
+        typeReleve: TypeReleve.QUALITE_EAU,
         date: new Date(),
         poidsMoyen: null,
         tailleMoyenne: null,
@@ -370,13 +379,13 @@ describe("SEUIL_MORTALITE — evalSeuilMortalite", () => {
 
 describe("STOCK_BAS — evalStockBas", () => {
   const stockEnAlerte = {
-    produit: { id: "prod-1", nom: "Farine", categorie: "ALIMENT" as const, unite: "KG" as const, seuilAlerte: 50 },
+    produit: { id: "prod-1", nom: "Farine", categorie: CategorieProduit.ALIMENT, unite: UniteStock.KG, seuilAlerte: 50 },
     quantiteActuelle: 20,
     estEnAlerte: true,
   };
 
   const stockOk = {
-    produit: { id: "prod-2", nom: "Sel", categorie: "ALIMENT" as const, unite: "KG" as const, seuilAlerte: 5 },
+    produit: { id: "prod-2", nom: "Sel", categorie: CategorieProduit.ALIMENT, unite: UniteStock.KG, seuilAlerte: 5 },
     quantiteActuelle: 100,
     estEnAlerte: false,
   };
@@ -548,7 +557,7 @@ describe("Regles de skip — EC-3.2 : firedOnce pour SEUIL_*", () => {
           tauxMortaliteCumule: 10,
         },
         stock: [{
-          produit: { id: "p1", nom: "Farine", categorie: "ALIMENT" as const, unite: "KG" as const, seuilAlerte: 10 },
+          produit: { id: "p1", nom: "Farine", categorie: CategorieProduit.ALIMENT, unite: UniteStock.KG, seuilAlerte: 10 },
           quantiteActuelle: 5,
           estEnAlerte: true,
         }],
@@ -732,7 +741,7 @@ describe("Per-bac iteration", () => {
   it("STOCK_BAS avec bac null → 1 match vague-level (pas duplique par bac)", () => {
     const regle = makeRegle({ typeDeclencheur: TypeDeclencheur.STOCK_BAS, conditionValeur: null });
     const stockEnAlerte = {
-      produit: { id: "prod-1", nom: "Farine", categorie: "ALIMENT" as const, unite: "KG" as const, seuilAlerte: 50 },
+      produit: { id: "prod-1", nom: "Farine", categorie: CategorieProduit.ALIMENT, unite: UniteStock.KG, seuilAlerte: 50 },
       quantiteActuelle: 20,
       estEnAlerte: true,
     };

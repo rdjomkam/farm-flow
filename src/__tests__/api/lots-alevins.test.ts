@@ -6,6 +6,7 @@ import {
 } from "@/app/api/lots-alevins/[id]/route";
 import { POST as POST_TRANSFERER } from "@/app/api/lots-alevins/[id]/transferer/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutLotAlevins, StatutVague } from "@/types";
 
 // ---------------------------------------------------------------------------

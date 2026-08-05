@@ -85,7 +85,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGet.mockImplementation((url: string) => {
     if (url.includes("/postes")) {
-      return Promise.resolve({ ok: true, data: { data: [{ id: "poste-1", libelle: "Aliment", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 0, scenarioId: "s1", siteId: "site-1" }] } });
+      return Promise.resolve({ ok: true, data: { data: [{ id: "poste-1", libelle: "Aliment", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 0, scenarioId: "s1", siteId: "site-1", actif: true }] } });
     }
     if (url.includes("/aliments")) {
       return Promise.resolve({ ok: true, data: { data: [] } });
@@ -209,13 +209,13 @@ describe("MappingFormDialog — remplacement en bloc, jamais un POST partiel", (
     expect(await screen.findByText(/Scenario A/)).toBeInTheDocument();
   });
 
-  it("CORRECTIF C1/A.4 : pour POSTE_PREVISION, une cible referentiel introuvable/desactivee declenche l'avertissement DEDIE (jamais celui, scenario-scope, d'ALIMENT_PREVISION)", async () => {
+  it("PR2non.2/CORRECTIF C1/A.4 : pour POSTE_PREVISION, une cible referentiel ABSENTE declenche l'avertissement dedie 'n'existe plus' (jamais celui, scenario-scope, d'ALIMENT_PREVISION)", async () => {
     render(
       <MappingFormDialog
         scenarioId="s1"
         scenarioNom="Scenario A"
         source={{ sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ELECTRICITE" }}
-        existant={{ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-referentiel-desactive-ou-absent" }}
+        existant={{ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-referentiel-absent" }}
         trigger={<button>Ouvrir</button>}
         onSaved={vi.fn()}
       />
@@ -224,16 +224,82 @@ describe("MappingFormDialog — remplacement en bloc, jamais un POST partiel", (
     openDialog();
 
     // "poste-1" est la seule entree PosteReferentiel chargee (cf. beforeEach,
-    // site-scopee depuis A.4) — "poste-referentiel-desactive-ou-absent" n'y
-    // figure pas : POSTE_PREVISION est desormais SITE-scope (ADR-053 §16),
-    // donc ce n'est plus "un autre scenario" (message reserve a
-    // ALIMENT_PREVISION, toujours scenario-scope) mais une entree referentiel
-    // introuvable/desactivee — message DEDIE, texte distinct.
+    // site-scopee depuis A.4) — "poste-referentiel-absent" n'y figure pas du
+    // tout : POSTE_PREVISION est SITE-scope (ADR-053 §16), donc ce n'est pas
+    // "un autre scenario" (message reserve a ALIMENT_PREVISION, toujours
+    // scenario-scope) mais une entree referentiel ABSENTE (n'existe plus,
+    // PR2non.2) — message dedie distinct du cas DESACTIVEE ci-dessous.
     expect(
-      await screen.findByText(/ne correspond à aucune entrée active du référentiel des postes du site/)
+      await screen.findByText(/ne correspond à aucune entrée du référentiel des postes du site — elle n'existe plus/)
     ).toBeInTheDocument();
     expect(screen.queryByText(/n'appartient pas au scénario/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/entrée désactivée/)).not.toBeInTheDocument();
     expect(screen.getByText("Cible actuelle indisponible")).toBeInTheDocument();
+  });
+
+  it("PR2non.2 : pour POSTE_PREVISION, une cible referentiel DESACTIVEE declenche l'avertissement dedie avec le libelle, distinct du cas ABSENTE", async () => {
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes("/postes")) {
+        return Promise.resolve({
+          ok: true,
+          data: {
+            data: [
+              { id: "poste-1", libelle: "Aliment", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 0, scenarioId: "s1", siteId: "site-1", actif: true },
+              { id: "poste-2", libelle: "Ancien poste retire", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 1, scenarioId: "s1", siteId: "site-1", actif: false },
+            ],
+          },
+        });
+      }
+      if (url.includes("/aliments")) {
+        return Promise.resolve({ ok: true, data: { data: [] } });
+      }
+      if (url.includes("/mapping-rapprochement")) {
+        return Promise.resolve({ ok: true, data: { data: MAPPING_ACTIF_EXISTANT, version: 3 } });
+      }
+      return Promise.resolve({ ok: true, data: { data: [] } });
+    });
+
+    const user = userEvent.setup({ delay: null });
+    render(
+      <MappingFormDialog
+        scenarioId="s1"
+        scenarioNom="Scenario A"
+        source={{ sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ELECTRICITE" }}
+        existant={{ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-2" }}
+        trigger={<button>Ouvrir</button>}
+        onSaved={vi.fn()}
+      />
+    );
+
+    openDialog();
+
+    expect(
+      await screen.findByText(/correspond à une entrée désactivée du référentiel des postes, « Ancien poste retire »/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/n'existe plus/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/n'appartient pas au scénario/)).not.toBeInTheDocument();
+    expect(screen.getByText("Cible actuelle indisponible")).toBeInTheDocument();
+
+    // PR2non.2 (falsification, comble ERR-189) : la distinction absente/desactivee
+    // ne PEUT etre prouvee par le client que si le fetch cible reellement la
+    // route ADMIN (toutes les entrees) — la route actifs-seuls ne renvoie
+    // jamais les entrees desactivees, et le cas retomberait silencieusement
+    // sur "absente" en production, meme si ce mock (qui ne filtre pas par
+    // URL) continuerait de renvoyer "poste-2" quel que soit le chemin appele.
+    // Assertion explicite sur l'URL exacte, pour que ce fichier de test
+    // detecte lui-meme un rebranchement vers la route non-admin.
+    expect(mockGet).toHaveBeenCalledWith(
+      "/api/previsions/postes-referentiel/admin",
+      expect.objectContaining({ silentError: true, silentLoading: true })
+    );
+
+    // L'entree desactivee n'est JAMAIS proposee comme nouvelle cible
+    // selectionnable (ADR-053 §16.12 Arbitrage 2) — seule "Aliment" (active)
+    // figure dans la liste, en plus de l'option de repli desactivee.
+    const cibleIdTrigger = screen.getByRole("combobox", { name: /Cible précise/ });
+    await user.click(cibleIdTrigger);
+    expect(await screen.findByRole("option", { name: "Aliment" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Ancien poste retire" })).not.toBeInTheDocument();
   });
 
   it("CORRECTIF C1 : une cible existante appartenant a CE scenario ne declenche PAS l'avertissement hors-scenario", async () => {
@@ -264,7 +330,7 @@ describe("MappingFormDialog — correctif C3 : la relecture du mapping actif ech
     // produit en essayant de lire `mappingActuel.data.data` sur `null`).
     mockGet.mockImplementation((url: string) => {
       if (url.includes("/postes")) {
-        return Promise.resolve({ ok: true, data: { data: [{ id: "poste-1", libelle: "Aliment", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 0, scenarioId: "s1", siteId: "site-1" }] } });
+        return Promise.resolve({ ok: true, data: { data: [{ id: "poste-1", libelle: "Aliment", type: "CHARGE_EXPLOITATION", inclusBaseRepartition: true, ordre: 0, scenarioId: "s1", siteId: "site-1", actif: true }] } });
       }
       if (url.includes("/aliments")) {
         return Promise.resolve({ ok: true, data: { data: [] } });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET as GET_DASHBOARD } from "@/app/api/ingenieur/dashboard/route";
 import { GET as GET_CLIENTS } from "@/app/api/ingenieur/clients/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutActivation } from "@/types";
 
 // ---------------------------------------------------------------------------

@@ -50,6 +50,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Garde-fou de la dette `tsc --noEmit` (sprint de résorption des
+      # réserves du module Prévisions, réserve R6). `tsc --noEmit` ne
+      # nécessite ni Postgres ni le build Next.js (contrairement à `npx
+      # vitest run`, gated par R11/le garde global sur DATABASE_URL) — il
+      # est donc placé ici, immédiatement après `npm ci`, pour un retour
+      # aussi rapide que possible en cas de régression de typage, plutôt
+      # qu'après les étapes Postgres/build qui prennent plusieurs minutes.
+      # Positionnement AVANT `next build` également nécessaire pour la
+      # reproductibilité du compte : `.next/types/**/*.ts` fait partie de
+      # l'`include` de tsconfig.json, et le seuil de référence (178) a été
+      # mesuré sans ce dossier — le lancer avant le build garantit qu'il
+      # est structurellement absent ici aussi (checkout propre), donc que
+      # le compte ne peut jamais varier selon qu'un build a eu lieu avant
+      # (voir scripts/typecheck-budget.sh, section ".next/types").
+      - name: Typecheck budget (tsc --noEmit, seuil versionné)
+        run: npm run typecheck:budget
+
       - name: Wait for Postgres to be ready
         run: |
           for i in $(seq 1 30); do

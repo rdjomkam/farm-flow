@@ -163,10 +163,12 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     projection,
     erreurProjection,
     rapprochement,
+    erreurRapprochement,
   }: {
     projection: ProjectionScenarioDTO;
     erreurProjection: string | null;
     rapprochement: RapprochementScenarioDTO;
+    erreurRapprochement: string | null;
   } = await (async () => {
       try {
         const scenarioPourCalcul = await chargerScenarioPourMoteur(id, siteId);
@@ -239,21 +241,75 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
          * pourrait diverger, ADR-053 section 15.6 point 1). Un echec de ce
          * calcul specifique ne doit jamais invalider la projection deja
          * calculee avec succes — capture separement, l'onglet
-         * Rapprochement affiche alors son propre etat vide/erreur.
+         * Rapprochement affiche alors son propre etat dedie, distinct de
+         * l'etat "vide legitime" (reserve R4, PR2non.4) : `erreurRapprochement`
+         * porte le message reel (jamais `null` "avale" en silence), et
+         * l'echec est trace cote serveur AVANT le repli sur
+         * `RAPPROCHEMENT_VIDE` — meme discipline que `erreurProjection`
+         * ci-dessus.
          */
         let rapprochementCalcule = RAPPROCHEMENT_VIDE;
+        let erreurRapprochementCalcul: string | null = null;
         try {
           const vue = await chargerRapprochementScenario(id, siteId, scenarioPourCalcul, p);
           rapprochementCalcule = construireRapprochementDTO(vue, scenario.dateDebutPlan.toISOString());
-        } catch {
-          // rapprochementCalcule reste RAPPROCHEMENT_VIDE — l'onglet gere son propre etat vide.
+        } catch (error) {
+          console.error("[PrevisionsScenarioDetailPage] rapprochement", { scenarioId: id, siteId }, error);
+          erreurRapprochementCalcul =
+            error instanceof Error ? error.message : t("page.errors.projectionUnknown");
+          // rapprochementCalcule reste RAPPROCHEMENT_VIDE — l'onglet distingue cet echec de l'etat vide legitime via erreurRapprochement.
         }
 
-        return { projection: projectionCalculee, erreurProjection: null, rapprochement: rapprochementCalcule };
+        return {
+          projection: projectionCalculee,
+          erreurProjection: null,
+          rapprochement: rapprochementCalcule,
+          erreurRapprochement: erreurRapprochementCalcul,
+        };
       } catch (err) {
         const message =
           err instanceof Error ? err.message : t("page.errors.projectionUnknown");
-        return { projection: PROJECTION_VIDE, erreurProjection: message, rapprochement: RAPPROCHEMENT_VIDE };
+        return {
+          projection: PROJECTION_VIDE,
+          erreurProjection: message,
+          rapprochement: RAPPROCHEMENT_VIDE,
+          /**
+           * Correctif review PR2non.4 (reserve R4, constat M1) : quand
+           * `chargerScenarioPourMoteur`/`calculerProjectionScenario` levent
+           * (ce `catch` externe), le bloc rapprochement (~ligne 251
+           * ci-dessus) n'a JAMAIS pu s'executer — il n'y a donc aucune
+           * "vraie" erreur de rapprochement a rapporter separement. Avant ce
+           * correctif, `erreurRapprochement: null` ici faisait retomber
+           * l'onglet Rapprochement sur l'etat "vide legitime"
+           * (RAPPROCHEMENT_VIDE + erreurRapprochement null), soit exactement
+           * le defaut que la reserve R4 visait a eliminer : un echec de
+           * calcul deguise en absence de donnees (famille ERR-173/ERR-178).
+           *
+           * Choix : reutiliser TEL QUEL le message de `erreurProjection`
+           * (jamais une reformulation) plutot qu'inventer une nouvelle
+           * phrase du type "rapprochement indisponible parce que la
+           * projection a echoue" — la cause reelle EST le message de
+           * `erreurProjection`, il n'existe pas un message distinct propre
+           * au rapprochement sur ce chemin puisque le rapprochement n'a
+           * jamais tourne. Dupliquer la meme information sous deux
+           * formulations differentes risquerait de laisser croire a deux
+           * causes distinctes, alors qu'il n'y en a qu'une : reutiliser le
+           * meme texte rend cette unicite explicite a l'utilisateur, qui
+           * voit alors un etat d'echec coherent sur les onglets Tableau de
+           * bord, Previsions ET Rapprochement plutot qu'un "aucune donnee"
+           * trompeur sur ce dernier. Aucune chaine en dur : ce message vient
+           * deja de `err.message` / `t("page.errors.projectionUnknown")`
+           * ci-dessus, aucune nouvelle cle i18n necessaire.
+           *
+           * Portee volontairement limitee a CE `catch` (celui qui englobe
+           * la projection) : le `try` interne du rapprochement (~ligne 253)
+           * garde sa propre capture independante — un echec du rapprochement
+           * SEUL (projection reussie) continue de ne jamais invalider la
+           * projection, intention d'origine de la story PR3.7 / ADR-053
+           * §15.6 point 1, inchangee ici.
+           */
+          erreurRapprochement: message,
+        };
       }
     })();
 
@@ -266,8 +322,15 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
    * (`src/lib/queries/previsions-tresorerie-trois-series.ts`, story B.2/B.3)
    * — deja converti `Decimal -> number` ici, meme regle que `n()`/`nOrNull()`
    * de la route `GET .../tresorerie`.
+   *
+   * Reserve R4 (PR2non.4) : un echec de ce calcul est trace cote serveur et
+   * remonte a l'onglet Tresorerie via `erreurTresorerie` (jamais avale en
+   * silence) — meme discipline que `erreurRapprochement` ci-dessus, pour ne
+   * jamais laisser un echec de calcul se faire passer pour une absence
+   * legitime de donnees.
    */
   let tresorerie = TRESORERIE_VIDE;
+  let erreurTresorerie: string | null = null;
   try {
     const resultatTresorerie = await getTresorerieTroisSeries(id, siteId);
     tresorerie = {
@@ -291,8 +354,10 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
       caveatSerieReelleIncomplete: resultatTresorerie.caveatSerieReelleIncomplete,
       calculeLe: resultatTresorerie.calculeLe.toISOString(),
     };
-  } catch {
-    // tresorerie reste TRESORERIE_VIDE — l'onglet Tresorerie gere son propre etat vide.
+  } catch (error) {
+    console.error("[PrevisionsScenarioDetailPage] tresorerie", { scenarioId: id, siteId }, error);
+    erreurTresorerie = error instanceof Error ? error.message : t("page.errors.projectionUnknown");
+    // tresorerie reste TRESORERIE_VIDE — l'onglet distingue cet echec de l'etat vide legitime via erreurTresorerie.
   }
 
   const scenarioDetail: ScenarioPrevisionDetailDTO = {
@@ -477,7 +542,9 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
           projection={projection}
           erreurProjection={erreurProjection}
           rapprochement={rapprochement}
+          erreurRapprochement={erreurRapprochement}
           tresorerie={tresorerie}
+          erreurTresorerie={erreurTresorerie}
         />
       </div>
     </>

@@ -89,8 +89,24 @@ describe("GET /api/previsions/postes-referentiel/admin", () => {
   it("exige exactement PREVISIONS_PARAMETRER (distinct de PREVISIONS_VOIR), thread activeSiteId (R8), 200 avec actives ET inactives", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockListerPostesReferentielAdmin.mockResolvedValue([
-      { id: "ref-1", siteId: "site-1", code: "salaires", libelle: "Salaires", actif: true },
-      { id: "ref-2", siteId: "site-1", code: "loyer", libelle: "Loyer", actif: false },
+      {
+        id: "ref-1",
+        siteId: "site-1",
+        code: "salaires",
+        libelle: "Salaires",
+        actif: true,
+        nbPostesRattaches: 2,
+        nbMappingsRattaches: 1,
+      },
+      {
+        id: "ref-2",
+        siteId: "site-1",
+        code: "loyer",
+        libelle: "Loyer",
+        actif: false,
+        nbPostesRattaches: 0,
+        nbMappingsRattaches: 0,
+      },
     ]);
 
     const res = await GET(getRequest());
@@ -102,6 +118,13 @@ describe("GET /api/previsions/postes-referentiel/admin", () => {
     const body = await res.json();
     expect(body.data).toHaveLength(2);
     expect(body.data.some((e: { actif: boolean }) => !e.actif)).toBe(true);
+    // La route delegue integralement a la query (aucune logique propre) —
+    // les decomptes nbPostesRattaches/nbMappingsRattaches (reserve PR2non.3/R3)
+    // transitent donc tels quels jusqu'a la reponse HTTP.
+    expect(body.data[0].nbPostesRattaches).toBe(2);
+    expect(body.data[0].nbMappingsRattaches).toBe(1);
+    expect(body.data[1].nbPostesRattaches).toBe(0);
+    expect(body.data[1].nbMappingsRattaches).toBe(0);
   });
 
   it("500 explicite si la query echoue", async () => {

@@ -46,7 +46,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   POSTE_REFERENTIEL_ERROR_CODES,
   type CreatePostePrevisionResponseDTO,
-  type PosteReferentielDTO,
+  type PosteReferentielOptionDTO,
   type PosteReferentielExistantDetailsDTO,
 } from "@/components/previsions/api-types";
 
@@ -72,7 +72,7 @@ export function PosteFormDialog({ scenarioId, ordreSuivant, onCreated }: PosteFo
   const [mode, setMode] = useState<Mode>("RECHERCHER");
 
   // Onglet "Rechercher"
-  const [referentiel, setReferentiel] = useState<PosteReferentielDTO[]>([]);
+  const [referentiel, setReferentiel] = useState<PosteReferentielOptionDTO[]>([]);
   const [referentielChargement, setReferentielChargement] = useState(false);
   const [recherche, setRecherche] = useState("");
   const [posteReferentielId, setPosteReferentielId] = useState<string | null>(null);
@@ -101,7 +101,7 @@ export function PosteFormDialog({ scenarioId, ordreSuivant, onCreated }: PosteFo
     let cancelled = false;
     setReferentielChargement(true);
     (async () => {
-      const result = await get<{ data: PosteReferentielDTO[] }>("/api/previsions/postes-referentiel", {
+      const result = await get<{ data: PosteReferentielOptionDTO[] }>("/api/previsions/postes-referentiel", {
         silentError: true,
         silentLoading: true,
       });
@@ -134,7 +134,7 @@ export function PosteFormDialog({ scenarioId, ordreSuivant, onCreated }: PosteFo
     if (!next) resetForm();
   }
 
-  function handleSelectEntry(entry: PosteReferentielDTO) {
+  function handleSelectEntry(entry: PosteReferentielOptionDTO) {
     setPosteReferentielId(entry.id);
     if (!libelleTouche) setLibelle(entry.libelle);
     setTouched(true);
@@ -261,6 +261,7 @@ export function PosteFormDialog({ scenarioId, ordreSuivant, onCreated }: PosteFo
             <Tabs
               value={mode}
               onValueChange={(v) => {
+                if (submitting) return;
                 setMode(v as Mode);
                 setTouched(true);
                 setError(null);
@@ -268,8 +269,12 @@ export function PosteFormDialog({ scenarioId, ordreSuivant, onCreated }: PosteFo
               }}
             >
               <TabsList>
-                <TabsTrigger value="RECHERCHER">{t("posteForm.mode.search")}</TabsTrigger>
-                <TabsTrigger value="CREER">{t("posteForm.mode.create")}</TabsTrigger>
+                <TabsTrigger value="RECHERCHER" disabled={submitting}>
+                  {t("posteForm.mode.search")}
+                </TabsTrigger>
+                <TabsTrigger value="CREER" disabled={submitting}>
+                  {t("posteForm.mode.create")}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="RECHERCHER">

@@ -21,6 +21,7 @@ import { PATCH as PATCH_STRIPPING } from "@/app/api/reproduction/pontes/[id]/str
 import { PATCH as PATCH_RESULTAT } from "@/app/api/reproduction/pontes/[id]/resultat/route";
 import { PATCH as PATCH_ECHEC } from "@/app/api/reproduction/pontes/[id]/echec/route";
 import { NextRequest } from "next/server";
+import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { Permission, StatutPonte, CauseEchecPonte } from "@/types";
 
 // ---------------------------------------------------------------------------

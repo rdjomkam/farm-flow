@@ -8190,4 +8190,59 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR3-QUINQUIES*.md` n'existe* — le s
 | Moyenne | **Pas de test end-to-end en navigateur réel** pour l'écran d'administration du référentiel (ERR-157). |
 | Dette projet — **non imputable à A.5** | `npx tsc --noEmit` ≈ **1 449 erreurs préexistantes**, déjà tracée dans [`docs/reviews/review-sprint-PR2-octies.md`](reviews/review-sprint-PR2-octies.md), **porteur @project-manager**. **A.5 l'a réduite d'environ 19.** |
 
+**Reprise de ces points :** 4 des 5 lignes ci-dessus sont **reprises comme stories du sprint PR2-nonies** (ci-dessous) — `poste-form-dialog` → **PR2non.1**, `mapping-form-dialog` → **PR2non.2**, avertissement de portée avant désactivation → **PR2non.3**, dette `tsc --noEmit` → **PR2non.6**. La ligne « **pas de test end-to-end en navigateur réel** pour l'écran d'administration du référentiel (ERR-157) » **reste ouverte**, hors périmètre de PR2-nonies.
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR2-nonies — Résorption des réserves ouvertes du module Prévisions
+Voir : *aucun fichier `docs/sprints/SPRINT-PR2-NONIES*.md` n'existe* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`, **même convention que PR3-quater et PR3-quinquies**.
+
+**Statut :** `FAIT` (**6 stories** — toutes `FAIT`) — **reviews de story : 1 `VALIDÉ`, 4 `VALIDÉ AVEC RÉSERVES`, aucune réserve Critique ; un défaut Haute découvert et corrigé en cours de story (PR2non.3)**
+**Objectif :** solder les **6 réserves ouvertes** du module Prévisions, issues de [`docs/reviews/review-sprint-PR2-octies.md`](reviews/review-sprint-PR2-octies.md) et du tableau « Points restés ouverts » de **PR3-quinquies**, ainsi que d'[ADR-053 §16](decisions/ADR-053-module-previsions.md). Aucune de ces réserves n'est une régression : ce sont des reports assumés, consignés à la clôture des sprints précédents (leçon **ERR-180** : un report non consigné est un report perdu).
+
+| Story | Type | Sévérité | Sujet | Statut |
+|-------|------|----------|-------|--------|
+| PR2non.1 | BUGFIX/UI | Basse (préexistante) | Erreur silencieuse au changement d'onglet dans `poste-form-dialog` : les `Tabs` ne sont pas désactivés pendant `submitting`, l'`Input` porteur du `role="alert"` est démonté | `FAIT` |
+| PR2non.2 | BUGFIX/UI | Moyenne | « Introuvable » et « désactivé » confondus dans `mapping-form-dialog` (`cibleReferentielIntrouvableWarning`) — **famille ERR-173** appliquée à un autre triplet | `FAIT` |
+| PR2non.3 | UI | Basse | Avertissement de portée avant désactivation d'une entrée du référentiel postes : décompte des `PostePrevision` et `MappingRapprochement` rattachés | `FAIT` |
+| PR2non.4 | BUGFIX | Moyenne | `catch {}` muet sur le rapprochement : un échec de chargement s'affiche comme une absence de données — **famille ERR-173** au niveau du chargement | `FAIT` |
+| PR2non.5 | ADR + TEST | Moyenne | **ERR-184** : deux implémentations d'une même normalisation de slug (SQL de migration vs `sluggifierLibellePoste`) — arbitrage sur la parité | `FAIT` |
+| PR2non.6 | REFACTOR | Moyenne | Dette `tsc --noEmit` (≈ **1 449 erreurs**) : triage par cause racine, correction du mécanique, garde-fou anti-régression | `FAIT` |
+
+**PR2non.6 est traitée en dernier, sur arbre stabilisé** : un triage transversal de la dette `tsc` sur un arbre encore en mouvement produirait des conflits et un décompte non reproductible.
+
+Pipeline par story selon `docs/PROCESSES.md` : @pre-analyst → agent assigné → @tester → @code-reviewer → @knowledge-keeper → @status-updater, sauf PR2non.5 (`ADR` → @architect, puis @tester pour la partie parité).
+
+**PR2non.1 — `FAIT`.** Review **`VALIDÉ AVEC RÉSERVES`**. **Preuve par falsification : 2 + 2, sans chevauchement** — les deux paires de tests protègent des propriétés distinctes, aucune ne couvre l'autre par accident. Le motif corrigé (`Tabs` non désactivés pendant `submitting`, démontant l'`Input` porteur du `role="alert"`) est **unique au dépôt** : le balayage de recherche l'a confirmé, aucun autre dialogue ne le rejoue.
+
+**PR2non.2 — `FAIT`.** Review **`VALIDÉ`**. **Preuve par falsification : 1 / 2 / 1 / 1**, plus **une découverte à 0/14** — une propriété qu'aucun des 14 tests existants n'exerçait — **comblée** dans la story plutôt que consignée.
+
+**PR2non.3 — `FAIT`.** Review **`VALIDÉ AVEC RÉSERVES`**. **Un défaut de sévérité `Haute` a été découvert et corrigé en cours de story** : un **`NaN` affiché** à l'écran. Il n'était pas dans le périmètre initial — le décompte de portée avant désactivation l'a rendu visible.
+
+**PR2non.4 — `FAIT`.** Review **`VALIDÉ AVEC RÉSERVES`**. **4 mutations à 0 test** ont été découvertes — quatre altérations du code que la suite laissait passer verte — puis **comblées** (capitalisé en **ERR-189**). Le constat **M1** de la review a été **corrigé**, pas reporté.
+
+**PR2non.5 — `FAIT`.** Arbitrage **tranché** : **option B**, actée en **[ADR-053 §17](decisions/ADR-053-module-previsions.md)**. Review **`VALIDÉ AVEC RÉSERVES`**. **Un faux vert corrigé** : 4 tests sur 4 **échouent désormais** quand la base est injoignable, là où ils passaient silencieusement (motif ADR-052 §6, cf. point ouvert n°1 ci-dessous).
+
+**PR2non.6 — `FAIT`.** Dette `tsc --noEmit` : **1 449 → 178 erreurs (−87,7 %)**. **Garde-fou posé et testé** — le seuil de 178 est verrouillé, une régression le fait échouer.
+
+**Chiffres de clôture — mesures réelles :**
+- `npx vitest run` : **344 fichiers de test / 9 746 tests / 0 échec / 0 skip** (baseline d'entrée de sprint : **341 fichiers / 9 712 tests**).
+- `npm run build` : **OK**. `npx tsc --noEmit` : **178 erreurs** — **seuil du garde-fou**.
+- **Recette du moteur : 2 709 / 2 709, 0 écart** — `src/lib/previsions/` **non modifié**, hors deux blocs de commentaires explicitement autorisés.
+- **Intégrité `EXCEL-V12` vérifiée AVANT et APRÈS.**
+- **Capitalisation @knowledge-keeper :** **ERR-190** à **ERR-193** créées ; **ERR-178** et **ERR-184** mises à jour.
+- **Nouvel amendement :** **ADR-053 §17**.
+
+**Points restés ouverts — consignés (leçon ERR-180 : un risque documenté à un seul endroit redevient invisible). PAS des stories de ce sprint :**
+
+| Sévérité / Nature | Point |
+|---|---|
+| Moyenne — **dette préexistante, non introduite par ce sprint** | **15 des 16 fichiers de tests DB-gated** portent encore le motif de **faux vert** (`catch { dbAvailable = false }` suivi d'un `return` silencieux) **interdit par ADR-052 §6** : sans base, ils passent au lieu d'échouer. Seul le **nouveau** fichier livré par PR2non.5 a été corrigé. Voir **ERR-192**. |
+| Moyenne | `rapprochement-mapping-tab.tsx` **et** `mapping-rapprochement-helpers.ts` **confondent toujours « absente » et « désactivée »** — **non corrigé délibérément** : ce tab est visible aux utilisateurs porteurs de `PREVISIONS_VOIR` **seuls**, et un rebranchement naïf sur la route d'administration les casserait en **403**. Exige une **conception dédiée**, pas un correctif d'alignement. |
+| Moyenne | **178 erreurs `tsc` restantes, non homogènes** : catégorie « **fixtures incomplètes** » (**~72**, chacune à examiner **cas par cas** — risque **ERR-188**) et **casts i18n** (**~9**), **volontairement non traités**. Voir **ERR-191**. |
+| Moyenne — **arbitrage utilisateur, pas décision de sprint** | **8 vrais bugs révélés par le typage**, **confirmés mais non corrigés**. Par priorité : `TypeRemise.POURCENTAGE` / `.FIXE` **inexistants** + **5 appels à 4 arguments au lieu de 3** (**touche la logique de remises facturée**) ; `TypePlan.PRO` **inexistant** ; `previsionnel` vs `prevu` (**assertion morte**) ; `PhaseLot === "LARVE"` (**mock auto-cohérent découplé du domaine réel**) ; `Decimal === number` (**fake Prisma infidèle**). Voir **ERR-191**. |
+| Basse — **test flaky connu, à tracer nommément** | `mapping-form-dialog.test.tsx` a montré **un échec isolé sous charge CPU parallèle**, **vert en 4 exécutions isolées** : un `findByText` **sensible au timing**. Ni assertion affaiblie, ni `retry`, ni `skip` ajouté. |
+
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
