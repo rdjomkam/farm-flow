@@ -67,6 +67,8 @@ DELETE FROM "JournalDepensePrevue";
 DELETE FROM "AlimentParVaguePrevue";
 DELETE FROM "ChargeMensuellePrevue";
 DELETE FROM "PostePrevision";
+-- ADR-053 §16 (story A.4) — PosteReferentiel apres PostePrevision (FK Restrict)
+DELETE FROM "PosteReferentiel";
 DELETE FROM "RepartitionMoisAliment";
 -- ADR-053 §12 (amendement PR2-quater) — AlimentArticlePrevision (niveau article) avant
 -- AlimentPrevision (niveau calibre), sa table parente (FK alimentCalibrePrevisionId)

@@ -38,6 +38,15 @@
  * mapping actif) — un mapping ORPHELIN existe bel et bien, mais sa cible
  * resolue est morte.
  *
+ * ADR-053 §16, story A.4 : `postes` charge desormais `GET
+ * /api/previsions/postes-referentiel` (SITE-scope) au lieu de `GET
+ * /scenarios/[id]/postes` (SCENARIO-scope) — `cibleId` d'un mapping
+ * `POSTE_PREVISION` porte desormais un `PosteReferentiel.id`, le meme scope
+ * que la liste chargee ici (fini le defaut ERR-179 ou une cible resolue
+ * dans un AUTRE scenario que celui affiche etait a tort signalee
+ * "introuvable"). `libelleCible` (helpers) compare toujours `p.id ===
+ * cibleId`, inchange — seule la SOURCE de la liste `postes` change.
+ *
  * Sprint PR3-ter, story C.3 : `GET ?version=N` existait deja (Sprint PR3,
  * story PR3.6) mais restait totalement INUTILISE — cet ecran n'affichait
  * QUE la version active, jamais l'historique (ERR-174 : une route livree,
@@ -72,7 +81,7 @@ import {
   type MappingRapprochementAvecOrphelinite,
 } from "@/components/previsions/mapping-rapprochement-helpers";
 import type { CategorieReelleNonMappee } from "@/lib/queries/previsions-rapprochement-mapping";
-import type { PostePrevisionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
+import type { PosteReferentielDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
 
 /** Valeur sentinelle du `Select` pour "version active" — distincte de toute valeur numerique reelle. */
 const VERSION_ACTIVE_SENTINEL = "actif";
@@ -93,7 +102,7 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
   const [nonMappees, setNonMappees] = useState<CategorieReelleNonMappee[]>([]);
   const [mappingAffiche, setMappingAffiche] = useState<MappingRapprochementAvecOrphelinite[]>([]);
   const [version, setVersion] = useState<number | null>(null);
-  const [postes, setPostes] = useState<PostePrevisionDTO[]>([]);
+  const [postes, setPostes] = useState<PosteReferentielDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D2 (contre-review PR3-bis) : `postes`/`aliments` peuvent
   // echouer SEULS (le `Promise.all` ci-dessous ne declenche l'erreur
@@ -130,7 +139,7 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
       get<{ data: MappingRapprochementAvecOrphelinite[]; version: number | null }>(urlMapping, {
         silentError: true,
       }),
-      get<{ data: PostePrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/postes`, {
+      get<{ data: PosteReferentielDTO[] }>(`/api/previsions/postes-referentiel`, {
         silentError: true,
       }),
       get<{ data: AlimentPrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/aliments`, {

@@ -16,6 +16,14 @@
 import { prisma } from "@/lib/db";
 import { CategorieJournalPrevu, TypeApportCapital, TypePostePrevision } from "@/types";
 import { BusinessRuleError } from "@/lib/errors";
+import { sluggifierLibellePoste } from "@/lib/previsions/sluggifier-poste";
+
+/**
+ * Type d'un client de transaction interactive Prisma (`tx` dans
+ * `prisma.$transaction(async (tx) => …)`). Meme pattern que `numero-utils.ts`,
+ * `assignation-bac.ts`, `bons-livraison.ts`.
+ */
+type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /**
  * Garde applicative — colonnes Prisma `Int` de ce module (`PostePrevision.ordre`,
@@ -83,7 +91,80 @@ export async function getPostesPrevisionParScenario(scenarioId: string, siteId: 
   });
 }
 
-/** Cree un PostePrevision. */
+/**
+ * Verifie si une erreur Prisma est une violation P2002 sur la contrainte d'unicite
+ * `PosteReferentiel(siteId, code)` precisement (pas n'importe quel P2002 — notamment pas la
+ * violation de `PostePrevision(scenarioId, libelle)`, qui doit continuer a remonter telle
+ * quelle, cf. `handleApiError`).
+ */
+function estCollisionUniciteCodeReferentiel(error: unknown): boolean {
+  if (
+    error === null ||
+    typeof error !== "object" ||
+    !("code" in error) ||
+    (error as { code: unknown }).code !== "P2002"
+  ) {
+    return false;
+  }
+  const target = (error as { meta?: { target?: string[] } }).meta?.target;
+  return Array.isArray(target) && target.includes("code") && target.includes("siteId");
+}
+
+/**
+ * Resout (get-or-create) l'entree `PosteReferentiel` du site pour ce `code`, a l'interieur
+ * d'une transaction Prisma deja ouverte (ADR-053 §16.11).
+ *
+ * @throws {BusinessRuleError} (409) si le slug matche une entree referentiel DESACTIVEE du site
+ *   — jamais de reactivation silencieuse, jamais de doublon avec un code en collision.
+ */
+async function resoudrePosteReferentielIdDansTransaction(
+  tx: PrismaTransactionClient,
+  siteId: string,
+  code: string,
+  libelleOrigine: string
+): Promise<string> {
+  const existant = await tx.posteReferentiel.findUnique({
+    where: { siteId_code: { siteId, code } },
+  });
+
+  if (existant) {
+    if (!existant.actif) {
+      throw new BusinessRuleError(
+        `Un poste referentiel desactive existe deja pour ce libelle ("${existant.libelle}"). ` +
+          `Reactivez-le ou choisissez un libelle different plutot que d'en creer un doublon.`,
+        409,
+        "POSTE_REFERENTIEL_INACTIF"
+      );
+    }
+    return existant.id;
+  }
+
+  // `actif` explicite (redondant avec le defaut du schema Prisma @default(true), mais
+  // volontaire, R7) : la valeur cree doit etre sans ambiguite pour tout consommateur qui lit
+  // cette ligne, y compris un mock de test qui n'applique pas les defauts du schema.
+  const cree = await tx.posteReferentiel.create({
+    data: { siteId, code, libelle: libelleOrigine, actif: true },
+  });
+  return cree.id;
+}
+
+/**
+ * Cree un PostePrevision (chemin par defaut, ADR-053 §16.11) : le contrat de route reste
+ * inchange (seul `libelle`), mais la creation resout desormais en interne, par get-or-create
+ * transactionnel sur `sluggifierLibellePoste(libelle)`, l'entree `PosteReferentiel` du site a
+ * lier — la creant si aucune entree active du site ne porte ce `code`. R4 : tout se passe dans
+ * la MEME transaction Prisma que la creation du `PostePrevision` (jamais une entree referentiel
+ * creee puis un echec de creation du poste, qui laisserait une entree orpheline sans poste).
+ *
+ * Concurrence (R4, §16.11) : si deux requetes concomitantes manquent toutes deux le
+ * `findUnique` initial avant que l'une des deux n'ait committe sa creation, la seconde voit son
+ * `create` echouer avec `P2002` sur `@@unique([siteId, code])` — la contrainte en base est
+ * l'arbitre final, jamais l'application seule. Cette transaction ayant ete annulee par Postgres
+ * a l'echec de la contrainte, le rattrapage se fait HORS de cette transaction (une transaction
+ * avortee ne peut plus etre reutilisee pour une requete de lecture) : un unique retry
+ * deterministe relit l'entree desormais committee par la premiere requete, puis cree le
+ * `PostePrevision` en la reutilisant.
+ */
 export async function createPostePrevision(
   scenarioId: string,
   siteId: string,
@@ -99,16 +180,65 @@ export async function createPostePrevision(
     throw new Error("Scenario introuvable");
   }
 
-  return prisma.postePrevision.create({
-    data: {
-      scenarioId,
-      libelle: data.libelle,
-      type: data.type,
-      inclusBaseRepartition: data.inclusBaseRepartition ?? true,
-      ordre: data.ordre,
-      siteId,
-    },
-  });
+  const code = sluggifierLibellePoste(data.libelle);
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const posteReferentielId = await resoudrePosteReferentielIdDansTransaction(
+        tx,
+        siteId,
+        code,
+        data.libelle
+      );
+
+      return tx.postePrevision.create({
+        data: {
+          scenarioId,
+          libelle: data.libelle,
+          type: data.type,
+          inclusBaseRepartition: data.inclusBaseRepartition ?? true,
+          ordre: data.ordre,
+          siteId,
+          posteReferentielId,
+        },
+      });
+    });
+  } catch (error) {
+    if (!estCollisionUniciteCodeReferentiel(error)) {
+      throw error;
+    }
+
+    // Un seul retry deterministe (R4) : l'entree PosteReferentiel vient d'etre committee par
+    // la requete concurrente gagnante, hors de la transaction avortee ci-dessus.
+    const referentiel = await prisma.posteReferentiel.findUnique({
+      where: { siteId_code: { siteId, code } },
+    });
+    if (!referentiel) {
+      // Ne peut arriver que si l'entree cree-puis-supprimee entre les deux requetes — aucune
+      // route de suppression n'existe (§16.5) : ce cas ne devrait jamais survenir en pratique.
+      throw error;
+    }
+    if (!referentiel.actif) {
+      throw new BusinessRuleError(
+        `Un poste referentiel desactive existe deja pour ce libelle ("${referentiel.libelle}"). ` +
+          `Reactivez-le ou choisissez un libelle different plutot que d'en creer un doublon.`,
+        409,
+        "POSTE_REFERENTIEL_INACTIF"
+      );
+    }
+
+    return prisma.postePrevision.create({
+      data: {
+        scenarioId,
+        libelle: data.libelle,
+        type: data.type,
+        inclusBaseRepartition: data.inclusBaseRepartition ?? true,
+        ordre: data.ordre,
+        siteId,
+        posteReferentielId: referentiel.id,
+      },
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

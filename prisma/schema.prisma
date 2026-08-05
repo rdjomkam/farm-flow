@@ -856,6 +856,7 @@ model Site {
   vaguesPrevues            VaguePrevue[]
   alimentsParVaguePrevue   AlimentParVaguePrevue[]
   postesPrevision          PostePrevision[]
+  postesReferentiel        PosteReferentiel[]
   chargesMensuellesPrevues ChargeMensuellePrevue[]
   journalDepensesPrevues   JournalDepensePrevue[]
   apportsCapital           ApportCapital[]
@@ -4681,6 +4682,30 @@ model AlimentParVaguePrevue {
   @@index([vaguePrevueId])
 }
 
+// ADR-053 §16 — story A.4 : référentiel de postes site-scopé, corrige le défaut structurel
+// de MappingRapprochement.cibleId (POSTE_PREVISION) qui référençait un PostePrevision.id
+// scénario-scopé (onDelete: Cascade) alors que MappingRapprochement est site-scopé (ERR-179).
+model PosteReferentiel {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  // slug stable, genere une seule fois a la creation depuis le libelle d'origine
+  // (sluggifierLibellePoste, src/lib/previsions/sluggifier-poste.ts) — JAMAIS recalcule
+  // automatiquement ensuite, y compris si libelle change.
+  code      String
+  // libelle d'affichage courant du referentiel — peut diverger du code
+  libelle   String
+  // desactivation logique — AUCUNE route DELETE dans cette story (onDelete: Restrict ci-dessous)
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postes    PostePrevision[]
+
+  @@unique([siteId, code])
+  @@index([siteId, actif])
+}
+
 model PostePrevision {
   id                    String             @id @default(cuid())
   scenarioId            String
@@ -4700,12 +4725,17 @@ model PostePrevision {
   ordre                 Int
   siteId                String
   site                  Site               @relation(fields: [siteId], references: [id])
+  // ADR-053 §16 — story A.4 : identité stable, site-scopée, symétrique du scope de
+  // MappingRapprochement. Résout POSTE_PREVISION indépendamment du cycle de vie du scénario.
+  posteReferentielId    String
+  posteReferentiel      PosteReferentiel   @relation(fields: [posteReferentielId], references: [id], onDelete: Restrict)
 
   chargesMensuelles      ChargeMensuellePrevue[]
   snapshotsBudgetInitial SnapshotBudgetInitial[]
 
   @@unique([scenarioId, libelle])
   @@index([siteId])
+  @@index([posteReferentielId])
 }
 
 model ChargeMensuellePrevue {

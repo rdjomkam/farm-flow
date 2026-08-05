@@ -268,7 +268,7 @@ describe("RapprochementMappingTab — mapping actif", () => {
     expect(await screen.findByText("Transport aliments")).toBeInTheDocument();
   });
 
-  it("CORRECTIF C6/C1 : une cible introuvable dans ce scenario (autre scenario) affiche un libelle explicite, jamais un id brut ni un vide silencieux", async () => {
+  it("CORRECTIF C6/C1 + A.4 : un cibleId POSTE_PREVISION sans entree PosteReferentiel correspondante (SITE-scope, plus 'un autre scenario') affiche un libelle explicite, jamais un id brut ni un vide silencieux", async () => {
     mockApi({
       mappingActif: [
         {
@@ -278,18 +278,22 @@ describe("RapprochementMappingTab — mapping actif", () => {
           sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
           sourceCle: "ELECTRICITE",
           cibleType: CibleRapprochement.POSTE_PREVISION,
-          cibleId: "poste-autre-scenario",
+          cibleId: "poste-referentiel-inconnu",
           actif: true,
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
       version: 5,
+      // A.4 : `postes` est desormais la liste SITE-scopee de
+      // `PosteReferentiel` (`GET /api/previsions/postes-referentiel`), plus
+      // les `PostePrevision` d'un scenario precis — "poste-referentiel-inconnu"
+      // n'y figure pas.
       postes: [{ id: "poste-1", libelle: "Electricite du site" }],
     });
     render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
 
-    expect(await screen.findByText("Cible introuvable dans ce scénario")).toBeInTheDocument();
-    expect(screen.queryByText("poste-autre-scenario")).not.toBeInTheDocument();
+    expect(await screen.findByText("Cible introuvable")).toBeInTheDocument();
+    expect(screen.queryByText("poste-referentiel-inconnu")).not.toBeInTheDocument();
   });
 
   it("CORRECTIF D2 : quand postes/aliments echouent SEULS (nonMappees/mappingActif reussissent), l'ecran reste affiche et le libelle n'est jamais le mensonge 'introuvable dans ce scenario'", async () => {

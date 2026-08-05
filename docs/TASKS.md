@@ -8022,3 +8022,129 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR3-PREVISIONS.md` n'existe* — le s
 **Livrables :** `docs/decisions/ADR-053-module-previsions.md` **§15** (amendement) ; `docs/analysis/pre-analysis-sprint-PR3.md` ; `docs/reviews/review-sprint-PR3.md` (**VALIDÉ AVEC RÉSERVES**) ; `docs/tests/rapport-falsification-sprint-PR3.md` ; `docs/tests/rapport-verification-sprint-PR3.md`.
 
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR3-bis — L'écran d'administration du mapping
+Voir : [SPRINT-PR3-BIS.md](sprints/SPRINT-PR3-BIS.md).
+
+> ⚠️ **Section reconstituée a posteriori (2026-08-05) par le @status-updater.** Cette section
+> manquait dans `docs/TASKS.md` alors que PR3 et PR3-ter y étaient (ou y sont désormais) référencés
+> — **lacune de traçabilité connue**. Son contenu est **intégralement reconstitué à partir de
+> `docs/sprints/SPRINT-PR3-BIS.md`**, seule source retrouvée dans le dépôt. **Rien n'est inventé** :
+> ce qui n'a pas pu être établi par une source est marqué explicitement ci-dessous.
+
+**Statut :** `FAIT` (**7 stories** — toutes `FAIT`) — **review de sprint `VALIDÉ SOUS RÉSERVE` sur les deux passes, toutes les réserves corrigées ensuite (C1 → C6, puis D1/D2)**
+
+**Objectif (source : fichier de sprint, §Contexte) :** PR3 avait livré le rapprochement prévu/réel et le bac « Non rapproché », mais **aucun écran ne consommait** `GET /api/previsions/mapping-rapprochement/non-mappees` : l'exploitant voyait un montant non rapproché sans pouvoir agir dessus. `MappingRapprochement` et `ClotureMois` étaient vides sur **tous** les sites. Ce sprint livre l'écran d'administration du mapping en **5ᵉ sous-onglet** de `rapprochement-tab.tsx` (`mensuelle` / `cumulee` / `parVague` / `topEcarts` / **`mapping`**) : voir les catégories réelles non mappées (4 sources, granulométries comprises), créer un mapping depuis une catégorie non mappée (**remplacement en bloc**, jamais un ajout unitaire), consulter et modifier les mappings existants avec leur numéro de version. **Sprint UI pur** (+ tests), à l'exception d'une story de validation de schéma mineure.
+
+**Pré-analyse :** `docs/analysis/pre-analysis-sprint-PR3-bis.md` — verdict **GO AVEC RÉSERVES**.
+
+| Story | Type | Sujet | Agent | Statut |
+|-------|------|-------|-------|--------|
+| PR3bis.1 | SCHEMA | Validation `cibleId`/`cibleType` dans `ligneMappingRapprochementInputSchema` (mineure, optionnelle) | @db-specialist | `FAIT` |
+| PR3bis.2 | UI | Propager `permissions` à `RapprochementTab` (prérequis strict des stories UI suivantes) | @developer | `FAIT` |
+| PR3bis.3 | UI | Sous-onglet Mapping — liste des catégories réelles non mappées | @developer | `FAIT` |
+| PR3bis.4 | UI | Sous-onglet Mapping — création d'un mapping depuis la liste des non-mappées | @developer | `FAIT` |
+| PR3bis.5 | UI | Sous-onglet Mapping — consultation + modification des mappings existants avec version | @developer | `FAIT` |
+| PR3bis.6 | TEST | Tests du sous-onglet Mapping (rendu, traduction granulométrie, état vide, POST en bloc, permissions, garde de fermeture de dialogue) | @tester | `FAIT` |
+| PR3bis.7 | REVIEW | Review de sprint (R1-R11, mobile 375 px réel) | @code-reviewer | `FAIT` |
+
+Pipeline par story : @pre-analyst → agent assigné → @tester → @code-reviewer → @knowledge-keeper, sauf PR3bis.6 (@tester seul) et PR3bis.7 (@code-reviewer → @knowledge-keeper), conformément à `docs/PROCESSES.md`.
+
+**Clôture du sprint — mesures réelles (source : fichier de sprint, §Clôture) :**
+- `npx vitest run` : **3 passages consécutifs strictement identiques** — **306 fichiers / 9 413 tests, 26 todo, 0 skip, 0 échec, aucune flakiness**. Mesures obtenues **avec `DATABASE_URL` exportée** ; sans elle, les tests DB-gated sont **silencieusement skippés** (**ERR-116**).
+- Recette du moteur : **2 709 / 2 709, 0 écart** ; **aucun fichier de `src/lib/previsions/` modifié**.
+- `npm run build` → **EXIT=0**. `npx prisma migrate deploy` → **aucune migration en attente** (170 migrations).
+- **Falsification : 11 règles falsifiées et chiffrées, (a) → (k)**. Un trou détecté et comblé (**correctif C5**, falsification **(i)** à 0 test). La falsification **(j)** (**correctif D1**) tombe à **0 test** — **trou de couverture assumé et documenté, non masqué** : le défaut protégé est une fenêtre de rendu d'une frame, non observable par la suite RTL.
+- **Vérification en navigateur réel** (Chromium/Playwright, **ERR-157**), **deux passes à 375 px et 1280 px** : onglets N1 `scrollWidth 977 / clientWidth 343`, sous-onglets `518 / 343`, **aucun débordement horizontal de page**, dialog non rogné à 375 px, garde `useDialogCloseGuard` prouvée avec une valeur réellement modifiée.
+- **`EXCEL-V12` strictement inchangé**, vérifié par SQL avant/après : 19 vagues, 602 500 alevins, 3 `AlimentPrevision`, 4 `PalierRemise`, apports 30 000 000, journal 34 400 000, charges 20 580 000, `ParametresPrevision` colonne par colonne **y compris `updatedAt`**. Sites jetables `vpr3b_site` et `vpr3c_site` créés puis supprimés, **0 résidu sur 13 tables**.
+- **Capitalisation :** **ERR-174 à ERR-178** créées ; **ERR-116** et **ERR-168** enrichies.
+
+**Livrables identifiés :** `docs/sprints/SPRINT-PR3-BIS.md` ; `docs/analysis/pre-analysis-sprint-PR3-bis.md` ; `docs/reviews/review-sprint-PR3-bis.md`.
+
+**À reconstituer, source non trouvée** (à ne pas combler par déduction) :
+- Les **dates** d'ouverture et de clôture du sprint.
+- L'existence et le nom d'un éventuel **rapport de test de sprint** dans `docs/tests/` (aucun rapport `*PR3-bis*` n'est cité par le fichier de sprint).
+- Le détail nominatif des **correctifs C1 → C6 et D1/D2** (seuls C4, C5 et D1 sont nommés par le fichier de sprint).
+
+**Points ouverts consignés à la clôture (PAS des stories de ce sprint) :**
+
+| Nature | Point | État au 2026-08-05 |
+|---|---|---|
+| Risque structurel, hors périmètre | `MappingRapprochement.cibleId` **site-scopé** alors que `PostePrevision`/`AlimentPrevision` sont **scénario-scopés** (ADR-053 §3.9). Mitigation UI en place ; correctif structurel « à concevoir dans une story dédiée ». | **SOLDÉ** — `ALIMENT_PREVISION` corrigé en **PR3ter.A2**, `POSTE_PREVISION` corrigé par la **story A.4** (sprint PR3-quater, ci-dessous). |
+| Dette signalée, hors périmètre | `vente-detail-client.tsx` / `depense-vente-dialog.tsx` : tables `CATEGORIE_LABELS` codées en dur, non accentuées (**ERR-176**). | **SOLDÉ** en **PR3ter.C4**. |
+| Dette signalée, hors périmètre | Libellés non accentués sur `/depenses` (« Depenses », « payee », « recurrentes configurees »). | **SOLDÉ** en **PR3ter.C4**. |
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR3-ter — Achever le §6 : portée du mapping, trésorerie à trois séries, reprévision glissante
+Voir : [SPRINT-PR3-TER.md](sprints/SPRINT-PR3-TER.md) — **source unique de cette section**, reprise ici par le @status-updater le 2026-08-05 (le suivi détaillé reste porté par le fichier de sprint).
+
+**Statut :** `FAIT` (**13 stories** — toutes `FAIT`) — **review de sprint `VALIDÉ SOUS RÉSERVE`, 4 réserves, toutes levées ensuite**
+
+| Story | Type | Sujet | Statut |
+|-------|------|-------|--------|
+| PR3ter.A1 | ANALYSE | Pré-analyse de la portée du mapping (site-scopé vs scénario-scopé, ADR-053 §3.9) | `FAIT` |
+| PR3ter.A2 | QUERIES | Correction structurelle de la portée du mapping, compatible avec le versionnage §6.2 | `FAIT` — moitié **`ALIMENT_PREVISION`** livrée ici ; moitié **`POSTE_PREVISION`** livrée depuis par la **story A.4** (sprint PR3-quater) |
+| PR3ter.A3 | API+UI | Filet de sécurité non négociable : détection et signalement d'une cible de mapping orpheline | `FAIT` |
+| PR3ter.A4 | TEST | Tests de la portée du mapping (le montant réel ne disparaît plus silencieusement) | `FAIT` |
+| PR3ter.B1 | ANALYSE | Ce que `SnapshotBudgetInitial` et `ClotureMois` portent réellement | `FAIT` |
+| PR3ter.B2 | QUERIES | Backend des trois séries : BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL | `FAIT` |
+| PR3ter.B3 | UI | Vue trésorerie §6.5 : bande d'écart, zone sous zéro, option « Reprévision » | `FAIT` |
+| PR3ter.B4 | TEST | Prouver que **le gel mord** (modifier la prévision après clôture ne change pas le budget initial) | `FAIT` |
+| PR3ter.C1 | BUGFIX | Collision de clé `DEPENSE` sous `MOUVEMENT_STOCK` | `FAIT` |
+| PR3ter.C2 | BUGFIX | « Total du mois » / « Top écarts » mélangeaient FCFA et kg sous un tri unique | `FAIT` |
+| PR3ter.C3 | UI | Consultation de l'historique des versions de mapping (`GET ?version=N`) | `FAIT` |
+| PR3ter.C4 | BUGFIX | **ERR-176** — `CATEGORIE_LABELS` en dur et libellés non accentués | `FAIT` |
+| PR3ter.R | REVIEW | Review de sprint (R1-R11, rendu réel 375 px et 1280 px) | `FAIT` |
+
+**Clôture — mesures réelles :** `npx vitest run` **3 passages identiques**, **325 fichiers / 9 532 tests, 26 todo, 0 skip, 0 échec** ; recette **2 709 / 2 709, 0 écart**, `git diff --stat src/lib/previsions/` **vide** ; `npm run build` **EXIT=0** ; `npx prisma migrate deploy` **aucune migration en attente** (170) ; **`EXCEL-V12` strictement inchangé** (19 vagues, 602 500 alevins, 3 `AlimentPrevision`, 4 `PalierRemise`, apports 30 000 000, journal 34 400 000, charges 20 580 000, `MappingRapprochement` à 0 ligne). **Capitalisation : ERR-179 à ERR-182** créées ; **ERR-116, ERR-157, ERR-172, ERR-176** enrichies.
+
+**Réserve `POSTE_PREVISION` — LEVÉE.** Le point ouvert « `MappingRapprochement.cibleId` reste site-scopé pour `POSTE_PREVISION` … correction structurelle reportée, story A.4 hors périmètre de ce sprint » **n'est plus ouvert** : il est traité par la **story A.4** (sprint PR3-quater, ci-dessous), qui introduit le référentiel de postes site-scopé (`PosteReferentiel`, migration `20260805120000_add_poste_referentiel`) et rend la résolution dynamique — **filet ET moteur**. Le fichier `docs/sprints/SPRINT-PR3-TER.md` a été mis à jour en conséquence.
+
+**Livrables :** `docs/sprints/SPRINT-PR3-TER.md` ; `docs/reviews/review-sprint-PR3-ter.md` ; `docs/tests/rapport-falsification-sprint-PR3-ter.md`.
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint PR3-quater — Périmètre de mapping `POSTE_PREVISION` : la correction structurelle
+Voir : *aucun fichier `docs/sprints/SPRINT-PR3-QUATER*.md` n'a été trouvé dans le dépôt* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`.
+
+**Statut :** `FAIT` — **review de story `VALIDÉ`, aucun point Bloquant**
+**Objectif :** solder la moitié `POSTE_PREVISION` de la correction de périmètre de mapping, laissée ouverte par **PR3ter.A2** (« correction structurelle reportée, story A.4 hors périmètre de ce sprint »). `PostePrevision.libelle` étant un texte libre sans clé métier stable, la correction exigeait un **référentiel de postes site-scopé** — nouveau modèle + amendement d'ADR.
+
+| Story | Type | Sujet | Pipeline | Statut |
+|-------|------|-------|----------|--------|
+| A.4 | SCHEMA + QUERIES + API + UI + TEST | **Périmètre de mapping `POSTE_PREVISION` — correction structurelle** : modèle `PosteReferentiel`, get-or-create transactionnel par slug, résolution dynamique du filet **et** du moteur de rapprochement, bandeau de cible orpheline partagé, liste de cibles site-scope | @pre-analyst → @db-specialist/@developer → @tester → @code-reviewer → @knowledge-keeper → @status-updater | `FAIT` |
+
+**A.4 — `FAIT`.** Livré et validé le **2026-08-05**.
+- **Schéma / R10** : migration `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql` — table `PosteReferentiel`, colonne `PostePrevision.posteReferentielId` (**NOT NULL**, FK **`Restrict`**), en **4 étapes idempotentes** (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING` + relecture) avec **garde-fou de précondition `RAISE EXCEPTION` dans la migration elle-même**, après backfill et avant `SET NOT NULL`. Jamais un `.sql` à la racine de `prisma/migrations/`.
+- **R4** : get-or-create dans une **transaction Prisma unique**, rattrapage `P2002` **ciblé** (vérification que `target` inclut `code` + `siteId`), **un seul retry déterministe** — testé sous **concurrence réelle** contre Postgres.
+- **ERR-179 corrigé à la source, pas seulement détecté** : `previsions-rapprochement.ts` (le moteur) résout `POSTE_PREVISION` dynamiquement ; une résolution échouée fait retomber `cibleCle` à `null`, ce qui bascule le montant en **`NON_RAPPROCHE` explicite**, jamais un `?? 0` muet (prouvé de bout en bout, montant réel 31 415 FCFA visible sous `NON_RAPPROCHE`).
+- **Règles** : R3 (`posteReferentielId` aligné schéma/loader/types), R5 (`DialogTrigger asChild`), R6 (variables de thème), R8 (`siteId` partout), R11 (aucun secret). **ERR-160 / affaiblissement des tests : aucun constaté.**
+- **Constats de review traités** : **Majeur #1** (test du point 4 de §16.9 — contrainte `Restrict` — absent) **CORRIGÉ** (test DB-gated ajouté, falsifié, restauration prouvée par MD5) ; **Remarque #1** (divergence slug SQL↔TS) **traitée et enrichie** par un test de parité automatisé de 36 tests, qui a révélé une divergence non anticipée sur `Ø`/`ø` (**ERR-184**) ; **Remarque #2** (§16.6 non implémenté) conforme au report acté en §16.11.
+
+**Chiffres de clôture — mesures réelles :**
+- `npx vitest run` : **331 fichiers de test / 9 607 tests / 0 échec / 26 todo pré-existants** (les 26 `todo` sont **exclusivement** dans `density-calculs.test.ts` et `density-integration.test.ts`, module densité, sans lien avec cette story).
+- **Recette du moteur : 2 709 / 2 709 assertions, 0 écart.**
+- `npm run build` : **exit 0**.
+- **Intégrité `EXCEL-V12` vérifiée identique AVANT et APRÈS** : **19 `VaguePrevue`**, **602 500 alevins**, **3 `AlimentPrevision`**, **4 `PalierRemise`**, `ApportCapital` **30 000 000**, `JournalDepensePrevue` **34 400 000**. Aucune écriture n'a touché ce scénario ; tous les sites jetables (`pr3quater-a4-site-*`) nettoyés, **0 résidu** prouvé par SQL.
+- Les 10 points de vérification d'**ADR-053 §16.9** sont **tous couverts** par au moins un test qui échouerait si la propriété correspondante était rompue (table de correspondance dans le rapport de test, §1bis).
+
+**Capitalisation @knowledge-keeper :** nouvelles entrées **ERR-183**, **ERR-184**, **ERR-185**.
+
+**Livrables :** [ADR-053 §16](decisions/ADR-053-module-previsions.md) (dont **§16.10** et **§16.11**) ; [pre-analysis-story-A4-mapping-poste-prevision.md](analysis/pre-analysis-story-A4-mapping-poste-prevision.md) ; [review-story-A4-mapping-poste-prevision.md](reviews/review-story-A4-mapping-poste-prevision.md) (**VALIDÉ**) ; [rapport-story-A4-mapping-poste-prevision.md](tests/rapport-story-A4-mapping-poste-prevision.md) (**GO**) ; migration `prisma/migrations/20260805120000_add_poste_referentiel/`.
+
+**Points restés ouverts — consignés (leçon ERR-180 : un report non consigné est un report perdu). PAS des stories de ce sprint :**
+
+| Nature | Point |
+|---|---|
+| **Évolution UX optionnelle — À VALIDER PAR L'UTILISATEUR, NE PAS IMPLÉMENTER SANS SON ACCORD** | **ADR-053 §16.10** — création d'un poste par **sélection explicite dans le référentiel de site** (parcours à deux temps : chercher dans le référentiel, ou créer une nouvelle entrée explicitement) au lieu du champ texte unique + get-or-create livré en §16.11. **Hors périmètre.** L'ADR précise que cette évolution est possible **sans nouvelle migration** (le modèle `PosteReferentiel` est déjà en place). §16.10 est explicitement **reclassé en évolution future optionnelle**, plus une condition bloquante ; l'exigence de **validation utilisateur préalable à toute construction d'écran** reste entière. |
+| Extension additive future, non implémentée | **ADR-053 §16.6** — contrat à deux champs explicites `posteReferentielId` **XOR** `nouveauPosteReferentielLibelle`. **Non implémenté**, réservé en **extension additive future** : il implique nécessairement l'écran de §16.10 ci-dessus. Report acté en §16.11, confirmé par la review (Remarque #2). |
+| Divergence documentée et testée, aucune correction prévue à ce stade | **ERR-184** — divergence de slug **SQL ↔ TS hors alphabet français** : `Ø`/`ø` (présentes dans la table `src_chars` du backfill SQL, mais **non décomposables par NFD** côté TS) et les diacritiques d'Europe centrale/Baltique (`ą ć ń ś ź ż ș ț`, décomposables côté TS, absentes de `src_chars` côté SQL). **Périmètre de parité garanti : alphabet français standard** (+ parité de comportement sur `œ`/`æ`). Divergence **prouvée par 36 tests dédiés**, **non atteinte par les données réelles** (libellés de postes en français). **Pas de correction prévue à ce stade.** |
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**

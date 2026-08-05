@@ -196,11 +196,40 @@ export async function chargerResolveurAlimentParTailleGranule(
 }
 
 /**
+ * Resout, pour un `posteReferentielId` donne (SITE-scope, ADR-053 §16, story
+ * A.4), le `PostePrevision.id` du scenario COURANT — au plus un resultat
+ * possible (`@@unique([scenarioId, libelle])` implique en pratique au plus un
+ * PostePrevision par entree referentiel dans un meme scenario, aucune route
+ * ne permettant de lier deux PostePrevision d'un meme scenario a la meme
+ * entree). Requete UNIQUE, jamais en boucle par ligne de mapping — meme
+ * patron que `chargerResolveurAlimentParTailleGranule` ci-dessus, en
+ * substituant `posteReferentielId` a `tailleGranule` comme cle metier stable.
+ */
+export async function chargerResolveurPosteParPosteReferentielId(
+  scenarioId: string
+): Promise<(posteReferentielId: string) => string | null> {
+  const postes = await prisma.postePrevision.findMany({
+    where: { scenarioId },
+    select: { id: true, posteReferentielId: true },
+  });
+  const idParPosteReferentielId = new Map<string, string>();
+  for (const poste of postes) {
+    idParPosteReferentielId.set(poste.posteReferentielId, poste.id);
+  }
+  return (posteReferentielId: string) => idParPosteReferentielId.get(posteReferentielId) ?? null;
+}
+
+/**
  * Traduit une ligne `MappingRapprochement` (Prisma) en `MappingRapprochementActif`
  * (contrat du moteur pur). Seule fonction qui sait deriver `cibleCle` a
  * partir de (`cibleType`, `cibleId`) :
- * - `POSTE_PREVISION` : `cibleId` litteral (FK reelle, encore SITE-scope —
- *   correction structurelle reportee, A.4/story PR3ter.A4) ;
+ * - `POSTE_PREVISION` : `cibleId` porte desormais un `PosteReferentiel.id`
+ *   SITE-scope (ADR-053 §16, story A.4 — le meme scope que
+ *   `MappingRapprochement` lui-meme), resolu DYNAMIQUEMENT vers le
+ *   `PostePrevision` du scenario COURANT via `resoudrePosteCibleCle` —
+ *   `null` si le scenario courant n'a aucun PostePrevision lie a cette
+ *   entree referentiel (bac NON_RAPPROCHE, jamais une cle morte invisible) ;
+ *   meme patron que `ALIMENT_PREVISION` ci-dessous.
  * - `ALIMENT_PREVISION` : `cibleId` compose (A.3 ci-dessus), resolu
  *   DYNAMIQUEMENT vers l'`AlimentPrevision` du scenario COURANT via
  *   `resoudreAlimentCibleCle` (jamais via l'id fige a la creation) —
@@ -219,14 +248,15 @@ function versMappingActif(
     cibleType: string;
     cibleId: string | null;
   },
-  resoudreAlimentCibleCle: (tailleGranule: TailleGranule) => string | null
+  resoudreAlimentCibleCle: (tailleGranule: TailleGranule) => string | null,
+  resoudrePosteCibleCle: (posteReferentielId: string) => string | null
 ): MappingRapprochementActif {
   const sourceCle = composeCategorieCle(ligne.sourceType as SourceRapprochement, ligne.sourceCle);
 
   let cibleCle: string | null;
   switch (ligne.cibleType as CibleRapprochement) {
     case CibleRapprochement.POSTE_PREVISION:
-      cibleCle = ligne.cibleId;
+      cibleCle = ligne.cibleId !== null ? resoudrePosteCibleCle(ligne.cibleId) : null;
       break;
     case CibleRapprochement.ALIMENT_PREVISION: {
       const { tailleGranule } = parseCibleAlimentPrevision(ligne.cibleId);
@@ -293,15 +323,16 @@ export async function getMappingActifResoluPourMois(
   siteId: string,
   moisAbsolu: number
 ): Promise<MappingRapprochementActif[]> {
-  const [versionFigee, resoudreAlimentCibleCle] = await Promise.all([
+  const [versionFigee, resoudreAlimentCibleCle, resoudrePosteCibleCle] = await Promise.all([
     resoudreVersionMappingPourMois(scenarioId, siteId, moisAbsolu),
     chargerResolveurAlimentParTailleGranule(scenarioId),
+    chargerResolveurPosteParPosteReferentielId(scenarioId),
   ]);
   const lignes =
     versionFigee !== null
       ? await getMappingParVersion(siteId, versionFigee)
       : await getMappingActif(siteId);
-  return lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle));
+  return lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle, resoudrePosteCibleCle));
 }
 
 /**
@@ -316,12 +347,13 @@ async function getMappingResoluParMois(
   moisDebut: number,
   moisFin: number
 ): Promise<Map<number, MappingRapprochementActif[]>> {
-  const [clotures, resoudreAlimentCibleCle] = await Promise.all([
+  const [clotures, resoudreAlimentCibleCle, resoudrePosteCibleCle] = await Promise.all([
     prisma.clotureMois.findMany({
       where: { scenarioId, siteId, moisAbsolu: { gte: moisDebut, lte: moisFin } },
       select: { moisAbsolu: true, versionMapping: true },
     }),
     chargerResolveurAlimentParTailleGranule(scenarioId),
+    chargerResolveurPosteParPosteReferentielId(scenarioId),
   ]);
 
   const versionParMois = new Map<number, number>();
@@ -336,12 +368,12 @@ async function getMappingResoluParMois(
     const lignes = await getMappingParVersion(siteId, version);
     mappingParVersion.set(
       version,
-      lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle))
+      lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle, resoudrePosteCibleCle))
     );
   }
 
   const mappingActifCourant = (await getMappingActif(siteId)).map((l) =>
-    versMappingActif(l, resoudreAlimentCibleCle)
+    versMappingActif(l, resoudreAlimentCibleCle, resoudrePosteCibleCle)
   );
 
   const resultat = new Map<number, MappingRapprochementActif[]>();

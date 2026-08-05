@@ -2585,3 +2585,523 @@ construites) est laissée à une story de nettoyage documentaire ultérieure, ho
   solidement et reporter la vue trésorerie à un sprint suivant que de forcer le snapshot sous pression
   (cf. ERR-160/ERR-171 : un modèle bâclé sous pression, dans ce module précisément, a déjà coûté deux
   sprints de récidive).
+
+## 16. Amendement (Sprint PR3-quater, story A.4, 2026-08-05) — `PosteReferentiel` : corriger le
+défaut structurel de `MappingRapprochement.cibleId` pour `POSTE_PREVISION`
+
+**Origine.** ERR-179 documente un défaut structurel : `MappingRapprochement` est site-scopé (§3.9)
+alors que ses deux cibles polymorphes (`PostePrevision`, `AlimentPrevision`) sont scénario-scopées
+avec `onDelete: Cascade`. Story A.3 (sprint PR3-ter) a corrigé `ALIMENT_PREVISION` par résolution
+dynamique via la clé métier stable `tailleGranule` (un enum). Story A.4, tranchée ici, corrige
+`POSTE_PREVISION` — le seul type de cible encore affecté (pré-analyse `docs/analysis/pre-analysis-
+story-A4-mapping-poste-prevision.md`, confirmée contre le schéma et le code, aucune ligne
+`MappingRapprochement` réelle en base au moment de cette décision : correctif structurel, pas un
+correctif de données R10).
+
+`PostePrevision` n'a, à la différence d'`AlimentPrevision`, **aucun équivalent de `tailleGranule`** :
+son unicité est `(scenarioId, libelle)`, un texte libre — et ce texte libre est un choix **assumé** de
+§3.8 (« le classeur Excel a fait évoluer ses lignes de dépenses »), pas un oubli. La symétrie directe
+avec A.3 (résoudre par libellé normalisé) n'est donc pas transposable sans introduire un nouveau
+risque : un texte libre peut être renommé sans qu'aucune structure ne le retienne.
+
+### 16.1 Les trois options
+
+**(a) Référentiel de postes au niveau site — `PosteReferentiel`.** Nouveau modèle site-scopé,
+portant un `code` slug stable généré à la création et un `libelle` d'affichage. Chaque
+`PostePrevision` (scénario-scopé, inchangé par ailleurs) porte une FK `posteReferentielId` NOT NULL
+vers cette entrée. `MappingRapprochement.cibleId`, pour `POSTE_PREVISION`, stocke désormais
+`PosteReferentiel.id` — un id **site-scopé**, symétrique du scope de `MappingRapprochement`
+lui-même. La résolution à la lecture (symétrique de `resoudreCibleCleDuScenarioCourant` pour
+`ALIMENT_PREVISION`) retrouve, dans le scénario courant, le `PostePrevision` dont
+`posteReferentielId` correspond — jamais l'inverse.
+
+**(b) Résolution par clé naturelle `(scenarioId, libellé normalisé)`.** Symétrique d'A.3 au sens
+littéral, aucun nouveau modèle. Rejetée : `libelle` est du texte libre par décision assumée (§3.8) —
+un renommage, même mineur (« Transport alevins » → « Transport des alevins »), romprait la
+correspondance de normalisation et ferait **re-résoudre silencieusement vers une autre cible**, ou
+vers aucune (bascule en `NON_RAPPROCHE`), selon le hasard de la coïncidence de normalisation. C'est
+exactement la classe de défaut nommée par ERR-171/ERR-179 : un échec qui ne transite par aucun état
+nommé avant de fausser un total. Aucune protection structurelle ne peut naître d'une clé qui reste,
+par construction, du texte libre.
+
+**(c) Scoper `MappingRapprochement` au scénario.** Rejetée sans ambiguïté : contredit frontalement
+la justification actée §3.9 (« un mapping sert potentiellement plusieurs scénarios successifs du
+même site ») — un administrateur qui reconfigure la totalité du mapping à chaque nouveau scénario
+(dépenses réelles ↔ postes prévisionnels) reproduirait manuellement, à chaque nouveau plan, un travail
+de configuration que le scope site existe précisément pour éviter. Aucun fait nouveau de la
+pré-analyse ne justifie de revenir sur cette décision — le coût mesuré (défaut de `POSTE_PREVISION`)
+est un défaut d'implémentation de l'option site-scopée, pas une preuve que l'option elle-même est
+fausse : la preuve en est qu'A.3 a corrigé le même défaut pour `ALIMENT_PREVISION` sans jamais
+remettre en cause le scope site du mapping.
+
+### 16.2 Décision : (a), `PosteReferentiel`
+
+**Ce que ce choix rend IMPOSSIBLE — énoncé explicitement, pas seulement ses avantages :**
+
+1. **Il devient impossible de créer un `PostePrevision` sans dépendance à une entrée référentiel
+   du site.** Toute création de poste, quel que soit le scénario, exige de résoudre ou créer une
+   entrée `PosteReferentiel` — ce n'est plus une opération purement scénario-locale comme
+   aujourd'hui (route `POST /postes` actuelle, aucune dépendance externe). Un scénario ne peut plus
+   être un silo strictement indépendant pour ses postes de charges : il partage désormais un espace
+   de nommage avec tous les autres scénarios du site, présents et futurs.
+2. **Il devient impossible de fusionner automatiquement, sans décision explicite de l'utilisateur,
+   deux postes que le système jugerait « proches ».** La création d'un `PostePrevision` exige un
+   choix explicite (lier à une entrée `PosteReferentiel` existante du site, ou en créer une nouvelle)
+   — délibérément **aucun rapprochement automatique par similarité de texte** n'est permis à la
+   création (§16.6). Ce choix élimine le risque de fausse fusion, mais il **rend impossible** la
+   fluidité d'une saisie totalement libre sans jamais consulter un référentiel existant : créer un
+   poste devient un geste à deux temps (chercher, puis créer si absent), jamais un simple champ
+   texte comme aujourd'hui.
+3. **Il devient impossible de supprimer physiquement une entrée `PosteReferentiel` tant qu'un
+   `PostePrevision`, de quelque scénario que ce soit, y est encore lié** (`onDelete: Restrict`,
+   §16.3) — y compris un scénario archivé. Un administrateur qui veut « nettoyer » un poste
+   obsolète ne peut le faire qu'en le désactivant (`actif = false`), jamais en l'effaçant, tant que
+   son historique existe quelque part dans le site.
+4. **Il ne devient PAS impossible de renommer un poste** — c'est au contraire ce que ce choix
+   protège explicitement (§16.4). Ce point est mentionné ici pour éviter toute ambiguïté : la
+   décision ne restreint jamais l'édition du libellé affiché, ni au niveau scénario ni au niveau
+   référentiel.
+
+**Ce que ce choix ne prétend pas régler :** un administrateur peut toujours, par erreur humaine,
+créer deux entrées `PosteReferentiel` distinctes qui désignent le même concept réel (ex. « Énergie »
+et « Énergie et Carburant » comme deux entrées séparées). Ce n'est plus un défaut structurel
+(aucune cible ne devient jamais une clé morte) mais un défaut de qualité de saisie — son seul
+gardefou est l'étape de sélection explicite décrite en §16.6, jamais une résolution automatique.
+
+### 16.3 Modèle de données
+
+```prisma
+model PosteReferentiel {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  code      String   // slug stable, genere une seule fois a la creation depuis le libelle
+                      // d'origine — JAMAIS recalcule automatiquement ensuite, y compris si
+                      // libelle change (renommage explicite du code = action distincte,
+                      // hors perimetre de cette story, non exposee par aucune route)
+  libelle   String   // libelle d'affichage courant du referentiel — peut diverger du code
+  actif     Boolean  @default(true) // desactivation logique — AUCUNE route DELETE dans cette story
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postes    PostePrevision[]
+
+  @@unique([siteId, code])
+  @@index([siteId, actif])
+}
+
+model PostePrevision {
+  // ... champs existants (§3.8) inchangés (id, scenarioId, scenario, libelle, type,
+  //     inclusBaseRepartition, ordre, siteId, site, chargesMensuelles, snapshotsBudgetInitial) ...
+  posteReferentielId String
+  posteReferentiel   PosteReferentiel @relation(fields: [posteReferentielId], references: [id], onDelete: Restrict)
+
+  @@unique([scenarioId, libelle])
+  @@index([siteId])
+  @@index([posteReferentielId])
+}
+```
+
+`onDelete: Restrict` (et non `SetNull`, et non `Cascade`) sur `PostePrevision.posteReferentielId` :
+une FK réelle qui **empêche structurellement**, au niveau base, la suppression d'une entrée
+référentiel encore référencée — contrairement à `MappingRapprochement.cibleId` qui reste un
+littéral polymorphe (aucune FK Prisma possible : un même champ scalaire référence des tables
+différentes selon `cibleType` — question 4 de la pré-analyse, tranchée dans le même sens qu'A.3 :
+détection applicative, pas de FK polymorphe). La différence structurelle introduite par cette
+section est ailleurs : **`PosteReferentiel` étant lui-même site-scopé**, `MappingRapprochement.cibleId`
+(toujours un littéral) référence désormais une entité du **même scope** que `MappingRapprochement`
+— ce qui élimine la classe de défaut d'ERR-179 (jointure molle **et** scope incohérent) sans
+prétendre éliminer la jointure molle elle-même (toujours un littéral, toujours détectée
+applicativement, §16.7).
+
+`MappingRapprochement` (§3.9) n'est **pas modifié au schéma** — seule la sémantique de
+`cibleId` change pour `cibleType = POSTE_PREVISION` (documentée dans le commentaire du champ,
+`src/types/models.ts`).
+
+### 16.4 Comportement au renommage — la question centrale de cette story
+
+**Renommer `PostePrevision.libelle`** (le libellé affiché dans un scénario donné, seul champ
+aujourd'hui éditable via une future route d'édition — actuellement aucune route `PUT`/`PATCH`
+n'existe, pré-analyse §7) **ne touche jamais `posteReferentielId`.** Le mapping, qui résout par
+`posteReferentielId` (jamais par `libelle`), reste **entièrement intact** — pas seulement
+« signalé comme cassé puis réparé », mais **jamais affecté**, à aucun instant. Ce n'est ni un échec
+visible ni un échec silencieux : ce n'est **pas un échec**, parce que la clé de résolution n'est,
+par construction, jamais dérivée d'un champ mutable destiné à changer.
+
+**Renommer `PosteReferentiel.libelle`** (une future action d'administration, hors périmètre UI de
+cette story — seul le modèle et le champ existent, §16.8) a la même propriété : `id`/`code` restent
+stables, `MappingRapprochement.cibleId` continue de résoudre correctement. Le seul effet visible est
+cosmétique : le libellé affiché dans l'écran d'administration du mapping change, sans que la
+correspondance change.
+
+**Le seul renommage qui a un effet réel — et il est délibérément explicite, jamais silencieux :**
+si un nouveau `PostePrevision` est créé dans un **nouveau** scénario avec un libellé qui aurait pu
+correspondre à une entrée référentiel existante mais que l'utilisateur **choisit explicitement de
+créer une nouvelle entrée référentiel plutôt que de lier l'existante** (§16.6 : aucune fusion
+automatique), deux entrées référentiel distinctes coexistent pour ce qu'un humain jugerait être
+« le même poste ». Ce n'est pas un renommage qui casse un mapping existant (le mapping existant
+reste valide, pointant vers l'ancienne entrée) — c'est une **divergence de saisie visible dès la
+création** (l'écran de création affiche la liste des entrées existantes avant de permettre d'en
+créer une nouvelle, §16.6), jamais une résolution automatique qui masquerait la question à
+l'utilisateur.
+
+### 16.5 Comportement à la suppression
+
+- **Suppression d'un `ScenarioPrevision`** (aucune route ne l'expose aujourd'hui, pré-analyse §1.3,
+  mais le schéma la permet via `onDelete: Cascade` sur `PostePrevision.scenario`) : les
+  `PostePrevision` du scénario sont supprimés en cascade, **mais `PosteReferentiel` n'est jamais
+  affecté** (relation indépendante, cycle de vie distinct du scénario). Tout `MappingRapprochement`
+  dont `cibleId` référence cette entrée référentiel **reste valide** après la suppression du
+  scénario — c'est la correction directe du risque décrit en pré-analyse §1.3 (« un id mort après
+  suppression de scénario »), qui disparaît structurellement : l'entité référencée par le mapping
+  n'appartient plus au cycle de vie d'aucun scénario.
+- **Suppression d'un `PosteReferentiel`** : aucune route DELETE n'est créée par cette story
+  (cohérent avec `actif`/désactivation logique, même patron que `MappingRapprochement.actif`,
+  §3.9). Si une story future en ajoute une, elle **doit** respecter `onDelete: Restrict` déjà
+  posé au schéma — la base refuse la suppression tant qu'un `PostePrevision` y est lié, quel que
+  soit son scénario (actif, archivé, ou brouillon). Un administrateur souhaitant retirer un poste
+  du référentiel actif le désactive (`actif = false`) ; les `PostePrevision` déjà liés et les
+  `MappingRapprochement` déjà créés restent inchangés — seule la **création** de nouveaux
+  `PostePrevision` liés à cette entrée doit être bloquée pour une entrée inactive (validation
+  applicative dans `createPostePrevision`, §16.8).
+
+### 16.6 Contrat de résolution à la création d'un `PostePrevision` — évolution optionnelle, différée (voir §16.11)
+
+**Amendement du 2026-08-05 (suite à la relecture de §16.10 par l'utilisateur) : ce contrat à deux
+champs explicites n'est PAS le contrat livré par cette story.** Il reste documenté ici tel qu'il a
+été initialement conçu, comme **extension future optionnelle** du contrat par défaut décrit en
+§16.11, activable sans nouvelle migration le jour où l'écran de sélection/création explicite
+(§16.10) est validé par l'utilisateur. Le contrat effectivement livré par cette story est celui de
+§16.11 : un seul champ `libelle`, résolu automatiquement par get-or-create sur un slug déterministe
+— **aucun changement visible de l'écran de création par rapport à aujourd'hui.**
+
+**Description de l'extension future (non livrée maintenant) : aucune résolution automatique par
+similarité de texte (slug ou autre) n'est permise.** La route
+`POST /api/previsions/scenarios/[id]/postes` (existante, `src/lib/queries/previsions-charges.ts`)
+exigerait, en plus des champs actuels, **exactement l'un des deux** :
+
+- `posteReferentielId: string` — lie explicitement à une entrée référentiel active existante du
+  site (l'appelant l'a obtenue via `GET /api/previsions/postes-referentiel`, §16.8) ;
+- `nouveauPosteReferentielLibelle: string` — crée une nouvelle entrée référentiel. Le `code` est
+  généré depuis ce libellé (slug déterministe : minuscules, accents translittérés, non-alphanumériques
+  remplacés par `-`, tirets consécutifs réduits). **Si le slug généré collide avec le `code` d'une
+  entrée référentiel active existante du site, la création est refusée** (`BusinessRuleError`, 409,
+  message explicite invitant à lier l'entrée existante plutôt qu'à en créer une variante quasi
+  identique) — jamais une collision résolue en silence par un suffixe numérique auto-généré, ce qui
+  masquerait la question à l'utilisateur exactement au moment où elle doit être posée.
+
+Fournir les deux champs, ou aucun des deux, est une erreur de validation (400).
+
+```typescript
+// src/lib/validation/previsions.schema.ts (extension du schema createPostePrevisionSchema)
+// forme attendue (Zod), a ecrire par @developer :
+//   .refine(data => !!data.posteReferentielId !== !!data.nouveauPosteReferentielLibelle, ...)
+```
+
+### 16.7 Extension du filet de détection existant (`cibleOrpheline`)
+
+`detecterCiblesOrphelines`/`resoudreCibleCleDuScenarioCourant`
+(`src/lib/queries/previsions-mapping-orphelins.ts`) sont **modifiés, pas remplacés** : pour
+`CibleRapprochement.POSTE_PREVISION`, la résolution ne retourne plus `ligne.cibleId` tel quel
+(§comportement actuel, commenté « correction structurelle reportee, story A.4 hors perimetre ») mais
+recherche, dans `scenario.postes` (déjà chargé par `chargerScenarioPourMoteur`), le `PostePrevision`
+dont `posteReferentielId === ligne.cibleId` — exactement le même patron que la résolution
+`ALIMENT_PREVISION` par `tailleGranule` déjà en place. `ScenarioPourCalcul.postes` (`previsions-
+scenario-loader.ts`) doit désormais sélectionner `posteReferentielId` (actuellement non chargé).
+
+**Question posée par la pré-analyse (§10, Q5) — jusqu'où étendre la visibilité du bandeau
+`cibleOrpheline` au-delà de l'onglet Mapping :** cette story **réduit** déjà la portée du risque
+qu'ERR-179/ERR-180 documentaient pour `POSTE_PREVISION` (la suppression de scénario ne produit plus
+de cible morte, §16.5), mais ne l'élimine pas totalement (la résolution dynamique peut toujours
+échouer si un `PostePrevision` du scénario courant n'a jamais existé pour cette entrée référentiel —
+cas légitime : ce scénario ne budgétise pas ce poste). **Décision, délimitée :** ajouter **un seul**
+composant de bandeau, affiché au niveau de `scenario-detail-client.tsx` (pas dans chacun des cinq
+sous-onglets de rapprochement), qui appelle la même détection déjà existante
+(`detecterCiblesOrphelinesDuMappingActif`) et affiche un résumé (« N cibles de mapping orphelines
+actives pour ce site ») quel que soit l'onglet ouvert — **pas** une réplication du bandeau ligne par
+ligne dans les cinq vues. Ce point est une recommandation forte de cette section, cohérente avec la
+leçon d'ERR-180 (un risque documenté seulement en un endroit redevient invisible), mais reste
+**séparable** de la correction structurelle elle-même : si le calendrier du sprint est sous tension,
+livrer §16.1–16.6 (le fix) sans §16.7-bandeau-partagé est acceptable, à condition que le report soit
+consigné explicitement dans le rapport de clôture du sprint (pas seulement en commentaire de code —
+c'est très exactement la leçon d'ERR-180).
+
+### 16.8 Plan de migration
+
+**Aucune donnée réelle à migrer** (0 ligne `MappingRapprochement` en base au moment de cette
+décision) — mais la migration reste une migration versionnée (R10), pas un script à la main :
+
+1. Créer `PosteReferentiel` (table).
+2. Ajouter `PostePrevision.posteReferentielId` — en deux temps dans la même migration (colonne
+   nullable, backfill, `NOT NULL` + FK `Restrict`), jamais un `NOT NULL` direct sur une table qui
+   contient déjà des lignes (ici 4, mais le principe s'applique indépendamment du volume) :
+   - `ALTER TABLE "PostePrevision" ADD COLUMN "posteReferentielId" TEXT;`
+   - Pour chaque `PostePrevision` existant sans doublon de libellé au sein du site (le cas actuel,
+     4 lignes, aucun doublon confirmé par la pré-analyse §8), `INSERT` une entrée `PosteReferentiel`
+     (`code` = `sluggifierLibellePoste(libelle)`, la **même** fonction de normalisation que le
+     get-or-create de création décrit en §16.11 — un seul point de vérité pour la règle de
+     normalisation, jamais deux implémentations divergentes, `libelle` = libellé d'origine, `siteId`
+     = celui du `PostePrevision`), puis `UPDATE "PostePrevision" SET "posteReferentielId" = ...`.
+     **Idempotent** :
+     ne rien faire si une entrée `PosteReferentiel` de même `(siteId, code)` existe déjà et si
+     `posteReferentielId` est déjà renseigné — no-op silencieux si rejoué (R10).
+   - `ALTER TABLE "PostePrevision" ALTER COLUMN "posteReferentielId" SET NOT NULL;`
+   - Ajouter la contrainte FK `onDelete: Restrict` et l'index.
+3. **Garde-fou de précondition** (R10) : la migration doit échouer explicitement (pas silencieusement
+   ignorer) si, après backfill, une ligne `PostePrevision` reste sans `posteReferentielId` — ce qui ne
+   peut arriver que si deux `PostePrevision` du même site portent le même libellé dans des scénarios
+   différents et que le slug généré collide sans logique de désambiguïsation prévue par la migration ;
+   la pré-analyse confirme qu'aucun cas de ce type n'existe aujourd'hui (1 seul scénario), mais le
+   garde-fou protège toute base de dev/staging qui aurait divergé.
+4. Nouvelle route `GET /api/previsions/postes-referentiel` (site-scopé, `PREVISIONS_VOIR`), nouvelle
+   query `src/lib/queries/previsions-postes-referentiel.ts` (`listerPostesReferentielActifs(siteId)`).
+   Cette route sert `mapping-form-dialog.tsx` (point 6) ; elle n'est **pas** consommée par l'écran
+   de création d'un `PostePrevision` dans le chemin par défaut (§16.11) — le champ `libelle` seul
+   suffit côté route de création.
+5. **Chemin livré par cette story (§16.11, remplace le contrat XOR de §16.6) :**
+   `createPostePrevision` (`src/lib/queries/previsions-charges.ts`) modifiée pour accepter
+   uniquement `libelle` (contrat de route **inchangé** par rapport à aujourd'hui) et résoudre en
+   interne, par get-or-create sur `sluggifierLibellePoste(libelle)`, l'entrée `PosteReferentiel` à
+   utiliser — la créant si aucune entrée active du site ne porte ce `code`. Le tout dans la
+   **même transaction** Prisma que la création du `PostePrevision` (R4 : jamais créer l'entrée
+   référentiel puis échouer sur la création du poste, laissant une entrée référentiel orpheline sans
+   poste ; jamais un check-then-create hors transaction — voir gestion de la collision concurrente
+   en §16.11). Le contrat à deux champs explicites (`posteReferentielId` /
+   `nouveauPosteReferentielLibelle`, §16.6) N'EST PAS implémenté par cette story ; il reste une
+   extension additive possible plus tard, sans migration.
+6. `mapping-form-dialog.tsx` : pour `cibleType = POSTE_PREVISION`, la liste chargée passe de
+   `GET /api/previsions/scenarios/[id]/postes` (scénario-scopé, la source du défaut) à
+   `GET /api/previsions/postes-referentiel` (site-scopé) — l'utilisateur choisit désormais une
+   entrée référentiel du site, pas un `PostePrevision` d'un scénario précis. `cibleId` envoyé à
+   l'API est `PosteReferentiel.id`.
+
+### 16.9 Tests attendus (discipline §15.6, appliquée à cette story)
+
+1. **Résolution dynamique — cas nominal.** Un mapping `POSTE_PREVISION` créé avec
+   `cibleId = posteReferentielId` d'une entrée liée au `PostePrevision` du scénario courant résout
+   correctement vers ce `PostePrevision.id` — `cibleOrpheline = false`.
+2. **Renommage n'affecte jamais le mapping (falsification requise, §16.4).** Construire un mapping
+   valide, renommer `PostePrevision.libelle` (simulateur direct en base pour le test, aucune route
+   n'existe encore) **et** `PosteReferentiel.libelle`, revérifier que la résolution produit
+   exactement le même résultat qu'avant renommage — falsifier en cassant volontairement la
+   résolution pour la faire dépendre de `libelle` au lieu de `posteReferentielId`, constater que le
+   test échoue, restaurer.
+3. **Suppression de scénario ne casse jamais le mapping (§16.5).** Créer un scénario A avec un
+   `PostePrevision` lié à une entrée référentiel R, créer un mapping `cibleId = R.id`, supprimer le
+   scénario A (cascade), vérifier que `PosteReferentiel` R existe toujours et que le mapping reste
+   syntaxiquement valide (`cibleId` non orphelin au sens de la table référentiel elle-même — même
+   si, faute de scénario courant contenant ce poste, il apparaîtra `cibleOrpheline = true` pour un
+   scénario B qui ne l'a jamais eu, ce qui est le comportement correct : absence légitime, pas une
+   corruption).
+4. **Restrict bloque la suppression (si une route de suppression du référentiel est un jour
+   ajoutée) — test de contrainte base, pas applicatif** : tentative de `DELETE` SQL direct sur une
+   `PosteReferentiel` référencée par au moins un `PostePrevision` → erreur de contrainte FK Postgres,
+   jamais un succès silencieux.
+5. **Non-régression A.1/A.3** : la suite `previsions-mapping-orphelins-integration.test.ts` existante
+   (résolution `ALIMENT_PREVISION`) doit rester verte sans modification de ses assertions — cette
+   story ne touche que la branche `POSTE_PREVISION` de `resoudreCibleCleDuScenarioCourant`.
+6. **`sluggifierLibellePoste` — table de vérité (§16.11), test pur, sans DB.** Couvre au minimum :
+   `"Salaires"` → `"salaires"` ; `"salaires"` → `"salaires"` (idempotence casse) ;
+   `" Salaires  "` → `"salaires"` (espaces en tête/fin, espaces multiples) ;
+   `"Énergie et Carburant"` → `"energie-et-carburant"` (accents) ;
+   `"Énergie   et Carburant!!"` → `"energie-et-carburant"` (ponctuation + espaces multiples
+   convergent vers le même slug que la variante propre ci-dessus) ;
+   `"Loyer & redevances"` → `"loyer-redevances"` (aucune traduction sémantique de `&`, simple
+   caractère de séparation) ; `"Frais / Divers"` → `"frais-divers"` ; `"!!!"` / `""` / `"   "` →
+   chaîne vide → doit lever une erreur de validation (400), jamais produire un `code` vide en base.
+7. **Get-or-create — réutilisation (cas nominal du chemin par défaut, §16.11).** Créer un premier
+   `PostePrevision` avec `libelle = "Salaires"` dans le scénario A (crée une entrée
+   `PosteReferentiel` de `code = "salaires"`). Créer un second `PostePrevision` avec
+   `libelle = "salaires"` (casse différente) dans le scénario B du même site → doit réutiliser la
+   **même** entrée `PosteReferentiel` (`posteReferentielId` identique dans les deux
+   `PostePrevision`), **aucune** deuxième entrée référentiel créée.
+8. **Get-or-create — création (cas nominal, aucune entrée existante).** Créer un `PostePrevision`
+   avec un `libelle` dont le slug n'existe pas encore dans le site → une nouvelle entrée
+   `PosteReferentiel` est créée dans la **même transaction**, `posteReferentielId` du
+   `PostePrevision` créé pointe vers elle.
+9. **Get-or-create — collision avec une entrée référentiel désactivée (chemin dormant, §16.5/§16.11).**
+   Simuler `PosteReferentiel.actif = false` sur une entrée existante (aucune route ne permet de le
+   faire aujourd'hui — écriture directe en base pour le test), tenter de créer un `PostePrevision`
+   dont le libellé slugifie vers le `code` de cette entrée → doit échouer explicitement
+   (`BusinessRuleError`, 409), jamais réactiver silencieusement l'entrée ni créer une entrée
+   dupliquée avec un `code` en collision.
+10. **Get-or-create — concurrence (R4).** Deux créations concomitantes de `PostePrevision` avec le
+    même `libelle` (même slug) dans deux scénarios différents du même site (simulé par deux appels
+    Prisma imbriqués ou un test d'intégration avec un délai contrôlé) → une seule entrée
+    `PosteReferentiel` doit exister au final (la deuxième requête absorbe la violation
+    `P2002` sur `@@unique([siteId, code])` et se rabat sur un second `findUnique`, §16.11), jamais
+    une erreur 500 non gérée, jamais deux entrées.
+
+### 16.10 Évolution optionnelle, hors périmètre de cette story — écran de sélection/création explicite
+
+**Reclassé le 2026-08-05 (amendement §16.11) : ce point n'est plus une condition bloquante de
+cette story.** Il a d'abord été rédigé comme un point à valider par l'utilisateur *avant*
+implémentation ; il est désormais une **évolution future optionnelle**, non nécessaire pour livrer
+la correction structurelle complète (identité stable, mapping résolu par id, résistant au
+renommage et à la suppression de scénario) — voir §16.11 pour le chemin effectivement livré, qui ne
+change **rien** au parcours utilisateur visible de création d'un poste.
+
+Description conservée pour référence future, si l'utilisateur valide un jour ce changement d'UX :
+
+- **Le changement de comportement visible de l'écran de création d'un `PostePrevision`.**
+  Aujourd'hui (et après cette story, §16.11), créer un poste reste un geste à un seul champ texte
+  (`libelle`). Cette évolution optionnelle transformerait ce geste en parcours à deux temps
+  (chercher dans le référentiel du site, ou créer une nouvelle entrée explicitement) — un
+  changement d'UX visible par tout utilisateur qui paramètre des scénarios, pas seulement un
+  changement interne de modèle de données. **Si cette évolution est un jour engagée, elle doit être
+  validée par l'utilisateur avant que @developer ne construise l'écran, pas après** — cette
+  exigence de validation préalable reste vraie, seule sa position dans le calendrier change : elle
+  n'est plus une précondition de la story A.4 elle-même.
+
+Le reste (modèle `PosteReferentiel`, migration, résolution dynamique, filet de détection étendu,
+tests, get-or-create de §16.11) est une correction structurelle interne, dans la continuité directe
+d'A.3, et ne requiert pas de validation utilisateur séparée — c'est ce périmètre, et uniquement
+celui-ci, que cette story livre.
+
+### 16.11 Chemin de livraison par défaut, sans changement d'UX (amendement du 2026-08-05)
+
+**Contexte de l'amendement.** §16.6 spécifiait un contrat à deux champs explicites
+(`posteReferentielId` XOR `nouveauPosteReferentielLibelle`), qui implique nécessairement l'écran de
+sélection/création décrit en §16.10 — un changement d'UX que l'utilisateur a refusé de faire
+implémenter sans validation explicite. Cette section tranche le chemin par défaut qui livre
+**l'intégralité** de la correction structurelle (§16.1–§16.5, §16.7–§16.9 restent inchangés dans
+leur fond) sans toucher au parcours utilisateur visible.
+
+**Chemin retenu : get-or-create par slug, dans la même transaction que la création du poste.**
+L'UI conserve un unique champ texte `libelle` (aucun changement de composant, aucun nouveau champ,
+aucune nouvelle requête réseau côté formulaire). Côté serveur, `createPostePrevision` :
+
+1. normalise `libelle` en `code` via `sluggifierLibellePoste` (règle exacte ci-dessous) ;
+2. dans une transaction Prisma, cherche une entrée `PosteReferentiel` active du site portant ce
+   `code` ; si elle existe, la réutilise (`posteReferentielId = referentiel.id`) ; si elle
+   existe mais est désactivée (`actif = false`), refuse la création (`BusinessRuleError`, 409 —
+   chemin dormant aujourd'hui, aucune route ne permet de désactiver une entrée dans cette story,
+   §16.5) ; sinon crée une nouvelle entrée `PosteReferentiel` (`code`, `libelle` = texte saisi tel
+   quel, non normalisé — la normalisation ne sert qu'à la clé de résolution, jamais à l'affichage) ;
+3. crée le `PostePrevision` avec ce `posteReferentielId`, dans la **même transaction**.
+
+**Concurrence (R4).** Le get-or-create ci-dessus n'est pas à l'abri d'une course entre deux
+requêtes concomitantes qui manqueraient toutes deux le `findUnique` initial avant que l'une des deux
+n'ait committé sa création. Ce n'est **pas** un check-then-update silencieux au sens R4 interdit :
+la contrainte `@@unique([siteId, code])` en base est l'arbitre final, jamais l'application seule.
+Le pattern prescrit : la seconde requête, dont le `create` échoue avec `P2002` (violation
+d'unicité), rattrape explicitement cette erreur et refait un `findUnique` (l'entrée vient d'être
+committée par la première requête) plutôt que de laisser remonter une erreur 500 — un seul retry,
+déterministe, jamais une boucle non bornée.
+
+#### Règle de normalisation exacte — `sluggifierLibellePoste(libelle: string): string`
+
+Fonction pure, testable sans DB, utilisée aux **deux** seuls endroits qui produisent un `code` :
+le get-or-create ci-dessus et le backfill de migration (§16.8, point 2) — un seul point de vérité,
+jamais deux implémentations qui pourraient diverger.
+
+1. Normalisation Unicode NFD puis suppression des marques diacritiques combinantes (plage
+   U+0300–U+036F) — élimine les accents (`"Énergie"` → `"Energie"`).
+2. Mise en minuscules (`.toLowerCase()`, sûr après l'étape 1 : plus aucun caractère accentué latin
+   à traiter spécifiquement).
+3. Remplacement de chaque **suite maximale** de caractères hors `[a-z0-9]` par un unique `-` — une
+   seule règle couvre en un passage les espaces (simples ou multiples), la ponctuation, les
+   symboles (`&`, `/`, `!`, etc.) : aucune substitution sémantique (`&` ne devient jamais `"et"`,
+   c'est un simple séparateur, au même titre qu'une espace).
+4. Suppression des `-` en tête et en fin de chaîne.
+5. Si le résultat est la chaîne vide (libellé entièrement composé de ponctuation/espaces/symboles),
+   **échec explicite** : erreur de validation 400 (« Libellé invalide : aucun caractère
+   alphanumérique. ») — jamais un `code` vide inséré en base, jamais un fallback sur un id généré
+   qui masquerait le problème de saisie.
+6. Troncature défensive à 100 caractères (borne arbitraire mais fixe, alignée sur une longueur de
+   colonne raisonnable), au dernier `-` avant la limite, puis nouveau passage de l'étape 4 — non
+   critique sur les libellés réels observés (§8 de la pré-analyse, tous < 40 caractères), mais
+   nécessaire pour que la fonction soit totale et déterministe sur toute entrée.
+
+Table de vérité (reprise en tests, §16.9 point 6) :
+
+| `libelle` | `code` |
+|---|---|
+| `"Salaires"` | `"salaires"` |
+| `"salaires"` | `"salaires"` |
+| `"  Salaires   "` | `"salaires"` |
+| `"Énergie et Carburant"` | `"energie-et-carburant"` |
+| `"Énergie   et Carburant!!"` | `"energie-et-carburant"` |
+| `"Loyer & redevances"` | `"loyer-redevances"` |
+| `"Frais / Divers"` | `"frais-divers"` |
+| `"!!!"` / `""` / `"   "` | *(rejeté, 400)* |
+
+#### Réponses aux 5 questions posées
+
+**1. Le get-or-create réintroduit-il un échec silencieux (ERR-171/ERR-179) ? Non — argumentation
+en deux temps, il faut distinguer la résolution (inchangée) de la saisie initiale (nouvelle, mais
+d'une autre nature).**
+
+- **La résolution du mapping — le cœur du défaut corrigé par cette story — n'est pas touchée par cet
+  amendement.** `resoudreCibleCleDuScenarioCourant` (§16.7) continue de résoudre exclusivement par
+  `posteReferentielId`, un id stable, jamais par texte, jamais recalculé à la lecture. C'est
+  précisément la classe de défaut d'ERR-171/ERR-179 (une valeur accumulée qui retombe sur zéro sans
+  transiter par aucun des trois états nommés, à la lecture, silencieusement) — et elle reste fermée
+  à l'identique, que `posteReferentielId` ait été obtenu par sélection explicite (§16.6) ou par
+  get-or-create (§16.11) : le mécanisme de lecture ne sait même pas laquelle des deux voies a produit
+  l'id qu'il résout.
+- **Le get-or-create déplace le seul risque résiduel vers un autre moment et une autre nature de
+  risque : l'écriture, une fois, au moment de la création — jamais la lecture, jamais répété.** Le
+  risque n'est plus « un montant disparaît sans état nommé » mais « une entrée référentiel est
+  réutilisée (ou créée en double) sur la base d'une correspondance de texte normalisé, sans
+  confirmation explicite de l'utilisateur ». C'est un risque de **qualité de saisie** (faux
+  rapprochement ou doublon), pas un risque **structurel d'intégrité** : le résultat est toujours un
+  id valide, toujours visible dans la liste `GET /postes-referentiel`, jamais un id mort, jamais une
+  valeur qui s'efface silencieusement d'un total.
+- **Ce risque résiduel n'est d'ailleurs pas nouveau : §16.2 l'avait déjà nommé et accepté** même
+  pour le chemin à sélection explicite (« un administrateur peut toujours, par erreur humaine, créer
+  deux entrées `PosteReferentiel` distinctes qui désignent le même concept réel » — §16.2, avant-
+  dernier paragraphe). Le get-or-create ne fait qu'échanger un mode d'erreur humaine contre un autre
+  (sous-fusion involontaire par saisie distraite d'un libellé légèrement différent, dans le chemin
+  explicite ; sur-fusion automatique par coïncidence de normalisation, dans le chemin par défaut) —
+  ni l'un ni l'autre n'est la classe de défaut qu'ERR-171/ERR-179 documentent.
+- **Verdict : non, pas d'échec silencieux au sens ERR-171/ERR-179.** Le get-or-create introduit un
+  risque de qualité de données (fusion/duplication), mineur, visible dans l'écran référentiel, et
+  strictement moins grave que le défaut corrigé (qui produisait un montant disparu sans aucune trace
+  visible nulle part).
+
+**2. La normalisation en slug couvre-t-elle le risque de doublons visuels (« Salaires » / «
+salaires » / « Salaires  ») ? Oui pour la casse, les accents, les espaces multiples/en
+tête/en fin et la ponctuation — voir la règle exacte et la table de vérité ci-dessus. Ce qu'elle ne
+couvre PAS et n'a pas vocation à couvrir : la synonymie sémantique (« Énergie » vs « Énergie et
+Carburant » restent deux slugs distincts, à dessein — aucune traduction de sens, seulement une
+normalisation de forme, §16.2 dernier paragraphe).**
+
+**3. Le contrat `posteReferentielId` XOR `nouveauPosteReferentielLibelle` (§16.6) est-il remplacé ou
+gardé en option ? Remplacé comme chemin de livraison de cette story ; gardé en extension additive
+optionnelle, non implémentée maintenant** (§16.6 amendé en tête de section pour le documenter comme
+tel). Le contrat de route effectif pour cette story reste `{ libelle, type, inclusBaseRepartition,
+ordre }` — identique à aujourd'hui, aucun champ ajouté, aucune rupture de compatibilité.
+
+**4. Ce chemin laisse-t-il la porte ouverte à l'UX explicite de §16.10 plus tard, sans nouvelle
+migration ? Oui.** Le modèle `PosteReferentiel`, la FK `Restrict`, la contrainte
+`@@unique([siteId, code])`, l'index et la route `GET /api/previsions/postes-referentiel` (§16.8,
+points 1 à 4) sont **tous** livrés par cette story, indépendamment du chemin de création choisi —
+ils ne dépendent en rien du contrat de la route `POST /postes`. Activer §16.10 plus tard consiste
+uniquement à : (a) étendre `createPostePrevisionSchema` avec les deux champs optionnels de §16.6 et
+un `.refine` XOR, en conservant le get-or-create comme comportement par défaut quand aucun des deux
+n'est fourni (rétrocompatibilité) ; (b) construire l'écran de sélection/création dans
+`postes-form-dialog` (ou équivalent) consommant la route déjà livrée. Aucune colonne, aucune
+contrainte, aucune donnée à retoucher.
+
+**5. Autres points de §16 qui changent un comportement visible par l'utilisateur — liste
+exhaustive :**
+
+- **Écran de création d'un `PostePrevision` (`/previsions/scenarios/[id]`, onglet Postes) : aucun
+  changement visible.** Même champ, même formulaire, même validation de surface (`libelle`
+  obligatoire). C'est la condition posée par cette demande, tenue.
+- **`mapping-form-dialog.tsx`, sous-onglet Mapping → cible `POSTE_PREVISION` (§16.8, point 6) :
+  changement visible, mais déjà spécifié avant cet amendement, pas introduit par lui.** La liste
+  déroulante des cibles possibles passe d'un scénario-scopé (les postes du scénario ouvert) à un
+  site-scopé (toutes les entrées référentiel actives du site, potentiellement dédupliquées grâce au
+  get-or-create de plusieurs scénarios successifs) — un administrateur qui configure un mapping verra
+  une liste différente, en principe plus courte et plus stable dans le temps, qu'aujourd'hui.
+- **Nouveau message d'erreur 409, dans un cas aujourd'hui inatteignable.** Si un futur sprint ajoute
+  une route de désactivation de `PosteReferentiel` (aucune n'existe dans cette story), créer un poste
+  dont le libellé slugifie vers le `code` d'une entrée désactivée produira un 409 explicite au lieu
+  d'un succès silencieux — actuellement dormant, sans impact utilisateur observable tant que cette
+  route de désactivation n'existe pas.
+- **Aucun autre écran n'est touché.** Le formulaire de renommage d'un `PostePrevision` n'existe
+  toujours pas (§16.4, inchangé). Le bandeau `cibleOrpheline` (§16.7) reste scopé à
+  l'écran d'administration du mapping, séparable de cette story. Aucun export, aucun calcul du
+  moteur §4, aucun montant affiché ailleurs n'est modifié.

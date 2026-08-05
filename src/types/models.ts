@@ -4494,13 +4494,58 @@ export interface AlimentParVaguePrevue {
 }
 
 /**
- * PostePrevision — referentiel parametrable des postes de charges
- * (logistique / exploitation), PAS un enum code en dur (ADR-053 §3.8).
+ * PosteReferentiel — identite STABLE et SITE-scopee d'un poste de charges,
+ * independante de tout scenario (ADR-053 §16, amendement story A.4).
+ *
+ * Introduit pour corriger le defaut structurel documente par ERR-179/ERR-180 :
+ * `MappingRapprochement` est site-scope (ADR-053 §3.9) alors que
+ * `PostePrevision` est scenario-scope avec `onDelete: Cascade` — un
+ * `cibleId` de mapping POSTE_PREVISION pointant directement vers un
+ * `PostePrevision.id` devient une cle morte des qu'il est lu depuis un AUTRE
+ * scenario, ou des que le scenario d'origine est supprime. `PosteReferentiel`
+ * porte desormais l'identite stable que `MappingRapprochement.cibleId`
+ * reference (ADR-053 §16.3) — le meme role que joue `AlimentPrevision.tailleGranule`
+ * pour ALIMENT_PREVISION (story A.3), mais via un id stable plutot qu'un enum,
+ * car aucun enum ferme n'est acceptable ici (ADR-053 §3.8 : le classeur Excel
+ * fait evoluer ses lignes de depenses).
+ *
+ * `code` est un slug STABLE, genere une seule fois a la creation (jamais
+ * recalcule automatiquement depuis `libelle` ensuite) — un renommage de
+ * `libelle` (au niveau referentiel ou au niveau d'un `PostePrevision` de
+ * scenario) NE CASSE JAMAIS un mapping existant, puisque la resolution se
+ * fait par id, jamais par texte (ADR-053 §16.4).
+ */
+export interface PosteReferentiel {
+  id: string;
+  siteId: string;
+  /** slug stable, genere a la creation — jamais recalcule automatiquement */
+  code: string;
+  /** libelle d'affichage courant — peut diverger du code au fil des renommages */
+  libelle: string;
+  /** desactivation logique — jamais de DELETE physique tant qu'un PostePrevision y est lie (onDelete Restrict) */
+  actif: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * PostePrevision — ligne de charges parametrable PROPRE A UN SCENARIO
+ * (libelle/type/ordre/inclusBaseRepartition editables independamment d'un
+ * scenario a l'autre — ADR-053 §3.8), toujours rattachee a une identite
+ * stable SITE-scopee (`PosteReferentiel`, ADR-053 §16) qui, elle, sert de
+ * cible au mapping de rapprochement.
  */
 export interface PostePrevision {
   id: string;
   scenarioId: string;
-  /** referentiel parametrable — PAS un enum code en dur */
+  /**
+   * FK NOT NULL vers PosteReferentiel (ADR-053 §16.3) — chaque PostePrevision
+   * cree, quel que soit le scenario, resout OU cree une entree referentiel
+   * site-scopee. Jamais nullable : un poste sans identite stable ne pourrait
+   * jamais etre une cible de mapping fiable (R7).
+   */
+  posteReferentielId: string;
+  /** libelle d'affichage PROPRE A CE SCENARIO — referentiel parametrable — PAS un enum code en dur */
   libelle: string;
   type: TypePostePrevision;
   /**
@@ -4576,7 +4621,21 @@ export interface MappingRapprochement {
   /** valeur litterale de l'enum reel (ex. "ALIMENT" pour CategorieDepense) */
   sourceCle: string;
   cibleType: CibleRapprochement;
-  /** nullable : NON_RAPPROCHE n'a pas de cible (ADR-053 section 5) */
+  /**
+   * nullable : NON_RAPPROCHE n'a pas de cible (ADR-053 section 5).
+   * - POSTE_PREVISION : `PosteReferentiel.id` (site-scope, ADR-053 §16,
+   *   amendement A.4 — corrige le defaut ERR-179/ERR-180). Resolu a la
+   *   lecture contre le `PostePrevision` du scenario courant dont
+   *   `posteReferentielId` correspond (§16.7) — jamais un `PostePrevision.id`
+   *   directement, scenario-scope et instable d'un scenario a l'autre.
+   *   L'entree `PosteReferentiel` elle-meme peut avoir ete obtenue par
+   *   selection explicite ou par get-or-create sur un slug normalise a la
+   *   creation du poste (§16.11) — la resolution de mapping ne distingue pas
+   *   les deux origines.
+   * - ALIMENT_PREVISION : couple compose `tailleGranule::alimentPrevisionId`
+   *   (ADR-053 §15, story A.3) — `alimentPrevisionId` documentaire seulement.
+   * - VENTE_PREVUE : sentinelle fixe, jamais un id d'entite.
+   */
   cibleId: string | null;
   actif: boolean;
   createdAt: Date;

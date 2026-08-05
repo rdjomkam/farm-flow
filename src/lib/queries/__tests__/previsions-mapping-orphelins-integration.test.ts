@@ -1,19 +1,38 @@
 /**
- * Test d'integration DB-gated — story A.1 (Sprint PR3-ter) : filet de
- * securite non negociable, point d'entree DB
- * `detecterCiblesOrphelinesDuMappingActif`.
+ * Test d'integration DB-gated — story A.4 (Sprint PR3-quater, ADR-053 §16),
+ * point d'entree DB `detecterCiblesOrphelinesDuMappingActif` +
+ * `createPostePrevision` (get-or-create `PosteReferentiel`).
+ *
+ * Remplace l'ancien contrat (`cibleId: poste.id`, PostePrevision.id
+ * scenario-scope) par le contrat CORRIGE (`cibleId: posteReferentielId`,
+ * PosteReferentiel.id site-scope) — c'est le defaut exact documente par
+ * ERR-179 et corrige par cette story.
  *
  * Preuve de bout en bout, via le code de PRODUCTION uniquement (ERR-171) :
- * un mapping actif reel, en base, dont la cible (`PostePrevision.id`)
- * n'existe QUE dans un autre scenario du meme site, est bien signale
- * `cibleOrpheline: true` quand on l'evalue contre un second scenario qui ne
- * porte pas cette cible — et `false` quand on l'evalue contre le scenario
- * d'origine.
+ * - (1) resolution nominale par posteReferentielId ;
+ * - (2) PORTABILITE INTER-SCENARIOS : un mapping cree contre le scenario A
+ *   resout aussi sous le scenario B du meme site (propriete que la story
+ *   achete — cf. instructions PM) ;
+ * - (3) SURVIE A LA SUPPRESSION d'un scenario : le PosteReferentiel et le
+ *   mapping restent valides apres suppression physique du scenario qui a
+ *   cree le PostePrevision d'origine ;
+ * - (4) cas orphelin legitime : un scenario qui n'a jamais eu de
+ *   PostePrevision pour l'entree referentiel visee est signale ORPHELIN,
+ *   jamais confondu avec NON_RAPPROCHE, jamais absorbe par un `?? 0` muet ;
+ * - (5) composition filet + moteur (regression Moyenne #3, review PR3-ter) ;
+ * - (6) get-or-create sous concurrence reelle (§16.9 point 10, R4) : deux
+ *   creations concomitantes du meme libelle dans deux scenarios du meme site
+ *   ne produisent JAMAIS deux entrees PosteReferentiel ;
+ * - (7) RESTRICT (§16.9 point 4) : un DELETE SQL direct sur une PosteReferentiel
+ *   referencee par un PostePrevision echoue avec une violation de contrainte
+ *   FK Postgres (23503), jamais un succes silencieux.
  *
- * Pourquoi DB-gated : `chargerScenarioPourMoteur` (7 requetes Prisma) et la
- * lecture du mapping actif passent par le vrai schema Postgres — aucun mock
- * JS ne peut prouver que la resolution fonctionne contre des donnees reelles
- * cross-scenario.
+ * Pourquoi DB-gated : `chargerScenarioPourMoteur` (7 requetes Prisma), la
+ * contrainte reelle `@@unique([siteId, code])` de `PosteReferentiel` et la
+ * FK `onDelete: Restrict`/cascade de suppression de scenario s'appuient sur
+ * un vrai schema Postgres — aucun mock JS ne peut prouver ce comportement
+ * contre des donnees reelles cross-scenario ni contre une vraie course de
+ * transactions concurrentes.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool, type PoolClient } from "pg";
@@ -61,18 +80,18 @@ const parametresBase = {
 };
 
 async function seedSite(c: PoolClient, suffix: string): Promise<{ siteId: string; userId: string }> {
-  const siteId = `pr3ter-a1-site-${suffix}`;
-  const userId = `pr3ter-a1-user-${suffix}`;
+  const siteId = `pr3quater-a4-site-${suffix}`;
+  const userId = `pr3quater-a4-user-${suffix}`;
 
   await c.query(
     `INSERT INTO "User" (id, name, "passwordHash", role, "isActive", "isSystem", "isSuperAdmin", "soldeCredit", "createdAt", "updatedAt")
      VALUES ($1, $2, 'x', 'PISCICULTEUR', true, false, false, 0, now(), now())`,
-    [userId, `User PR3ter A1 ${suffix}`]
+    [userId, `User PR3quater A4 ${suffix}`]
   );
   await c.query(
     `INSERT INTO "Site" (id, name, "isActive", "supervised", "enabledModules", "ownerId", "createdAt", "updatedAt")
      VALUES ($1, $2, true, false, '{}', $3, now(), now())`,
-    [siteId, `Site PR3ter A1 ${suffix}`, userId]
+    [siteId, `Site PR3quater A4 ${suffix}`, userId]
   );
 
   return { siteId, userId };
@@ -84,6 +103,8 @@ async function cleanup(c: PoolClient, siteId: string, userId: string): Promise<v
   await c.query(`DELETE FROM "Depense" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ChargeMensuellePrevue" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "PostePrevision" WHERE "siteId" = $1`, [siteId]);
+  // ADR-053 §16 (story A.4) — PosteReferentiel apres PostePrevision (FK Restrict)
+  await c.query(`DELETE FROM "PosteReferentiel" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ParametresPrevision" WHERE "scenarioId" IN (SELECT id FROM "ScenarioPrevision" WHERE "siteId" = $1)`, [siteId]);
   await c.query(`DELETE FROM "ScenarioPrevision" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "Site" WHERE id = $1`, [siteId]);
@@ -101,39 +122,31 @@ async function insertDepense(
 ): Promise<void> {
   await c.query(
     `INSERT INTO "Depense" (id, numero, description, "categorieDepense", "montantTotal", "montantPaye", "montantFraisSupp", statut, date, "userId", "siteId", "createdAt", "updatedAt")
-     VALUES ($1, $2, 'Depense test PR3ter A.4 (composition filet+moteur)', $3::"CategorieDepense", $4, 0, 0, 'NON_PAYEE', $5, $6, $7, now(), now())`,
+     VALUES ($1, $2, 'Depense test PR3quater A.4 (composition filet+moteur)', $3::"CategorieDepense", $4, 0, 0, 'NON_PAYEE', $5, $6, $7, now(), now())`,
     [id, id, categorieDepense, montantTotal, date, userId, siteId]
   );
 }
 
 describe.runIf(requireDatabaseUrl())(
-  "PR3ter.A1 — detecterCiblesOrphelinesDuMappingActif : le filet de securite contre une base reelle",
+  "PR3quater.A4 — PosteReferentiel : le filet + le get-or-create contre une base reelle",
   () => {
     it(
-      "une cible POSTE_PREVISION du scenario A est signalee orpheline quand evaluee contre le scenario B (meme site), et NON orpheline contre A",
+      "(1) resolution nominale : une cible POSTE_PREVISION dont cibleId = posteReferentielId n'est JAMAIS orpheline sous le scenario qui la porte",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.A1] DB de dev injoignable — test ignore (dbAvailable=false).");
+          console.warn("[PR3quater.A4.1] DB de dev injoignable — test ignore (dbAvailable=false).");
           return;
         }
-        const { siteId, userId } = await seedSite(client, "cross");
+        const { siteId, userId } = await seedSite(client, "nominal");
         try {
-          const scenarioA = await createScenario(siteId, {
-            code: "PR3TER-A1-SCN-A",
-            nom: "Scenario A (porte le poste)",
+          const scenario = await createScenario(siteId, {
+            code: "PR3QUATER-A4-NOMINAL",
+            nom: "Scenario nominal",
             dateDebutPlan: new Date("2026-01-01").toISOString(),
             userId,
             parametres: parametresBase,
           });
-          const scenarioB = await createScenario(siteId, {
-            code: "PR3TER-A1-SCN-B",
-            nom: "Scenario B (ne porte PAS ce poste)",
-            dateDebutPlan: new Date("2026-01-01").toISOString(),
-            userId,
-            parametres: parametresBase,
-          });
-
-          const poste = await createPostePrevision(scenarioA.id, siteId, {
+          const poste = await createPostePrevision(scenario.id, siteId, {
             libelle: "Electricite",
             type: TypePostePrevision.CHARGE_EXPLOITATION,
             ordre: 0,
@@ -144,18 +157,14 @@ describe.runIf(requireDatabaseUrl())(
               sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
               sourceCle: "ELECTRICITE",
               cibleType: CibleRapprochement.POSTE_PREVISION,
-              cibleId: poste.id,
+              cibleId: poste.posteReferentielId,
             },
           ]);
 
-          const resultatContreA = await detecterCiblesOrphelinesDuMappingActif(scenarioA.id, siteId);
-          const ligneA = resultatContreA.find((l) => l.sourceCle === "ELECTRICITE");
-          expect(ligneA?.cibleOrpheline).toBe(false);
-
-          const resultatContreB = await detecterCiblesOrphelinesDuMappingActif(scenarioB.id, siteId);
-          const ligneB = resultatContreB.find((l) => l.sourceCle === "ELECTRICITE");
-          expect(ligneB?.cibleOrpheline).toBe(true);
-          expect(ligneB?.cibleCleResolue).toBe(poste.id);
+          const resultat = await detecterCiblesOrphelinesDuMappingActif(scenario.id, siteId);
+          const ligne = resultat.find((l) => l.sourceCle === "ELECTRICITE");
+          expect(ligne?.cibleOrpheline).toBe(false);
+          expect(ligne?.cibleCleResolue).toBe(poste.id);
         } finally {
           await cleanup(client, siteId, userId);
         }
@@ -164,24 +173,218 @@ describe.runIf(requireDatabaseUrl())(
     );
 
     it(
-      "(Moyenne #3, review PR3-ter) COMPOSITION filet + moteur : le filet detecte EXACTEMENT le cas ou le moteur fait disparaitre un montant reel, ni plus ni moins — appelle le vrai pipeline calculerRapprochementScenario, pas seulement detecterCiblesOrphelinesDuMappingActif isolement",
+      "(2) PORTABILITE INTER-SCENARIOS — LA PROPRIETE CENTRALE ACHETEE PAR CETTE STORY : un mapping cree contre le scenario A resout AUSSI, sans reconfiguration, sous le scenario B du meme site",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.A4] DB de dev injoignable — test ignore (dbAvailable=false).");
+          console.warn("[PR3quater.A4.2] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "portable");
+        try {
+          const scenarioA = await createScenario(siteId, {
+            code: "PR3QUATER-A4-PORT-A",
+            nom: "Scenario A (cree le mapping)",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+          const scenarioB = await createScenario(siteId, {
+            code: "PR3QUATER-A4-PORT-B",
+            nom: "Scenario B (plan successeur, meme site)",
+            dateDebutPlan: new Date("2027-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+
+          const posteA = await createPostePrevision(scenarioA.id, siteId, {
+            libelle: "Salaires",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+          // Meme libelle (casse differente) dans le scenario B : get-or-create
+          // (§16.11) reutilise la MEME entree PosteReferentiel — c'est le
+          // chemin normal par lequel un administrateur reproduit un poste
+          // d'un plan a l'autre.
+          const posteB = await createPostePrevision(scenarioB.id, siteId, {
+            libelle: "salaires",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+          expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
+          expect(posteA.id).not.toBe(posteB.id);
+
+          // Le mapping est cree UNE SEULE FOIS, contre le referentiel du
+          // site — jamais reconfigure pour B.
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "SALAIRE",
+              cibleType: CibleRapprochement.POSTE_PREVISION,
+              cibleId: posteA.posteReferentielId,
+            },
+          ]);
+
+          const resultatA = await detecterCiblesOrphelinesDuMappingActif(scenarioA.id, siteId);
+          const ligneA = resultatA.find((l) => l.sourceCle === "SALAIRE");
+          expect(ligneA?.cibleOrpheline).toBe(false);
+          expect(ligneA?.cibleCleResolue).toBe(posteA.id);
+
+          const resultatB = await detecterCiblesOrphelinesDuMappingActif(scenarioB.id, siteId);
+          const ligneB = resultatB.find((l) => l.sourceCle === "SALAIRE");
+          expect(ligneB?.cibleOrpheline).toBe(false);
+          expect(ligneB?.cibleCleResolue).toBe(posteB.id);
+          expect(ligneB?.cibleCleResolue).not.toBe(ligneA?.cibleCleResolue);
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(3) SURVIE A LA SUPPRESSION D'UN SCENARIO : supprimer physiquement le scenario A (cascade sur ses PostePrevision) laisse PosteReferentiel intact et le mapping toujours resolvable sous B",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3quater.A4.3] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "suppression");
+        try {
+          const scenarioA = await createScenario(siteId, {
+            code: "PR3QUATER-A4-SUPPR-A",
+            nom: "Scenario A (sera supprime)",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+          const scenarioB = await createScenario(siteId, {
+            code: "PR3QUATER-A4-SUPPR-B",
+            nom: "Scenario B (survit)",
+            dateDebutPlan: new Date("2027-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+
+          const posteA = await createPostePrevision(scenarioA.id, siteId, {
+            libelle: "Loyer",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+          const posteB = await createPostePrevision(scenarioB.id, siteId, {
+            libelle: "Loyer",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+          expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
+          const referentielId = posteA.posteReferentielId;
+
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "LOYER",
+              cibleType: CibleRapprochement.POSTE_PREVISION,
+              cibleId: referentielId,
+            },
+          ]);
+
+          // Aucune route DELETE de scenario n'existe (pre-analyse §1.3) —
+          // suppression physique directe pour prouver la garantie de schema
+          // (onDelete: Cascade sur PostePrevision.scenario), pas un parcours
+          // utilisateur normal.
+          await client.query(`DELETE FROM "ChargeMensuellePrevue" WHERE "scenarioId" = $1`, [scenarioA.id]);
+          await client.query(`DELETE FROM "ParametresPrevision" WHERE "scenarioId" = $1`, [scenarioA.id]);
+          await client.query(`DELETE FROM "ScenarioPrevision" WHERE id = $1`, [scenarioA.id]);
+
+          // PostePrevision de A a disparu (cascade), mais PosteReferentiel
+          // N'A PAS ete touche — cycle de vie totalement independant du
+          // scenario (ADR-053 §16.5).
+          const posteAEncore = await client.query(`SELECT id FROM "PostePrevision" WHERE id = $1`, [posteA.id]);
+          expect(posteAEncore.rowCount).toBe(0);
+          const referentielEncore = await client.query(`SELECT id FROM "PosteReferentiel" WHERE id = $1`, [referentielId]);
+          expect(referentielEncore.rowCount).toBe(1);
+
+          // Le mapping reste syntaxiquement valide et resout TOUJOURS sous B
+          // (qui n'a jamais ete touche).
+          const resultatB = await detecterCiblesOrphelinesDuMappingActif(scenarioB.id, siteId);
+          const ligneB = resultatB.find((l) => l.sourceCle === "LOYER");
+          expect(ligneB?.cibleOrpheline).toBe(false);
+          expect(ligneB?.cibleCleResolue).toBe(posteB.id);
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(4) cas orphelin LEGITIME : un scenario qui n'a jamais eu de PostePrevision pour cette entree referentiel est signale ORPHELIN, jamais confondu avec une corruption",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3quater.A4.4] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "legitime");
+        try {
+          const scenarioA = await createScenario(siteId, {
+            code: "PR3QUATER-A4-LEGIT-A",
+            nom: "Scenario A (porte le poste)",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+          const scenarioC = await createScenario(siteId, {
+            code: "PR3QUATER-A4-LEGIT-C",
+            nom: "Scenario C (ne budgetise pas ce poste)",
+            dateDebutPlan: new Date("2026-06-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+
+          const poste = await createPostePrevision(scenarioA.id, siteId, {
+            libelle: "Assurance",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "ASSURANCE",
+              cibleType: CibleRapprochement.POSTE_PREVISION,
+              cibleId: poste.posteReferentielId,
+            },
+          ]);
+
+          const resultatC = await detecterCiblesOrphelinesDuMappingActif(scenarioC.id, siteId);
+          const ligneC = resultatC.find((l) => l.sourceCle === "ASSURANCE");
+          expect(ligneC?.cibleOrpheline).toBe(true);
+          expect(ligneC?.cibleCleResolue).toBeNull();
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(5, Moyenne #3 review PR3-ter, CORRIGE par A.4) COMPOSITION filet + moteur : le filet signale l'orphelinite legitime ET le moteur (vrai pipeline de production) ne fait PLUS disparaitre le montant reel — il bascule explicitement en NON_RAPPROCHE, jamais un `?? 0` muet (defaut ERR-179, CORRIGE ICI, contrairement a l'ancien comportement ALIMENT_PREVISION-seul de la story A.3)",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3quater.A4.5] DB de dev injoignable — test ignore (dbAvailable=false).");
           return;
         }
         const { siteId, userId } = await seedSite(client, "composition");
         try {
           const scenarioA = await createScenario(siteId, {
-            code: "PR3TER-A4-SCN-A",
+            code: "PR3QUATER-A4-COMP-A",
             nom: "Scenario A (porte le poste d'origine du mapping)",
             dateDebutPlan: new Date("2026-01-01").toISOString(),
             userId,
             parametres: parametresBase,
           });
           const scenarioB = await createScenario(siteId, {
-            code: "PR3TER-A4-SCN-B",
-            nom: "Scenario B (scenario COURANT, ne porte PAS ce poste)",
+            code: "PR3QUATER-A4-COMP-B",
+            nom: "Scenario B (scenario COURANT, ne budgetise pas ce poste)",
             dateDebutPlan: new Date("2026-01-01").toISOString(),
             userId,
             parametres: parametresBase,
@@ -193,57 +396,161 @@ describe.runIf(requireDatabaseUrl())(
             ordre: 0,
           });
 
-          // Mapping cree contre le scenario A (SITE-scope, ADR-053 §3.9) :
-          // cibleId = posteA.id, qui n'existe PAS dans le referentiel du
-          // scenario B (scenario courant utilise plus bas).
+          // Mapping cree contre l'entree referentiel du poste du scenario A —
+          // AUCUN PostePrevision du scenario B (courant, plus bas) n'y est
+          // lie : cas legitime "ce scenario ne budgetise pas ce poste", pas
+          // le defaut ERR-179 (qui aurait rendu cibleId invalide meme SI B
+          // avait un poste equivalent).
           await creerVersionMapping(siteId, [
             {
               sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
               sourceCle: "ELECTRICITE",
               cibleType: CibleRapprochement.POSTE_PREVISION,
-              cibleId: posteA.id,
+              cibleId: posteA.posteReferentielId,
             },
           ]);
 
-          // Une depense REELLE existe bel et bien sur ce site, mois 0,
-          // categorie ELECTRICITE — montant delibarement distinctif (31415)
-          // pour ne jamais pouvoir se confondre avec un total legitime
-          // d'une autre ligne.
-          await insertDepense(client, "dep-pr3ter-a4-elec", siteId, userId, "ELECTRICITE", 31415, new Date("2026-01-10"));
+          await insertDepense(client, "dep-pr3quater-a4-elec", siteId, userId, "ELECTRICITE", 31415, new Date("2026-01-10"));
 
-          // (a) LE FILET : la ligne est bien signalee orpheline contre le
-          // scenario COURANT (B).
+          // (a) LE FILET : orpheline contre le scenario COURANT (B).
           const detection = await detecterCiblesOrphelinesDuMappingActif(scenarioB.id, siteId);
           const ligneDetectee = detection.find((l) => l.sourceCle === "ELECTRICITE");
           expect(ligneDetectee?.cibleOrpheline).toBe(true);
-          expect(ligneDetectee?.cibleCleResolue).toBe(posteA.id);
+          expect(ligneDetectee?.cibleCleResolue).toBeNull();
 
           // (b) LE MOTEUR (vrai pipeline de production, jamais reimplemente,
-          // ERR-171) : le montant reel de 31415 FCFA n'apparait NULLE PART
-          // dans le resultat pour le scenario COURANT — ni RAPPROCHE (aucune
-          // EntreePrevueRapprochement du scenario B ne porte la cle
-          // posteA.id), ni NON_RAPPROCHE (le mapping cible une cible NON
-          // NULLE, meme orpheline — src/lib/previsions/rapprochement.ts
-          // ligne 310-322/343-344, exactement le defaut documente par la
-          // pre-analyse PR3ter.A et reporte comme non corrige pour
-          // POSTE_PREVISION, review-sprint-PR3-ter.md Majeur #2).
+          // ERR-171) : AVANT la story A.4, ce montant disparaissait
+          // silencieusement (ERR-179, cf. l'ancienne version de ce test).
+          // DEPUIS A.4, `versMappingActif`/`resoudrePosteCibleCle`
+          // (`previsions-rapprochement.ts`) resolvent aussi dynamiquement
+          // POSTE_PREVISION : une resolution qui echoue (`cibleCle = null`)
+          // fait retomber la source sur le bac NON_RAPPROCHE explicite —
+          // JAMAIS un `?? 0` muet. Le montant de 31415 FCFA doit donc
+          // apparaitre, mais SOUS NON_RAPPROCHE, jamais sous RAPPROCHE (qui
+          // impliquerait une resolution reussie a tort).
           const lignesMoteur = await calculerRapprochementScenario(scenarioB.id, siteId, 0, 0);
 
-          const montantTotalReel = lignesMoteur.reduce(
-            (total, l) => total.plus(l.reel ?? new Decimal(0)),
-            new Decimal(0)
+          const ligneNonRapprochee31415 = lignesMoteur.find(
+            (l) => l.statutRapprochement === "NON_RAPPROCHE" && l.reel?.toNumber() === 31415
           );
+          expect(ligneNonRapprochee31415).toBeDefined();
 
-          const uneLigneContient31415 = lignesMoteur.some((l) => l.reel?.toNumber() === 31415);
-          expect(uneLigneContient31415).toBe(false);
-          expect(montantTotalReel.toNumber()).not.toBe(31415);
+          const uneLigneRapprocheeContient31415 = lignesMoteur.some(
+            (l) => l.statutRapprochement === "RAPPROCHE" && l.reel?.toNumber() === 31415
+          );
+          expect(uneLigneRapprocheeContient31415).toBe(false);
 
-          // Preuve conjointe explicite : le filet a bien signale (a) EXACTEMENT
-          // la ligne dont le moteur (b) a fait disparaitre le montant — ni un
-          // faux positif (une ligne signalee orpheline dont le montant serait
-          // pourtant bien compte quelque part), ni un faux negatif (un montant
-          // disparu du moteur sans etre signale par le filet).
-          expect(ligneDetectee?.cibleOrpheline).toBe(true);
+          // Comptee dans le total reel (jamais absorbee/ignoree, ADR-053 §5) :
+          const montantTotalReel = lignesMoteur
+            .filter((l) => l.statutRapprochement !== "SANS_SOURCE_REELLE")
+            .reduce((total, l) => total.plus(l.reel ?? new Decimal(0)), new Decimal(0));
+          expect(montantTotalReel.toNumber()).toBeGreaterThanOrEqual(31415);
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(6, §16.9 point 10, R4) GET-OR-CREATE SOUS CONCURRENCE REELLE : deux createPostePrevision concomitants du meme libelle dans deux scenarios du meme site ne produisent JAMAIS deux entrees PosteReferentiel",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3quater.A4.6] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "concurrence");
+        try {
+          const scenarioA = await createScenario(siteId, {
+            code: "PR3QUATER-A4-CONC-A",
+            nom: "Scenario A",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+          const scenarioB = await createScenario(siteId, {
+            code: "PR3QUATER-A4-CONC-B",
+            nom: "Scenario B",
+            dateDebutPlan: new Date("2027-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+
+          // Deux appels reellement concomitants (Promise.all, pas sequentiel)
+          // — l'un des deux `create` de PosteReferentiel va necessairement
+          // manquer son `findUnique` initial et rattraper la violation
+          // @@unique([siteId, code]) reelle de Postgres (P2002), §16.11.
+          const [posteA, posteB] = await Promise.all([
+            createPostePrevision(scenarioA.id, siteId, {
+              libelle: "Carburant",
+              type: TypePostePrevision.LOGISTIQUE,
+              ordre: 0,
+            }),
+            createPostePrevision(scenarioB.id, siteId, {
+              libelle: "Carburant",
+              type: TypePostePrevision.LOGISTIQUE,
+              ordre: 0,
+            }),
+          ]);
+
+          expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
+
+          const referentiels = await client.query(
+            `SELECT id FROM "PosteReferentiel" WHERE "siteId" = $1 AND code = 'carburant'`,
+            [siteId]
+          );
+          expect(referentiels.rowCount).toBe(1);
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      20000
+    );
+
+    it(
+      "(7, §16.9 point 4) RESTRICT BLOQUE LA SUPPRESSION : un DELETE SQL direct sur une PosteReferentiel referencee par au moins un PostePrevision echoue avec une violation de contrainte FK Postgres, jamais un succes silencieux",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3quater.A4.7] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "restrict");
+        try {
+          const scenario = await createScenario(siteId, {
+            code: "PR3QUATER-A4-RESTRICT",
+            nom: "Scenario Restrict",
+            dateDebutPlan: new Date("2026-01-01").toISOString(),
+            userId,
+            parametres: parametresBase,
+          });
+          const poste = await createPostePrevision(scenario.id, siteId, {
+            libelle: "Maintenance",
+            type: TypePostePrevision.CHARGE_EXPLOITATION,
+            ordre: 0,
+          });
+          const referentielId = poste.posteReferentielId;
+
+          // La PosteReferentiel est bien referencee par le PostePrevision cree ci-dessus.
+          const referentielAvant = await client.query(`SELECT id FROM "PosteReferentiel" WHERE id = $1`, [referentielId]);
+          expect(referentielAvant.rowCount).toBe(1);
+
+          // Tentative de DELETE SQL direct sur la PosteReferentiel referencee :
+          // aucune route applicative ne permet ce geste aujourd'hui (§16.9 point 4)
+          // — le test verifie la garantie de SCHEMA elle-meme (onDelete: Restrict),
+          // pas un comportement applicatif.
+          await expect(
+            client.query(`DELETE FROM "PosteReferentiel" WHERE id = $1`, [referentielId])
+          ).rejects.toMatchObject({
+            code: "23503", // foreign_key_violation (Postgres)
+          });
+
+          // La ligne n'a PAS ete supprimee : rejet de contrainte, pas un succes
+          // silencieux ni une suppression partielle.
+          const referentielApres = await client.query(`SELECT id FROM "PosteReferentiel" WHERE id = $1`, [referentielId]);
+          expect(referentielApres.rowCount).toBe(1);
+
+          const posteEncore = await client.query(`SELECT id FROM "PostePrevision" WHERE id = $1`, [poste.id]);
+          expect(posteEncore.rowCount).toBe(1);
         } finally {
           await cleanup(client, siteId, userId);
         }

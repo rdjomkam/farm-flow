@@ -17,24 +17,30 @@
  * `previsions-rapprochement-mapping.ts:101-104`, `updateMany({actif:false})`
  * sur TOUT le site avant de creer la nouvelle version).
  *
- * RISQUE R1 (pre-analyse section 4) : `cibleId` d'un mapping SITE-scope
- * reference une entite SCENARIO-scope (`PostePrevision`/`AlimentPrevision`).
- * La liste de cibles n'est peuplee QUE depuis le scenario actuellement
- * affiche (`scenarioId`), et un avertissement explicite le dit — mitigation
- * documentaire requise par la pre-analyse, pas un correctif structurel (hors
- * perimetre de ce sprint).
+ * RISQUE R1 (pre-analyse section 4), CORRIGE POUR POSTE_PREVISION (ADR-053
+ * §16, story A.4) : `cibleId` d'un mapping SITE-scope referencait une entite
+ * SCENARIO-scope (`PostePrevision`) — defaut ERR-179. Pour `POSTE_PREVISION`,
+ * la liste de cibles est desormais SITE-scopee elle aussi (`GET
+ * /api/previsions/postes-referentiel`, `PosteReferentielDTO`) : le meme
+ * scope que `cibleId`, plus de desynchronisation possible par changement de
+ * scenario. `ALIMENT_PREVISION` reste SCENARIO-scope (aucune entite
+ * referentiel equivalente n'existe pour les aliments) — `scenarioWarning`
+ * ne s'affiche donc plus que pour ce type, `siteScopedNote` le remplace pour
+ * `POSTE_PREVISION`.
  *
- * CORRECTIF C1 (review + verification navigateur, sprint PR3-bis-bis) : en
- * edition, si `existant.cibleId` n'appartient a AUCUNE des cibles chargees
- * (le mapping vise un `PostePrevision`/`AlimentPrevision` d'un AUTRE
- * scenario que celui affiche), le `Select` Radix retombe sur son placeholder
- * "Choisir…" — l'administrateur croit alors qu'aucune cible n'est
- * selectionnee, en choisit une autre, et ECRASE SILENCIEUSEMENT la cible
- * existante d'un autre scenario. `cibleActuelleHorsScenario` detecte ce cas
- * et rend la situation explicite par un bandeau distinct de
- * `scenarioWarning` (celui-ci prevu pour la SAISIE future, celui-la pour
- * l'ETAT actuel du formulaire) + une option de repli desactivee dans la
- * liste.
+ * CORRECTIF C1 (review + verification navigateur, sprint PR3-bis-bis),
+ * TOUJOURS PERTINENT POUR ALIMENT_PREVISION, RECLASSE POUR POSTE_PREVISION
+ * (story A.4) : en edition, si `existant.cibleId` n'appartient a AUCUNE des
+ * cibles chargees, le `Select` Radix retombe sur son placeholder "Choisir…"
+ * — l'administrateur croit alors qu'aucune cible n'est selectionnee, en
+ * choisit une autre, et ECRASE SILENCIEUSEMENT la cible existante.
+ * `cibleActuelleHorsScenario` detecte ce cas et rend la situation explicite
+ * par un bandeau + une option de repli desactivee dans la liste — pour
+ * ALIMENT_PREVISION cela signifie toujours "cible d'un autre scenario"
+ * (`cibleHorsScenarioWarning`), pour POSTE_PREVISION cela signifie
+ * desormais "entree referentiel introuvable/desactivee"
+ * (`cibleReferentielIntrouvableWarning`) — le scope site elimine la cause
+ * scenario, pas la possibilite qu'une entree ait ete desactivee entre-temps.
  *
  * Sprint PR3-ter, story A.2 : le `cibleId` d'un mapping `ALIMENT_PREVISION`
  * porte desormais le format compose `tailleGranule::alimentPrevisionId`
@@ -80,7 +86,7 @@ import {
   composeCibleAlimentPrevisionClient,
   extraireTailleGranuleDeCibleId,
 } from "@/components/previsions/mapping-rapprochement-helpers";
-import type { PostePrevisionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
+import type { PosteReferentielDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
 
 interface MappingFormDialogProps {
   scenarioId: string;
@@ -138,7 +144,7 @@ export function MappingFormDialog({
   // ci-dessous — evite de reecraser un choix utilisateur deja fait si l'effet
   // se redeclenche (ex. `aliments` change de reference sans changer de valeur).
   const [alimentInitialResolu, setAlimentInitialResolu] = useState(false);
-  const [postes, setPostes] = useState<PostePrevisionDTO[]>([]);
+  const [postes, setPostes] = useState<PosteReferentielDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D1 (contre-review PR3-bis) : `chargementCibles` n'est plus un
   // booleen pilote par setState (qui laissait une fenetre de rendu, au tout
@@ -167,7 +173,7 @@ export function MappingFormDialog({
     let cancelled = false;
     (async () => {
       const [postesResult, alimentsResult] = await Promise.all([
-        get<{ data: PostePrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/postes`, {
+        get<{ data: PosteReferentielDTO[] }>(`/api/previsions/postes-referentiel`, {
           silentError: true,
           silentLoading: true,
         }),
@@ -382,11 +388,15 @@ export function MappingFormDialog({
             {exigeCibleId && (
               <>
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  {t("rapprochementTab.mapping.form.scenarioWarning", { scenario: scenarioNom })}
+                  {cibleType === CibleRapprochement.POSTE_PREVISION
+                    ? t("rapprochementTab.mapping.form.siteScopedNote", { scenario: scenarioNom })
+                    : t("rapprochementTab.mapping.form.scenarioWarning", { scenario: scenarioNom })}
                 </div>
                 {cibleActuelleHorsScenario && (
                   <div role="alert" className="rounded-lg border border-warning/40 bg-accent-amber-muted p-3 text-xs text-warning">
-                    {t("rapprochementTab.mapping.form.cibleHorsScenarioWarning", { scenario: scenarioNom })}
+                    {cibleType === CibleRapprochement.POSTE_PREVISION
+                      ? t("rapprochementTab.mapping.form.cibleReferentielIntrouvableWarning")
+                      : t("rapprochementTab.mapping.form.cibleHorsScenarioWarning", { scenario: scenarioNom })}
                   </div>
                 )}
                 <Select

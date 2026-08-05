@@ -67,6 +67,8 @@ async function cleanup(c: PoolClient, siteId: string, userId: string): Promise<v
   await c.query(`DELETE FROM "SnapshotBudgetInitial" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ChargeMensuellePrevue" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "PostePrevision" WHERE "siteId" = $1`, [siteId]);
+  // ADR-053 §16 (story A.4) — PosteReferentiel apres PostePrevision (FK Restrict)
+  await c.query(`DELETE FROM "PosteReferentiel" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ParametresPrevision" WHERE "scenarioId" IN (SELECT id FROM "ScenarioPrevision" WHERE "siteId" = $1)`, [
     siteId,
   ]);

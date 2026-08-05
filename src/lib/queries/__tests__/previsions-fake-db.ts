@@ -45,6 +45,8 @@ export interface Stores {
   vague: FakeRow[];
   produit: FakeRow[];
   postePrevision: FakeRow[];
+  // ADR-053 §16 (story A.4) — get-or-create transactionnel dans createPostePrevision
+  posteReferentiel: FakeRow[];
   chargeMensuellePrevue: FakeRow[];
   journalDepensePrevue: FakeRow[];
   apportCapital: FakeRow[];
@@ -63,6 +65,7 @@ export function createEmptyStores(): Stores {
     vague: [],
     produit: [],
     postePrevision: [],
+    posteReferentiel: [],
     chargeMensuellePrevue: [],
     journalDepensePrevue: [],
     apportCapital: [],
@@ -347,6 +350,7 @@ const INCLUDE_RESOLVERS: Record<keyof Stores, Record<string, (row: FakeRow, s: S
         .filter((c) => c.posteId === row.id)
         .sort((a, b) => (a.moisAbsolu as number) - (b.moisAbsolu as number)),
   },
+  posteReferentiel: {},
   chargeMensuellePrevue: {},
   journalDepensePrevue: {},
   apportCapital: {},

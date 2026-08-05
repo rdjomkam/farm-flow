@@ -73,6 +73,88 @@ describe("PostePrevision — R8 isolation par site", () => {
     expect(poste.siteId).toBe("site-A");
     expect(poste.inclusBaseRepartition).toBe(true); // default
   });
+});
+
+describe("PostePrevision — get-or-create PosteReferentiel (ADR-053 §16.11, §16.9 points 7-9)", () => {
+  it("point 7 : reutilise la MEME entree PosteReferentiel pour deux scenarios du meme site, meme si la casse du libelle differe", async () => {
+    const { createPostePrevision } = await import("@/lib/queries/previsions-charges");
+    seedScenario("A", "site-A");
+    seedScenario("B", "site-A");
+
+    const posteA = await createPostePrevision("A", "site-A", {
+      libelle: "Salaires",
+      type: TypePostePrevision.CHARGE_EXPLOITATION,
+      ordre: 0,
+    });
+    const posteB = await createPostePrevision("B", "site-A", {
+      libelle: "salaires",
+      type: TypePostePrevision.CHARGE_EXPLOITATION,
+      ordre: 0,
+    });
+
+    expect(posteA.posteReferentielId).toBe(posteB.posteReferentielId);
+    expect(stores.posteReferentiel).toHaveLength(1);
+    expect(stores.posteReferentiel[0].code).toBe("salaires");
+  });
+
+  it("point 8 : cree une nouvelle entree PosteReferentiel dans la meme transaction quand aucune n'existe pour ce slug", async () => {
+    const { createPostePrevision } = await import("@/lib/queries/previsions-charges");
+    seedScenario("A", "site-A");
+
+    const poste = await createPostePrevision("A", "site-A", {
+      libelle: "Énergie et Carburant",
+      type: TypePostePrevision.CHARGE_EXPLOITATION,
+      ordre: 0,
+    });
+
+    expect(stores.posteReferentiel).toHaveLength(1);
+    expect(stores.posteReferentiel[0].code).toBe("energie-et-carburant");
+    expect(stores.posteReferentiel[0].libelle).toBe("Énergie et Carburant");
+    expect(poste.posteReferentielId).toBe(stores.posteReferentiel[0].id);
+  });
+
+  it("point 9 : refuse (409 BusinessRuleError) si le slug matche une entree PosteReferentiel DESACTIVEE du site", async () => {
+    const { createPostePrevision } = await import("@/lib/queries/previsions-charges");
+    seedScenario("A", "site-A");
+    stores.posteReferentiel.push({
+      id: "ref-inactif",
+      siteId: "site-A",
+      code: "salaires",
+      libelle: "Salaires",
+      actif: false,
+    });
+
+    await expect(
+      createPostePrevision("A", "site-A", {
+        libelle: "Salaires",
+        type: TypePostePrevision.CHARGE_EXPLOITATION,
+        ordre: 0,
+      })
+    ).rejects.toMatchObject({ status: 409, name: "BusinessRuleError" });
+
+    expect(stores.postePrevision).toHaveLength(0);
+    expect(stores.posteReferentiel).toHaveLength(1); // aucune reactivation, aucun doublon
+  });
+
+  it("les entrees PosteReferentiel actives d'un site different ne sont jamais reutilisees (R8)", async () => {
+    const { createPostePrevision } = await import("@/lib/queries/previsions-charges");
+    seedScenario("A", "site-A");
+    seedScenario("B", "site-B");
+
+    const posteA = await createPostePrevision("A", "site-A", {
+      libelle: "Salaires",
+      type: TypePostePrevision.CHARGE_EXPLOITATION,
+      ordre: 0,
+    });
+    const posteB = await createPostePrevision("B", "site-B", {
+      libelle: "Salaires",
+      type: TypePostePrevision.CHARGE_EXPLOITATION,
+      ordre: 0,
+    });
+
+    expect(posteA.posteReferentielId).not.toBe(posteB.posteReferentielId);
+    expect(stores.posteReferentiel).toHaveLength(2);
+  });
 
   it("createPostePrevision rejette un ordre fractionnaire AVANT tout acces DB (garde assertEntierColonneInt)", async () => {
     const { createPostePrevision } = await import("@/lib/queries/previsions-charges");

@@ -274,6 +274,7 @@ export type {
   RepartitionMoisAliment,
   VaguePrevue,
   AlimentParVaguePrevue,
+  PosteReferentiel,
   PostePrevision,
   ChargeMensuellePrevue,
   JournalDepensePrevue,

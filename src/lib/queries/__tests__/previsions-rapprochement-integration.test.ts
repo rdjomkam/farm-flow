@@ -106,6 +106,8 @@ async function cleanup(
   await c.query(`DELETE FROM "Vente" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ChargeMensuellePrevue" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "PostePrevision" WHERE "siteId" = $1`, [siteId]);
+  // ADR-053 §16 (story A.4) — PosteReferentiel apres PostePrevision (FK Restrict)
+  await c.query(`DELETE FROM "PosteReferentiel" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "ParametresPrevision" WHERE "scenarioId" IN (SELECT id FROM "ScenarioPrevision" WHERE "siteId" = $1)`, [siteId]);
   await c.query(`DELETE FROM "ScenarioPrevision" WHERE "siteId" = $1`, [siteId]);
   await c.query(`DELETE FROM "Produit" WHERE id = $1`, [produitId]);
@@ -209,12 +211,13 @@ describe.runIf(requireDatabaseUrl())(
           ordre: 0,
         });
         await upsertChargeMensuelle(poste.id, siteId, 0, 50000);
+        // ADR-053 §16 (story A.4) : cibleId = posteReferentielId (site-scope).
         await creerVersionMapping(siteId, [
           {
             sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
             sourceCle: "SALAIRE",
             cibleType: CibleRapprochement.POSTE_PREVISION,
-            cibleId: poste.id,
+            cibleId: poste.posteReferentielId,
           },
         ]);
 
@@ -263,13 +266,16 @@ describe.runIf(requireDatabaseUrl())(
         });
         await upsertChargeMensuelle(poste.id, siteId, 0, 30000);
 
-        // v1 : TRANSPORT -> poste "Transport"
+        // v1 : TRANSPORT -> poste "Transport". ADR-053 §16 (story A.4) :
+        // `cibleId` d'un mapping POSTE_PREVISION est desormais un
+        // `PosteReferentiel.id` (site-scope), jamais un `PostePrevision.id`
+        // (scenario-scope) — `poste.posteReferentielId`, pas `poste.id`.
         const v1 = await creerVersionMapping(siteId, [
           {
             sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
             sourceCle: "TRANSPORT",
             cibleType: CibleRapprochement.POSTE_PREVISION,
-            cibleId: poste.id,
+            cibleId: poste.posteReferentielId,
           },
         ]);
 

@@ -69,6 +69,7 @@ import { JournalTab } from "@/components/previsions/journal-tab";
 import { ApportsTab } from "@/components/previsions/apports-tab";
 import { TableauBordTab } from "@/components/previsions/tableau-bord-tab";
 import { PrevisionsMensuellesTab } from "@/components/previsions/previsions-mensuelles-tab";
+import { MappingOrphelineBanner } from "@/components/previsions/mapping-orpheline-banner";
 
 interface ScenarioDetailClientProps {
   scenario: ScenarioPrevisionDetailDTO;
@@ -153,118 +154,125 @@ export function ScenarioDetailClient({
   }, [scrollActiveTabIntoView]);
 
   return (
-    <Tabs
-      defaultValue="tableau-de-bord"
-      onValueChange={() => requestAnimationFrame(scrollActiveTabIntoView)}
-    >
-      <TabsList
-        ref={tabsListRef}
-        className="flex-nowrap justify-start overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-hide [-webkit-overflow-scrolling:touch]"
+    <>
+      {/* ADR-053 §16.7 (story A.4) : UN SEUL bandeau, ici, partage entre TOUS
+          les onglets — jamais reproduit dans chacun des 5 sous-onglets de
+          rapprochement (ERR-179/ERR-180). Reste visible quel que soit
+          l'onglet actif, y compris "Tableau de bord" (le premier ouvert). */}
+      <MappingOrphelineBanner scenarioId={scenario.id} />
+      <Tabs
+        defaultValue="tableau-de-bord"
+        onValueChange={() => requestAnimationFrame(scrollActiveTabIntoView)}
       >
-        <TabsTrigger value="tableau-de-bord">{t("tabs.tableauBord")}</TabsTrigger>
-        <TabsTrigger value="previsions">{t("tabs.previsions")}</TabsTrigger>
-        <TabsTrigger value="parametres">{t("tabs.parametres")}</TabsTrigger>
-        <TabsTrigger value="aliments">{t("tabs.aliments")}</TabsTrigger>
-        <TabsTrigger value="vagues">{t("tabs.vagues")}</TabsTrigger>
-        <TabsTrigger value="charges">{t("tabs.charges")}</TabsTrigger>
-        <TabsTrigger value="journal">{t("tabs.journal")}</TabsTrigger>
-        <TabsTrigger value="apports">{t("tabs.apports")}</TabsTrigger>
-        <TabsTrigger value="rapprochement">{t("tabs.rapprochement")}</TabsTrigger>
-        <TabsTrigger value="tresorerie">{t("tabs.tresorerie")}</TabsTrigger>
-      </TabsList>
+        <TabsList
+          ref={tabsListRef}
+          className="flex-nowrap justify-start overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-hide [-webkit-overflow-scrolling:touch]"
+        >
+          <TabsTrigger value="tableau-de-bord">{t("tabs.tableauBord")}</TabsTrigger>
+          <TabsTrigger value="previsions">{t("tabs.previsions")}</TabsTrigger>
+          <TabsTrigger value="parametres">{t("tabs.parametres")}</TabsTrigger>
+          <TabsTrigger value="aliments">{t("tabs.aliments")}</TabsTrigger>
+          <TabsTrigger value="vagues">{t("tabs.vagues")}</TabsTrigger>
+          <TabsTrigger value="charges">{t("tabs.charges")}</TabsTrigger>
+          <TabsTrigger value="journal">{t("tabs.journal")}</TabsTrigger>
+          <TabsTrigger value="apports">{t("tabs.apports")}</TabsTrigger>
+          <TabsTrigger value="rapprochement">{t("tabs.rapprochement")}</TabsTrigger>
+          <TabsTrigger value="tresorerie">{t("tabs.tresorerie")}</TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="tableau-de-bord">
-        <TableauBordTab
-          dateDebutPlan={scenario.dateDebutPlan}
-          projection={projection}
-          erreurProjection={erreurProjection}
-        />
-      </TabsContent>
+        <TabsContent value="tableau-de-bord">
+          <TableauBordTab
+            dateDebutPlan={scenario.dateDebutPlan}
+            projection={projection}
+            erreurProjection={erreurProjection}
+          />
+        </TabsContent>
 
-      <TabsContent value="previsions">
-        <PrevisionsMensuellesTab
-          dateDebutPlan={scenario.dateDebutPlan}
-          mois={projection.mois}
-          erreurProjection={erreurProjection}
-          apports={initialApports}
-          charges={initialCharges}
-          postes={initialPostes}
-          journal={initialJournal}
-        />
-      </TabsContent>
+        <TabsContent value="previsions">
+          <PrevisionsMensuellesTab
+            dateDebutPlan={scenario.dateDebutPlan}
+            mois={projection.mois}
+            erreurProjection={erreurProjection}
+            apports={initialApports}
+            charges={initialCharges}
+            postes={initialPostes}
+            journal={initialJournal}
+          />
+        </TabsContent>
 
-      <TabsContent value="parametres">
-        <ParametresTab scenario={scenario} permissions={permissions} onDataChanged={handleDataChanged} />
-      </TabsContent>
+        <TabsContent value="parametres">
+          <ParametresTab scenario={scenario} permissions={permissions} onDataChanged={handleDataChanged} />
+        </TabsContent>
 
-      <TabsContent value="aliments">
-        <AlimentsTab
-          scenarioId={scenario.id}
-          dureeCycleMois={scenario.dureeCycleMois}
-          initialAliments={initialAliments}
-          permissions={permissions}
-          onDataChanged={handleDataChanged}
-        />
-      </TabsContent>
+        <TabsContent value="aliments">
+          <AlimentsTab
+            scenarioId={scenario.id}
+            dureeCycleMois={scenario.dureeCycleMois}
+            initialAliments={initialAliments}
+            permissions={permissions}
+            onDataChanged={handleDataChanged}
+          />
+        </TabsContent>
 
-      <TabsContent value="vagues">
-        <PlanVaguesTab
-          scenarioId={scenario.id}
-          vaguesPrevues={vaguesPrevues}
-          onVaguesPrevuesChange={setVaguesPrevues}
-          vaguesCandidates={vaguesCandidates}
-          permissions={permissions}
-          parametres={scenario.parametres}
-          dateDebutPlan={scenario.dateDebutPlan}
-          dureeCycleMois={scenario.dureeCycleMois}
-          onDataChanged={handleDataChanged}
-        />
-      </TabsContent>
+        <TabsContent value="vagues">
+          <PlanVaguesTab
+            scenarioId={scenario.id}
+            vaguesPrevues={vaguesPrevues}
+            onVaguesPrevuesChange={setVaguesPrevues}
+            vaguesCandidates={vaguesCandidates}
+            permissions={permissions}
+            parametres={scenario.parametres}
+            dateDebutPlan={scenario.dateDebutPlan}
+            dureeCycleMois={scenario.dureeCycleMois}
+            onDataChanged={handleDataChanged}
+          />
+        </TabsContent>
 
-      <TabsContent value="charges">
-        <ChargesTab
-          scenarioId={scenario.id}
-          dateDebutPlan={scenario.dateDebutPlan}
-          initialPostes={initialPostes}
-          initialCharges={initialCharges}
-          permissions={permissions}
-          horizonMois={projection.horizonMois}
-          erreurProjection={erreurProjection}
-          onDataChanged={handleDataChanged}
-        />
-      </TabsContent>
+        <TabsContent value="charges">
+          <ChargesTab
+            scenarioId={scenario.id}
+            dateDebutPlan={scenario.dateDebutPlan}
+            initialPostes={initialPostes}
+            initialCharges={initialCharges}
+            permissions={permissions}
+            horizonMois={projection.horizonMois}
+            erreurProjection={erreurProjection}
+            onDataChanged={handleDataChanged}
+          />
+        </TabsContent>
 
-      <TabsContent value="journal">
-        <JournalTab
-          scenarioId={scenario.id}
-          initialJournal={initialJournal}
-          vaguesPrevues={vaguesPrevues}
-          permissions={permissions}
-          onDataChanged={handleDataChanged}
-        />
-      </TabsContent>
+        <TabsContent value="journal">
+          <JournalTab
+            scenarioId={scenario.id}
+            initialJournal={initialJournal}
+            vaguesPrevues={vaguesPrevues}
+            permissions={permissions}
+            onDataChanged={handleDataChanged}
+          />
+        </TabsContent>
 
-      <TabsContent value="apports">
-        <ApportsTab
-          scenarioId={scenario.id}
-          initialApports={initialApports}
-          permissions={permissions}
-          onDataChanged={handleDataChanged}
-        />
-      </TabsContent>
+        <TabsContent value="apports">
+          <ApportsTab
+            scenarioId={scenario.id}
+            initialApports={initialApports}
+            permissions={permissions}
+            onDataChanged={handleDataChanged}
+          />
+        </TabsContent>
 
-      <TabsContent value="rapprochement">
-        <RapprochementTab
-          rapprochement={rapprochement}
-          scenarioId={scenario.id}
-          scenarioNom={scenario.nom}
-          permissions={permissions}
-        />
-      </TabsContent>
+        <TabsContent value="rapprochement">
+          <RapprochementTab
+            rapprochement={rapprochement}
+            scenarioId={scenario.id}
+            scenarioNom={scenario.nom}
+            permissions={permissions}
+          />
+        </TabsContent>
 
-      <TabsContent value="tresorerie">
-        <TresorerieTab dateDebutPlan={scenario.dateDebutPlan} tresorerie={tresorerie} />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="tresorerie">
+          <TresorerieTab dateDebutPlan={scenario.dateDebutPlan} tresorerie={tresorerie} />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }

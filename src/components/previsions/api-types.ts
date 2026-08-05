@@ -201,6 +201,23 @@ export interface PostePrevisionDTO {
   siteId: string;
 }
 
+/**
+ * PosteReferentielDTO — entree site-scopee du referentiel des postes
+ * (ADR-053 §16, story A.4). Consommee par `mapping-form-dialog.tsx` pour la
+ * cible `POSTE_PREVISION` — remplace la liste scenario-scopee
+ * `PostePrevisionDTO`, source du defaut ERR-179 (une cible qui devient
+ * orpheline des qu'un nouveau scenario est cree ou l'ancien supprime).
+ */
+export interface PosteReferentielDTO {
+  id: string;
+  siteId: string;
+  code: string;
+  libelle: string;
+  actif: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChargeMensuellePrevueDTO {
   id: string;
   scenarioId: string;

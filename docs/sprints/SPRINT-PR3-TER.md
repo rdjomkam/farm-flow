@@ -14,7 +14,7 @@ silence**, la story B est une fonctionnalité absente.
 | Story | Titre | Type | Agent | Statut | Dépendances |
 |---|---|---|---|---|---|
 | **PR3ter.A1** | Pré-analyse de la portée du mapping : trancher la correction structurelle (`MappingRapprochement.cibleId` site-scopé vs `PostePrevision`/`AlimentPrevision` scénario-scopés, ADR-053 §3.9) | ANALYSE | @pre-analyst | FAIT | Aucune |
-| **PR3ter.A2** | Correction structurelle de la portée du mapping, compatible avec le versionnage §6.2 (« changer un mapping ne doit pas réécrire l'historique des écarts figés ») | à déterminer par A1 | à déterminer par A1 | FAIT (partiel — moitié POSTE_PREVISION reportée) | PR3ter.A1 |
+| **PR3ter.A2** | Correction structurelle de la portée du mapping, compatible avec le versionnage §6.2 (« changer un mapping ne doit pas réécrire l'historique des écarts figés ») | à déterminer par A1 | à déterminer par A1 | FAIT (moitié `ALIMENT_PREVISION` livrée ici ; moitié `POSTE_PREVISION` **livrée depuis** par la story A.4 — sprint PR3-quater, cf. `docs/TASKS.md`) | PR3ter.A1 |
 | **PR3ter.A3** | Filet de sécurité **non négociable** : détection explicite et signalement à l'écran d'une cible de mapping orpheline. Un mapping dont la cible n'existe plus doit **se voir, pas s'évaporer** | API+UI | @developer | FAIT | PR3ter.A1 |
 | **PR3ter.A4** | Tests de la portée du mapping, dont la preuve que le montant réel ne disparaît plus silencieusement | TEST | @tester | FAIT | PR3ter.A2, PR3ter.A3 |
 | **PR3ter.B1** | Pré-analyse : ce que `SnapshotBudgetInitial` et `ClotureMois` portent **réellement**, avant que l'UI ne raconte quoi que ce soit | ANALYSE | @pre-analyst | FAIT | Aucune |
@@ -84,7 +84,8 @@ explicitement**, pas passé sous silence.
   `MappingRapprochement` étant à 0 ligne.
 - **Story A (portée du mapping)** : moitié **`ALIMENT_PREVISION` corrigée structurellement** par une
   clé métier stable (`tailleGranule`, résolution dynamique à la lecture vers le scénario courant) ;
-  Zod durci rejetant l'ancien format brut. Moitié **`POSTE_PREVISION` NON corrigée** — voir Points
+  Zod durci rejetant l'ancien format brut. Moitié **`POSTE_PREVISION` non corrigée dans ce sprint**,
+  **corrigée depuis** par la **story A.4** (sprint PR3-quater, `FAIT` le 2026-08-05) — voir Points
   ouverts. **Filet de sécurité livré pour les deux types** : `cibleOrpheline` détecté côté queries
   (`previsions-mapping-orphelins.ts`, moteur non touché), exposé par
   `GET /api/previsions/mapping-rapprochement?scenarioId=`, affiché comme état **distinct** de
@@ -134,14 +135,18 @@ explicitement**, pas passé sous silence.
 
 | Nature | Point |
 |---|---|
-| Risque structurel non corrigé, report assumé | `MappingRapprochement.cibleId` reste **site-scopé**
-pour `POSTE_PREVISION` alors que `PostePrevision` est **scénario-scopé** (ADR-053 §3.9).
-`PostePrevision.libelle` est un **texte libre sans clé métier stable** ; corriger exige un
-référentiel de postes site-scopé (nouveau modèle + ADR amendé), hors périmètre. **Conséquence à ne
-pas perdre de vue** : pour un poste, le montant réel d'un mapping orphelin **continue d'être absent
-du total** ; le filet `cibleOrpheline` le **signale** sur l'écran d'administration du mapping, mais
-un exploitant qui ne visite jamais cet écran ne le verra pas. Ce n'est pas une garantie
-structurelle, c'est une alerte. |
+| ~~Risque structurel non corrigé, report assumé~~ → **SOLDÉ le 2026-08-05, ce point n'est plus
+ouvert** | `MappingRapprochement.cibleId` restait **site-scopé** pour `POSTE_PREVISION` alors que
+`PostePrevision` est **scénario-scopé** (ADR-053 §3.9), faute de clé métier stable sur
+`PostePrevision.libelle` (texte libre) — la correction exigeait un référentiel de postes site-scopé,
+hors périmètre de ce sprint. **Traité depuis par la story A.4** (sprint PR3-quater, `FAIT`,
+review **VALIDÉ**) : modèle **`PosteReferentiel`** + migration
+`20260805120000_add_poste_referentiel` (FK `Restrict`, backfill idempotent avec garde-fou de
+précondition), get-or-create transactionnel par slug (R4), et **résolution dynamique du filet ET du
+moteur de rapprochement** — un mapping orphelin ne fait plus disparaître le montant, il bascule en
+**`NON_RAPPROCHE` explicite** (ERR-179 corrigé à la source, plus seulement signalé). Réf :
+ADR-053 §16, `docs/reviews/review-story-A4-mapping-poste-prevision.md`,
+`docs/tests/rapport-story-A4-mapping-poste-prevision.md`, `docs/TASKS.md` §Sprint PR3-quater. |
 | Limite structurelle assumée de la série RÉEL | le domaine réel n'a **aucun modèle** pour les
 apports/subventions/prêts réellement encaissés (§15.1(b), reporté sine die §15.8(a)) : la courbe
 RÉEL est **biaisée à la baisse**. Le caveat est affiché en permanence, en haut de l'onglet, avant le

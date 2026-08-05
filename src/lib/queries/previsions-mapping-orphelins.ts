@@ -121,12 +121,16 @@ export function construireClesCiblesValidesDuScenario(scenario: ScenarioPourCalc
  * scenario COURANT — fonction PURE, aucune I/O (le scenario est deja
  * charge par l'appelant).
  *
- * - `POSTE_PREVISION` : `cibleId` litteral. `MappingRapprochement` reste
- *   SITE-scope pour les postes (correction structurelle reportee, story
- *   A.4 hors perimetre de ce sprint — `PostePrevision.libelle` est un texte
- *   libre sans cle metier stable) : aucune resolution dynamique possible,
- *   la cle resolue EST le `cibleId` stocke, verifiee telle quelle contre le
- *   scenario courant.
+ * - `POSTE_PREVISION` : `cibleId` litteral, mais desormais un
+ *   `PosteReferentiel.id` SITE-scope (ADR-053 §16, story A.4) — le meme
+ *   scope que `MappingRapprochement` lui-meme. Resolution DYNAMIQUE :
+ *   recherche, dans `scenario.postes` (scenario COURANT), le
+ *   `PostePrevision` dont `posteReferentielId === ligne.cibleId` —
+ *   exactement le meme patron que `ALIMENT_PREVISION` ci-dessous, en
+ *   substituant `posteReferentielId` a `tailleGranule` comme cle metier
+ *   stable. `null` si aucun `PostePrevision` du scenario courant n'est lie
+ *   a cette entree referentiel (cas legitime : ce scenario ne budgetise pas
+ *   ce poste — pas une corruption).
  * - `ALIMENT_PREVISION` : `cibleId` compose `tailleGranule::id` (story A.3,
  *   `src/lib/queries/previsions-rapprochement.ts`). Resolution DYNAMIQUE
  *   via la tailleGranule (cle metier stable, `@@unique([scenarioId,
@@ -140,8 +144,11 @@ export function resoudreCibleCleDuScenarioCourant(
   scenario: ScenarioPourCalcul
 ): string | null {
   switch (ligne.cibleType) {
-    case CibleRapprochement.POSTE_PREVISION:
-      return ligne.cibleId;
+    case CibleRapprochement.POSTE_PREVISION: {
+      if (ligne.cibleId === null) return null;
+      const poste = scenario.postes.find((p) => p.posteReferentielId === ligne.cibleId);
+      return poste?.id ?? null;
+    }
     case CibleRapprochement.ALIMENT_PREVISION: {
       const { tailleGranule } = parseCibleAlimentPrevision(ligne.cibleId);
       if (tailleGranule === null) return null;

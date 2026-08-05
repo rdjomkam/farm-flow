@@ -174,6 +174,13 @@ export interface PostePrevisionPourCalcul {
   type: TypePostePrevision;
   inclusBaseRepartition: boolean;
   ordre: number;
+  /**
+   * ADR-053 §16 (story A.4) — identite stable, site-scopee, resolue par
+   * `resoudreCibleCleDuScenarioCourant` (`previsions-mapping-orphelins.ts`) pour retrouver, dans
+   * le scenario courant, le PostePrevision dont `posteReferentielId` correspond au `cibleId`
+   * (site-scope) d'un mapping `POSTE_PREVISION` — jamais l'inverse.
+   */
+  posteReferentielId: string;
   chargesMensuelles: ChargeMensuellePourCalcul[];
 }
 
@@ -358,6 +365,7 @@ export async function chargerScenarioPourMoteur(
       type: p.type as TypePostePrevision,
       inclusBaseRepartition: p.inclusBaseRepartition,
       ordre: p.ordre,
+      posteReferentielId: p.posteReferentielId,
       chargesMensuelles: p.chargesMensuelles.map((c) => ({
         id: c.id,
         posteId: c.posteId,

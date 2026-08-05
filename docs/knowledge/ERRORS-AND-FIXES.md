@@ -3381,6 +3381,151 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-185 — [RÉTROACTIF, jamais fiché au moment du fix] La ligne « Aliment » du rapprochement comparait des sacs (entiers, après `ceil`) à des kilogrammes réels : 384 kg de besoin s'affichaient « 0,0 t »
+**Sprint :** PR3-ter, commit `45e8e57` (« rapprochement, trésorerie réelle, et une unité qui mentait ») | **Date :** 2026-08-05 — entrée rédigée rétroactivement, story A.4, le fix lui-même est antérieur et n'avait jamais été fiché
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/route-orchestration.ts` (`MoisProjectionResult.sacsParGranulometrie` / nouveau `kgParGranulometrie`), `src/lib/queries/previsions-rapprochement.ts` (consommation du prévu de la ligne `QUANTITE`)
+
+**Symptôme :**
+La ligne « Aliment <granulométrie> » du rapprochement prévu/réel lisait
+`MoisProjectionResult.sacsParGranulometrie` — un **compte de sacs** (entier, obtenu après `Math.ceil` du
+besoin en kg divisé par le poids d'un sac) — et le comparait directement au réel issu de
+`MouvementStock.quantite`, exprimé en **kilogrammes**. Le résultat affiché : pour un besoin réel de
+384 kg, l'écran affichait « 0,0 t » (un compte de ~1-26 sacs interprété et formaté comme s'il s'agissait
+d'un nombre de tonnes), et l'écart en rouge qui en découlait ne voulait rien dire. Aucun test ne détectait
+ce défaut : il n'était visible qu'en ouvrant manuellement l'écran sur le mois d'août et en comparant au
+classeur de référence (384 kg).
+
+**Cause racine :**
+Même famille que l'homonymie `sacsParTonne` documentée à l'ADR-053 §11 : **deux grandeurs légitimes et
+correctement calculées, exposées sous un seul nom implicite** (« la quantité d'aliment du mois »), l'une
+en sacs (une unité d'achat, entière, arrondie au-dessus), l'autre en kg (une unité de besoin brut,
+continue). Le champ `sacsParGranulometrie` était correct pour son usage d'origine (achats, logistique) —
+le bug n'était pas dans son calcul, mais dans le fait qu'une consommation tierce (le rapprochement) l'a
+lu en supposant, à tort, qu'il portait la même unité que le réel (`MouvementStock.quantite`, en kg).
+Rien dans le nom du champ ni dans son type (`Record<string, number>` des deux côtés) ne permettait au
+compilateur ou à un lecteur pressé de détecter la substitution d'unité.
+
+**Fix :**
+`route-orchestration.ts` expose désormais un champ **jumeau** et **explicitement distinct**,
+`kgParGranulometrie` (même boucle, même clé `tailleGranule`, mais accumulé en kg BRUTS, avant `ceil`,
+jamais convertis en sacs). Le rapprochement (`previsions-rapprochement.ts` / le moteur pur qui consomme
+la ligne `QUANTITE`) a été migré pour lire `kgParGranulometrie`, plus jamais `sacsParGranulometrie`. Les
+libellés d'affichage ont été revus pour nommer explicitement l'unité **affichée** (t, via
+`formatTonnagePrevision`) et non l'unité **stockée** (kg) — la confusion entre les deux avait aussi
+contribué au symptôme. Un test dédié (`previsions-rapprochement-unite-aliment.test.ts`) construit
+délibérément des valeurs **différentes** en kg et en sacs pour la même granulométrie, afin de prouver par
+construction que c'est bien `kgParGranulometrie` qui est lu, jamais `sacsParGranulometrie`.
+
+**Leçon / Règle :**
+Une grandeur comparée à une autre grandeur d'unité différente, sans que rien ne le signale au niveau du
+type ou du nom de champ, est l'échec silencieux canonique de ce module (même famille qu'ERR-161 —
+« deux arrondis voisins pour deux grandeurs voisines » — et que l'homonymie `sacsParTonne` de l'ADR-053
+§11). Quand un module calcule une même quantité sous deux représentations légitimes (ici : sacs pour
+l'achat, kg pour le besoin brut), **exposer les deux sous des noms distincts et sans ambiguïté**
+(`sacsParGranulometrie` / `kgParGranulometrie`) plutôt qu'un seul champ que chaque consommateur doit
+deviner correctement. Un test qui construit des valeurs volontairement différentes entre les deux
+représentations, pour la même clé, est le moyen le plus direct de prouver qu'un consommateur donné lit la
+bonne grandeur. Cette entrée a été rédigée rétroactivement (signalée par l'agent d'implémentation du
+commit `45e8e57`, oubliée sur le moment) — rappel que « corriger le bug » et « ficher la leçon » sont deux
+actions distinctes, la seconde n'est pas automatique.
+
+**Références :** ERR-161, ERR-171, ERR-179, ADR-053 §11, §15, commit `45e8e57`
+
+---
+
+### ERR-184 — Deux implémentations d'une même normalisation dans deux langages divergent par construction : « bit-exact sur l'alphabet français » n'est pas « bit-exact »
+**Sprint :** PR3-ter, story A.4 (correction structurelle du mapping `POSTE_PREVISION`) | **Date :** 2026-08-05
+**Sévérité :** Basse (divergence documentée, non atteinte par les données réelles)
+**Fichier(s) :** `src/lib/previsions/sluggifier-poste.ts` (`sluggifierLibellePoste`, NFD), `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql` (backfill SQL, `translate()` + table d'accents FR), `src/lib/previsions/__tests__/sluggifier-poste-parite-sql.test.ts` (36 tests)
+
+**Symptôme :**
+Le test de parité automatisé entre le slug calculé par la migration SQL (backfill, `translate()` avec
+une table d'accents FR en dur) et le slug calculé par `sluggifierLibellePoste` (TypeScript, normalisation
+Unicode NFD) révèle une divergence sur deux familles de caractères : `Ø`/`ø` (non décomposés par NFD —
+ce ne sont pas des caractères accentués composés, donc NFD ne les affecte pas, alors que la table SQL les
+mappe explicitement vers `o`) et les diacritiques d'Europe centrale/Baltique (`ą ć ń ś ź ż ș ț`, absents
+de la table d'accents FR de la migration).
+
+**Cause racine :**
+Deux implémentations indépendantes d'une même règle de normalisation (« transformer un libellé en slug
+stable »), écrites dans deux langages différents pour deux besoins différents (une migration SQL
+one-shot de backfill vs une fonction TypeScript appelée à chaque écriture), n'ont aucune garantie
+structurelle de rester alignées au-delà du périmètre explicitement testé. NFD (Unicode) et une table de
+correspondance écrite à la main ne sont pas la même opération : elles coïncident sur l'alphabet français
+parce que ce périmètre a été pensé au moment d'écrire la table, pas parce que les deux méthodes sont
+équivalentes par construction.
+
+**Fix :**
+Aucun changement de code — la divergence n'est pas atteinte par les données réelles du site (alphabet
+français uniquement). Un test de parité automatisé (36 cas) borne explicitement le périmètre garanti
+(alphabet français standard) et documente la divergence connue (`Ø`/`ø`, diacritiques centre-européens/
+baltes) plutôt que de la laisser latente et non testée.
+
+**Leçon / Règle :**
+Quand une même transformation doit être reproduite dans deux langages (typiquement : une migration SQL
+de backfill qui doit produire le même résultat qu'une fonction applicative appelée ensuite en continu),
+soit centraliser la logique dans un point de vérité unique (ex. calculer le slug applicatif puis
+l'écrire tel quel en base plutôt que de le recalculer en SQL), soit écrire un test de parité explicite
+qui énumère le périmètre de caractères réellement garanti — jamais supposer une équivalence non testée.
+« Bit-exact sur l'alphabet français » est une garantie utile et suffisante ici, mais elle doit être
+énoncée avec son périmètre, pas généralisée en « bit-exact » tout court.
+
+**Références :** ERR-171, ERR-179, ADR-053 §16.3, `docs/analysis/pre-analysis-story-A4-mapping-poste-prevision.md`, `docs/tests/rapport-story-A4-mapping-poste-prevision.md`
+
+---
+
+### ERR-183 — Une référence sans FK entre deux entités de scopes différents (site ↔ scénario) est une bombe à retardement silencieuse, même quand le mapping lui-même est correctement site-scopé
+**Sprint :** PR3-ter, story A.4 (correction structurelle du mapping `POSTE_PREVISION`) | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/schema.prisma` (`MappingRapprochement`, `PosteReferentiel` nouveau, `PostePrevision.posteReferentielId`), `prisma/migrations/20260805120000_add_poste_referentiel/migration.sql`, `src/lib/queries/previsions-rapprochement.ts`, `src/lib/queries/previsions-mapping-orphelins.ts`
+
+**Symptôme :**
+`MappingRapprochement` est **site-scopé** (`@@unique([siteId, version, sourceType, sourceCle])`, aucune
+FK Prisma sur `cibleId`), mais pour la cible `POSTE_PREVISION`, `cibleId` stockait un `PostePrevision.id`
+— une entité **scénario-scopée** (`onDelete: Cascade` depuis `ScenarioPrevision`, `libelle` en texte
+libre, aucune clé métier stable). Deux scopes incompatibles reliés par une jointure molle sans contrainte
+d'intégrité : tout nouveau scénario orphelinait l'intégralité des mappings `POSTE_PREVISION` du site
+(les ids `PostePrevision` sont recréés à chaque scénario) ; la suppression d'un scénario laissait des
+`MappingRapprochement` pointant vers un id mort, sans que la base ne puisse l'empêcher (pas de FK à
+violer). `ALIMENT_PREVISION` échappait au même défaut structurel uniquement parce qu'il avait déjà été
+corrigé en story A.3 par résolution via une clé naturelle (`tailleGranule`) — la cause racine, elle,
+était identique et documentée comme report assumé (ERR-180).
+
+**Cause racine :**
+`cibleId` référence, pour `POSTE_PREVISION`, une entité dont le cycle de vie (créé/détruit avec un
+scénario) est plus court et plus granulaire que celui de l'entité qui le porte (`MappingRapprochement`,
+qui survit à plusieurs scénarios successifs du même site, ADR-053 §3.9). Une chaîne littérale sans
+contrainte de clé étrangère ne peut pas signaler cette incompatibilité de scope au moment où elle se
+produit — elle se manifeste uniquement plus tard, en lecture, sous forme de montant disparu.
+
+**Fix :**
+Nouveau modèle `PosteReferentiel`, **site-scopé** au même niveau que `MappingRapprochement`
+(`@@unique([siteId, code])`, `code` = slug stable dérivé du libellé). `PostePrevision.posteReferentielId`
+devient une FK NOT NULL `onDelete: Restrict` vers ce référentiel. `MappingRapprochement.cibleId` stocke
+désormais un `PosteReferentiel.id` — du **même scope** que le mapping qui le porte, jamais plus un id
+scénario-scopé. Migration en 4 étapes idempotente avec garde-fou de précondition intégré (`RAISE
+EXCEPTION` après backfill, avant `SET NOT NULL`, jamais dans un script préalable — R10). Get-or-create
+transactionnel avec retry déterministe borné sur collision `P2002` (R4).
+
+**Leçon / Règle :**
+Pour tout champ `xxxId` non contraint par une FK réelle, poser systématiquement la question : *l'entité
+pointée a-t-elle le même cycle de vie et le même scope que l'entité qui pointe ?* Si la réponse est non
+(ex. une entité site-scopée qui référence une entité scénario-scopée, ou plus généralement une entité
+« longue durée » qui référence une entité « courte durée »), deux solutions seulement sont valables : (1)
+une clé naturelle stable qui survit au changement de scope (ex. `tailleGranule`, story A.3), ou (2) une
+entité pivot du bon scope, contrainte par une vraie FK (ex. `PosteReferentiel`, cette story). Une
+jointure molle entre deux scopes différents ne produit aucune erreur immédiate — elle produit un montant
+qui disparaît en silence, des mois plus tard, sans transiter par aucun état nommé. Cette entrée rattache
+explicitement le défaut à la famille ERR-171 (grandeur jamais ajoutée, décaissement disparu) / ERR-179
+(quatrième état invisible d'une jointure molle site/scénario) : c'est la même famille d'échec silencieux
+du module Prévisions, cette fois traitée par correction structurelle plutôt que par filet de détection
+seul.
+
+**Références :** ERR-171, ERR-179, ERR-180, ADR-053 §16, `docs/analysis/pre-analysis-story-A4-mapping-poste-prevision.md`, `docs/tests/rapport-story-A4-mapping-poste-prevision.md`, `docs/reviews/review-story-A4-mapping-poste-prevision.md`
+
+---
+
 ### ERR-182 — Une falsification à 0 test est acceptable quand la garantie est prouvée à la couche où la logique existe réellement, pas à une couche passe-plat
 **Sprint :** PR3-ter (Réserve Mineure #5 de la review, mesuré dans le rapport de falsification) | **Date :** 2026-08-05
 **Sévérité :** — (entrée de **pratique reproductible**, complète ERR-160)

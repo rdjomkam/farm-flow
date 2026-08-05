@@ -209,13 +209,13 @@ describe("MappingFormDialog — remplacement en bloc, jamais un POST partiel", (
     expect(await screen.findByText(/Scenario A/)).toBeInTheDocument();
   });
 
-  it("CORRECTIF C1 : une cible existante hors de ce scenario declenche un avertissement explicite (jamais un Select silencieusement vide)", async () => {
+  it("CORRECTIF C1/A.4 : pour POSTE_PREVISION, une cible referentiel introuvable/desactivee declenche l'avertissement DEDIE (jamais celui, scenario-scope, d'ALIMENT_PREVISION)", async () => {
     render(
       <MappingFormDialog
         scenarioId="s1"
         scenarioNom="Scenario A"
         source={{ sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ELECTRICITE" }}
-        existant={{ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-autre-scenario" }}
+        existant={{ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-referentiel-desactive-ou-absent" }}
         trigger={<button>Ouvrir</button>}
         onSaved={vi.fn()}
       />
@@ -223,10 +223,17 @@ describe("MappingFormDialog — remplacement en bloc, jamais un POST partiel", (
 
     openDialog();
 
-    // "poste-1" est la seule cible chargee (cf. beforeEach) — "poste-autre-scenario"
-    // n'y figure pas : le mapping vise donc un poste d'un AUTRE scenario.
-    expect(await screen.findByText(/n'appartient pas au scénario/)).toBeInTheDocument();
-    expect(screen.getByText("Cible actuelle hors de ce scénario")).toBeInTheDocument();
+    // "poste-1" est la seule entree PosteReferentiel chargee (cf. beforeEach,
+    // site-scopee depuis A.4) — "poste-referentiel-desactive-ou-absent" n'y
+    // figure pas : POSTE_PREVISION est desormais SITE-scope (ADR-053 §16),
+    // donc ce n'est plus "un autre scenario" (message reserve a
+    // ALIMENT_PREVISION, toujours scenario-scope) mais une entree referentiel
+    // introuvable/desactivee — message DEDIE, texte distinct.
+    expect(
+      await screen.findByText(/ne correspond à aucune entrée active du référentiel des postes du site/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/n'appartient pas au scénario/)).not.toBeInTheDocument();
+    expect(screen.getByText("Cible actuelle indisponible")).toBeInTheDocument();
   });
 
   it("CORRECTIF C1 : une cible existante appartenant a CE scenario ne declenche PAS l'avertissement hors-scenario", async () => {
@@ -390,7 +397,7 @@ describe("MappingFormDialog — Sprint PR3-ter story A.2 : format compose ALIMEN
     );
 
     openDialog();
-    expect(await screen.findByText("Cible actuelle hors de ce scénario")).toBeInTheDocument();
+    expect(await screen.findByText("Cible actuelle indisponible")).toBeInTheDocument();
     expect(screen.getByText(/n'appartient pas au scénario/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
@@ -415,7 +422,7 @@ describe("MappingFormDialog — Sprint PR3-ter story A.2 : format compose ALIMEN
     );
 
     openDialog();
-    await screen.findByText("Cible actuelle hors de ce scénario");
+    await screen.findByText("Cible actuelle indisponible");
 
     const cibleIdTrigger = screen.getByRole("combobox", { name: /Cible précise/ });
     await user.click(cibleIdTrigger);

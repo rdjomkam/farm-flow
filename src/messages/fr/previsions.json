@@ -6,6 +6,10 @@
       "projectionUnavailable": "Calcul de la projection indisponible"
     }
   },
+  "cibleOrphelineBanner": {
+    "message": "{count, plural, one {# cible de mapping orpheline active pour ce site} other {# cibles de mapping orphelines actives pour ce site}} — le montant réel associé n'apparaît dans aucun total tant que le mapping n'est pas corrigé. Voir l'onglet Rapprochement → Mapping.",
+    "loadError": "Impossible de vérifier l'état du mapping de rapprochement pour ce scénario."
+  },
   "list": {
     "emptyTitle": "Aucun scénario de prévision",
     "emptyDescription": "Créez un scénario pour planifier vos vagues, vos aliments et votre trésorerie.",
@@ -812,7 +816,7 @@
     "mapping": {
       "scopeBanner": "Ce mapping s'applique à TOUT LE SITE, pas seulement à ce scénario ({scenario}) — il sert potentiellement plusieurs scénarios successifs du même site.",
       "loadError": "Impossible de charger le mapping de rapprochement.",
-      "cibleIntrouvable": "Cible introuvable dans ce scénario",
+      "cibleIntrouvable": "Cible introuvable",
       "cibleNonChargee": "Cible non chargée",
       "cibleOrpheline": "Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total",
       "versionSelectorLabel": "Version du mapping",
@@ -859,12 +863,14 @@
           "cibleId": {
             "label": "Cible précise",
             "placeholder": "Choisir…",
-            "empty": "Aucune option disponible dans ce scénario",
-            "horsScenario": "Cible actuelle hors de ce scénario"
+            "empty": "Aucune option disponible",
+            "horsScenario": "Cible actuelle indisponible"
           }
         },
         "scenarioWarning": "Cette liste est peuplée depuis le scénario « {scenario} ». Si ce scénario est archivé ou remplacé, ce mapping cessera de fonctionner correctement pour un nouveau scénario tant qu'il n'est pas remis à jour.",
         "cibleHorsScenarioWarning": "La cible actuelle de ce mapping n'appartient pas au scénario « {scenario} » — elle a été enregistrée pour un autre scénario. Choisir une nouvelle cible ci-dessous remplacera cette cible existante.",
+        "siteScopedNote": "Cette liste provient du référentiel des postes du site — stable d'un scénario à l'autre, elle ne dépend plus du scénario « {scenario} » (ADR-053 §16).",
+        "cibleReferentielIntrouvableWarning": "La cible actuelle de ce mapping ne correspond à aucune entrée active du référentiel des postes du site — elle a peut-être été désactivée. Choisir une nouvelle cible ci-dessous remplacera cette cible existante.",
         "versioningNote": "Enregistrer ce formulaire crée une nouvelle version du mapping : l'historique des mois déjà clôturés n'est jamais réécrit, seuls les mois encore ouverts suivront la nouvelle version.",
         "errors": {
           "cibleIdRequired": "Choisissez une cible précise pour ce type."

@@ -6,6 +6,10 @@
       "projectionUnavailable": "Projection calculation unavailable"
     }
   },
+  "cibleOrphelineBanner": {
+    "message": "{count, plural, one {# orphaned mapping target active for this site} other {# orphaned mapping targets active for this site}} — the associated actual amount is missing from every total until the mapping is fixed. See the Reconciliation → Mapping tab.",
+    "loadError": "Unable to check the reconciliation mapping status for this scenario."
+  },
   "list": {
     "emptyTitle": "No forecast scenario",
     "emptyDescription": "Create a scenario to plan your batches, feed and cash flow.",
@@ -812,7 +816,7 @@
     "mapping": {
       "scopeBanner": "This mapping applies to the WHOLE SITE, not just this scenario ({scenario}) — it potentially serves several successive scenarios of the same site.",
       "loadError": "Unable to load the reconciliation mapping.",
-      "cibleIntrouvable": "Target not found in this scenario",
+      "cibleIntrouvable": "Target not found",
       "cibleNonChargee": "Target not loaded",
       "cibleOrpheline": "Target not found in the active plan — the associated actual amount is missing from all totals",
       "versionSelectorLabel": "Mapping version",
@@ -859,12 +863,14 @@
           "cibleId": {
             "label": "Precise target",
             "placeholder": "Choose…",
-            "empty": "No option available in this scenario",
-            "horsScenario": "Current target outside this scenario"
+            "empty": "No option available",
+            "horsScenario": "Current target unavailable"
           }
         },
         "scenarioWarning": "This list is populated from the scenario \"{scenario}\". If this scenario is archived or replaced, this mapping will stop working correctly for a new scenario until it is updated.",
         "cibleHorsScenarioWarning": "The current target of this mapping does not belong to the scenario \"{scenario}\" — it was saved for another scenario. Choosing a new target below will replace this existing target.",
+        "siteScopedNote": "This list comes from the site's reference table of postes — stable across scenarios, it no longer depends on the scenario \"{scenario}\" (ADR-053 §16).",
+        "cibleReferentielIntrouvableWarning": "The current target of this mapping does not match any active entry in the site's reference table of postes — it may have been deactivated. Choosing a new target below will replace this existing target.",
         "versioningNote": "Saving this form creates a new mapping version: the history of already-closed months is never rewritten, only the still-open months will follow the new version.",
         "errors": {
           "cibleIdRequired": "Choose a precise target for this type."
