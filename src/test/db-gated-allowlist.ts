@@ -163,6 +163,21 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
     adr: "ADR-053",
   },
   {
+    file: "src/lib/queries/__tests__/previsions-tresorerie-trois-series-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres l'assemblage de la vue trésorerie à 3 séries " +
+      "(ADR-053 §6.5/§15.1(b)/§15.2, Sprint PR3-ter story B.3) : le GEL du BUDGET INITIAL " +
+      "dans SnapshotBudgetInitial résiste réellement à une édition post-activation d'une " +
+      "ChargeMensuellePrevue en place (transaction d'activation déjà écrite en base), la " +
+      "REPRÉVISION GLISSANTE bascule sur le REEL uniquement pour un mois réellement " +
+      "CLÔTURÉ (ClotureMois créé en base, contrainte @@unique([scenarioId, moisAbsolu])) " +
+      "et le netting du RÉEL agrège de vraies lignes Depense via $queryRaw/GROUP BY — un " +
+      "mock JS ne peut ni exercer une vraie transaction d'activation atomique, ni une " +
+      "vraie contrainte de clôture, ni un vrai GROUP BY SQL.",
+    adr: "ADR-053",
+  },
+  {
     file: "src/lib/queries/__tests__/previsions-cloture-integration.test.ts",
     linePattern: "describe.runIf(requireDatabaseUrl())(",
     justification:
@@ -188,6 +203,36 @@ export const DB_GATED_ALLOWLIST: DbGatedAllowlistEntry[] = [
       "aucun mouvement ressort quand même avec des totaux à 0 (jamais absente), et le " +
       "filtre siteId (R8) isole deux sites — un mock JS ne peut prouver qu'un vrai GROUP " +
       "BY/SUM Postgres agrège correctement plusieurs lignes réelles pour une même vague.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-rapprochement-aliment-scope-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres la correction structurelle de la portée du " +
+      "mapping ALIMENT_PREVISION (Sprint PR3-ter, story A.3, ADR-053 §3.9) : deux " +
+      "ScenarioPrevision réels du même site, chacun avec son propre AlimentPrevision " +
+      "auto-copié (contrainte réelle @@unique([scenarioId, tailleGranule]), " +
+      "copierAlimentsPrevisionDepuisProduits exécuté en vraie transaction Prisma à la " +
+      "création du scénario) ; un mapping composé avec l'id du scénario A doit se résoudre " +
+      "dynamiquement, à la lecture, vers l'AlimentPrevision du scénario B — reproduisant " +
+      "exactement la disparition silencieuse de montant prouvée par la pré-analyse — un mock " +
+      "JS ne peut ni exercer la contrainte d'unicité réelle par scénario, ni prouver que la " +
+      "copie automatique à la création produit deux id distincts pour la même tailleGranule.",
+    adr: "ADR-053",
+  },
+  {
+    file: "src/lib/queries/__tests__/previsions-mapping-orphelins-integration.test.ts",
+    linePattern: "describe.runIf(requireDatabaseUrl())(",
+    justification:
+      "Prouve contre un vrai schéma Postgres le filet de sécurité non négociable de " +
+      "détection de cible orpheline (Sprint PR3-ter, story A.1, ADR-053 §3.9) : un mapping " +
+      "actif réel, en base, ciblant un PostePrevision.id du scénario A, doit être signalé " +
+      "cibleOrpheline=true quand évalué contre un second ScenarioPrevision réel du même " +
+      "site qui ne porte pas ce poste (chargerScenarioPourMoteur exécute 7 requêtes Prisma " +
+      "réelles), et cibleOrpheline=false contre le scénario d'origine — un mock JS ne peut " +
+      "prouver que la résolution fonctionne contre des données cross-scénario réellement " +
+      "persistées.",
     adr: "ADR-053",
   },
 ];

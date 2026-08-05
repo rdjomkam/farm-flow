@@ -45,6 +45,12 @@ import { queryKeys } from "@/lib/query-keys";
 // Helpers
 // ---------------------------------------------------------------------------
 
+// ERR-176 : la liste des categories proposees dans ce dialog exclut
+// volontairement ALIMENT (une depense de vente n'est jamais un achat
+// d'aliment) — c'est un sous-ensemble deliberement restreint, pas un
+// referentiel de libelles parallele. Les libelles eux-memes viennent du
+// referentiel i18n partage `depenses.categories.*` (namespace "depenses",
+// deja accentue), jamais d'une table codee en dur locale a ce composant.
 const CATEGORIES: CategorieDepense[] = [
   CategorieDepense.TRANSPORT,
   CategorieDepense.INTRANT,
@@ -58,21 +64,6 @@ const CATEGORIES: CategorieDepense[] = [
   CategorieDepense.INVESTISSEMENT,
   CategorieDepense.AUTRE,
 ];
-
-const CATEGORIE_LABELS: Record<CategorieDepense, string> = {
-  [CategorieDepense.ALIMENT]: "Alimentation",
-  [CategorieDepense.INTRANT]: "Intrants",
-  [CategorieDepense.EQUIPEMENT]: "Equipements",
-  [CategorieDepense.ELECTRICITE]: "Electricite",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaire",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Veterinaire",
-  [CategorieDepense.REPARATION]: "Reparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
-};
 
 // ---------------------------------------------------------------------------
 // Props
@@ -108,6 +99,10 @@ export function DepenseVenteDialog({
 }: DepenseVenteDialogProps) {
   const isEdit = !!existingDepense;
   const t = useTranslations("ventes.depenses");
+  // ERR-176 : les libelles de categorie viennent du referentiel partage
+  // "depenses" (namespace distinct de "ventes.depenses"), jamais d'une
+  // table locale codee en dur.
+  const tCategories = useTranslations("depenses");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -289,7 +284,7 @@ export function DepenseVenteDialog({
               <SelectContent>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {CATEGORIE_LABELS[cat]}
+                    {tCategories(`categories.${cat}` as Parameters<typeof tCategories>[0])}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -30,6 +30,7 @@ import { Permission, StatutVaguePrevue, StatutScenarioPrevision } from "@/types"
 import type { VaguePrevueListItemDTO, ScenarioPrevisionDetailDTO } from "@/components/previsions/api-types";
 import type { ProjectionScenarioDTO } from "@/components/previsions/projection-types";
 import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
+import type { TresorerieTroisSeriesDTO } from "@/components/previsions/tresorerie-types";
 import frPrevisions from "@/messages/fr/previsions.json";
 import frCommon from "@/messages/fr/common.json";
 import frStock from "@/messages/fr/stock.json";
@@ -111,12 +112,25 @@ const RAPPROCHEMENT_VIDE: RapprochementScenarioDTO = {
   dateDebutPlan: "2026-09-01T00:00:00.000Z",
   moisDisponibles: [],
   lignesParMois: {},
-  totalMoisParMois: {},
+  totalMoisMonetaireParMois: {},
+  totalMoisQuantiteParMois: {},
   nonRapprocheParMois: {},
-  cumuleGlobalParMois: {},
+  cumuleGlobalMonetaireParMois: {},
+  cumuleGlobalQuantiteParMois: {},
   cumuleParPosteParMois: {},
-  topEcartsParMois: {},
+  topEcartsMonetaireParMois: {},
+  topEcartsQuantiteParMois: {},
   vagues: [],
+  calculeLe: "2026-09-01T00:00:00.000Z",
+};
+
+const TRESORERIE_VIDE: TresorerieTroisSeriesDTO = {
+  scenarioId: "s1",
+  horizonMois: 0,
+  budgetInitialDisponible: false,
+  series: [],
+  reprevisionGlissante: [],
+  caveatSerieReelleIncomplete: true,
   calculeLe: "2026-09-01T00:00:00.000Z",
 };
 
@@ -164,6 +178,7 @@ const baseProps = {
   permissions: [Permission.PREVISIONS_GERER, Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER],
   projection: PROJECTION_VIDE,
   rapprochement: RAPPROCHEMENT_VIDE,
+  tresorerie: TRESORERIE_VIDE,
   erreurProjection: null,
 };
 

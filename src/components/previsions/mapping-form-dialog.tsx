@@ -35,6 +35,21 @@
  * `scenarioWarning` (celui-ci prevu pour la SAISIE future, celui-la pour
  * l'ETAT actuel du formulaire) + une option de repli desactivee dans la
  * liste.
+ *
+ * Sprint PR3-ter, story A.2 : le `cibleId` d'un mapping `ALIMENT_PREVISION`
+ * porte desormais le format compose `tailleGranule::alimentPrevisionId`
+ * (story A.3, `src/lib/queries/previsions-rapprochement.ts`). Ce dialog
+ * garde `cibleId` (etat React) comme la valeur BRUTE du `Select`
+ * (l'`AlimentPrevision.id` du scenario COURANT, jamais compose) — la
+ * composition n'intervient qu'AU SUBMIT (`composeCibleAlimentPrevisionClient`).
+ * En edition, `existant.cibleId` (compose, potentiellement d'un AUTRE
+ * scenario) est resolu DYNAMIQUEMENT vers l'`AlimentPrevision` du scenario
+ * COURANT via sa `tailleGranule` (cle metier stable, jamais l'id fige) des
+ * que les cibles sont chargees. Si aucune correspondance n'existe dans le
+ * scenario courant (mapping ORPHELIN, story A.1), `cibleId` bascule sur le
+ * sentinel `CIBLE_ALIMENT_ORPHELINE_SENTINEL` — jamais une chaine composee
+ * brute passee tel quel a `<Select value=...>` (qui ne correspondrait a
+ * aucune `SelectItem`, reproduisant ERR-177 pour un cas different).
  */
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -59,14 +74,19 @@ import { CibleRapprochement, SourceRapprochement } from "@/types";
 import type { MappingRapprochement } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import { useDialogCloseGuard } from "@/hooks/use-dialog-close-guard";
-import { libelleSourceCle, libelleSourceType } from "@/components/previsions/mapping-rapprochement-helpers";
+import {
+  libelleSourceCle,
+  libelleSourceType,
+  composeCibleAlimentPrevisionClient,
+  extraireTailleGranuleDeCibleId,
+} from "@/components/previsions/mapping-rapprochement-helpers";
 import type { PostePrevisionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
 
 interface MappingFormDialogProps {
   scenarioId: string;
   scenarioNom: string;
   source: { sourceType: SourceRapprochement; sourceCle: string };
-  /** Ligne existante — presence => mode edition (source affichee mais non modifiable). */
+  /** Ligne existante — presence => mode edition (source affichee mais non modifiable). `cibleId` deja au format compose pour ALIMENT_PREVISION (story A.3). */
   existant?: { cibleType: CibleRapprochement; cibleId: string | null };
   trigger: React.ReactNode;
   /** Le mapping actif COMPLET renvoye par le POST (nouvelle version) — le parent remplace son etat avec cette valeur, ne recalcule rien. */
@@ -74,6 +94,18 @@ interface MappingFormDialogProps {
 }
 
 const CIBLES_AVEC_ID = [CibleRapprochement.POSTE_PREVISION, CibleRapprochement.ALIMENT_PREVISION];
+
+/**
+ * Valeur de repli du `Select` (story A.2) quand la cible ORIGINALE d'un
+ * mapping `ALIMENT_PREVISION` en edition ne correspond a AUCUN
+ * `AlimentPrevision` du scenario COURANT (mapping ORPHELIN, story A.1) — sa
+ * `tailleGranule` a disparu du scenario. Jamais l'`AlimentPrevision.id` brut
+ * d'un autre scenario (ne correspondrait a aucune `SelectItem` reelle), et
+ * jamais une chaine vide (retomberait sur le placeholder Radix, reproduisant
+ * ERR-177). Valeur intentionnellement improbable pour ne jamais collisionner
+ * avec un vrai `AlimentPrevision.id` (cuid).
+ */
+const CIBLE_ALIMENT_ORPHELINE_SENTINEL = "__cible_aliment_orpheline__";
 
 export function MappingFormDialog({
   scenarioId,
@@ -89,9 +121,23 @@ export function MappingFormDialog({
   const tCommon = useTranslations("common");
   const { get, post } = usePrevisionsApi();
 
+  // Story A.2 : pour ALIMENT_PREVISION, `existant.cibleId` est un format
+  // COMPOSE (story A.3) — jamais utilisable directement comme valeur brute du
+  // `Select` (ne correspondrait a aucune `SelectItem`). L'etat initial part
+  // volontairement vide ; l'effet de resolution ci-dessous le peuple des que
+  // les cibles du scenario courant sont chargees.
+  function cibleIdInitiale(): string {
+    if (existant?.cibleType === CibleRapprochement.ALIMENT_PREVISION) return "";
+    return existant?.cibleId ?? "";
+  }
+
   const [open, setOpen] = useState(false);
   const [cibleType, setCibleType] = useState<CibleRapprochement>(existant?.cibleType ?? CibleRapprochement.NON_RAPPROCHE);
-  const [cibleId, setCibleId] = useState<string>(existant?.cibleId ?? "");
+  const [cibleId, setCibleId] = useState<string>(cibleIdInitiale);
+  // Story A.2 : garde d'execution unique de la resolution ALIMENT_PREVISION
+  // ci-dessous — evite de reecraser un choix utilisateur deja fait si l'effet
+  // se redeclenche (ex. `aliments` change de reference sans changer de valeur).
+  const [alimentInitialResolu, setAlimentInitialResolu] = useState(false);
   const [postes, setPostes] = useState<PostePrevisionDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D1 (contre-review PR3-bis) : `chargementCibles` n'est plus un
@@ -144,12 +190,49 @@ export function MappingFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, scenarioId]);
 
+  // Story A.2 : resolution DYNAMIQUE de la selection initiale ALIMENT_PREVISION
+  // par tailleGranule (jamais par l'id fige porte par le format compose,
+  // ADR-053 §3.9 amendement A.3) — miroir cote formulaire de
+  // `resoudreCibleCleDuScenarioCourant` (`previsions-mapping-orphelins.ts`).
+  // Ne s'execute qu'une fois par ouverture (garde `alimentInitialResolu`), et
+  // seulement si l'utilisateur n'a pas deja touche le formulaire.
+  useEffect(() => {
+    // `chargementCibles` vaut FAUX aussi bien quand le dialog est FERME
+    // (`open === false`, aucun chargement en cours par definition) que
+    // quand il est OUVERT et les cibles sont chargees — sans le garde
+    // explicite `!open` ci-dessous, cet effet resolvait au tout premier
+    // montage (avant meme la premiere ouverture), avec `aliments` encore a
+    // `[]`, posant a tort le sentinel orphelin et ne se redeclenchant plus
+    // jamais ensuite (garde `alimentInitialResolu` deja consommee).
+    if (!open || chargementCibles) return;
+    if (alimentInitialResolu) return;
+    if (touched) {
+      setAlimentInitialResolu(true);
+      return;
+    }
+    if (existant?.cibleType !== CibleRapprochement.ALIMENT_PREVISION || !existant?.cibleId) {
+      setAlimentInitialResolu(true);
+      return;
+    }
+    const tailleGranule = extraireTailleGranuleDeCibleId(existant.cibleId);
+    const trouve = tailleGranule ? aliments.find((a) => a.tailleGranule === tailleGranule) : undefined;
+    setCibleId(trouve ? trouve.id : CIBLE_ALIMENT_ORPHELINE_SENTINEL);
+    setAlimentInitialResolu(true);
+  }, [open, chargementCibles, aliments, existant, alimentInitialResolu, touched]);
+
   // CORRECTIF C1 : la cible ACTUELLE du formulaire (pas encore modifiee par
   // l'utilisateur) n'appartient a aucune des cibles chargees pour ce
   // scenario => elle appartient a un AUTRE scenario. Ne se declenche que
   // pour la valeur d'origine (`existant.cibleId`), jamais apres un choix
   // volontaire de l'utilisateur (une cible fraichement choisie est toujours
   // dans la liste puisqu'elle en est issue).
+  //
+  // Story A.2 : pour ALIMENT_PREVISION, `cibleId === existant.cibleId` ne
+  // marche plus (format compose vs id brut resolu, voir plus haut) — le
+  // sentinel `CIBLE_ALIMENT_ORPHELINE_SENTINEL` remplace cette comparaison :
+  // il n'est POSE par l'effet de resolution ci-dessus QUE si la resolution a
+  // echoue, jamais apres un choix utilisateur (`touched` interrompt l'effet
+  // avant qu'il ne pose le sentinel).
   const listePertinente =
     cibleType === CibleRapprochement.POSTE_PREVISION
       ? postes
@@ -159,10 +242,12 @@ export function MappingFormDialog({
   const cibleActuelleHorsScenario =
     exigeCibleId &&
     !chargementCibles &&
+    !touched &&
     !!existant?.cibleId &&
-    cibleId === existant.cibleId &&
     cibleType === existant.cibleType &&
-    !listePertinente.some((item) => item.id === cibleId);
+    (cibleType === CibleRapprochement.ALIMENT_PREVISION
+      ? cibleId === CIBLE_ALIMENT_ORPHELINE_SENTINEL
+      : cibleId === existant.cibleId && !listePertinente.some((item) => item.id === cibleId));
   // CORRECTIF C2 : cable la cle i18n `fields.cibleId.empty` (auparavant
   // morte) — distincte du cas ci-dessus, elle couvre l'absence totale
   // d'options pour ce `cibleType` dans ce scenario.
@@ -170,7 +255,8 @@ export function MappingFormDialog({
 
   function resetForm() {
     setCibleType(existant?.cibleType ?? CibleRapprochement.NON_RAPPROCHE);
-    setCibleId(existant?.cibleId ?? "");
+    setCibleId(cibleIdInitiale());
+    setAlimentInitialResolu(false);
     setError(null);
     setTouched(false);
   }
@@ -181,7 +267,10 @@ export function MappingFormDialog({
   }
 
   async function handleSubmit() {
-    if (exigeCibleId && !cibleId) {
+    // Story A.2 : le sentinel orphelin n'est jamais une selection valide —
+    // l'utilisateur DOIT choisir une cible reelle du scenario courant pour
+    // remplacer une cible orpheline, jamais la resoumettre telle quelle.
+    if (exigeCibleId && (!cibleId || cibleId === CIBLE_ALIMENT_ORPHELINE_SENTINEL)) {
       setError(t("rapprochementTab.mapping.form.errors.cibleIdRequired"));
       return;
     }
@@ -198,11 +287,33 @@ export function MappingFormDialog({
         return;
       }
 
+      // Story A.2/A.3 : ALIMENT_PREVISION compose desormais `tailleGranule::id`
+      // — jamais l'id brut du `Select`. `cibleId` (etat) reste TOUJOURS
+      // l'`AlimentPrevision.id` du scenario COURANT (jamais compose), la
+      // composition n'intervient qu'ici, au moment d'envoyer le payload.
+      let cibleIdAEnvoyer: string | null = null;
+      if (exigeCibleId) {
+        if (cibleType === CibleRapprochement.ALIMENT_PREVISION) {
+          const alimentSelectionne = aliments.find((a) => a.id === cibleId);
+          if (!alimentSelectionne) {
+            // Ne devrait jamais se produire (le Select ne propose que des
+            // options issues de `aliments`, et le sentinel est deja intercepte
+            // ci-dessus) — filet de securite explicite plutot qu'une exception
+            // non geree ou une composition avec une tailleGranule absente.
+            setError(t("rapprochementTab.mapping.form.errors.cibleIdRequired"));
+            return;
+          }
+          cibleIdAEnvoyer = composeCibleAlimentPrevisionClient(alimentSelectionne.tailleGranule, alimentSelectionne.id);
+        } else {
+          cibleIdAEnvoyer = cibleId;
+        }
+      }
+
       const nouvelleLigne = {
         sourceType: source.sourceType,
         sourceCle: source.sourceCle,
         cibleType,
-        cibleId: exigeCibleId ? cibleId : null,
+        cibleId: cibleIdAEnvoyer,
       };
 
       const lignes = mappingActuel.data.data

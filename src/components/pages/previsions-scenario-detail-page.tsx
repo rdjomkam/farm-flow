@@ -17,6 +17,8 @@ import { calculerProjectionScenario } from "@/lib/previsions/route-orchestration
 import { chargerRapprochementScenario } from "@/lib/queries/previsions-vue-rapprochement";
 import { construireRapprochementDTO } from "@/components/previsions/rapprochement-dto";
 import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
+import { getTresorerieTroisSeries } from "@/lib/queries/previsions-tresorerie-trois-series";
+import type { TresorerieTroisSeriesDTO } from "@/components/previsions/tresorerie-types";
 import type { Decimal } from "@/lib/previsions/decimal-config";
 import { prisma } from "@/lib/db";
 import {
@@ -112,16 +114,29 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     },
   };
 
+  const TRESORERIE_VIDE: TresorerieTroisSeriesDTO = {
+    scenarioId: id,
+    horizonMois: 0,
+    budgetInitialDisponible: false,
+    series: [],
+    reprevisionGlissante: [],
+    caveatSerieReelleIncomplete: true,
+    calculeLe: new Date().toISOString(),
+  };
+
   const RAPPROCHEMENT_VIDE: RapprochementScenarioDTO = {
     horizonMois: 0,
     dateDebutPlan: scenario.dateDebutPlan.toISOString(),
     moisDisponibles: [],
     lignesParMois: {},
-    totalMoisParMois: {},
+    totalMoisMonetaireParMois: {},
+    totalMoisQuantiteParMois: {},
     nonRapprocheParMois: {},
-    cumuleGlobalParMois: {},
+    cumuleGlobalMonetaireParMois: {},
+    cumuleGlobalQuantiteParMois: {},
     cumuleParPosteParMois: {},
-    topEcartsParMois: {},
+    topEcartsMonetaireParMois: {},
+    topEcartsQuantiteParMois: {},
     vagues: [],
     calculeLe: new Date().toISOString(),
   };
@@ -241,6 +256,44 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
         return { projection: PROJECTION_VIDE, erreurProjection: message, rapprochement: RAPPROCHEMENT_VIDE };
       }
     })();
+
+  /**
+   * Vue tresorerie a 3 series (Sprint PR3-ter, story B.5, ADR-053 §6.5) —
+   * meme discipline que le rapprochement ci-dessus : un echec de CE calcul
+   * specifique (ex. snapshot indisponible pour une raison inattendue) ne
+   * doit jamais invalider la projection ni le rapprochement deja calcules
+   * avec succes. `getTresorerieTroisSeries` est l'orchestrateur dedie
+   * (`src/lib/queries/previsions-tresorerie-trois-series.ts`, story B.2/B.3)
+   * — deja converti `Decimal -> number` ici, meme regle que `n()`/`nOrNull()`
+   * de la route `GET .../tresorerie`.
+   */
+  let tresorerie = TRESORERIE_VIDE;
+  try {
+    const resultatTresorerie = await getTresorerieTroisSeries(id, siteId);
+    tresorerie = {
+      scenarioId: resultatTresorerie.scenarioId,
+      horizonMois: resultatTresorerie.horizonMois,
+      budgetInitialDisponible: resultatTresorerie.budgetInitialDisponible,
+      series: resultatTresorerie.series.map((m) => ({
+        moisAbsolu: m.moisAbsolu,
+        budgetInitialFCFA: m.budgetInitialFCFA === null ? null : n(m.budgetInitialFCFA),
+        previsionActualiseeFCFA: n(m.previsionActualiseeFCFA),
+        reelFCFA: n(m.reelFCFA),
+        caveatApportsReelsNonModelises: m.caveatApportsReelsNonModelises,
+      })),
+      reprevisionGlissante: resultatTresorerie.reprevisionGlissante.map((m) => ({
+        moisAbsolu: m.moisAbsolu,
+        source: m.source,
+        soldeMensuelFCFA: n(m.soldeMensuelFCFA),
+        soldeCumuleFCFA: n(m.soldeCumuleFCFA),
+        caveatSerieReelleIncomplete: m.caveatSerieReelleIncomplete,
+      })),
+      caveatSerieReelleIncomplete: resultatTresorerie.caveatSerieReelleIncomplete,
+      calculeLe: resultatTresorerie.calculeLe.toISOString(),
+    };
+  } catch {
+    // tresorerie reste TRESORERIE_VIDE — l'onglet Tresorerie gere son propre etat vide.
+  }
 
   const scenarioDetail: ScenarioPrevisionDetailDTO = {
     id: scenario.id,
@@ -419,6 +472,7 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
           projection={projection}
           erreurProjection={erreurProjection}
           rapprochement={rapprochement}
+          tresorerie={tresorerie}
         />
       </div>
     </>

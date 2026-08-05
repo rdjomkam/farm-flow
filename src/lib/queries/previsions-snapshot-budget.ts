@@ -42,7 +42,15 @@ const CATEGORIE_ALEVINS = "ALEVINS";
 const CATEGORIE_INVESTISSEMENT = "INVESTISSEMENT";
 const CATEGORIE_APPORT_CAPITAL = "APPORT_CAPITAL";
 const CATEGORIE_REVENU_VENTE = "REVENU_VENTE";
-const CATEGORIE_TRESORERIE_SOLDE = "TRESORERIE_SOLDE";
+/**
+ * Categorie portant le solde de tresorerie CUMULE projete a l'activation
+ * (posteId = null) — c'est la ligne que consomme la vue tresorerie a 3
+ * series (Sprint PR3-ter, story B.3, ADR-053 §15.2) comme serie BUDGET
+ * INITIAL. EXPORTEE pour eviter qu'un second module ne redeclare ce
+ * litteral en dur (une seule source de verite pour ce nom de categorie) —
+ * voir `src/lib/queries/previsions-tresorerie-trois-series.ts`.
+ */
+export const CATEGORIE_TRESORERIE_SOLDE = "TRESORERIE_SOLDE";
 
 interface LigneSnapshotACreer {
   moisAbsolu: number;

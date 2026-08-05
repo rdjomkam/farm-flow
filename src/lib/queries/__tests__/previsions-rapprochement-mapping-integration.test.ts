@@ -21,6 +21,7 @@ import {
   creerVersionMapping,
   getMappingActif,
   getMappingParVersion,
+  getVersionsDisponibles,
 } from "@/lib/queries/previsions-rapprochement-mapping";
 import { SourceRapprochement, CibleRapprochement } from "@/types";
 
@@ -123,6 +124,57 @@ describe.runIf(requireDatabaseUrl())(
           const actif = await getMappingActif(siteId);
           expect(actif).toHaveLength(2);
           expect(actif.every((l) => l.version === 2)).toBe(true);
+        } finally {
+          await cleanup(client, siteId, userId);
+        }
+      },
+      15000
+    );
+
+    it(
+      "getVersionsDisponibles (story C.3, PR3-ter) : renvoie TOUTES les versions creees, decroissant, jamais seulement la version active",
+      async () => {
+        if (!dbAvailable || !client) {
+          console.warn("[PR3ter.C3] DB de dev injoignable — test ignore (dbAvailable=false).");
+          return;
+        }
+        const { siteId, userId } = await seedSite(client, "versions-disponibles");
+        try {
+          // Aucune version creee -> tableau vide, jamais une erreur.
+          expect(await getVersionsDisponibles(siteId)).toEqual([]);
+
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "ALIMENT",
+              cibleType: CibleRapprochement.NON_RAPPROCHE,
+              cibleId: null,
+            },
+          ]);
+          expect(await getVersionsDisponibles(siteId)).toEqual([1]);
+
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "ALIMENT",
+              cibleType: CibleRapprochement.POSTE_PREVISION,
+              cibleId: "poste-fictif",
+            },
+          ]);
+          await creerVersionMapping(siteId, [
+            {
+              sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+              sourceCle: "ALIMENT",
+              cibleType: CibleRapprochement.NON_RAPPROCHE,
+              cibleId: null,
+            },
+          ]);
+
+          // Les TROIS versions restent listees (1 desactivee, 2 desactivee, 3
+          // active) — jamais seulement la version active courante, sinon la
+          // navigation "consulter une version passee" (story C.3) serait
+          // impossible.
+          expect(await getVersionsDisponibles(siteId)).toEqual([3, 2, 1]);
         } finally {
           await cleanup(client, siteId, userId);
         }

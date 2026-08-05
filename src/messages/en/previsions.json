@@ -113,7 +113,8 @@
     "charges": "Expenses",
     "journal": "Journal",
     "apports": "Contributions",
-    "rapprochement": "Reconciliation"
+    "rapprochement": "Reconciliation",
+    "tresorerie": "Cash flow"
   },
   "parametresTab": {
     "sectionTitle": "Scenario parameters",
@@ -773,7 +774,8 @@
     "sansSourceReelle": "No actual data source available for this line",
     "nonBudgete": "Unbudgeted expense",
     "nonApplicable": "N/A",
-    "totalRow": "Month total",
+    "totalRowMonetaire": "Month total — amounts (FCFA)",
+    "totalRowQuantite": "Month total — quantities (t)",
     "vueMensuelle": {
       "title": "Monthly view — {mois}",
       "description": "One row per line item: planned amount, actual amount, and variance for the selected month."
@@ -781,7 +783,8 @@
     "vueCumulee": {
       "title": "Cumulative view — from the start of the horizon through {mois}",
       "description": "Cumulative total from the start of the horizon through the selected month, inclusive.",
-      "totalGlobal": "Cumulative total",
+      "totalGlobalMonetaire": "Cumulative total — amounts (FCFA)",
+      "totalGlobalQuantite": "Cumulative total — quantities (t)",
       "parPoste": "Detail by line item"
     },
     "nonRapproche": {
@@ -800,8 +803,10 @@
       "indisponible": "Unavailable"
     },
     "topEcarts": {
-      "title": "Top 5 variances — {mois}",
-      "description": "The 5 line items explaining the largest variance (absolute value) of the selected month.",
+      "titleMonetaire": "Top 5 variances — amounts FCFA — {mois}",
+      "descriptionMonetaire": "The 5 FCFA line items (expenses/income) explaining the largest variance (absolute value) of the selected month — never mixed with quantity variances.",
+      "titleQuantite": "Top 5 variances — quantities (t) — {mois}",
+      "descriptionQuantite": "The 5 line items in tonnes (feed granulometry, sold tonnage) explaining the largest variance (absolute value) of the selected month — ranked separately from FCFA variances.",
       "empty": "No measurable variance this month."
     },
     "mapping": {
@@ -809,6 +814,15 @@
       "loadError": "Unable to load the reconciliation mapping.",
       "cibleIntrouvable": "Target not found in this scenario",
       "cibleNonChargee": "Target not loaded",
+      "cibleOrpheline": "Target not found in the active plan — the associated actual amount is missing from all totals",
+      "versionSelectorLabel": "Mapping version",
+      "versionActiveOption": "Active version (v{version})",
+      "versionHistoriqueOption": "Version {version} (historical)",
+      "consultationHistoriqueBanner": "You are viewing version {version} (historical) — read-only display. The active version is {versionActive}. Editing a mapping always creates a new version: the history of already-closed variances is never rewritten.",
+      "mappingHistorique": {
+        "title": "Mapping — version viewed",
+        "description": "Version {version} — frozen snapshot, read-only. This version is no longer used for open months."
+      },
       "sourceTypes": {
         "DEPENSE_CATEGORIE": "Expense category",
         "PRODUIT_CATEGORIE": "Product category",
@@ -859,6 +873,35 @@
         "submitEdit": "Save",
         "submitting": "Saving…"
       }
+    }
+  },
+  "tresorerieTroisSeriesChart": {
+    "noData": "No data to project for this scenario.",
+    "ariaLabel": "Three-series cash flow chart: initial budget, updated forecast and actual",
+    "series": {
+      "budgetInitial": "Initial budget",
+      "previsionActualisee": "Updated forecast",
+      "reprevision": "Rolling reforecast",
+      "reel": "Actual",
+      "bandeEcart": "Forecast / actual gap"
+    }
+  },
+  "tresorerieTab": {
+    "freshnessNote": "The \"actual\" figures shown reflect the state of the data at the time of this view ({date}), not a frozen snapshot of a past import.",
+    "noData": "No cash flow data available for this scenario (no month in the horizon, or the projection could not be computed).",
+    "reprevisionToggle": "Reforecast",
+    "caveatReel": {
+      "title": "Actual cash flow is structurally incomplete",
+      "description": "No contribution, subsidy or loan actually received is currently tracked in the application's actual data — only actual expenses and sales feed the \"Actual\" curve. As soon as a contribution has actually been received, this curve is therefore biased downward compared to actual cash flow. Planned contributions remain visible on the \"Initial budget\" and \"Updated forecast\" curves."
+    },
+    "budgetInitialIndisponible": {
+      "title": "No initial budget frozen for this scenario",
+      "description": "This scenario has never been activated: no initial budget was frozen at that time. The \"Initial budget\" curve is therefore not shown — this is not a zero initial budget, it is the absence of a freeze."
+    },
+    "chart": {
+      "title": "Cash flow — initial budget, updated forecast and actual",
+      "legend": "Red zone: projected negative cash flow (financing need). \"Reforecast\" toggle: replaces the \"Updated forecast\" curve with the mixed trajectory of actual (closed months) / forecast (upcoming months).",
+      "legendReprevision": "Red zone: negative cash flow on the rolling reforecast (actual substituted on closed months, updated forecast on remaining months)."
     }
   }
 }

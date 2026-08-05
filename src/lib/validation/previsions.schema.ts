@@ -385,6 +385,39 @@ export type CreateApportCapitalInput = z.infer<typeof createApportCapitalSchema>
 // ---------------------------------------------------------------------------
 
 /**
+ * Separateur du couple compose `cibleId` d'un mapping `ALIMENT_PREVISION`
+ * (Sprint PR3-ter, story A.3 — cf. `src/lib/queries/previsions-
+ * rapprochement.ts`, section "0bis", SEULE source de verite du format :
+ * `${tailleGranule}::${alimentPrevisionId}`). Duplique ici volontairement
+ * (constante litterale, pas un import de la couche queries dans la couche
+ * validation) pour eviter un couplage validation -> queries -> prisma —
+ * garde par un test de non-regression qui verifie l'egalite des deux
+ * constantes.
+ */
+const SEPARATEUR_CIBLE_ALIMENT_PREVISION = "::";
+
+/**
+ * `cibleId` d'un mapping `ALIMENT_PREVISION` doit desormais porter le couple
+ * compose `tailleGranule::alimentPrevisionId` (Sprint PR3-ter, story A.3) —
+ * la tailleGranule (cle metier stable inter-scenario, `@@unique([scenarioId,
+ * tailleGranule])`) est la SEULE partie utilisee a la resolution
+ * (`src/lib/queries/previsions-rapprochement.ts`, `versMappingActif`) ;
+ * l'id documente l'AlimentPrevision d'origine, jamais relu pour la
+ * resolution. Valide la NATURE du `cibleId` (format + tailleGranule connue),
+ * pas seulement sa presence — un `cibleId` qui ne serait qu'un cuid brut
+ * (ancien format, pre-A.3) est desormais REJETE explicitement plutot que
+ * silencieusement tolere.
+ */
+function cibleAlimentPrevisionEstBienFormee(cibleId: string): boolean {
+  const indexSeparateur = cibleId.indexOf(SEPARATEUR_CIBLE_ALIMENT_PREVISION);
+  if (indexSeparateur <= 0) return false;
+  const tailleGranuleBrute = cibleId.slice(0, indexSeparateur);
+  const idOrigine = cibleId.slice(indexSeparateur + SEPARATEUR_CIBLE_ALIMENT_PREVISION.length);
+  const tailleGranuleConnue = (Object.values(TailleGranule) as string[]).includes(tailleGranuleBrute);
+  return tailleGranuleConnue && idOrigine.length > 0;
+}
+
+/**
  * Une ligne du mapping (ADR-053 §3.9) — `cibleId` nullable (NON_RAPPROCHE
  * n'a pas de cible). `.refine()` (Sprint PR3-bis, story PR3bis.1, pre-analyse
  * section 1 : gap signale par la review PR3) : lie explicitement la presence
@@ -395,6 +428,11 @@ export type CreateApportCapitalInput = z.infer<typeof createApportCapitalSchema>
  * (FK) ; `VENTE_PREVUE` (cible singleton batie depuis `sourceCle`, jamais un
  * FK, `previsions-rapprochement.ts:113-114`) et `NON_RAPPROCHE` (aucune
  * cible, ADR-053 section 5) exigent `cibleId` absent/`null`.
+ *
+ * Sprint PR3-ter, story A.3 : pour `ALIMENT_PREVISION` specifiquement, le
+ * `cibleId` doit en plus respecter le format compose `tailleGranule::id`
+ * (voir `cibleAlimentPrevisionEstBienFormee` ci-dessus) — la NATURE du
+ * `cibleId` est validee, pas seulement sa presence.
  */
 export const ligneMappingRapprochementInputSchema = z
   .object({
@@ -422,6 +460,18 @@ export const ligneMappingRapprochementInputSchema = z
         message: "cibleId doit etre absent (ou null) pour cibleType VENTE_PREVUE ou NON_RAPPROCHE.",
       });
     }
+    if (
+      ligne.cibleType === CibleRapprochement.ALIMENT_PREVISION &&
+      aCibleId &&
+      !cibleAlimentPrevisionEstBienFormee(ligne.cibleId as string)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cibleId"],
+        message:
+          "cibleId doit etre au format 'tailleGranule::alimentPrevisionId' pour cibleType ALIMENT_PREVISION.",
+      });
+    }
   });
 export type LigneMappingRapprochementInput = z.infer<typeof ligneMappingRapprochementInputSchema>;
 
@@ -440,7 +490,20 @@ export const creerVersionMappingSchema = z.object({
 });
 export type CreerVersionMappingInput = z.infer<typeof creerVersionMappingSchema>;
 
-/** `version` traverse un query param (string | null) — jamais `z.coerce.number()` seul (voir apercuGenerationPlanQuerySchema). */
+/**
+ * `version` traverse un query param (string | null) — jamais `z.coerce.number()` seul (voir apercuGenerationPlanQuerySchema).
+ *
+ * `scenarioId` (Sprint PR3-ter, story A.2) : OPTIONNEL — sans lui, `GET`
+ * renvoie le mapping brut, comportement inchange (retro-compatible avec
+ * l'appel de `MappingFormDialog`, qui ne relit le mapping actif QUE pour
+ * construire le payload du POST, jamais pour afficher un etat orphelin).
+ * Fourni, il declenche l'augmentation `cibleOrpheline`/`cibleCleResolue`
+ * (`detecterCiblesOrphelines`, `src/lib/queries/previsions-mapping-
+ * orphelins.ts`, story A.1) contre CE scenario precis — jamais une validation
+ * de forme (cuid) plus stricte que necessaire : une simple chaine non vide
+ * suffit, la resolution du scenario echoue explicitement plus loin si l'id
+ * est invalide (meme comportement que les autres routes `[id]` du module).
+ */
 export const mappingRapprochementQuerySchema = z.object({
   version: z
     .string()
@@ -449,6 +512,7 @@ export const mappingRapprochementQuerySchema = z.object({
       message: "Le parametre 'version' doit etre un entier positif ou nul.",
     })
     .transform((v) => (v === undefined ? undefined : Number(v))),
+  scenarioId: z.string().min(1).optional(),
 });
 export type MappingRapprochementQueryInput = z.infer<typeof mappingRapprochementQuerySchema>;
 

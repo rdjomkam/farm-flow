@@ -24,6 +24,7 @@ import { useTranslations } from "next-intl";
 import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { formatMontantPrevision } from "@/lib/previsions/format-previsions";
 import { libelleMoisCalendaire } from "@/lib/previsions/tableau-de-bord-helpers";
+import { calculerOffsetGradientSousZero } from "@/lib/previsions-presentation/gradient-tresorerie";
 
 const ResponsiveContainer = dynamic(() => import("recharts").then((m) => m.ResponsiveContainer), { ssr: false });
 const AreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
@@ -69,7 +70,7 @@ export function TresorerieChart({ dateDebutPlan, mois }: TresorerieChartProps) {
   // gradient reste dans [0, 1] meme si toute la serie reste d'un seul cote.
   const maxSolde = Math.max(...soldes, 0);
   const minSolde = Math.min(...soldes, 0);
-  const offset = maxSolde <= 0 ? 0 : minSolde >= 0 ? 1 : maxSolde / (maxSolde - minSolde);
+  const offset = calculerOffsetGradientSousZero(maxSolde, minSolde);
 
   return (
     <figure aria-label={t("tresorerieChart.ariaLabel")}>

@@ -180,6 +180,7 @@
   },
   "list": {
     "recurring": "Recurring",
+    "recurringSummary": "{count, plural, one {# recurring expense configured} other {# recurring expenses configured}}",
     "total": "Total: ",
     "remaining": "Remaining: ",
     "newButton": "New",

@@ -42,15 +42,47 @@ import type { ProjectionScenarioResult } from "@/lib/previsions/route-orchestrat
 import type { ScenarioPourCalcul } from "@/lib/queries/previsions-scenario-loader";
 
 /**
+ * Separe les lignes de rapprochement en deux groupes STRICTEMENT
+ * disjoints selon leur `natureGrandeur` (Sprint PR3-ter, story C.2) :
+ * - `monetaires` : DEPENSE/ENTREE (FCFA) ;
+ * - `quantites` : QUANTITE (kg).
+ *
+ * Raison d'etre : `agregerParMois`/`agregerCumule`/`topEcartsDuMois`
+ * (moteur pur, `src/lib/previsions/rapprochement.ts`) sommes/trient
+ * AVEUGLEMENT les lignes qu'on leur passe, sans connaitre leur nature —
+ * additionner un montant FCFA et une quantite kg dans un seul total, ou
+ * les trier ensemble par `|ecartAbsolu|`, produit un nombre/classement
+ * qui n'a ARITHMETIQUEMENT aucun sens (ADR-053, note deja presente dans
+ * `rapprochement-vue-cumulee.tsx` avant ce correctif, jamais appliquee a
+ * la valeur numerique elle-meme). Partitionner AVANT d'appeler le moteur
+ * garantit que chaque appel a `agregerParMois`/`agregerCumule`/
+ * `topEcartsDuMois` ne recoit jamais qu'une seule nature a la fois — le
+ * moteur reste inchange, seul l'appelant discipline ses entrees.
+ */
+export function partitionnerParGrandeur(lignes: LigneRapprochement[]): {
+  monetaires: LigneRapprochement[];
+  quantites: LigneRapprochement[];
+} {
+  const monetaires: LigneRapprochement[] = [];
+  const quantites: LigneRapprochement[] = [];
+  for (const l of lignes) {
+    if (l.natureGrandeur === "QUANTITE") quantites.push(l);
+    else monetaires.push(l);
+  }
+  return { monetaires, quantites };
+}
+
+/**
  * `AgregatPoste` (moteur) enrichi de `natureGrandeur`/`ecartPct`/`sens`/
  * `couleur` — necessaire pour la vue cumulee "detail par poste" (memes
  * colonnes que la vue mensuelle). Chaque poste est de nature HOMOGENE
  * (un `PostePrevision` est toujours DEPENSE, un `AlimentPrevision`
  * toujours QUANTITE, etc. — cf. `construireEntreesPrevuesDepuisScenario`),
  * ce qui rend `sens`/`couleur` bien definis au niveau agregat, contrairement
- * a un total GLOBAL qui mélangerait des natures differentes (jamais
- * calcule ici pour cette raison — `cumuleGlobalParMois` reste un total
- * numerique brut, sans sens).
+ * a un total GLOBAL qui mélangerait des natures differentes si les lignes
+ * n'etaient pas partitionnees en amont (story C.2) — `cumuleGlobalMonetaireParMois`/
+ * `cumuleGlobalQuantiteParMois` restent des totaux numeriques bruts, sans
+ * sens, mais chacun homogene en unite.
  */
 export interface AgregatPosteComparaison extends AgregatPoste {
   natureGrandeur: NatureGrandeur;
@@ -90,16 +122,44 @@ export interface RapprochementScenarioVue {
   moisDisponibles: number[];
   /** Vue mensuelle : toutes les lignes de chaque mois (tous statuts confondus). */
   lignesParMois: Map<number, LigneRapprochement[]>;
-  /** Agregat total (toutes lignes confondues) de chaque mois — ligne "Total" de la vue mensuelle. */
-  totalMoisParMois: Map<number, AgregatMois>;
+  /**
+   * Ligne "Total" de la vue mensuelle — agregat des lignes MONETAIRES
+   * (DEPENSE/ENTREE, FCFA) UNIQUEMENT de ce mois (story C.2, PR3-ter) :
+   * ne somme JAMAIS une ligne QUANTITE (kg) avec ces montants.
+   */
+  totalMoisMonetaireParMois: Map<number, AgregatMois>;
+  /**
+   * Ligne "Total" de la vue mensuelle — agregat des lignes QUANTITE (kg)
+   * UNIQUEMENT de ce mois (story C.2, PR3-ter), disjoint du total
+   * monetaire ci-dessus.
+   */
+  totalMoisQuantiteParMois: Map<number, AgregatMois>;
   /** Bac "Non rapproche" (ADR-053 section 5) — TOUJOURS present, tableau vide si aucune categorie non rapprochee ce mois. */
   nonRapprocheParMois: Map<number, LigneRapprochement[]>;
-  /** Vue cumulee — total toutes lignes confondues, depuis le debut de l'horizon jusqu'a (et y compris) ce mois. */
-  cumuleGlobalParMois: Map<number, AgregatEcart>;
-  /** Vue cumulee, detail par poste — memes bornes que `cumuleGlobalParMois`. */
+  /**
+   * Vue cumulee — total des lignes MONETAIRES (FCFA) UNIQUEMENT, depuis
+   * le debut de l'horizon jusqu'a (et y compris) ce mois (story C.2).
+   */
+  cumuleGlobalMonetaireParMois: Map<number, AgregatEcart>;
+  /**
+   * Vue cumulee — total des lignes QUANTITE (kg) UNIQUEMENT, memes
+   * bornes que `cumuleGlobalMonetaireParMois` (story C.2).
+   */
+  cumuleGlobalQuantiteParMois: Map<number, AgregatEcart>;
+  /** Vue cumulee, detail par poste — memes bornes que `cumuleGlobalMonetaireParMois` (chaque poste est de nature homogene, cf. `AgregatPosteComparaison`). */
   cumuleParPosteParMois: Map<number, AgregatPosteComparaison[]>;
-  /** Vue "Top ecarts" — les `n` lignes de plus grand |ecartAbsolu| de ce mois. */
-  topEcartsParMois: Map<number, LigneRapprochement[]>;
+  /**
+   * Vue "Top ecarts" — les `n` lignes MONETAIRES (FCFA) de plus grand
+   * |ecartAbsolu| de ce mois (story C.2) : jamais triees contre une
+   * ligne QUANTITE (kg).
+   */
+  topEcartsMonetaireParMois: Map<number, LigneRapprochement[]>;
+  /**
+   * Vue "Top ecarts" — les `n` lignes QUANTITE (kg) de plus grand
+   * |ecartAbsolu| de ce mois (story C.2), classement DISJOINT du
+   * classement monetaire ci-dessus.
+   */
+  topEcartsQuantiteParMois: Map<number, LigneRapprochement[]>;
   /** Vue "par vague" — une ligne par VaguePrevue active du scenario (ANNULEE exclue, meme perimetre que `projection.vagues`). */
   vagues: VagueRapprochementRow[];
   /** Instant du calcul serveur (ADR-053 §5.1(b), fraicheur) — jamais une photo figee d'un import passe. */
@@ -126,12 +186,18 @@ export async function chargerRapprochementScenario(
 
   const lignes =
     horizonMois > 0 ? await calculerRapprochementScenario(scenarioId, siteId, 0, horizonMois - 1) : [];
+  // Story C.2 (PR3-ter) : partitionnement UNIQUE, en amont de tout appel au
+  // moteur — chaque agregation/tri ci-dessous ne recoit plus jamais un
+  // melange DEPENSE/ENTREE (FCFA) + QUANTITE (kg).
+  const { monetaires: lignesMonetaires, quantites: lignesQuantites } = partitionnerParGrandeur(lignes);
 
   const lignesParMois = new Map<number, LigneRapprochement[]>();
   const nonRapprocheParMois = new Map<number, LigneRapprochement[]>();
-  const cumuleGlobalParMois = new Map<number, AgregatEcart>();
+  const cumuleGlobalMonetaireParMois = new Map<number, AgregatEcart>();
+  const cumuleGlobalQuantiteParMois = new Map<number, AgregatEcart>();
   const cumuleParPosteParMois = new Map<number, AgregatPosteComparaison[]>();
-  const topEcartsParMois = new Map<number, LigneRapprochement[]>();
+  const topEcartsMonetaireParMois = new Map<number, LigneRapprochement[]>();
+  const topEcartsQuantiteParMois = new Map<number, LigneRapprochement[]>();
 
   for (const m of moisDisponibles) {
     const lignesDuMois = lignes.filter((l) => l.moisAbsolu === m);
@@ -139,13 +205,22 @@ export async function chargerRapprochementScenario(
     nonRapprocheParMois.set(m, extraireBacNonRapproche(lignesDuMois));
 
     const lignesJusquAM = lignes.filter((l) => l.moisAbsolu <= m);
-    cumuleGlobalParMois.set(m, agregerCumule(lignesJusquAM));
+    const { monetaires: lignesJusquAMMonetaires, quantites: lignesJusquAMQuantites } =
+      partitionnerParGrandeur(lignesJusquAM);
+    cumuleGlobalMonetaireParMois.set(m, agregerCumule(lignesJusquAMMonetaires));
+    cumuleGlobalQuantiteParMois.set(m, agregerCumule(lignesJusquAMQuantites));
     cumuleParPosteParMois.set(m, enrichirAgregatsPoste(agregerParPoste(lignesJusquAM), lignesJusquAM));
 
-    topEcartsParMois.set(m, topEcartsDuMois(lignes, m, 5));
+    topEcartsMonetaireParMois.set(m, topEcartsDuMois(lignesMonetaires, m, 5));
+    topEcartsQuantiteParMois.set(m, topEcartsDuMois(lignesQuantites, m, 5));
   }
 
-  const totalMoisParMois = new Map<number, AgregatMois>(agregerParMois(lignes).map((a) => [a.moisAbsolu, a]));
+  const totalMoisMonetaireParMois = new Map<number, AgregatMois>(
+    agregerParMois(lignesMonetaires).map((a) => [a.moisAbsolu, a])
+  );
+  const totalMoisQuantiteParMois = new Map<number, AgregatMois>(
+    agregerParMois(lignesQuantites).map((a) => [a.moisAbsolu, a])
+  );
 
   const vagueReelleIdParVaguePrevueId = new Map(
     scenario.vaguesPrevues.map((vp) => [vp.id, vp.vagueReelleId])
@@ -171,11 +246,14 @@ export async function chargerRapprochementScenario(
     horizonMois,
     moisDisponibles,
     lignesParMois,
-    totalMoisParMois,
+    totalMoisMonetaireParMois,
+    totalMoisQuantiteParMois,
     nonRapprocheParMois,
-    cumuleGlobalParMois,
+    cumuleGlobalMonetaireParMois,
+    cumuleGlobalQuantiteParMois,
     cumuleParPosteParMois,
-    topEcartsParMois,
+    topEcartsMonetaireParMois,
+    topEcartsQuantiteParMois,
     vagues,
     calculeLe,
   };

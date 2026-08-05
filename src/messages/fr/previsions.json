@@ -113,7 +113,8 @@
     "charges": "Charges",
     "journal": "Journal",
     "apports": "Apports",
-    "rapprochement": "Rapprochement"
+    "rapprochement": "Rapprochement",
+    "tresorerie": "Trésorerie"
   },
   "parametresTab": {
     "sectionTitle": "Paramètres du scénario",
@@ -773,7 +774,8 @@
     "sansSourceReelle": "Pas de source réelle disponible pour ce poste",
     "nonBudgete": "Dépense non budgétée",
     "nonApplicable": "N/A",
-    "totalRow": "Total du mois",
+    "totalRowMonetaire": "Total du mois — montants (FCFA)",
+    "totalRowQuantite": "Total du mois — quantités (t)",
     "vueMensuelle": {
       "title": "Vue mensuelle — {mois}",
       "description": "Une ligne par poste : montant prévu, montant réel et écart pour le mois sélectionné."
@@ -781,7 +783,8 @@
     "vueCumulee": {
       "title": "Vue cumulée — depuis le début de l'horizon jusqu'à {mois}",
       "description": "Cumul du début de l'horizon jusqu'au mois sélectionné, inclus.",
-      "totalGlobal": "Total cumulé",
+      "totalGlobalMonetaire": "Total cumulé — montants (FCFA)",
+      "totalGlobalQuantite": "Total cumulé — quantités (t)",
       "parPoste": "Détail par poste"
     },
     "nonRapproche": {
@@ -800,8 +803,10 @@
       "indisponible": "Indisponible"
     },
     "topEcarts": {
-      "title": "Top 5 des écarts — {mois}",
-      "description": "Les 5 postes expliquant le plus grand écart (en valeur absolue) du mois sélectionné.",
+      "titleMonetaire": "Top 5 des écarts — montants FCFA — {mois}",
+      "descriptionMonetaire": "Les 5 postes en FCFA (dépenses/entrées) expliquant le plus grand écart (en valeur absolue) du mois sélectionné — jamais mélangés avec les écarts en quantité.",
+      "titleQuantite": "Top 5 des écarts — quantités (t) — {mois}",
+      "descriptionQuantite": "Les 5 postes en tonnes (granulométrie aliment, tonnage vendu) expliquant le plus grand écart (en valeur absolue) du mois sélectionné — classement distinct des écarts en FCFA.",
       "empty": "Aucun écart chiffrable ce mois-ci."
     },
     "mapping": {
@@ -809,6 +814,15 @@
       "loadError": "Impossible de charger le mapping de rapprochement.",
       "cibleIntrouvable": "Cible introuvable dans ce scénario",
       "cibleNonChargee": "Cible non chargée",
+      "cibleOrpheline": "Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total",
+      "versionSelectorLabel": "Version du mapping",
+      "versionActiveOption": "Version active (v{version})",
+      "versionHistoriqueOption": "Version {version} (historique)",
+      "consultationHistoriqueBanner": "Vous consultez la version {version} (historique) — affichage en lecture seule. La version active est la {versionActive}. Modifier un mapping crée toujours une nouvelle version : l'historique des écarts déjà figés n'est jamais réécrit.",
+      "mappingHistorique": {
+        "title": "Mapping — version consultée",
+        "description": "Version {version} — instantané figé, en lecture seule. Cette version n'est plus utilisée pour les mois non clôturés."
+      },
       "sourceTypes": {
         "DEPENSE_CATEGORIE": "Catégorie de dépense",
         "PRODUIT_CATEGORIE": "Catégorie de produit",
@@ -859,6 +873,35 @@
         "submitEdit": "Enregistrer",
         "submitting": "Enregistrement…"
       }
+    }
+  },
+  "tresorerieTroisSeriesChart": {
+    "noData": "Aucune donnée à projeter pour ce scénario.",
+    "ariaLabel": "Courbe de trésorerie à trois séries : budget initial, prévision actualisée et réel",
+    "series": {
+      "budgetInitial": "Budget initial",
+      "previsionActualisee": "Prévision actualisée",
+      "reprevision": "Reprévision glissante",
+      "reel": "Réel",
+      "bandeEcart": "Écart prévu / réel"
+    }
+  },
+  "tresorerieTab": {
+    "freshnessNote": "Le « réel » affiché reflète l'état des données au moment de cette consultation ({date}), pas une photo figée d'un import passé.",
+    "noData": "Aucune donnée de trésorerie disponible pour ce scénario (aucun mois dans l'horizon, ou la projection n'a pas pu être calculée).",
+    "reprevisionToggle": "Reprévision",
+    "caveatReel": {
+      "title": "Le « réel » de trésorerie est structurellement incomplet",
+      "description": "Aucun apport, subvention ou prêt réellement encaissé n'est aujourd'hui suivi dans les données réelles de l'application — seules les dépenses et les ventes réelles alimentent la courbe « Réel ». Dès qu'un apport a réellement été encaissé, cette courbe est donc biaisée à la baisse par rapport à la trésorerie réelle. Les apports prévus restent visibles sur les courbes « Budget initial » et « Prévision actualisée »."
+    },
+    "budgetInitialIndisponible": {
+      "title": "Aucun budget initial figé pour ce scénario",
+      "description": "Ce scénario n'a jamais été activé : aucun budget initial n'a été figé à cette date. La courbe « Budget initial » n'est donc pas affichée — ce n'est pas un budget initial nul, c'est une absence de figeage."
+    },
+    "chart": {
+      "title": "Trésorerie — budget initial, prévision actualisée et réel",
+      "legend": "Zone rouge : trésorerie projetée négative (besoin de financement). Bascule « Reprévision » : remplace la courbe « Prévision actualisée » par la trajectoire mixte réel (mois clôturés) / prévision (mois à venir).",
+      "legendReprevision": "Zone rouge : trésorerie négative sur la Reprévision glissante (réel substitué sur les mois clôturés, prévision actualisée sur les mois restants)."
     }
   }
 }

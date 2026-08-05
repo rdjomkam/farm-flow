@@ -33,9 +33,65 @@
  * pre-analyse PR3-bis : `MappingRapprochement` est site-scope, sa cible est
  * scenario-scope) — jamais un id brut, jamais un vide silencieux.
  */
-import { SourceRapprochement, CibleRapprochement } from "@/types";
+import { SourceRapprochement, CibleRapprochement, TailleGranule } from "@/types";
+import type { MappingRapprochement } from "@/types";
 
 type Translator = (key: string, values?: Record<string, string | number | Date>) => string;
+
+/**
+ * Format compose `cibleId` d'un mapping `ALIMENT_PREVISION` (Sprint PR3-ter,
+ * story A.3 — SEULE source de verite : `src/lib/queries/previsions-
+ * rapprochement.ts`, section "0bis"). DUPLIQUE ICI VOLONTAIREMENT, meme motif
+ * que `src/lib/validation/previsions.schema.ts` (`cibleAlimentPrevisionEstBienFormee`) :
+ * `previsions-rapprochement.ts` importe `@/lib/db` (Prisma, cote serveur
+ * uniquement) — l'importer depuis un composant `"use client"` casserait le
+ * bundle navigateur. Trois copies existent desormais du meme separateur ;
+ * une seule le change jamais sans casser un test de non-regression qui
+ * verifie explicitement leur egalite (voir
+ * `mapping-rapprochement-helpers.test.ts`).
+ */
+const SEPARATEUR_CIBLE_ALIMENT_PREVISION = "::";
+
+/** Duplicat client-safe de `composeCibleAlimentPrevision` (voir note ci-dessus). */
+export function composeCibleAlimentPrevisionClient(
+  tailleGranule: TailleGranule,
+  alimentPrevisionId: string
+): string {
+  return `${tailleGranule}${SEPARATEUR_CIBLE_ALIMENT_PREVISION}${alimentPrevisionId}`;
+}
+
+/**
+ * Extrait la `tailleGranule` d'un `cibleId` compose `ALIMENT_PREVISION` —
+ * fonction PURE, aucune I/O, duplicat client-safe de la logique de
+ * `parseCibleAlimentPrevision` (voir note ci-dessus). `null` si absent, mal
+ * forme, ou si la valeur avant le separateur n'est pas une `TailleGranule`
+ * connue (jamais un cast silencieux).
+ */
+export function extraireTailleGranuleDeCibleId(cibleId: string | null): TailleGranule | null {
+  if (!cibleId) return null;
+  const indexSeparateur = cibleId.indexOf(SEPARATEUR_CIBLE_ALIMENT_PREVISION);
+  if (indexSeparateur <= 0) return null;
+  const tailleGranuleBrute = cibleId.slice(0, indexSeparateur);
+  return (Object.values(TailleGranule) as string[]).includes(tailleGranuleBrute)
+    ? (tailleGranuleBrute as TailleGranule)
+    : null;
+}
+
+/**
+ * Une ligne `MappingRapprochement` augmentee de son etat d'orphelinite
+ * (Sprint PR3-ter, story A.2/A.3 — miroir cote client de
+ * `LigneMappingAvecOrphelinite`, `src/lib/queries/previsions-mapping-
+ * orphelins.ts`). Renvoyee par `GET /api/previsions/mapping-rapprochement`
+ * uniquement quand `?scenarioId=` est fourni — sinon `cibleOrpheline` est
+ * absent, jamais `false` par defaut trompeur (distinguer "non evalue" de
+ * "evalue et non orphelin" n'est pas necessaire cote UI de ce sprint, qui
+ * fournit TOUJOURS `scenarioId`, mais le type reste honnete sur ce que
+ * l'API garantit).
+ */
+export interface MappingRapprochementAvecOrphelinite extends MappingRapprochement {
+  cibleCleResolue?: string | null;
+  cibleOrpheline?: boolean;
+}
 
 /** Libelle du `SourceRapprochement` lui-meme (ex. "Categorie de depense"). */
 export function libelleSourceType(sourceType: SourceRapprochement, tPrevisions: Translator): string {
@@ -95,6 +151,15 @@ export interface CiblesDisponibles {
  * `libelleCible` sur "introuvable dans ce scenario", ce qui est FAUX et
  * trompeur : la cause reelle est un echec de chargement, pas une cible
  * hors scenario. `ciblesChargees = false` distingue honnetement ce cas.
+ *
+ * Sprint PR3-ter, story A.2 : pour `ALIMENT_PREVISION`, `cibleId` porte
+ * desormais le format compose `tailleGranule::alimentPrevisionId` (story
+ * A.3) — la resolution passe par `extraireTailleGranuleDeCibleId` puis une
+ * recherche par `tailleGranule` (cle metier stable, jamais par `id`, qui
+ * appartient potentiellement a un AUTRE scenario). Comparer `a.id ===
+ * cibleId` directement (ancien comportement pre-A.3) ferait TOUJOURS
+ * echouer la recherche desormais, meme pour une cible parfaitement valide —
+ * regression evitee ici, couverte par un test dedie.
  */
 export function libelleCible(
   cibleType: CibleRapprochement,
@@ -113,7 +178,8 @@ export function libelleCible(
       : tPrevisions("rapprochementTab.mapping.cibleNonChargee");
   }
   if (cibleType === CibleRapprochement.ALIMENT_PREVISION) {
-    const aliment = cibles.aliments.find((a) => a.id === cibleId);
+    const tailleGranule = extraireTailleGranuleDeCibleId(cibleId);
+    const aliment = tailleGranule ? cibles.aliments.find((a) => a.tailleGranule === tailleGranule) : undefined;
     if (aliment) return tStock(`produits.taillesGranule.${aliment.tailleGranule}`);
     return ciblesChargees
       ? tPrevisions("rapprochementTab.mapping.cibleIntrouvable")

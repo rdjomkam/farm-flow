@@ -30,6 +30,7 @@ import { creerVersionMapping } from "@/lib/queries/previsions-rapprochement-mapp
 import {
   getDepensesReellesParCategorie,
   getDepensesAlimentReellesParGranulometrie,
+  getSortiesAlimentReellesParGranulometrie,
   getReelAgregeSite,
   calculerRapprochementScenario,
   composeCategorieCle,
@@ -126,6 +127,22 @@ async function insertDepense(
     `INSERT INTO "Depense" (id, numero, description, "categorieDepense", "montantTotal", "montantPaye", "montantFraisSupp", statut, date, "userId", "siteId", "createdAt", "updatedAt")
      VALUES ($1, $2, 'Depense test PR3.5', $3::"CategorieDepense", $4, 0, 0, 'NON_PAYEE', $5, $6, $7, now(), now())`,
     [id, id, categorieDepense, montantTotal, date, userId, siteId]
+  );
+}
+
+async function insertMouvementStock(
+  c: PoolClient,
+  id: string,
+  siteId: string,
+  userId: string,
+  produitId: string,
+  quantite: number,
+  date: Date
+): Promise<void> {
+  await c.query(
+    `INSERT INTO "MouvementStock" (id, "produitId", type, quantite, "userId", date, "siteId", "createdAt")
+     VALUES ($1, $2, 'SORTIE', $3, $4, $5, $6, now())`,
+    [id, produitId, quantite, userId, date, siteId]
   );
 }
 
@@ -321,13 +338,67 @@ describe.runIf(requireDatabaseUrl())(
 
         const lignes = await getDepensesAlimentReellesParGranulometrie(siteId, new Date("2026-01-01"), 0, 0);
 
-        const inconnue = lignes.find((l) => l.categorieCle === composeCategorieCle(SourceRapprochement.MOUVEMENT_STOCK, GRANULOMETRIE_INCONNUE));
-        const connue = lignes.find((l) => l.categorieCle === composeCategorieCle(SourceRapprochement.MOUVEMENT_STOCK, "G1"));
+        // Story C.1 (PR3-ter) : la source reelle de cette fonction est
+        // Depense/LigneDepense, jamais MouvementStock — la cle doit refleter
+        // DEPENSE_CATEGORIE, pas MOUVEMENT_STOCK (cf. commentaire dans
+        // previsions-rapprochement.ts).
+        const inconnue = lignes.find(
+          (l) => l.categorieCle === composeCategorieCle(SourceRapprochement.DEPENSE_CATEGORIE, `ALIMENT:${GRANULOMETRIE_INCONNUE}`)
+        );
+        const connue = lignes.find(
+          (l) => l.categorieCle === composeCategorieCle(SourceRapprochement.DEPENSE_CATEGORIE, "ALIMENT:G1")
+        );
 
         expect(inconnue).toBeDefined();
         expect(inconnue?.montantReel.toNumber()).toBe(45000);
         expect(connue).toBeDefined();
         expect(connue?.montantReel.toNumber()).toBe(20000);
+      } finally {
+        await cleanup(client, siteId, userId, clientId, produitId);
+      }
+    },
+    20000
+  );
+
+  it(
+    "(d2, story C.1 PR3-ter) aucune collision de categorieCle entre la depense ALIMENT par granulometrie (FCFA) et la sortie MouvementStock par granulometrie (kg), meme granulometrie",
+    async () => {
+      if (!dbAvailable || !client) {
+        console.warn("[PR3ter.C1] DB de dev injoignable — test ignore (dbAvailable=false).");
+        return;
+      }
+      const { siteId, userId, clientId, produitId } = await seedSite(client, "collision-c1");
+      try {
+        // Meme granulometrie (G1, cf. seedSite) des DEUX cotes : une Depense
+        // ALIMENT detaillee (FCFA) et une sortie MouvementStock (kg).
+        await insertDepense(client, "dep-pr3ter-c1-aliment", siteId, userId, "ALIMENT", 20000, new Date("2026-01-22"));
+        await client.query(
+          `INSERT INTO "LigneDepense" (id, "depenseId", designation, "categorieDepense", quantite, "prixUnitaire", "montantTotal", "produitId", "siteId", "createdAt", "updatedAt")
+           VALUES ($1, $2, 'Sac G1', 'ALIMENT', 1, 20000, 20000, $3, $4, now(), now())`,
+          ["ligne-pr3ter-c1", "dep-pr3ter-c1-aliment", produitId, siteId]
+        );
+        await insertMouvementStock(client, "mvt-pr3ter-c1", siteId, userId, produitId, 75, new Date("2026-01-22"));
+
+        const lignesDepense = await getDepensesAlimentReellesParGranulometrie(siteId, new Date("2026-01-01"), 0, 0);
+        const lignesQuantite = await getSortiesAlimentReellesParGranulometrie(siteId, new Date("2026-01-01"), 0, 0);
+
+        const clesDepense = new Set(lignesDepense.map((l) => l.categorieCle));
+        const clesQuantite = new Set(lignesQuantite.map((l) => l.categorieCle));
+        const intersection = [...clesDepense].filter((cle) => clesQuantite.has(cle));
+
+        // AUCUNE cle commune entre les deux sources — sinon une combinaison
+        // future (ex. getReelAgregeSite) sommerait un montant FCFA et une
+        // quantite kg sous la meme cle, silencieusement.
+        expect(intersection).toEqual([]);
+
+        const ligneDepenseG1 = lignesDepense.find((l) => l.categorieCle.includes("G1"));
+        const ligneQuantiteG1 = lignesQuantite.find((l) => l.categorieCle.includes("G1"));
+        expect(ligneDepenseG1).toBeDefined();
+        expect(ligneQuantiteG1).toBeDefined();
+        expect(ligneDepenseG1?.natureGrandeur).toBe("DEPENSE");
+        expect(ligneQuantiteG1?.natureGrandeur).toBe("QUANTITE");
+        expect(ligneDepenseG1?.montantReel.toNumber()).toBe(20000);
+        expect(ligneQuantiteG1?.montantReel.toNumber()).toBe(75);
       } finally {
         await cleanup(client, siteId, userId, clientId, produitId);
       }

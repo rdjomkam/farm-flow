@@ -181,21 +181,6 @@ interface Props {
   currentUserName?: string;
 }
 
-const CATEGORIE_DEPENSE_LABELS: Record<string, string> = {
-  ALIMENT: "Alimentation",
-  INTRANT: "Intrants",
-  EQUIPEMENT: "Equipements",
-  ELECTRICITE: "Electricite",
-  EAU: "Eau",
-  LOYER: "Loyer",
-  SALAIRE: "Salaire",
-  TRANSPORT: "Transport",
-  VETERINAIRE: "Veterinaire",
-  REPARATION: "Reparation",
-  INVESTISSEMENT: "Investissement",
-  AUTRE: "Autre",
-};
-
 export function VenteDetailClient({
   vente,
   permissions,
@@ -204,6 +189,11 @@ export function VenteDetailClient({
   currentUserName = "",
 }: Props) {
   const t = useTranslations("ventes");
+  // ERR-176 : réutilise le référentiel i18n partagé `depenses.categories.*`
+  // et `depenses.statuts.*` (déjà accentués) au lieu d'un dictionnaire de
+  // libellés codé en dur ou d'un enum brut affiché tel quel — jamais un
+  // second référentiel pour la même donnée métier.
+  const tCategoriesDepense = useTranslations("depenses");
   const locale = useLocale();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
@@ -816,7 +806,7 @@ export function VenteDetailClient({
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{d.description}</div>
                         <div className="text-xs text-muted-foreground">
-                          {CATEGORIE_DEPENSE_LABELS[d.categorieDepense] ?? d.categorieDepense}
+                          {tCategoriesDepense(`categories.${d.categorieDepense}` as Parameters<typeof tCategoriesDepense>[0])}
                           {" · "}
                           {new Date(d.date).toLocaleDateString(locale)}
                         </div>
@@ -826,7 +816,9 @@ export function VenteDetailClient({
                           <div className="font-semibold text-sm text-destructive">
                             -{formatNumber(d.montantTotal)} F
                           </div>
-                          <div className="text-xs text-muted-foreground">{d.statut}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {tCategoriesDepense(`statuts.${d.statut}` as Parameters<typeof tCategoriesDepense>[0])}
+                          </div>
                         </div>
                         {canEdit && (
                           <>

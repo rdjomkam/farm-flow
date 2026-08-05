@@ -56,6 +56,25 @@ export async function getMappingParVersion(siteId: string, version: number) {
   });
 }
 
+/**
+ * Liste les versions DISTINCTES de `MappingRapprochement` deja creees pour
+ * un site, triees decroissant (la plus recente en premier) — Sprint
+ * PR3-ter, story C.3 : alimente le selecteur de version de l'ecran
+ * d'administration du mapping (`GET ?version=N` existait deja mais
+ * `RapprochementMappingTab` ne proposait aucun moyen de choisir N — cette
+ * fonction rend cette navigation possible). Lecture pure, R8 (`siteId`
+ * filtre), aucune ecriture.
+ */
+export async function getVersionsDisponibles(siteId: string): Promise<number[]> {
+  const lignes = await prisma.mappingRapprochement.findMany({
+    where: { siteId },
+    select: { version: true },
+    distinct: ["version"],
+    orderBy: { version: "desc" },
+  });
+  return lignes.map((l) => l.version);
+}
+
 /** Version active courante d'un site (0 si aucun mapping n'existe encore). */
 async function versionActiveCourante(
   tx: Pick<typeof prisma, "mappingRapprochement">,
@@ -169,16 +188,18 @@ export interface CategorieReelleNonMappee {
  *   `LigneDepense`) — cette fonction N'EST PAS branchee dans
  *   `getReelAgregeSite` (le chemin retenu pour le rapprochement de quantite
  *   aliment reste `MouvementStock`, pas `Depense`), donc ses cles ne
- *   participent a AUCUN calcul d'ecart aujourd'hui. Elle emet une nature
- *   `"DEPENSE"` sous le MEME prefixe `SourceRapprochement.MOUVEMENT_STOCK`
- *   que la nature `"QUANTITE"` lue ici (review Moyenne #3, meme rapport) —
- *   si une story future la branche dans `getReelAgregeSite` SANS distinguer
- *   les deux cles, deux `EntreeReelleAgregee` de nature differente
- *   collisionneraient sous la meme `categorieCle`. Cette fonction-ci reste
- *   sans effet sur ce risque tant qu'elle ne lit, comme aujourd'hui,
- *   QUE la source `MouvementStock` (jamais `getDepensesAlimentReellesParGranulometrie`)
- *   pour peupler `MOUVEMENT_STOCK` — a rappeler explicitement si cette
- *   fonction est un jour etendue pour couvrir aussi la vue de detail.
+ *   participent a AUCUN calcul d'ecart aujourd'hui.
+ *
+ *   CORRECTIF Sprint PR3-ter, story C.1 : cette fonction emettait a tort sa
+ *   nature `"DEPENSE"` sous le MEME prefixe `SourceRapprochement.MOUVEMENT_STOCK`
+ *   que la nature `"QUANTITE"` lue ici (collision latente signalee par la
+ *   review Moyenne #3 du sprint PR3, `docs/reviews/review-sprint-PR3.md`) —
+ *   corrige : elle emet desormais `SourceRapprochement.DEPENSE_CATEGORIE`
+ *   (source reelle et coherente avec sa nature DEPENSE), avec un `sourceCle`
+ *   compose (`"ALIMENT:<granulometrie>"`) qui reste distinct de la cle
+ *   agregee globale `"ALIMENT"` de `getDepensesReellesParCategorie`. Les deux
+ *   fonctions ne collisionnent donc plus jamais, meme si une story future
+ *   branche `getDepensesAlimentReellesParGranulometrie` dans `getReelAgregeSite`.
  */
 export async function getCategoriesReellesNonMappees(
   siteId: string

@@ -26,20 +26,56 @@
  * afficher le LIBELLE precis de la cible a cote du badge de type. Cible
  * introuvable dans ce scenario (RISQUE R1) => libelle explicite dedie via
  * `libelleCible`, jamais un id brut, jamais un vide silencieux.
+ *
+ * Sprint PR3-ter, story A.2 : le `GET` du mapping actif porte desormais
+ * `?scenarioId=` — chaque ligne renvoyee est augmentee de `cibleOrpheline`
+ * (filet de securite NON NEGOCIABLE, story A.1/A.3 : un mapping dont la
+ * cible resolue n'existe PAS dans le scenario COURANT doit se voir, jamais
+ * s'evaporer dans un total silencieux). DISTINCT de `libelleCible`
+ * ("cibleIntrouvable"/"cibleNonChargee", qui distinguent une absence reelle
+ * d'un simple echec de chargement du FORMULAIRE d'edition, ERR-177/ERR-178)
+ * et DISTINCT de `NON_RAPPROCHE` (ERR-173 : une source reelle sans AUCUN
+ * mapping actif) — un mapping ORPHELIN existe bel et bien, mais sa cible
+ * resolue est morte.
+ *
+ * Sprint PR3-ter, story C.3 : `GET ?version=N` existait deja (Sprint PR3,
+ * story PR3.6) mais restait totalement INUTILISE — cet ecran n'affichait
+ * QUE la version active, jamais l'historique (ERR-174 : une route livree,
+ * testee, jamais consommee). Ajoute un selecteur de version
+ * (`versionsDisponibles`, `GET .../versions`) : la version ACTIVE (la plus
+ * recente) reste PLEINEMENT editable (creation/modification, memes
+ * controles qu'avant cette story) ; toute version PASSEE selectionnee
+ * s'affiche en LECTURE SEULE STRICTE (ADR-053 §6.2 : « changer un mapping
+ * ne doit pas reecrire l'historique des ecarts figes » — un ecran qui
+ * permettrait de modifier une version passee violerait cette garantie a la
+ * racine) : aucun bouton d'edition, aucune carte "categories non mappees"
+ * (creer un mapping cree TOUJOURS une nouvelle version active, ce qui
+ * n'aurait aucun sens pendant qu'on consulte une version figee). Un bandeau
+ * dedie indique explicitement quelle version est consultee et si elle est
+ * active ou non — jamais une ambiguite silencieuse entre "je regarde
+ * l'etat actuel" et "je regarde un instantane passe".
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Info, Loader2, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, History, Info, Loader2, Pencil, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Permission, CibleRapprochement } from "@/types";
-import type { MappingRapprochement } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import { MappingFormDialog } from "@/components/previsions/mapping-form-dialog";
-import { libelleCible, libelleSourceCle, libelleSourceType } from "@/components/previsions/mapping-rapprochement-helpers";
+import {
+  libelleCible,
+  libelleSourceCle,
+  libelleSourceType,
+  type MappingRapprochementAvecOrphelinite,
+} from "@/components/previsions/mapping-rapprochement-helpers";
 import type { CategorieReelleNonMappee } from "@/lib/queries/previsions-rapprochement-mapping";
 import type { PostePrevisionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
+
+/** Valeur sentinelle du `Select` pour "version active" — distincte de toute valeur numerique reelle. */
+const VERSION_ACTIVE_SENTINEL = "actif";
 
 interface RapprochementMappingTabProps {
   scenarioId: string;
@@ -55,13 +91,13 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
   const peutParametrer = permissions.includes(Permission.PREVISIONS_PARAMETRER);
 
   const [nonMappees, setNonMappees] = useState<CategorieReelleNonMappee[]>([]);
-  const [mappingActif, setMappingActif] = useState<MappingRapprochement[]>([]);
+  const [mappingAffiche, setMappingAffiche] = useState<MappingRapprochementAvecOrphelinite[]>([]);
   const [version, setVersion] = useState<number | null>(null);
   const [postes, setPostes] = useState<PostePrevisionDTO[]>([]);
   const [aliments, setAliments] = useState<AlimentPrevisionDTO[]>([]);
   // CORRECTIF D2 (contre-review PR3-bis) : `postes`/`aliments` peuvent
   // echouer SEULS (le `Promise.all` ci-dessous ne declenche l'erreur
-  // globale que si `nonMappees`/`mappingActif` echouent — voulu, l'ecran
+  // globale que si `nonMappees`/`mappingAffiche` echouent — voulu, l'ecran
   // reste utilisable). Ce flag distingue "cible introuvable dans ce
   // scenario" (donnees chargees, id absent) de "cibles non chargees"
   // (echec reseau isole) — voir `libelleCible`.
@@ -69,14 +105,29 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Story C.3 (PR3-ter) : `null` = "version active" (editable, comportement
+  // IDENTIQUE a avant cette story) ; un nombre = version PASSEE selectionnee
+  // (lecture seule stricte, ADR-053 §6.2). `versionsDisponibles` (triees
+  // decroissant, la premiere est TOUJOURS la version active — `version`
+  // n'augmente jamais que par increment de 1 a chaque `creerVersionMapping`,
+  // jamais reassignee a une valeur plus ancienne).
+  const [versionsDisponibles, setVersionsDisponibles] = useState<number[]>([]);
+  const [versionSelectionnee, setVersionSelectionnee] = useState<number | null>(null);
+  const versionActive = versionsDisponibles[0] ?? null;
+  const consultationHistorique = versionSelectionnee !== null && versionSelectionnee !== versionActive;
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [nonMappeesResult, mappingResult, postesResult, alimentsResult] = await Promise.all([
+    const urlMapping =
+      versionSelectionnee === null
+        ? `/api/previsions/mapping-rapprochement?scenarioId=${encodeURIComponent(scenarioId)}`
+        : `/api/previsions/mapping-rapprochement?scenarioId=${encodeURIComponent(scenarioId)}&version=${versionSelectionnee}`;
+    const [nonMappeesResult, mappingResult, postesResult, alimentsResult, versionsResult] = await Promise.all([
       get<{ data: CategorieReelleNonMappee[] }>("/api/previsions/mapping-rapprochement/non-mappees", {
         silentError: true,
       }),
-      get<{ data: MappingRapprochement[]; version: number | null }>("/api/previsions/mapping-rapprochement", {
+      get<{ data: MappingRapprochementAvecOrphelinite[]; version: number | null }>(urlMapping, {
         silentError: true,
       }),
       get<{ data: PostePrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/postes`, {
@@ -85,39 +136,58 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
       get<{ data: AlimentPrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/aliments`, {
         silentError: true,
       }),
+      get<{ data: number[] }>("/api/previsions/mapping-rapprochement/versions", { silentError: true }),
     ]);
     if (nonMappeesResult.ok && nonMappeesResult.data) {
       setNonMappees(nonMappeesResult.data.data ?? []);
     }
     if (mappingResult.ok && mappingResult.data) {
-      setMappingActif(mappingResult.data.data ?? []);
+      setMappingAffiche(mappingResult.data.data ?? []);
       setVersion(mappingResult.data.version ?? null);
     }
     if (postesResult.ok && postesResult.data) setPostes(postesResult.data.data ?? []);
     if (alimentsResult.ok && alimentsResult.data) setAliments(alimentsResult.data.data ?? []);
+    if (versionsResult.ok && versionsResult.data) setVersionsDisponibles(versionsResult.data.data ?? []);
     setCiblesChargees(postesResult.ok && alimentsResult.ok);
     if (!nonMappeesResult.ok || !mappingResult.ok) {
       setError(t("rapprochementTab.mapping.loadError"));
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarioId]);
+  }, [scenarioId, versionSelectionnee]);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
   /**
-   * Le POST renvoie le mapping actif COMPLET de la nouvelle version — on le
-   * pose directement (jamais un recalcul local), puis on rafraichit
-   * `nonMappees` depuis le serveur (source de verite unique, evite toute
-   * derive entre l'etat local et la realite des donnees du site).
+   * Le POST renvoie le mapping actif COMPLET de la nouvelle version, MAIS
+   * SANS l'augmentation `cibleOrpheline` (route POST, jamais `?scenarioId=`)
+   * — on le pose quand meme directement le temps du rafraichissement
+   * (jamais de recalcul local de l'orphelinite, qui serait une
+   * reimplementation cote UI, ERR-171), puis `fetchAll()` (source de verite
+   * unique) restaure l'augmentation correcte depuis le serveur.
+   *
+   * Story C.3 : un enregistrement cree TOUJOURS une nouvelle version ACTIVE
+   * — `versionSelectionnee` est explicitement remis a `null` (revient sur la
+   * version active), jamais laisse pointer sur une version desormais
+   * depassee par la creation.
    */
-  function handleSaved(nouveauMappingActif: MappingRapprochement[]) {
-    setMappingActif(nouveauMappingActif);
+  function handleSaved(nouveauMappingActif: MappingRapprochementAvecOrphelinite[]) {
+    setMappingAffiche(nouveauMappingActif);
     setVersion(nouveauMappingActif[0]?.version ?? version);
+    setVersionSelectionnee(null);
     fetchAll();
   }
+
+  const optionsVersion = useMemo(
+    () =>
+      versionsDisponibles.map((v) => ({
+        value: String(v),
+        estActive: v === versionActive,
+      })),
+    [versionsDisponibles, versionActive]
+  );
 
   return (
     <div className="space-y-4">
@@ -125,6 +195,53 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>{t("rapprochementTab.mapping.scopeBanner", { scenario: scenarioNom })}</p>
       </div>
+
+      {/* Story C.3 (PR3-ter) : selecteur de version — toujours visible des qu'au
+          moins une version existe, meme pendant le chargement d'une nouvelle
+          selection (jamais masque, pour ne pas faire disparaitre le controle
+          sous les yeux de l'utilisateur qui vient de l'utiliser). */}
+      {versionsDisponibles.length > 0 && (
+        <div className="max-w-xs">
+          <Select
+            value={versionSelectionnee === null ? VERSION_ACTIVE_SENTINEL : String(versionSelectionnee)}
+            onValueChange={(v) => setVersionSelectionnee(v === VERSION_ACTIVE_SENTINEL ? null : Number(v))}
+          >
+            <SelectTrigger label={t("rapprochementTab.mapping.versionSelectorLabel")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={VERSION_ACTIVE_SENTINEL}>
+                {t("rapprochementTab.mapping.versionActiveOption", { version: versionActive ?? "" })}
+              </SelectItem>
+              {optionsVersion
+                .filter((o) => !o.estActive)
+                .map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {t("rapprochementTab.mapping.versionHistoriqueOption", { version: o.value })}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Bandeau explicite de lecture seule (ADR-053 §6.2 : une version passee
+          ne se modifie pas) — indique SANS AMBIGUITE quelle version est
+          consultee et qu'elle N'EST PAS la version active. */}
+      {consultationHistorique && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-lg border border-accent-blue/40 bg-accent-blue-muted p-3 text-xs text-accent-blue"
+        >
+          <History className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p>
+            {t("rapprochementTab.mapping.consultationHistoriqueBanner", {
+              version: versionSelectionnee ?? "",
+              versionActive: versionActive ?? "",
+            })}
+          </p>
+        </div>
+      )}
 
       {loading && (
         <div className="flex h-32 items-center justify-center">
@@ -140,69 +257,83 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
 
       {!loading && !error && (
         <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{t("rapprochementTab.mapping.nonMappees.title")}</CardTitle>
-              <p className="text-xs text-muted-foreground">{t("rapprochementTab.mapping.nonMappees.description")}</p>
-            </CardHeader>
-            <CardContent>
-              {nonMappees.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  {t("rapprochementTab.mapping.nonMappees.empty")}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {nonMappees.map((c) => (
-                    <div
-                      key={`${c.sourceType}::${c.sourceCle}`}
-                      className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {libelleSourceType(c.sourceType, t)}
-                        </span>
-                        <span className="text-sm font-semibold text-foreground">
-                          {libelleSourceCle(c.sourceType, c.sourceCle, { tDepenses, tStock, tPrevisions: t })}
-                        </span>
+          {/* La carte "categories non mappees" n'a de sens QUE pour la version
+              active : mapper une categorie cree TOUJOURS une nouvelle version
+              active (jamais une modification de la version consultee) — la
+              masquer pendant la consultation d'une version passee evite de
+              suggerer une action qui n'agirait de toute facon jamais sur ce
+              qui est affiche a l'ecran. */}
+          {!consultationHistorique && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{t("rapprochementTab.mapping.nonMappees.title")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("rapprochementTab.mapping.nonMappees.description")}</p>
+              </CardHeader>
+              <CardContent>
+                {nonMappees.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    {t("rapprochementTab.mapping.nonMappees.empty")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {nonMappees.map((c) => (
+                      <div
+                        key={`${c.sourceType}::${c.sourceCle}`}
+                        className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {libelleSourceType(c.sourceType, t)}
+                          </span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {libelleSourceCle(c.sourceType, c.sourceCle, { tDepenses, tStock, tPrevisions: t })}
+                          </span>
+                        </div>
+                        {peutParametrer && (
+                          <MappingFormDialog
+                            scenarioId={scenarioId}
+                            scenarioNom={scenarioNom}
+                            source={{ sourceType: c.sourceType, sourceCle: c.sourceCle }}
+                            onSaved={handleSaved}
+                            trigger={
+                              <Button size="sm" variant="outline" className="self-start sm:self-auto">
+                                <Plus className="h-4 w-4" aria-hidden="true" />
+                                {t("rapprochementTab.mapping.nonMappees.mapButton")}
+                              </Button>
+                            }
+                          />
+                        )}
                       </div>
-                      {peutParametrer && (
-                        <MappingFormDialog
-                          scenarioId={scenarioId}
-                          scenarioNom={scenarioNom}
-                          source={{ sourceType: c.sourceType, sourceCle: c.sourceCle }}
-                          onSaved={handleSaved}
-                          trigger={
-                            <Button size="sm" variant="outline" className="self-start sm:self-auto">
-                              <Plus className="h-4 w-4" aria-hidden="true" />
-                              {t("rapprochementTab.mapping.nonMappees.mapButton")}
-                            </Button>
-                          }
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">{t("rapprochementTab.mapping.mappingActif.title")}</CardTitle>
+              <CardTitle className="text-base">
+                {consultationHistorique
+                  ? t("rapprochementTab.mapping.mappingHistorique.title")
+                  : t("rapprochementTab.mapping.mappingActif.title")}
+              </CardTitle>
               {version !== null && (
                 <p className="text-xs text-muted-foreground">
-                  {t("rapprochementTab.mapping.mappingActif.description", { version })}
+                  {consultationHistorique
+                    ? t("rapprochementTab.mapping.mappingHistorique.description", { version })
+                    : t("rapprochementTab.mapping.mappingActif.description", { version })}
                 </p>
               )}
             </CardHeader>
             <CardContent>
-              {mappingActif.length === 0 ? (
+              {mappingAffiche.length === 0 ? (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   {t("rapprochementTab.mapping.mappingActif.empty")}
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {mappingActif.map((m) => (
+                  {mappingAffiche.map((m) => (
                     <div
                       key={m.id}
                       className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -225,8 +356,19 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
                             ) : null;
                           })()}
                         </div>
+                        {m.cibleOrpheline && (
+                          <div
+                            role="alert"
+                            className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-danger/40 bg-danger/10 p-2 text-xs text-danger"
+                          >
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>{t("rapprochementTab.mapping.cibleOrpheline")}</span>
+                          </div>
+                        )}
                       </div>
-                      {peutParametrer && (
+                      {/* Lecture seule stricte pour une version passee (ADR-053 §6.2) :
+                          jamais de bouton d'edition, quelle que soit la permission. */}
+                      {peutParametrer && !consultationHistorique && (
                         <MappingFormDialog
                           scenarioId={scenarioId}
                           scenarioNom={scenarioNom}

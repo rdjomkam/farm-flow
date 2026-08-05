@@ -928,6 +928,23 @@ patron à imiter dans un nouveau composant — même s'il semble plus rapide à 
 
 **Références :** `docs/tests/rapport-sprint-PR3-bis.md` §11.1, ERR-164 (autre limite structurelle des tests i18n, même famille de risque)
 
+**Récidive, même famille, fichier voisin (Sprint PR3-ter, 2026-08-05) — corriger un symptôme signalé ne
+suffit pas, il faut balayer le fichier entier :**
+La story C.4 du sprint PR3-ter a résorbé un `CATEGORIE_LABELS` codé en dur dans
+`src/components/ventes/depense-vente-dialog.tsx`, remplacé par le référentiel i18n partagé — un correctif
+conforme à la leçon ci-dessus. Mais un défaut **de la même famille**, dans le **même dossier**
+(`src/components/ventes/`), a été laissé intact et n'a été trouvé que par la vérification en navigateur
+réel, hors du périmètre initialement signalé : `src/components/ventes/vente-detail-client.tsx:818`
+affiche `{d.statut}` — l'enum brut (« PAYEE ») — au lieu de `tDepenses(\`statuts.${d.statut}\`)`, dans la
+carte « Dépenses associées » du détail vente, visible à 375 px et 1280 px. Corrigé séparément (hors
+périmètre exact de la story C.4, par un autre agent en parallèle du sprint). **Leçon : corriger les
+symptômes explicitement signalés ne suffit pas — un référentiel de libellés codé en dur découvert dans un
+fichier doit déclencher un balayage (`grep`) de ce fichier entier, et idéalement des fichiers voisins du
+même module, pour toute autre valeur d'enum affichée brute (`{d.statut}`, `{d.categorie}`, etc.), pas
+seulement la correction de la table de labels qui a motivé la découverte initiale.**
+
+**Références additionnelles :** `docs/reviews/review-sprint-PR3-ter.md` (« Ce qui reste ouvert »), `docs/tests/rapport-falsification-sprint-PR3-ter.md` (C.4, « NON REJOUÉ — ce fichier est explicitement interdit de modification pour ce sprint »)
+
 ---
 
 ### ERR-175 — Une API de remplacement en bloc lue comme une API d'ajout unitaire : un POST naïf de la seule ligne ajoutée désactive silencieusement tout le reste
@@ -1714,6 +1731,26 @@ aucun `runIf` (confirmé par ADR-052 §6, « Suivi hors du périmètre de cet AD
 migré par le sprint CI est donc les 4 fichiers listés dans ERR-118 (`bd0-savepoint-integration`,
 `bd0-savepoint-integration-persister-origin`, `bons-livraison-transaction-integration`,
 `su12-numero-unique-constraint`), pas ce troisième fichier.
+
+**Ajout (Sprint PR3-ter, 2026-08-05) — deux pièges locaux distincts, même famille :**
+
+1. **`todo` n'est pas `skip` — un artefact d'affichage du reporter a fait diverger deux agents.** Le
+   résumé final de `npx vitest run` sépare correctement `passed | todo` (ex. « 324 fichiers / 9 523 tests
+   / 26 todo / 0 skip / 0 échec »), mais l'affichage **par fichier** du reporter par défaut de Vitest
+   écrit littéralement « skipped » pour les tests déclarés `it.todo(...)`. Deux agents ayant lu la même
+   sortie de commande en ont tiré des conclusions opposées sur l'état réel de la suite — l'un concluant à
+   des tests silencieusement ignorés (le risque documenté par cette entrée), l'autre à des tests
+   simplement non écrits (`todo`, intentionnel). **Règle : le compteur du résumé final fait foi**, jamais
+   la ligne d'affichage par fichier, qui confond deux catégories réellement distinctes.
+2. **`xargs -d` échoue silencieusement sur macOS pour exporter `DATABASE_URL` depuis `.env`.** L'option
+   `-d` de `xargs` est une extension GNU ; le `xargs` BSD livré avec macOS ne la reconnaît pas et **échoue
+   silencieusement, sans exporter la variable** — la conséquence est exactement le symptôme central de
+   cette entrée : les tests DB-gated sont **silencieusement ignorés**, pas en échec, et rien ne l'indique
+   sauf un comptage explicite des skips. Méthode qui fonctionne de façon fiable sur macOS et Linux :
+   `set -a && source .env && set +a` (avant `npx vitest run`), jamais un pipeline `xargs` dont la
+   portabilité entre BSD et GNU n'est pas garantie.
+
+**Références additionnelles :** `docs/tests/rapport-falsification-sprint-PR3-ter.md` (« Vérification finale (mesures réelles de cette session) »)
 
 ---
 
@@ -3344,6 +3381,181 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-182 — Une falsification à 0 test est acceptable quand la garantie est prouvée à la couche où la logique existe réellement, pas à une couche passe-plat
+**Sprint :** PR3-ter (Réserve Mineure #5 de la review, mesuré dans le rapport de falsification) | **Date :** 2026-08-05
+**Sévérité :** — (entrée de **pratique reproductible**, complète ERR-160)
+**Fichier(s) :** `src/lib/queries/previsions-rapprochement.ts` (`getMappingResoluParMois`), `src/lib/previsions-presentation/tresorerie-reelle-nette.ts` (`netterTresorerieReelleParMois`), `src/lib/queries/__tests__/previsions-rapprochement-integration.test.ts`, `src/lib/queries/__tests__/previsions-tresorerie-trois-series-integration.test.ts` (test d2)
+
+**Symptôme :**
+Neutraliser la boucle `versionParMois`/`versionsDistinctes` dans `getMappingResoluParMois` (le mapping
+résolu par mois retombe systématiquement sur le mapping actif courant, quelle que soit la clôture) fait
+tomber **1** assertion dans `previsions-rapprochement-integration.test.ts` (test (c)) mais **0**
+assertion — y compris après ajout d'une assertion `series[m].reelFCFA` dédiée pour lever l'ambiguïté —
+dans `previsions-tresorerie-trois-series-integration.test.ts` (test d2), qui exerce la même mutation à
+travers `getTresorerieTroisSeries`.
+
+**Cause racine :**
+`netterTresorerieReelleParMois` (story B.1) somme les lignes `RAPPROCHE` **et** `NON_RAPPROCHE` dans le
+**même** total netté du mois (seules `SANS_SOURCE_REELLE` et `QUANTITE` sont exclues). Dans le scénario
+du test (d2), le changement de mapping actif après clôture fait basculer une dépense de `RAPPROCHE`
+(via un poste nommé) à `NON_RAPPROCHE` — mais le montant total netté du mois reste identique dans les
+deux cas, puisque les deux statuts sont sommés ensemble avant d'atteindre `getTresorerieTroisSeries`.
+La bascule n'est donc **pas discriminable** au niveau agrégé, quelle que soit la richesse de
+l'assertion ajoutée à ce niveau — ce n'est pas un oubli de test, c'est une propriété structurelle du
+design de `netterTresorerieReelleParMois`.
+
+**Fix :**
+Aucun changement de code : l'aveu de 0 test est documenté explicitement, nommé et expliqué dans
+`docs/tests/rapport-falsification-sprint-PR3-ter.md`, plutôt que masqué ou compensé par un test ajouté
+à la mauvaise couche. Un test capable de discriminer cette mutation existe déjà, mais **une couche plus
+bas** (`previsions-rapprochement-integration.test.ts`, test (c), qui appelle directement
+`getMappingResoluParMois`/`calculerRapprochementScenario`).
+
+**Leçon / Règle :**
+Avant de considérer un aveu de « 0 test tombé » comme un trou de couverture à combler, vérifier si la
+mutation est **discriminable en principe** à la couche testée : si une couche supérieure agrège
+plusieurs statuts distincts dans un même total (ici : `RAPPROCHE` + `NON_RAPPROCHE` sommés), ajouter un
+test à cette couche pour distinguer ces statuts produit un test qui passe dans les deux cas — exactement
+le piège nommé par ERR-160 (un jeu ou un test structurellement incapable de trancher). La bonne réponse
+n'est pas d'enrichir le test de la couche passe-plat, mais de vérifier que la garantie est déjà prouvée
+à la couche où la logique de discrimination existe réellement, et de le documenter comme tel — nommé,
+expliqué, non masqué — plutôt que de multiplier des assertions cosmétiques à un niveau qui ne peut pas
+les faire échouer.
+
+**Références :** ERR-160, ERR-173, ADR-053 §15.5, `docs/tests/rapport-falsification-sprint-PR3-ter.md` (« Falsification à 0 test, documentée comme telle »), `docs/reviews/review-sprint-PR3-ter.md` Mineure #5
+
+---
+
+### ERR-181 — Un chiffre de falsification annoncé par un agent d'implémentation n'est pas une preuve tant qu'il n'a pas été rejoué par un tiers
+**Sprint :** PR3-ter (rapport de falsification, mesures du @tester) | **Date :** 2026-08-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `docs/tests/rapport-falsification-sprint-PR3-ter.md` (sections B.5 et C.2), `src/components/previsions/tresorerie-trois-series-chart.test.tsx`, `src/components/previsions/rapprochement-lignes-liste.tsx`
+
+**Symptôme :**
+Deux chiffres de falsification annoncés par les agents d'implémentation, remesurés par le @tester en
+rejouant chaque mutation lui-même plutôt qu'en recopiant le récit fourni : (a) B.5 (offset du gradient
+de `tresorerie-trois-series-chart.tsx`) annoncé « 3/6 », « 1/8 », « 1/8 » pour trois mutations
+distinctes — remesuré à **1/8 pour les trois**, avec un fichier de test qui contient aujourd'hui 8 tests
+et non 6 ; (b) C.2 « formatage par nature (kg vs FCFA) » annoncé « 2/2 » alors qu'**aucun fichier de
+test ne couvre `rapprochement-lignes-liste.tsx`** — il n'existait rien à falsifier, le gap de couverture
+étant réel, pas comblé par une falsification qui n'a jamais pu être exécutée.
+
+**Cause racine :**
+Un chiffre de falsification rapporté à l'issue d'une story est une affirmation, pas une preuve tant
+qu'il n'a pas été rejoué indépendamment. Un décalage entre le nombre de tests annoncé et le nombre de
+tests réellement présent au moment de la vérification (6 vs 8) suggère que le fichier de test a évolué
+entre la mesure initiale et la clôture sans que le chiffre annoncé soit remis à jour ; l'annonce « 2/2 »
+sans aucun test existant suggère une confusion entre « la falsification a été pensée/planifiée » et
+« la falsification a été exécutée ».
+
+**Fix :**
+Chaque divergence signalée explicitement dans le rapport de falsification final, sans être lissée ni
+recalée après coup par supposition — le rapport documente le chiffre annoncé, le chiffre mesuré, et
+l'hypothèse de cause de l'écart quand elle existe (assertions internes à un même `it()` non révélées par
+l'arrêt au premier `expect` en échec, ou version antérieure du fichier de test).
+
+**Leçon / Règle :**
+Un chiffre de falsification n'est une preuve que **rejouée par un tiers** au moment de la clôture, pas
+recopiée du récit d'un agent d'implémentation. Le rapport de falsification final doit toujours indiquer
+explicitement, pour chaque mutation, si le chiffre a été **mesuré** par son auteur ou **recopié** — et
+en cas de divergence, la documenter sans la corriger silencieusement en alignant l'ancien chiffre sur le
+nouveau. Un chiffre annoncé pour un fichier qui, au moment de la vérification, ne contient **aucun**
+test à falsifier n'est pas une preuve à 100 % : c'est un gap de couverture déguisé en preuve.
+
+**Références :** ERR-172, ERR-168, `docs/tests/rapport-falsification-sprint-PR3-ter.md` (sections B.5, C.2, « Ce que je n'ai pas pu vérifier ou reproduire à l'identique »)
+
+---
+
+### ERR-180 — Un risque connu documenté uniquement dans des commentaires de code redevient invisible à la review suivante s'il n'est pas répété dans le rapport de clôture
+**Sprint :** PR3-ter (Majeur #2 de la review) | **Date :** 2026-08-05
+**Sévérité :** Moyenne (process)
+**Fichier(s) :** `src/lib/queries/previsions-rapprochement.ts:124-129, 202-203`, `src/lib/queries/previsions-mapping-orphelins.ts:124-129`
+
+**Symptôme :**
+Le report de la correction structurelle de `MappingRapprochement.cibleId` pour `POSTE_PREVISION` (voir
+ERR-179) était honnêtement documenté — mais **uniquement** en commentaires à trois endroits du code
+source. Le reviewer (@code-reviewer, Read/Glob/Grep uniquement) a dû le retrouver lui-même par lecture de
+code plutôt que de le lire dans un document de clôture qui l'annonce.
+
+**Cause racine :**
+Un commentaire de code correctement écrit protège le lecteur qui ouvre précisément ce fichier ; il ne
+protège personne d'autre. Rien ne garantit qu'un futur agent (PM à la clôture du sprint, reviewer d'un
+sprint ultérieur qui ne relit pas ce fichier précis) tombera sur ce commentaire avant de considérer le
+risque comme couvert ou oublié.
+
+**Fix :**
+Correctif attendu par la review : le rapport de clôture du sprint doit reprendre explicitement
+l'avertissement de `previsions-rapprochement.ts:124-129`, pas seulement énoncer « filet de sécurité
+livré ».
+
+**Leçon / Règle :**
+Un report de correction structurelle assumé (scope réduit, dette technique consciente) doit être
+consigné à **deux endroits distincts, jamais un seul** : (1) en commentaire à l'endroit exact du code
+concerné, pour le lecteur qui ouvre ce fichier précis ; (2) dans le document de clôture de sprint
+(rapport de test, review, ou ce fichier de connaissances), pour tout agent qui ne lira jamais ce fichier
+précis mais doit néanmoins hériter du risque. Un commentaire de code seul est une protection locale, pas
+une capitalisation — c'est la même leçon qu'ERR-165 (« signalé par trois reviews consécutives sans
+jamais avoir été fiché »), appliquée cette fois à un risque documenté en code plutôt qu'en review.
+
+**Références :** ERR-179, ERR-165, `docs/reviews/review-sprint-PR3-ter.md` Majeur #2, ADR-053 §3.9
+
+---
+
+### ERR-179 — Le quatrième état invisible d'une jointure molle : un mapping site-scopé lu contre une cible scénario-scopée fait disparaître un montant sans jamais transiter par un état nommé
+**Sprint :** PR3-ter (« Portée du mapping ») | **Date :** 2026-08-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/previsions/rapprochement.ts:310-322` (accumulateur `reconcilierPrevuEtReel`), `343-344` (`reelParCibleEtMois.get(cle) ?? new Decimal(0)`), `src/lib/queries/previsions-rapprochement.ts:124-129, 202-203`, `src/lib/queries/previsions-mapping-orphelins.ts:124-129`
+
+**Symptôme :**
+`MappingRapprochement.cibleId` est **site-scopé** (ADR-053 §3.9 : « un mapping sert potentiellement
+plusieurs scénarios successifs du même site »), mais les entités qu'il référence
+(`PostePrevision`/`AlimentPrevision`) sont **scénario-scopées**. Un mapping créé contre le scénario A
+puis lu depuis le scénario B accumulait le montant réel sous une **clé morte** (la clé du scénario A) :
+il n'apparaissait **ni** en `RAPPROCHE`, **ni** en `NON_RAPPROCHE`, **ni** en `SANS_SOURCE_REELLE` — les
+trois seuls états nommés par ADR-053 §15.1(b) et ERR-173. Un **quatrième état, non nommé**, qui rend une
+donnée invisible sans jamais transiter par un des trois états connus : `reelParCibleEtMois.get(cle) ??
+new Decimal(0)` retombe silencieusement sur zéro, exactement le geste qu'ERR-173 interdit pour le
+troisième état (« ne jamais combler le troisième cas par un `?? 0` »), mais ici appliqué à un quatrième
+cas qu'ERR-173 ne nommait pas.
+
+**Cause racine :**
+Une clé de jointure « molle » (`cibleId`, une chaîne littérale, pas une contrainte de clé étrangère
+Prisma) peut référencer une ligne qui n'existe tout simplement pas dans le scope où elle est relue, sans
+qu'aucune erreur ne soit levée à aucun niveau. Aucune fixture existante ne pouvait détecter ce cas : toutes
+supposaient implicitement que `cibleId` référence une cible du **même** scénario que celui en cours de
+calcul — une hypothèse jamais énoncée, donc jamais mise en défaut par un test. C'est une **variante
+nouvelle d'ERR-173** : ERR-173 distingue trois états visibles construits volontairement dans le moteur ;
+ici, le quatrième état naît d'une incohérence de portée entre deux modèles, invisible tant que personne
+ne compare explicitement les deux scopes.
+
+**Fix :**
+Résolution dynamique par clé métier stable (`tailleGranule`) pour `ALIMENT_PREVISION` — le mapping ne
+porte plus un `cibleId` littéral mais est réévalué contre la cible du scénario courant. Filet
+`cibleOrpheline` (`TYPES_CIBLE_AVEC_RESOLUTION`, `previsions-mapping-orphelins.ts`) posé pour les **deux**
+types de cible : détecte le cas et l'affiche en badge dans l'écran d'administration
+(`rapprochement-mapping-tab.tsx:359-367`). **Correction structurelle de `POSTE_PREVISION` reportée** —
+`PostePrevision.libelle` est un texte libre, sans clé métier stable équivalente à `tailleGranule` ; le
+filet reste donc la seule protection pour ce type de cible, et il n'agit que si l'exploitant visite
+l'écran d'administration (voir ERR-180 pour le risque de ce report documenté seulement en code).
+
+**Leçon / Règle :**
+Quand une clé de jointure est « molle » (une chaîne littérale, non contrainte par une FK Prisma), la
+portée (scope) des deux côtés de la jointure doit être vérifiée explicitement comme une propriété à
+part entière du modèle — pas seulement son existence. L'absence de correspondance entre les deux scopes
+doit produire un **état nommé**, jamais un repli silencieux (`?? 0`, `?? null` non distingué) : un
+`Decimal(0)` de repli sur une jointure molle transforme une incohérence de données en un chiffre faux
+mais crédible, indiscernable d'un vrai zéro pour quiconque lit l'écran. Avant de considérer qu'une vue
+de rapprochement/agrégation ne connaît que N états distincts, vérifier explicitement s'il n'existe pas
+un état supplémentaire créé par une incohérence de portée entre les modèles joints — la liste des états
+« connus » d'une review précédente (ici, les trois d'ERR-173) n'est pas nécessairement exhaustive.
+
+**Références :** ERR-173 (les trois états nommés, dont celui-ci est une variante non couverte), ERR-180
+(report documenté seulement en code), ADR-053 §3.9, §15.1(b), `docs/reviews/review-sprint-PR3-ter.md`
+Majeur #2, `docs/tests/rapport-falsification-sprint-PR3-ter.md` (falsification A.1/A.3, Réserve
+Moyenne #3)
+
+---
+
 ### ERR-174 — Une route API livrée, testée et corrigée, mais jamais consommée par aucun écran : une story « à moitié terminée » verte de bout en bout
 **Sprint :** PR3-bis (« L'écran d'administration du mapping ») | **Date :** 2026-08-05
 **Sévérité :** Haute
@@ -3462,6 +3674,22 @@ dans ce cas est une **falsification chiffrée systématique**, documentée dans 
 sans jeu d'or ne soit considéré comme terminé — pas après coup, sur demande.
 
 **Références :** ERR-160, ERR-168 (pratique de falsification), ERR-171, ERR-142, ADR-053 §15.6 point 3, `docs/analysis/pre-analysis-sprint-PR3.md` section C, `docs/tests/rapport-falsification-sprint-PR3.md`
+
+**Récidive directe (Sprint PR3-ter, Majeur #1 de la review, 2026-08-05) :**
+Malgré cette entrée écrite et référencée dans le sprint PR3 immédiatement précédent, le sprint PR3-ter
+(module toujours sans jeu d'or externe — extension du rapprochement) est arrivé en review **sans**
+`docs/tests/rapport-falsification-sprint-PR3-ter.md`. Le code source contenait bien une documentation en
+tête de fichier très détaillée faisant office de pré-analyse distribuée, et les fichiers de test
+contenaient des commentaires de falsification précis — mais sans document consolidé, le reviewer
+(Read/Glob/Grep uniquement) ne pouvait pas vérifier les comptages, seulement constater que les tests
+étaient **structurés pour discriminer**, jamais que la falsification avait **réellement été exécutée et
+chiffrée**. Le rapport a été produit **après** la review, sur réserve Majeur #1 — exactement le « après
+coup, sur demande » que cette entrée interdit. Leçon confirmée une seconde fois, sans ambiguïté possible
+cette fois : la préexistence de commentaires de falsification dans le code ou de docstrings détaillées ne
+remplace jamais le document consolidé et rejoué exigé par ADR-053 §15.6 point 3 — ce document doit être
+produit **pendant** le sprint, avant la review, pas régularisé après coup pour lever une réserve.
+
+**Références additionnelles :** `docs/reviews/review-sprint-PR3-ter.md` Majeur #1, `docs/tests/rapport-falsification-sprint-PR3-ter.md`
 
 ---
 
@@ -3923,6 +4151,17 @@ collision), envisager un test en moteur de rendu réel (Chromium) exécuté en r
 en vérification ad hoc après signalement.
 
 **Références :** review-sprint-PR2-quinquies §1 et §3
+
+**Ajout (Sprint PR3-ter, 2026-08-05) — Playwright et la langue de l'interface :**
+Même famille de piège (une vérification en environnement automatisé qui ne reproduit pas fidèlement les
+conditions réelles), sur un axe différent : sans cookie `NEXT_LOCALE=fr` posé explicitement avant
+navigation, Playwright envoie `Accept-Language: en-US` par défaut et **toute l'UI bascule en anglais** —
+un piège majeur pour toute vérification de libellés français (CLAUDE.md, « Langue de l'UI : français »),
+qui peut faire lire à l'agent des libellés anglais légitimes en croyant vérifier le français, ou
+inversement signaler à tort une régression i18n. Avant toute vérification Playwright de libellés, poser
+explicitement le cookie `NEXT_LOCALE=fr` (ou l'équivalent du mécanisme de locale du projet) avant la
+première navigation, et le vérifier par une assertion sur un libellé connu plutôt que de le supposer
+acquis.
 
 ---
 

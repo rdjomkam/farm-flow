@@ -47,6 +47,15 @@ export interface AgregatEcartDTO {
   nombreLignesNonRapprochees: number;
 }
 
+/**
+ * Unite d'un agregat de rapprochement (Sprint PR3-ter, story C.2) :
+ * "MONETAIRE" (DEPENSE/ENTREE, FCFA) ou "QUANTITE" (kg) — determine
+ * exclusivement le formatteur applique a l'affichage. Un agregat
+ * `AgregatEcartDTO` n'est JAMAIS affiche sans que son unite soit connue
+ * du composant qui le rend (jamais un "Total" mixte non etiquete).
+ */
+export type UniteAgregatDTO = "MONETAIRE" | "QUANTITE";
+
 /** Agregat par poste, enrichi de sens/couleur — miroir de `AgregatPosteComparaison`. */
 export interface AgregatPosteDTO extends AgregatEcartDTO {
   cle: string;
@@ -95,16 +104,26 @@ export interface RapprochementScenarioDTO {
   moisDisponibles: number[];
   /** Vue mensuelle : une entree par mois, la liste COMPLETE des lignes de ce mois (tous statuts confondus). */
   lignesParMois: Record<number, LigneRapprochementDTO[]>;
-  /** Ligne "Total" de la vue mensuelle — agregat toutes lignes confondues de ce mois. */
-  totalMoisParMois: Record<number, AgregatEcartDTO>;
+  /**
+   * Ligne "Total" de la vue mensuelle — agregat des lignes MONETAIRES
+   * (DEPENSE/ENTREE, FCFA) UNIQUEMENT de ce mois (Sprint PR3-ter, story
+   * C.2) : ne mélange JAMAIS un montant FCFA avec une quantite kg.
+   */
+  totalMoisMonetaireParMois: Record<number, AgregatEcartDTO>;
+  /** Ligne "Total" de la vue mensuelle — agregat des lignes QUANTITE (kg) UNIQUEMENT de ce mois (story C.2), disjoint du total monetaire. */
+  totalMoisQuantiteParMois: Record<number, AgregatEcartDTO>;
   /** Bac "Non rapproche" (ADR-053 section 5) — TOUJOURS present (tableau vide si aucune categorie non rapprochee ce mois), jamais absent. */
   nonRapprocheParMois: Record<number, LigneRapprochementDTO[]>;
-  /** Vue cumulee — total toutes lignes confondues, depuis le debut de l'horizon jusqu'a (et y compris) ce mois. */
-  cumuleGlobalParMois: Record<number, AgregatEcartDTO>;
-  /** Vue cumulee, detail par poste — memes bornes que `cumuleGlobalParMois`. */
+  /** Vue cumulee — total des lignes MONETAIRES (FCFA) UNIQUEMENT, depuis le debut de l'horizon jusqu'a (et y compris) ce mois (story C.2). */
+  cumuleGlobalMonetaireParMois: Record<number, AgregatEcartDTO>;
+  /** Vue cumulee — total des lignes QUANTITE (kg) UNIQUEMENT, memes bornes que `cumuleGlobalMonetaireParMois` (story C.2). */
+  cumuleGlobalQuantiteParMois: Record<number, AgregatEcartDTO>;
+  /** Vue cumulee, detail par poste — memes bornes que `cumuleGlobalMonetaireParMois` (chaque poste est de nature homogene). */
   cumuleParPosteParMois: Record<number, AgregatPosteDTO[]>;
-  /** Vue "Top ecarts" — les 5 lignes de plus grand |ecartAbsolu| de ce mois. */
-  topEcartsParMois: Record<number, LigneRapprochementDTO[]>;
+  /** Vue "Top ecarts" — les 5 lignes MONETAIRES (FCFA) de plus grand |ecartAbsolu| de ce mois (story C.2), jamais triees contre une ligne QUANTITE. */
+  topEcartsMonetaireParMois: Record<number, LigneRapprochementDTO[]>;
+  /** Vue "Top ecarts" — les 5 lignes QUANTITE (kg) de plus grand |ecartAbsolu| de ce mois (story C.2), classement DISJOINT du classement monetaire. */
+  topEcartsQuantiteParMois: Record<number, LigneRapprochementDTO[]>;
   /** Vue "par vague" — une ligne par VaguePrevue du scenario, tous mois confondus (cout complet du cycle). */
   vagues: VagueRapprochementRowDTO[];
   /** Instant ISO du calcul serveur — l'onglet doit afficher explicitement que le "reel" reflete cet instant, jamais une photo figee (ADR-053 §5.1(b)). */

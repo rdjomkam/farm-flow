@@ -7980,7 +7980,7 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR2-octies-*.md` n'existe* — le sui
 ## Sprint PR3 — Rapprochement prévu/réel
 Voir : *aucun fichier `docs/sprints/SPRINT-PR3-PREVISIONS.md` n'existe* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`. Livrables : [ADR-053 §15](decisions/ADR-053-module-previsions.md), [pre-analysis-sprint-PR3.md](analysis/pre-analysis-sprint-PR3.md), [review-sprint-PR3.md](reviews/review-sprint-PR3.md), [rapport-falsification-sprint-PR3.md](tests/rapport-falsification-sprint-PR3.md), [rapport-verification-sprint-PR3.md](tests/rapport-verification-sprint-PR3.md).
 
-**Statut :** `FAIT` (**9 stories** — **8 `FAIT`**, **1 `REPORTÉE`**) — **review de sprint `VALIDÉ AVEC RÉSERVES`, périmètre backend ; la review UI est distincte et non couverte par ce rapport**
+**Statut :** `FAIT` (**9 stories** — **9 `FAIT`**) — **review de sprint `VALIDÉ AVEC RÉSERVES`, périmètre backend ; la review UI est distincte et non couverte par ce rapport**
 
 | Story | Type | Sujet | Statut |
 |-------|------|-------|--------|
@@ -7993,7 +7993,7 @@ Voir : *aucun fichier `docs/sprints/SPRINT-PR3-PREVISIONS.md` n'existe* — le s
 | PR3.5 | QUERIES | Lecture agrégée du réel (`Depense`/`Vente`/`MouvementStock`) + résolution de la version de mapping par mois (immuabilité de l'historique) | `FAIT` |
 | PR3.6 | API | Routes mapping-rapprochement (GET/POST/non-mappees) et clôtures de mois (GET/POST) avec permissions | `FAIT` |
 | PR3.7 | UI | Onglet Rapprochement, 4 vues (mensuelle, cumulée, par vague avec libellé de cohorte, top écarts) | `FAIT` |
-| PR3.8 | UI | Vue Trésorerie à 3 séries (BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL) et reprévision glissante | `REPORTÉ` — **hors périmètre PR3, acté en ADR-053 §15.8** |
+| PR3.8 | UI | Vue Trésorerie à 3 séries (BUDGET INITIAL / PRÉVISION ACTUALISÉE / RÉEL) et reprévision glissante | `FAIT` — **livré par PR3ter.B2/B3** (voir [SPRINT-PR3-TER.md](sprints/SPRINT-PR3-TER.md)) ; initialement `REPORTÉ` hors périmètre PR3, acté en ADR-053 §15.8 |
 
 **Review de sprint — `VALIDÉ AVEC RÉSERVES`** (`docs/reviews/review-sprint-PR3.md`) : checklist **R1-R11** conforme (R5/R6 non applicables, périmètre backend ; **R9 non vérifié directement** par le reviewer, faute d'outil d'exécution — la preuve d'exécution est portée par les rapports du @tester) ; **13 points de contrôle tous conformes** (sens unique strict ADR §5.1(a), pureté du moteur, règles d'écart §15.5, exclusion de `SANS_SOURCE_REELLE` du total réel, immuabilité du mapping prouvée par test DB-gated, ERR-165 et ERR-162 soldés, pas de N+1). Constat **Haute #1** (preuve par falsification chiffrée absente du dépôt) : **RÉSOLU** par la production de `docs/tests/rapport-falsification-sprint-PR3.md`, qui fait partie intégrante de la clôture.
 

@@ -12,12 +12,18 @@
  * Les lignes de statut `NON_RAPPROCHE` sont exclues de la liste
  * principale (deja rendues, separement et explicitement, par
  * `RapprochementNonRapproche`) — elles restent neanmoins comptees dans
- * `total` (calcule par le moteur sur TOUTES les lignes du mois, y compris
- * `NON_RAPPROCHE`), pour ne jamais les faire disparaitre du total reel.
+ * `totalMonetaire`/`totalQuantite` (calcules par le moteur sur TOUTES les
+ * lignes du mois, y compris `NON_RAPPROCHE`), pour ne jamais les faire
+ * disparaitre du total reel.
+ *
+ * Story C.2 (PR3-ter) : le total du mois n'est plus un agregat unique —
+ * `totalMonetaire` (DEPENSE/ENTREE, FCFA) et `totalQuantite` (kg) sont
+ * DEUX totaux disjoints, jamais sommes ni tries ensemble (une quantite
+ * kg n'a pas de sens additionnee a un montant FCFA).
  */
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RapprochementLignesListe } from "@/components/previsions/rapprochement-lignes-liste";
+import { RapprochementLignesListe, type TotalAffichableDTO } from "@/components/previsions/rapprochement-lignes-liste";
 import { RapprochementNonRapproche } from "@/components/previsions/rapprochement-non-rapproche";
 import { libelleMoisCalendaire } from "@/lib/previsions/tableau-de-bord-helpers";
 import type { AgregatEcartDTO, LigneRapprochementDTO } from "@/components/previsions/rapprochement-types";
@@ -27,7 +33,8 @@ interface RapprochementVueMensuelleProps {
   moisAbsolu: number;
   lignes: LigneRapprochementDTO[];
   nonRapproche: LigneRapprochementDTO[];
-  total: AgregatEcartDTO | undefined;
+  totalMonetaire: AgregatEcartDTO | undefined;
+  totalQuantite: AgregatEcartDTO | undefined;
 }
 
 export function RapprochementVueMensuelle({
@@ -35,11 +42,20 @@ export function RapprochementVueMensuelle({
   moisAbsolu,
   lignes,
   nonRapproche,
-  total,
+  totalMonetaire,
+  totalQuantite,
 }: RapprochementVueMensuelleProps) {
   const t = useTranslations("previsions");
   const libelleMois = libelleMoisCalendaire(dateDebutPlan, moisAbsolu);
   const lignesPrincipales = lignes.filter((l) => l.statutRapprochement !== "NON_RAPPROCHE");
+
+  const totaux: TotalAffichableDTO[] = [];
+  if (totalMonetaire) {
+    totaux.push({ agregat: totalMonetaire, unite: "MONETAIRE", labelKey: "rapprochementTab.totalRowMonetaire" });
+  }
+  if (totalQuantite) {
+    totaux.push({ agregat: totalQuantite, unite: "QUANTITE", labelKey: "rapprochementTab.totalRowQuantite" });
+  }
 
   return (
     <div className="space-y-4">
@@ -51,7 +67,7 @@ export function RapprochementVueMensuelle({
         <CardContent>
           <RapprochementLignesListe
             lignes={lignesPrincipales}
-            total={total}
+            totaux={totaux}
             emptyLabel={t("rapprochementTab.noData")}
           />
         </CardContent>

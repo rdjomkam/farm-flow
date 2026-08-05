@@ -8,9 +8,10 @@
  * reel, jamais silencieusement absent. S'il est vide, dis-le explicitement
  * plutot que de masquer la section". Reutilise `RapprochementLignesListe`
  * (memes colonnes) mais sans ligne "Total" propre — ces lignes sont deja
- * comptees dans le total du mois affiche par la vue mensuelle
- * (`totalMoisParMois`, calcule par `agregerParMois` sur TOUTES les lignes,
- * moteur pur — jamais resomme ici).
+ * comptees dans les totaux du mois affiches par la vue mensuelle
+ * (`totalMoisMonetaireParMois`/`totalMoisQuantiteParMois`, Sprint PR3-ter
+ * story C.2, calcules par `agregerParMois` sur les lignes deja partitionnees
+ * par nature — moteur pur, jamais resomme ici).
  */
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

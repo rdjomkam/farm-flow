@@ -58,7 +58,9 @@ import type {
 } from "@/components/previsions/api-types";
 import type { ProjectionScenarioDTO } from "@/components/previsions/projection-types";
 import type { RapprochementScenarioDTO } from "@/components/previsions/rapprochement-types";
+import type { TresorerieTroisSeriesDTO } from "@/components/previsions/tresorerie-types";
 import { RapprochementTab } from "@/components/previsions/rapprochement-tab";
+import { TresorerieTab } from "@/components/previsions/tresorerie-tab";
 import { ParametresTab } from "@/components/previsions/parametres-tab";
 import { AlimentsTab } from "@/components/previsions/aliments-tab";
 import { PlanVaguesTab } from "@/components/previsions/plan-vagues-tab";
@@ -91,6 +93,8 @@ interface ScenarioDetailClientProps {
   erreurProjection: string | null;
   /** Rapprochement prevu/reel pre-calcule sur tout l'horizon (story PR3.7, ADR-053 section 15). */
   rapprochement: RapprochementScenarioDTO;
+  /** Vue tresorerie a 3 series pre-calculee sur tout l'horizon (Sprint PR3-ter, story B.5, ADR-053 §6.5). */
+  tresorerie: TresorerieTroisSeriesDTO;
 }
 
 export function ScenarioDetailClient({
@@ -106,6 +110,7 @@ export function ScenarioDetailClient({
   projection,
   erreurProjection,
   rapprochement,
+  tresorerie,
 }: ScenarioDetailClientProps) {
   const t = useTranslations("previsions");
   const router = useRouter();
@@ -165,6 +170,7 @@ export function ScenarioDetailClient({
         <TabsTrigger value="journal">{t("tabs.journal")}</TabsTrigger>
         <TabsTrigger value="apports">{t("tabs.apports")}</TabsTrigger>
         <TabsTrigger value="rapprochement">{t("tabs.rapprochement")}</TabsTrigger>
+        <TabsTrigger value="tresorerie">{t("tabs.tresorerie")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="tableau-de-bord">
@@ -254,6 +260,10 @@ export function ScenarioDetailClient({
           scenarioNom={scenario.nom}
           permissions={permissions}
         />
+      </TabsContent>
+
+      <TabsContent value="tresorerie">
+        <TresorerieTab dateDebutPlan={scenario.dateDebutPlan} tresorerie={tresorerie} />
       </TabsContent>
     </Tabs>
   );

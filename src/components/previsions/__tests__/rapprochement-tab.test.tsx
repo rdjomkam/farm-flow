@@ -140,20 +140,29 @@ const FIXTURE: RapprochementScenarioDTO = {
     ],
     1: [],
   },
-  totalMoisParMois: {
+  // Story C.2 (PR3-ter) : deux totaux DISJOINTS — le total monetaire (FCFA,
+  // lignes DEPENSE/ENTREE) exclut la ligne QUANTITE (tonnage recolte, 1000
+  // prevu / 1200 reel dans `lignesParMois[0]`) ; le total quantite ne
+  // contient QUE cette derniere. Un bug qui les remelangerait ferait
+  // apparaitre 1000/1200 dans le total monetaire (valeurs `total*Monetaire`
+  // ci-dessous ne les incluent PAS, contrairement a l'ancien
+  // `totalMoisParMois` a un seul total qui les additionnait).
+  totalMoisMonetaireParMois: {
     0: {
-      totalPrevu: 401_000,
+      totalPrevu: 400_000,
       totalReel: 465_000,
-      totalEcartAbsolu: 64_000,
-      nombreLignes: 5,
+      totalEcartAbsolu: 63_800,
+      nombreLignes: 4,
       nombreLignesSansSourceReelle: 1,
       nombreLignesNonRapprochees: 1,
     },
-    1: {
-      totalPrevu: 0,
-      totalReel: 0,
-      totalEcartAbsolu: 0,
-      nombreLignes: 0,
+  },
+  totalMoisQuantiteParMois: {
+    0: {
+      totalPrevu: 1000,
+      totalReel: 1200,
+      totalEcartAbsolu: 200,
+      nombreLignes: 1,
       nombreLignesSansSourceReelle: 0,
       nombreLignesNonRapprochees: 0,
     },
@@ -176,22 +185,41 @@ const FIXTURE: RapprochementScenarioDTO = {
     ],
     1: [],
   },
-  cumuleGlobalParMois: {
+  // Story C.2 : memes bornes que le total mensuel, DEUX totaux cumules disjoints.
+  cumuleGlobalMonetaireParMois: {
     0: {
-      totalPrevu: 401_000,
+      totalPrevu: 400_000,
       totalReel: 465_000,
-      totalEcartAbsolu: 64_000,
-      nombreLignes: 5,
+      totalEcartAbsolu: 63_800,
+      nombreLignes: 4,
       nombreLignesSansSourceReelle: 1,
       nombreLignesNonRapprochees: 1,
     },
     1: {
-      totalPrevu: 401_000,
+      totalPrevu: 400_000,
       totalReel: 465_000,
-      totalEcartAbsolu: 64_000,
-      nombreLignes: 5,
+      totalEcartAbsolu: 63_800,
+      nombreLignes: 4,
       nombreLignesSansSourceReelle: 1,
       nombreLignesNonRapprochees: 1,
+    },
+  },
+  cumuleGlobalQuantiteParMois: {
+    0: {
+      totalPrevu: 1000,
+      totalReel: 1200,
+      totalEcartAbsolu: 200,
+      nombreLignes: 1,
+      nombreLignesSansSourceReelle: 0,
+      nombreLignesNonRapprochees: 0,
+    },
+    1: {
+      totalPrevu: 1000,
+      totalReel: 1200,
+      totalEcartAbsolu: 200,
+      nombreLignes: 1,
+      nombreLignesSansSourceReelle: 0,
+      nombreLignesNonRapprochees: 0,
     },
   },
   cumuleParPosteParMois: {
@@ -213,7 +241,10 @@ const FIXTURE: RapprochementScenarioDTO = {
     ],
     1: [],
   },
-  topEcartsParMois: {
+  // Story C.2 (PR3-ter) : deux classements DISJOINTS — le monetaire (FCFA)
+  // ne contient JAMAIS "Tonnage récolté" (kg), le classement quantite ne
+  // contient QUE cette derniere.
+  topEcartsMonetaireParMois: {
     0: [
       {
         id: "posteNonBudgete::0",
@@ -240,6 +271,24 @@ const FIXTURE: RapprochementScenarioDTO = {
         ecartPct: 0.5,
         sens: "DEFAVORABLE",
         couleur: "rouge",
+      },
+    ],
+    1: [],
+  },
+  topEcartsQuantiteParMois: {
+    0: [
+      {
+        id: "vente::0",
+        moisAbsolu: 0,
+        libelle: "Tonnage récolté",
+        natureGrandeur: "QUANTITE",
+        prevu: 1000,
+        reel: 1200,
+        statutRapprochement: "RAPPROCHE",
+        ecartAbsolu: 200,
+        ecartPct: 0.2,
+        sens: "FAVORABLE",
+        couleur: "vert",
       },
     ],
     1: [],
@@ -432,5 +481,58 @@ describe("RapprochementTab", () => {
       moisDisponibles: [],
     });
     expect(screen.getByRole("tab", { name: "Mapping" })).toBeInTheDocument();
+  });
+
+  /* ==================================================================== *
+   * Story C.2 (PR3-ter) : FCFA et kg ne sont jamais melanges sous un total
+   * ou un classement unique.
+   * ==================================================================== */
+
+  it("vue mensuelle : 'Tonnage récolté' (kg) est formaté en tonnes, jamais en FCFA — et deux totaux distincts (FCFA / kg) sont affichés", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderTab();
+    await selectMonth(user, /janv\.? 2026/i);
+
+    // La ligne QUANTITE (1200 kg) est formatee "1,2 t", JAMAIS "1 200 FCFA".
+    expect(screen.getAllByText("1,2 t").length).toBeGreaterThan(0);
+    expect(screen.queryByText("1 200 FCFA")).not.toBeInTheDocument();
+
+    // Deux totaux distincts, jamais un seul total melangeant FCFA et kg.
+    expect(screen.getAllByText(/Total du mois — montants \(FCFA\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Total du mois — quantités \(t\)/).length).toBeGreaterThan(0);
+  });
+
+  it("vue cumulée : deux totaux globaux distincts (FCFA / kg), jamais un total unique", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderTab();
+    await selectMonth(user, /janv\.? 2026/i);
+    await user.click(screen.getByRole("tab", { name: "Vue cumulée" }));
+
+    expect(screen.getAllByText(/Total cumulé — montants \(FCFA\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Total cumulé — quantités \(t\)/).length).toBeGreaterThan(0);
+  });
+
+  it("Top écarts : deux classements DISJOINTS — 'Tonnage récolté' (kg) n'apparaît QUE dans la section quantités, jamais dans la section montants FCFA", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderTab();
+    await selectMonth(user, /janv\.? 2026/i);
+    await user.click(screen.getByRole("tab", { name: "Top écarts" }));
+
+    // Deux titres de section distincts, chacun avec son unite explicite.
+    expect(screen.getAllByText(/Top 5 des écarts — montants FCFA/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Top 5 des écarts — quantités \(t\)/).length).toBeGreaterThan(0);
+
+    // La section "montants FCFA" ne contient NI "Tonnage récolté" NI "1,2 t"
+    // — seule la section "quantités kg" les affiche.
+    const sectionMonetaire = screen
+      .getByText(/Top 5 des écarts — montants FCFA/)
+      .closest(".rounded-xl") as HTMLElement;
+    expect(within(sectionMonetaire).queryByText("Tonnage récolté")).not.toBeInTheDocument();
+
+    const sectionQuantite = screen
+      .getByText(/Top 5 des écarts — quantités \(t\)/)
+      .closest(".rounded-xl") as HTMLElement;
+    expect(within(sectionQuantite).getAllByText("Tonnage récolté").length).toBeGreaterThan(0);
+    expect(within(sectionQuantite).getAllByText("1,2 t").length).toBeGreaterThan(0);
   });
 });

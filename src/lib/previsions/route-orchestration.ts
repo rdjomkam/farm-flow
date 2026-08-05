@@ -263,6 +263,19 @@ export interface MoisProjectionResult {
   /** Detail par granulometrie (cle = `TailleGranule`, ex. "G1") — lignes 8-10 du classeur ; seules les granulometries reellement utilisees par le scenario apparaissent. */
   sacsParGranulometrie: Record<string, number>;
   /**
+   * Bug de rapprochement (ADR-053 §11, §15 — meme famille que l'homonymie
+   * `sacsParTonne` : deux grandeurs distinctes, un seul nom faillible)
+   * : `sacsParGranulometrie` ci-dessus compte des SACS (entiers, apres
+   * `ceil`), jamais des kg — le comparer au reel (`MouvementStock.quantite`,
+   * `Vente.poidsTotalKg`, tous deux en kg) revient a comparer deux unites
+   * differentes sous un meme intitule "QUANTITE". `kgParGranulometrie` est
+   * le besoin BRUT en kg (avant `ceil`), meme grandeur/meme unite que le
+   * reel — c'est CE champ que le rapprochement prevu/reel doit consommer
+   * pour la ligne "Aliment <granulometrie>", jamais `sacsParGranulometrie`.
+   * Cle = `TailleGranule` (ex. "G1"), memes conventions que ci-dessus.
+   */
+  kgParGranulometrie: Record<string, number>;
+  /**
    * Story PR2sex.2 (ADR-053 §7/§12, jeu d'or `besoinsAliments.detailParVagueSacs`,
    * `Previsions!A11:V23` — « DETAIL PAR VAGUE — sacs consommes dans le mois
    * (indicatif) »). UN ROUND, jamais le CEIL de `sacsAlimentsTotal`/
@@ -669,6 +682,11 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
     // `sacsAlimentsDuMois` (GAP 2, deja existant), jamais une seconde passe.
     let besoinAlimentsTotalKgDuMois = new Decimal(0);
     const sacsParGranulometrieDuMois: Record<string, number> = {};
+    // Bug de rapprochement (ADR-053 §11/§15) : accumulateur JUMEAU de
+    // `sacsParGranulometrieDuMois`, meme boucle, meme cle (`tailleGranule`),
+    // mais en kg BRUTS (avant ceil) — c'est cette grandeur, pas les sacs,
+    // que le rapprochement prevu/reel doit comparer au reel (kg).
+    const kgParGranulometrieDuMois: Record<string, number> = {};
     for (const [alimentId, parMois] of kgParGranulometrieEtMois) {
       const kgDuMois = parMois.get(m);
       if (!kgDuMois || kgDuMois.lte(0)) continue;
@@ -678,6 +696,8 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
       sacsAlimentsDuMois = sacsAlimentsDuMois.plus(sacs);
       sacsParGranulometrieDuMois[aliment.tailleGranule] =
         (sacsParGranulometrieDuMois[aliment.tailleGranule] ?? 0) + sacs;
+      kgParGranulometrieDuMois[aliment.tailleGranule] =
+        (kgParGranulometrieDuMois[aliment.tailleGranule] ?? 0) + kgDuMois.toNumber();
     }
 
     // Story PR2sex.2 — `detailParVagueSacs` (sacs CONSOMMES, ROUND, jamais le
@@ -779,6 +799,7 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
       besoinAlimentsTotalKg: besoinAlimentsTotalKgDuMois,
       sacsAlimentsTotal: sacsAlimentsDuMois.toNumber(),
       sacsParGranulometrie: sacsParGranulometrieDuMois,
+      kgParGranulometrie: kgParGranulometrieDuMois,
       detailParVagueSacs: detailParVagueSacsDuMois,
       logistique: {
         voyagesAliments: logistiqueMois.voyagesAliments,

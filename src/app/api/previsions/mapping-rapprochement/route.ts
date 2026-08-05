@@ -4,6 +4,11 @@ import {
   getMappingActif,
   getMappingParVersion,
 } from "@/lib/queries/previsions-rapprochement-mapping";
+import {
+  detecterCiblesOrphelines,
+  type LigneMappingPourDetectionOrpheline,
+} from "@/lib/queries/previsions-mapping-orphelins";
+import { chargerScenarioPourMoteur } from "@/lib/queries/previsions-scenario-loader";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { apiError, handleApiError } from "@/lib/api-utils";
@@ -13,13 +18,23 @@ import { parseBody } from "@/app/api/previsions/_shared";
 /**
  * GET /api/previsions/mapping-rapprochement — lit le mapping de
  * rapprochement du site actif (ADR-053 §3.9, §15.3, amendement Sprint PR3,
- * story PR3.6).
+ * story PR3.6 ; augmentation `cibleOrpheline` Sprint PR3-ter, story A.2).
  *
  * Sans query param : le mapping ACTIF courant (`getMappingActif`).
  * Avec `?version=N` : la version PRECISE N (`getMappingParVersion`) — c'est
  * cette forme qu'utilise toute lecture d'un rapprochement deja clos
  * (`ClotureMois.versionMapping`), qui ne doit JAMAIS relire le mapping
  * `actif` du moment (garantie d'immuabilite de l'historique, ADR-053 §15.3).
+ *
+ * Avec `?scenarioId=X` : chaque ligne renvoyee est augmentee de
+ * `cibleOrpheline`/`cibleCleResolue` (`detecterCiblesOrphelines`, story A.1),
+ * calcule contre CE scenario precis — filet de securite NON NEGOCIABLE
+ * (docs/sprints/SPRINT-PR3-TER.md, story A.3) : un mapping dont la cible
+ * n'existe pas dans le scenario COURANT doit se voir, jamais s'evaporer dans
+ * un total silencieux. Sans `scenarioId`, le comportement reste EXACTEMENT
+ * celui d'avant cette story (retro-compatible avec `MappingFormDialog`, qui
+ * relit le mapping actif uniquement pour construire le payload du POST, sans
+ * jamais afficher cet etat).
  *
  * Permission : PREVISIONS_VOIR (lecture).
  */
@@ -30,6 +45,7 @@ export async function GET(request: NextRequest) {
 
     const parsedQuery = mappingRapprochementQuerySchema.safeParse({
       version: searchParams.get("version") ?? undefined,
+      scenarioId: searchParams.get("scenarioId") ?? undefined,
     });
     if (!parsedQuery.success) {
       return apiError(400, "Erreurs de validation.", {
@@ -40,13 +56,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { version } = parsedQuery.data;
+    const { version, scenarioId } = parsedQuery.data;
     const data =
       version === undefined
         ? await getMappingActif(auth.activeSiteId)
         : await getMappingParVersion(auth.activeSiteId, version);
 
-    return NextResponse.json({ data, version: version ?? (data[0]?.version ?? null) });
+    const dataAugmentee = scenarioId
+      ? detecterCiblesOrphelines(
+          data as LigneMappingPourDetectionOrpheline[],
+          await chargerScenarioPourMoteur(scenarioId, auth.activeSiteId)
+        )
+      : data;
+
+    return NextResponse.json({ data: dataAugmentee, version: version ?? (data[0]?.version ?? null) });
   } catch (error) {
     return handleApiError(
       "GET /api/previsions/mapping-rapprochement",

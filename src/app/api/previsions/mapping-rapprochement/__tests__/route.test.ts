@@ -54,6 +54,16 @@ vi.mock("@/lib/queries/previsions-rapprochement-mapping", () => ({
   creerVersionMapping: (...a: unknown[]) => mockCreerVersionMapping(...a),
 }));
 
+const mockChargerScenarioPourMoteur = vi.fn();
+vi.mock("@/lib/queries/previsions-scenario-loader", () => ({
+  chargerScenarioPourMoteur: (...a: unknown[]) => mockChargerScenarioPourMoteur(...a),
+}));
+
+const mockDetecterCiblesOrphelines = vi.fn();
+vi.mock("@/lib/queries/previsions-mapping-orphelins", () => ({
+  detecterCiblesOrphelines: (...a: unknown[]) => mockDetecterCiblesOrphelines(...a),
+}));
+
 import { GET, POST } from "@/app/api/previsions/mapping-rapprochement/route";
 import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
@@ -135,6 +145,78 @@ describe("GET /api/previsions/mapping-rapprochement", () => {
     expect(res.status).toBe(400);
     expect(mockGetMappingActif).not.toHaveBeenCalled();
     expect(mockGetMappingParVersion).not.toHaveBeenCalled();
+  });
+
+  describe("?scenarioId= (Sprint PR3-ter, story A.2) : augmentation cibleOrpheline", () => {
+    it("sans scenarioId, ni chargerScenarioPourMoteur ni detecterCiblesOrphelines ne sont jamais appeles — comportement retro-compatible strict", async () => {
+      mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+      mockGetMappingActif.mockResolvedValue([
+        { id: "m1", version: 2, sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ALIMENT", cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-1", actif: true },
+      ]);
+
+      const res = await GET(getRequest("/api/previsions/mapping-rapprochement"));
+
+      expect(mockChargerScenarioPourMoteur).not.toHaveBeenCalled();
+      expect(mockDetecterCiblesOrphelines).not.toHaveBeenCalled();
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data).toEqual([
+        { id: "m1", version: 2, sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ALIMENT", cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-1", actif: true },
+      ]);
+    });
+
+    it("avec ?scenarioId=X : charge le scenario (R8 : filtre activeSiteId) puis augmente chaque ligne via detecterCiblesOrphelines", async () => {
+      mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+      const lignesBrutes = [
+        { id: "m1", version: 2, sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ALIMENT", cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-mort", actif: true },
+      ];
+      const scenarioCharge = { id: "scenario-x", nom: "Scenario X" };
+      const lignesAugmentees = [{ ...lignesBrutes[0], cibleCleResolue: "poste-mort", cibleOrpheline: true }];
+      mockGetMappingActif.mockResolvedValue(lignesBrutes);
+      mockChargerScenarioPourMoteur.mockResolvedValue(scenarioCharge);
+      mockDetecterCiblesOrphelines.mockReturnValue(lignesAugmentees);
+
+      const res = await GET(getRequest("/api/previsions/mapping-rapprochement?scenarioId=scenario-x"));
+
+      expect(mockChargerScenarioPourMoteur).toHaveBeenCalledWith("scenario-x", "site-1");
+      expect(mockDetecterCiblesOrphelines).toHaveBeenCalledWith(lignesBrutes, scenarioCharge);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data).toEqual(lignesAugmentees);
+      expect(body.data[0].cibleOrpheline).toBe(true);
+    });
+
+    it("FALSIFICATION — si l'augmentation etait ignoree (retour des lignes brutes malgre scenarioId fourni), cibleOrpheline serait absent : ce test le detecte", async () => {
+      mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+      const lignesBrutes = [
+        { id: "m1", version: 2, sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ALIMENT", cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "poste-mort", actif: true },
+      ];
+      mockGetMappingActif.mockResolvedValue(lignesBrutes);
+      mockChargerScenarioPourMoteur.mockResolvedValue({ id: "scenario-x" });
+      mockDetecterCiblesOrphelines.mockReturnValue([{ ...lignesBrutes[0], cibleCleResolue: null, cibleOrpheline: true }]);
+
+      const res = await GET(getRequest("/api/previsions/mapping-rapprochement?scenarioId=scenario-x"));
+      const body = await res.json();
+
+      expect(body.data[0]).toHaveProperty("cibleOrpheline");
+      expect(mockDetecterCiblesOrphelines).toHaveBeenCalledTimes(1);
+    });
+
+    it("avec ?scenarioId= et ?version=N combines : augmente les lignes de LA VERSION demandee, jamais le mapping actif", async () => {
+      mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+      const lignesVersion1 = [
+        { id: "m0", version: 1, sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "ALIMENT", cibleType: CibleRapprochement.NON_RAPPROCHE, cibleId: null, actif: false },
+      ];
+      mockGetMappingParVersion.mockResolvedValue(lignesVersion1);
+      mockChargerScenarioPourMoteur.mockResolvedValue({ id: "scenario-x" });
+      mockDetecterCiblesOrphelines.mockReturnValue([{ ...lignesVersion1[0], cibleCleResolue: null, cibleOrpheline: false }]);
+
+      const res = await GET(getRequest("/api/previsions/mapping-rapprochement?scenarioId=scenario-x&version=1"));
+
+      expect(mockGetMappingActif).not.toHaveBeenCalled();
+      expect(mockDetecterCiblesOrphelines).toHaveBeenCalledWith(lignesVersion1, { id: "scenario-x" });
+      expect(res.status).toBe(200);
+    });
   });
 });
 

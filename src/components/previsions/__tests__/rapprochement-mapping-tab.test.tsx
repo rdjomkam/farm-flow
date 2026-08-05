@@ -11,6 +11,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { RapprochementMappingTab } from "@/components/previsions/rapprochement-mapping-tab";
 import { Permission, SourceRapprochement, CibleRapprochement } from "@/types";
 import frPrevisions from "@/messages/fr/previsions.json";
@@ -72,13 +73,28 @@ function mockApi(options: {
   failCibles?: boolean;
   postes?: Array<{ id: string; libelle: string }>;
   aliments?: Array<{ id: string; tailleGranule: string }>;
+  /** Story C.3 (PR3-ter) : versions distinctes disponibles, decroissant — la premiere est la version active. */
+  versions?: number[];
+  /** Permet de fournir un mapping DIFFERENT quand `?version=` est explicitement demande (consultation historique). */
+  mappingParVersion?: Record<number, unknown[]>;
 }) {
   mockGet.mockImplementation((url: string) => {
     if (options.fail) return Promise.resolve({ ok: false, data: null, error: "erreur" });
     if (url.includes("/non-mappees")) {
       return Promise.resolve({ ok: true, data: { data: options.nonMappees ?? [] } });
     }
+    // Verifier "/versions" AVANT le check generique "/mapping-rapprochement"
+    // (substring commun aux deux routes) — sinon la route versions ne serait
+    // jamais atteinte.
+    if (url.includes("/mapping-rapprochement/versions")) {
+      return Promise.resolve({ ok: true, data: { data: options.versions ?? [] } });
+    }
     if (url.includes("/mapping-rapprochement")) {
+      const matchVersion = url.match(/[?&]version=(\d+)/);
+      if (matchVersion && options.mappingParVersion) {
+        const v = Number(matchVersion[1]);
+        return Promise.resolve({ ok: true, data: { data: options.mappingParVersion[v] ?? [], version: v } });
+      }
       return Promise.resolve({ ok: true, data: { data: options.mappingActif ?? [], version: options.version ?? null } });
     }
     if (url.includes("/postes")) {
@@ -333,6 +349,101 @@ describe("RapprochementMappingTab — mapping actif", () => {
   });
 });
 
+describe("RapprochementMappingTab — Sprint PR3-ter story A.2 : cible orpheline (filet de securite non negociable)", () => {
+  it("le GET du mapping actif porte ?scenarioId= (declenche l'augmentation cibleOrpheline cote serveur)", async () => {
+    mockApi({});
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/previsions\/mapping-rapprochement\?scenarioId=s1$/),
+        expect.anything()
+      );
+    });
+  });
+
+  it("une ligne cibleOrpheline: true affiche le message explicite dedie — distinct de 'Cible introuvable dans ce scénario' (formulaire) et de NON_RAPPROCHE", async () => {
+    mockApi({
+      mappingActif: [
+        {
+          id: "m1",
+          siteId: "site-1",
+          version: 5,
+          sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+          sourceCle: "ELECTRICITE",
+          cibleType: CibleRapprochement.POSTE_PREVISION,
+          cibleId: "poste-mort",
+          actif: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          cibleOrpheline: true,
+          cibleCleResolue: "poste-mort",
+        },
+      ],
+      version: 5,
+      postes: [],
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    expect(
+      await screen.findByText(
+        "Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total"
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("une ligne cibleOrpheline: false (ou absente) n'affiche JAMAIS le message d'orphelinite", async () => {
+    mockApi({
+      mappingActif: [
+        {
+          id: "m1",
+          siteId: "site-1",
+          version: 5,
+          sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+          sourceCle: "ELECTRICITE",
+          cibleType: CibleRapprochement.POSTE_PREVISION,
+          cibleId: "poste-1",
+          actif: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          cibleOrpheline: false,
+        },
+      ],
+      version: 5,
+      postes: [{ id: "poste-1", libelle: "Electricite du site" }],
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    await screen.findByText("Electricite du site");
+    expect(
+      screen.queryByText("Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total")
+    ).not.toBeInTheDocument();
+  });
+
+  it("FALSIFICATION — un mapping NON_RAPPROCHE (aucune cible) n'affiche jamais le message d'orphelinite, meme sans cibleOrpheline explicite", async () => {
+    mockApi({
+      mappingActif: [
+        {
+          id: "m2",
+          siteId: "site-1",
+          version: 5,
+          sourceType: SourceRapprochement.PRODUIT_CATEGORIE,
+          sourceCle: "EQUIPEMENT",
+          cibleType: CibleRapprochement.NON_RAPPROCHE,
+          cibleId: null,
+          actif: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      version: 5,
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    await screen.findByText("Non rapproché (aucune cible)");
+    expect(
+      screen.queryByText("Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total")
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("RapprochementMappingTab — erreur reseau", () => {
   it("affiche un message d'erreur explicite (jamais un alert() nu, jamais un ecran vide silencieux)", async () => {
     mockApi({ fail: true });
@@ -341,6 +452,162 @@ describe("RapprochementMappingTab — erreur reseau", () => {
     await waitFor(() => {
       expect(screen.getByText("Impossible de charger le mapping de rapprochement.")).toBeInTheDocument();
     });
+  });
+});
+
+describe("RapprochementMappingTab — Sprint PR3-ter, story C.3 : navigation dans l'historique du mapping", () => {
+  it("aucun mapping n'a jamais ete cree -> aucun selecteur de version affiche", async () => {
+    mockApi({ versions: [] });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    await screen.findByText("Aucun mapping actif sur ce site pour le moment.");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("une seule version existe -> le selecteur affiche 'Version active (v1)', pas de bandeau de lecture seule", async () => {
+    mockApi({
+      versions: [1],
+      mappingActif: [
+        {
+          id: "m1",
+          siteId: "site-1",
+          version: 1,
+          sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+          sourceCle: "ELECTRICITE",
+          cibleType: CibleRapprochement.NON_RAPPROCHE,
+          cibleId: null,
+          actif: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      version: 1,
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    expect(await screen.findByText("Version active (v1)")).toBeInTheDocument();
+    expect(screen.queryByText(/affichage en lecture seule/)).not.toBeInTheDocument();
+  });
+
+  it("selectionner une version PASSEE affiche le bandeau de lecture seule, masque la carte 'categories non mappees' et le bouton Modifier", async () => {
+    mockApi({
+      versions: [2, 1],
+      mappingActif: [
+        {
+          id: "m2",
+          siteId: "site-1",
+          version: 2,
+          sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+          sourceCle: "ELECTRICITE",
+          cibleType: CibleRapprochement.NON_RAPPROCHE,
+          cibleId: null,
+          actif: true,
+          createdAt: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+      version: 2,
+      mappingParVersion: {
+        1: [
+          {
+            id: "m1",
+            siteId: "site-1",
+            version: 1,
+            sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+            sourceCle: "TRANSPORT",
+            cibleType: CibleRapprochement.NON_RAPPROCHE,
+            cibleId: null,
+            actif: false,
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      },
+      nonMappees: [{ sourceType: SourceRapprochement.DEPENSE_CATEGORIE, sourceCle: "EAU" }],
+    });
+    const user = userEvent.setup({ delay: null });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    // Etat initial : version active (v2), carte "non mappees" visible, bouton Modifier present.
+    await screen.findByText("Version active (v2)");
+    expect(screen.getByText("Eau")).toBeInTheDocument(); // categorie non mappee (via referentiel depenses.categories)
+    expect(await screen.findByRole("button", { name: /Modifier/ })).toBeInTheDocument();
+
+    // Selectionne la version 1 (historique).
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Version 1 (historique)" }));
+
+    // Bandeau explicite de lecture seule, mentionnant la version consultee ET la version active.
+    expect(await screen.findByText(/Vous consultez la version 1/)).toBeInTheDocument();
+    expect(screen.getByText(/La version active est la 2/)).toBeInTheDocument();
+
+    // Le contenu affiche est celui de la version 1 (TRANSPORT), plus celui de v2 (ELECTRICITE).
+    expect(await screen.findByText("Transport")).toBeInTheDocument();
+    expect(screen.queryByText("Électricité")).not.toBeInTheDocument();
+
+    // Carte "categories non mappees" masquee pendant la consultation d'une version passee.
+    expect(screen.queryByText("Eau")).not.toBeInTheDocument();
+
+    // Bouton Modifier masque en lecture seule stricte (ADR-053 §6.2), meme avec PREVISIONS_PARAMETRER.
+    expect(screen.queryByRole("button", { name: /Modifier/ })).not.toBeInTheDocument();
+  });
+
+  it("FALSIFICATION — revenir a 'Version active' apres avoir consulte l'historique retire le bandeau et restaure les controles d'edition", async () => {
+    mockApi({
+      versions: [2, 1],
+      mappingActif: [
+        {
+          id: "m2",
+          siteId: "site-1",
+          version: 2,
+          sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+          sourceCle: "ELECTRICITE",
+          cibleType: CibleRapprochement.NON_RAPPROCHE,
+          cibleId: null,
+          actif: true,
+          createdAt: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+      version: 2,
+      mappingParVersion: {
+        1: [
+          {
+            id: "m1",
+            siteId: "site-1",
+            version: 1,
+            sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+            sourceCle: "TRANSPORT",
+            cibleType: CibleRapprochement.NON_RAPPROCHE,
+            cibleId: null,
+            actif: false,
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      },
+    });
+    const user = userEvent.setup({ delay: null });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    await screen.findByText("Version active (v2)");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Version 1 (historique)" }));
+    expect(await screen.findByText(/Vous consultez la version 1/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Version active (v2)" }));
+
+    expect(await screen.findByText("Électricité")).toBeInTheDocument();
+    expect(screen.queryByText(/Vous consultez la version/)).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Modifier/ })).toBeInTheDocument();
   });
 });
 

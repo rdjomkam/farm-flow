@@ -120,7 +120,8 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
               moisAbsolu={moisSelectionne}
               lignes={rapprochement.lignesParMois[moisSelectionne] ?? []}
               nonRapproche={rapprochement.nonRapprocheParMois[moisSelectionne] ?? []}
-              total={rapprochement.totalMoisParMois[moisSelectionne]}
+              totalMonetaire={rapprochement.totalMoisMonetaireParMois[moisSelectionne]}
+              totalQuantite={rapprochement.totalMoisQuantiteParMois[moisSelectionne]}
             />
           )}
         </TabsContent>
@@ -132,7 +133,8 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
             <RapprochementVueCumulee
               dateDebutPlan={dateDebutPlan}
               moisAbsolu={moisSelectionne}
-              totalGlobal={rapprochement.cumuleGlobalParMois[moisSelectionne]}
+              totalGlobalMonetaire={rapprochement.cumuleGlobalMonetaireParMois[moisSelectionne]}
+              totalGlobalQuantite={rapprochement.cumuleGlobalQuantiteParMois[moisSelectionne]}
               parPoste={rapprochement.cumuleParPosteParMois[moisSelectionne] ?? []}
             />
           )}
@@ -153,7 +155,8 @@ export function RapprochementTab({ rapprochement, scenarioId, scenarioNom, permi
             <RapprochementVueTopEcarts
               dateDebutPlan={dateDebutPlan}
               moisAbsolu={moisSelectionne}
-              lignes={rapprochement.topEcartsParMois[moisSelectionne] ?? []}
+              lignesMonetaires={rapprochement.topEcartsMonetaireParMois[moisSelectionne] ?? []}
+              lignesQuantite={rapprochement.topEcartsQuantiteParMois[moisSelectionne] ?? []}
             />
           )}
         </TabsContent>

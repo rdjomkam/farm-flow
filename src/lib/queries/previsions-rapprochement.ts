@@ -39,7 +39,7 @@
  * VISIBLE, jamais reparti arbitrairement ni omis silencieusement.
  */
 import { prisma } from "@/lib/db";
-import { CategorieDepense, SourceRapprochement, CibleRapprochement } from "@/types";
+import { CategorieDepense, SourceRapprochement, CibleRapprochement, TailleGranule } from "@/types";
 import { BusinessRuleError } from "@/lib/errors";
 import { Decimal } from "@/lib/previsions/decimal-config";
 import type {
@@ -87,29 +87,152 @@ export const CLE_VENTE_PREVUE_TONNAGE = "VENTE_PREVUE:TONNAGE";
 /** Cle prevue fixe des apports en capital — toujours SANS_SOURCE_REELLE (ADR-053 §15.1). */
 export const CLE_APPORT_CAPITAL = "APPORT_CAPITAL";
 
+/* ------------------------------------------------------------------ *
+ * 0bis. Portee du mapping ALIMENT_PREVISION (correction structurelle,
+ * Sprint PR3-ter story A.3 — pre-analyse PR3ter.A)
+ * ------------------------------------------------------------------ *
+ *
+ * `AlimentPrevision` est SCENARIO-scope (`@@unique([scenarioId,
+ * tailleGranule])`, prisma/schema.prisma) alors que `MappingRapprochement`
+ * est SITE-scope (ADR-053 §3.9). Porter directement `AlimentPrevision.id`
+ * (FK d'un scenario precis, potentiellement archive) dans `cibleId` reproduit
+ * exactement le defaut qui fait disparaitre silencieusement un montant reel
+ * (pre-analyse PR3ter.A) : lu depuis un AUTRE scenario que celui d'origine,
+ * ce `cibleId` ne correspond a AUCUN `AlimentPrevision.cle` du scenario
+ * courant, mais n'est pas non plus `null` — le montant s'accumule sous une
+ * cle morte (`src/lib/previsions/rapprochement.ts:310-322`) puis n'est
+ * jamais relu (ligne 343-344, `?? new Decimal(0)`), sans jamais apparaitre
+ * dans NON_RAPPROCHE (une cible NON NULLE a bien ete resolue).
+ *
+ * Correction : `cibleId` porte desormais un COUPLE compose
+ * `${tailleGranule}::${alimentPrevisionId}` — `tailleGranule` est la cle
+ * METIER STABLE inter-scenario (existe deja, `@@unique([scenarioId,
+ * tailleGranule])` garantit au plus un AlimentPrevision par tailleGranule et
+ * par scenario) ; `alimentPrevisionId` documente l'AlimentPrevision
+ * D'ORIGINE selectionne au moment de la creation du mapping (utile pour
+ * l'affichage/l'audit), mais N'EST JAMAIS UTILISE pour la resolution. La
+ * resolution vers l'AlimentPrevision du scenario COURANT se fait
+ * DYNAMIQUEMENT a la lecture (`versMappingActif` ci-dessous), via la
+ * tailleGranule uniquement — jamais via l'id fige. Si le scenario courant ne
+ * porte aucun AlimentPrevision pour cette tailleGranule, la resolution
+ * echoue explicitement (`cibleCle = null`) : le montant reel tombe alors
+ * dans le bac NON_RAPPROCHE (visible, jamais perdu) plutot que sous une cle
+ * morte invisible — c'est l'amelioration structurelle de cette story par
+ * rapport au defaut d'origine. Le filet de securite (story A.1,
+ * `previsions-mapping-orphelins.ts`) signale en plus, cote administration du
+ * mapping, cette ligne comme `cibleOrpheline` a part entiere.
+ *
+ * AUCUNE migration R10 necessaire : `MappingRapprochement` compte 0 ligne en
+ * base au moment de cette story (revérifié par SQL, pre-analyse PR3ter.A) —
+ * ce format ne remplace donc aucune donnee existante.
+ */
+const SEPARATEUR_CIBLE_ALIMENT_PREVISION = "::";
+
+/**
+ * Compose la valeur `cibleId` d'un mapping `ALIMENT_PREVISION` (A.3) :
+ * `tailleGranule` (cle metier stable, utilisee seule a la resolution) suivi
+ * de l'id de l'`AlimentPrevision` selectionne a la creation (documentaire
+ * uniquement, jamais relu pour la resolution).
+ */
+export function composeCibleAlimentPrevision(
+  tailleGranule: TailleGranule,
+  alimentPrevisionId: string
+): string {
+  return `${tailleGranule}${SEPARATEUR_CIBLE_ALIMENT_PREVISION}${alimentPrevisionId}`;
+}
+
+/** Resultat de `parseCibleAlimentPrevision` — les deux composantes du couple compose (A.3). */
+export interface CibleAlimentPrevisionParsee {
+  /** `null` si `cibleId` est absent ou dans un format non reconnu (jamais lance en exception ici). */
+  tailleGranule: TailleGranule | null;
+  /** id de l'AlimentPrevision d'origine — documentaire, jamais utilise pour la resolution. */
+  alimentPrevisionIdOrigine: string | null;
+}
+
+/**
+ * Decompose le `cibleId` compose d'un mapping `ALIMENT_PREVISION` (A.3).
+ * Fonction PURE, aucune I/O — la resolution vers un `AlimentPrevision` reel
+ * du scenario courant est faite par l'appelant (`versMappingActif`), jamais
+ * ici.
+ */
+export function parseCibleAlimentPrevision(cibleId: string | null): CibleAlimentPrevisionParsee {
+  if (!cibleId) {
+    return { tailleGranule: null, alimentPrevisionIdOrigine: null };
+  }
+  const indexSeparateur = cibleId.indexOf(SEPARATEUR_CIBLE_ALIMENT_PREVISION);
+  if (indexSeparateur === -1) {
+    // Format non reconnu (jamais produit par ce module) — aucune tailleGranule
+    // extractible, resolution impossible en amont (jamais une exception ici).
+    return { tailleGranule: null, alimentPrevisionIdOrigine: null };
+  }
+  const tailleGranuleBrute = cibleId.slice(0, indexSeparateur);
+  const alimentPrevisionIdOrigine =
+    cibleId.slice(indexSeparateur + SEPARATEUR_CIBLE_ALIMENT_PREVISION.length) || null;
+  const tailleGranule = (Object.values(TailleGranule) as string[]).includes(tailleGranuleBrute)
+    ? (tailleGranuleBrute as TailleGranule)
+    : null;
+  return { tailleGranule, alimentPrevisionIdOrigine };
+}
+
+/**
+ * Resout, pour une `tailleGranule` donnee, l'`AlimentPrevision.id` du
+ * scenario COURANT (A.3) — au plus un resultat possible
+ * (`@@unique([scenarioId, tailleGranule])`). Requete UNIQUE, jamais en
+ * boucle par ligne de mapping (evite un N+1 sur un mapping a N lignes
+ * ALIMENT_PREVISION).
+ */
+export async function chargerResolveurAlimentParTailleGranule(
+  scenarioId: string
+): Promise<(tailleGranule: TailleGranule) => string | null> {
+  const aliments = await prisma.alimentPrevision.findMany({
+    where: { scenarioId },
+    select: { id: true, tailleGranule: true },
+  });
+  const idParTailleGranule = new Map<TailleGranule, string>();
+  for (const aliment of aliments) {
+    idParTailleGranule.set(aliment.tailleGranule as TailleGranule, aliment.id);
+  }
+  return (tailleGranule: TailleGranule) => idParTailleGranule.get(tailleGranule) ?? null;
+}
+
 /**
  * Traduit une ligne `MappingRapprochement` (Prisma) en `MappingRapprochementActif`
  * (contrat du moteur pur). Seule fonction qui sait deriver `cibleCle` a
- * partir de (`cibleType`, `cibleId`) — les cibles `POSTE_PREVISION`/
- * `ALIMENT_PREVISION` portent leur `cibleId` (FK reelle), `VENTE_PREVUE` est
- * un couple de sentinelles fixes disambiguees par `sourceCle`
- * (MONTANT/TONNAGE, ADR-053 §15.1 : "vers le revenu prevu", pas une entite),
- * `NON_RAPPROCHE` retourne `null` (bac explicite du moteur, ADR-053 section 5).
+ * partir de (`cibleType`, `cibleId`) :
+ * - `POSTE_PREVISION` : `cibleId` litteral (FK reelle, encore SITE-scope —
+ *   correction structurelle reportee, A.4/story PR3ter.A4) ;
+ * - `ALIMENT_PREVISION` : `cibleId` compose (A.3 ci-dessus), resolu
+ *   DYNAMIQUEMENT vers l'`AlimentPrevision` du scenario COURANT via
+ *   `resoudreAlimentCibleCle` (jamais via l'id fige a la creation) —
+ *   `null` si le scenario courant n'a aucun AlimentPrevision pour cette
+ *   tailleGranule (bac NON_RAPPROCHE, jamais une cle morte invisible) ;
+ * - `VENTE_PREVUE` : couple de sentinelles fixes disambiguees par
+ *   `sourceCle` (MONTANT/TONNAGE, ADR-053 §15.1 : "vers le revenu prevu",
+ *   pas une entite) ;
+ * - `NON_RAPPROCHE` : retourne `null` (bac explicite du moteur, ADR-053
+ *   section 5).
  */
-function versMappingActif(ligne: {
-  sourceType: string;
-  sourceCle: string;
-  cibleType: string;
-  cibleId: string | null;
-}): MappingRapprochementActif {
+function versMappingActif(
+  ligne: {
+    sourceType: string;
+    sourceCle: string;
+    cibleType: string;
+    cibleId: string | null;
+  },
+  resoudreAlimentCibleCle: (tailleGranule: TailleGranule) => string | null
+): MappingRapprochementActif {
   const sourceCle = composeCategorieCle(ligne.sourceType as SourceRapprochement, ligne.sourceCle);
 
   let cibleCle: string | null;
   switch (ligne.cibleType as CibleRapprochement) {
     case CibleRapprochement.POSTE_PREVISION:
-    case CibleRapprochement.ALIMENT_PREVISION:
       cibleCle = ligne.cibleId;
       break;
+    case CibleRapprochement.ALIMENT_PREVISION: {
+      const { tailleGranule } = parseCibleAlimentPrevision(ligne.cibleId);
+      cibleCle = tailleGranule !== null ? resoudreAlimentCibleCle(tailleGranule) : null;
+      break;
+    }
     case CibleRapprochement.VENTE_PREVUE:
       cibleCle = `VENTE_PREVUE:${ligne.sourceCle}`;
       break;
@@ -170,12 +293,15 @@ export async function getMappingActifResoluPourMois(
   siteId: string,
   moisAbsolu: number
 ): Promise<MappingRapprochementActif[]> {
-  const versionFigee = await resoudreVersionMappingPourMois(scenarioId, siteId, moisAbsolu);
+  const [versionFigee, resoudreAlimentCibleCle] = await Promise.all([
+    resoudreVersionMappingPourMois(scenarioId, siteId, moisAbsolu),
+    chargerResolveurAlimentParTailleGranule(scenarioId),
+  ]);
   const lignes =
     versionFigee !== null
       ? await getMappingParVersion(siteId, versionFigee)
       : await getMappingActif(siteId);
-  return lignes.map(versMappingActif);
+  return lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle));
 }
 
 /**
@@ -190,10 +316,13 @@ async function getMappingResoluParMois(
   moisDebut: number,
   moisFin: number
 ): Promise<Map<number, MappingRapprochementActif[]>> {
-  const clotures = await prisma.clotureMois.findMany({
-    where: { scenarioId, siteId, moisAbsolu: { gte: moisDebut, lte: moisFin } },
-    select: { moisAbsolu: true, versionMapping: true },
-  });
+  const [clotures, resoudreAlimentCibleCle] = await Promise.all([
+    prisma.clotureMois.findMany({
+      where: { scenarioId, siteId, moisAbsolu: { gte: moisDebut, lte: moisFin } },
+      select: { moisAbsolu: true, versionMapping: true },
+    }),
+    chargerResolveurAlimentParTailleGranule(scenarioId),
+  ]);
 
   const versionParMois = new Map<number, number>();
   const versionsDistinctes = new Set<number>();
@@ -205,10 +334,15 @@ async function getMappingResoluParMois(
   const mappingParVersion = new Map<number, MappingRapprochementActif[]>();
   for (const version of versionsDistinctes) {
     const lignes = await getMappingParVersion(siteId, version);
-    mappingParVersion.set(version, lignes.map(versMappingActif));
+    mappingParVersion.set(
+      version,
+      lignes.map((l) => versMappingActif(l, resoudreAlimentCibleCle))
+    );
   }
 
-  const mappingActifCourant = (await getMappingActif(siteId)).map(versMappingActif);
+  const mappingActifCourant = (await getMappingActif(siteId)).map((l) =>
+    versMappingActif(l, resoudreAlimentCibleCle)
+  );
 
   const resultat = new Map<number, MappingRapprochementActif[]>();
   for (let mois = moisDebut; mois <= moisFin; mois++) {
@@ -523,7 +657,19 @@ export async function getDepensesAlimentReellesParGranulometrie(
     const [anneeMois, granulo] = cle.split("::");
     const [annee, mois] = anneeMois.split("-").map(Number);
     resultat.push({
-      categorieCle: composeCategorieCle(SourceRapprochement.MOUVEMENT_STOCK, granulo),
+      // Correction PR3-ter story C.1 : cette ligne vient de Depense/LigneDepense
+      // (nature DEPENSE, FCFA), PAS de MouvementStock (nature QUANTITE, kg,
+      // cf. getSortiesAlimentReellesParGranulometrie ci-dessus). Utiliser
+      // SourceRapprochement.MOUVEMENT_STOCK ici produirait une categorieCle
+      // IDENTIQUE ("MOUVEMENT_STOCK:<granulo>") pour deux grandeurs de nature
+      // differente (FCFA vs kg) des qu'une story branche cette fonction dans
+      // getReelAgregeSite/le mapping — collision latente, sans effet
+      // aujourd'hui uniquement parce que cette fonction n'est appelee par
+      // aucun agregat combine. DEPENSE_CATEGORIE + prefixe "<CategorieDepense
+      // ALIMENT>:" est la source reelle et coherente avec la nature DEPENSE,
+      // et reste distincte de la cle globale ALIMENT (sans granulometrie)
+      // produite par getDepensesReellesParCategorie ("DEPENSE_CATEGORIE:ALIMENT").
+      categorieCle: composeCategorieCle(SourceRapprochement.DEPENSE_CATEGORIE, `${categorieAliment}:${granulo}`),
       moisAbsolu: moisAbsoluDepuis(dateDebutPlan, new Date(annee, mois - 1, 1)),
       montantReel: montant,
       natureGrandeur: "DEPENSE",
@@ -575,7 +721,13 @@ export async function getReelAgregeSite(
  * - `PostePrevision` x `ChargeMensuellePrevue` (nature DEPENSE, cle =
  *   `PostePrevision.id`) ;
  * - `AlimentPrevision` (calibre) x mois, via `MoisProjectionResult.
- *   sacsParGranulometrie` (nature QUANTITE, cle = `AlimentPrevision.id`) ;
+ *   kgParGranulometrie` (nature QUANTITE, cle = `AlimentPrevision.id`) —
+ *   PAS `sacsParGranulometrie` : cette derniere compte des SACS (bug
+ *   corrige, meme famille que l'homonymie `sacsParTonne` de l'ADR-053 §11 —
+ *   le reel de cette meme ligne, `MouvementStock.quantite`/
+ *   `Vente.poidsTotalKg`, est en kg ; comparer des sacs a des kg sous un
+ *   meme intitule "QUANTITE" produisait un ecart faux d'un facteur
+ *   `poidsSacKg` — ~15x sur le plan de reference) ;
  * - le revenu de vente prevu (`MoisProjectionResult.revenusFCFA`, nature
  *   ENTREE, cle `VENTE_PREVUE:MONTANT`) et le tonnage recolte prevu
  *   (`MoisProjectionResult.ventesKg`, nature QUANTITE, cle
@@ -611,13 +763,18 @@ export function construireEntreesPrevuesDepuisScenario(
 
   for (const aliment of scenario.aliments) {
     for (const mois of moisDansPlage) {
-      const sacs = mois.sacsParGranulometrie[aliment.tailleGranule] ?? 0;
+      // Bug de rapprochement corrige (ADR-053 §11/§15) : `sacsParGranulometrie`
+      // compte des SACS, pas des kg — comparer ce nombre au reel (kg) sous
+      // un meme intitule "QUANTITE" produisait un ecart faux (facteur
+      // ~poidsSacKg). `kgParGranulometrie` porte la meme unite (kg) que le
+      // reel de cette ligne (`MouvementStock.quantite`).
+      const kg = mois.kgParGranulometrie[aliment.tailleGranule] ?? 0;
       entrees.push({
         cle: aliment.id,
         libelle: `Aliment ${aliment.tailleGranule}`,
         natureGrandeur: "QUANTITE",
         moisAbsolu: mois.moisAbsolu,
-        montantPrevu: new Decimal(sacs),
+        montantPrevu: new Decimal(kg),
       });
     }
   }

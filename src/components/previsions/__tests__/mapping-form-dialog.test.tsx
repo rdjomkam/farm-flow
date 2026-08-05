@@ -291,6 +291,145 @@ describe("MappingFormDialog — correctif C3 : la relecture du mapping actif ech
   });
 });
 
+describe("MappingFormDialog — Sprint PR3-ter story A.2 : format compose ALIMENT_PREVISION (tailleGranule::id)", () => {
+  const ALIMENTS_SCENARIO_COURANT = [
+    { id: "aliment-g2", tailleGranule: "G2", scenarioId: "s1", siteId: "site-1", sacsParTonneStandard: null, ordre: 0, repartitions: [], articles: [] },
+    { id: "aliment-g3", tailleGranule: "G3", scenarioId: "s1", siteId: "site-1", sacsParTonneStandard: null, ordre: 0, repartitions: [], articles: [] },
+  ];
+
+  function mockAvecAliments() {
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes("/postes")) {
+        return Promise.resolve({ ok: true, data: { data: [] } });
+      }
+      if (url.includes("/aliments")) {
+        return Promise.resolve({ ok: true, data: { data: ALIMENTS_SCENARIO_COURANT } });
+      }
+      if (url.includes("/mapping-rapprochement")) {
+        return Promise.resolve({ ok: true, data: { data: MAPPING_ACTIF_EXISTANT, version: 3 } });
+      }
+      return Promise.resolve({ ok: true, data: { data: [] } });
+    });
+  }
+
+  it("creation : le cibleId POSTe pour ALIMENT_PREVISION est le format compose 'tailleGranule::id', jamais l'id brut du Select", async () => {
+    mockAvecAliments();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <MappingFormDialog
+        scenarioId="s1"
+        scenarioNom="Scenario A"
+        source={{ sourceType: SourceRapprochement.MOUVEMENT_STOCK, sourceCle: "G3" }}
+        trigger={<button>Ouvrir</button>}
+        onSaved={vi.fn()}
+      />
+    );
+
+    openDialog();
+    const cibleTypeTrigger = screen.getByRole("combobox", { name: /^Cible\*/ });
+    await user.click(cibleTypeTrigger);
+    await user.click(await screen.findByRole("option", { name: "Calibre d'aliment prévisionnel" }));
+
+    const cibleIdTrigger = screen.getByRole("combobox", { name: /Cible précise/ });
+    await user.click(cibleIdTrigger);
+    await user.click(await screen.findByRole("option", { name: "G3 — Granulé 4mm" }));
+
+    await user.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1));
+    const [, body] = mockPost.mock.calls[0];
+    const ligne = body.lignes.find((l: { sourceCle: string }) => l.sourceCle === "G3");
+    expect(ligne.cibleId).toBe("G3::aliment-g3");
+  });
+
+  it("edition : une cible ALIMENT_PREVISION valide (tailleGranule presente dans le scenario courant) est resolue et reconstruite au format compose, meme si l'id d'origine differe", async () => {
+    mockAvecAliments();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <MappingFormDialog
+        scenarioId="s1"
+        scenarioNom="Scenario A"
+        source={{ sourceType: SourceRapprochement.MOUVEMENT_STOCK, sourceCle: "G3" }}
+        // cibleId compose porte l'id d'un AUTRE scenario ("aliment-scenario-a")
+        // — la resolution doit passer par la tailleGranule G3, pas cet id.
+        existant={{ cibleType: CibleRapprochement.ALIMENT_PREVISION, cibleId: "G3::aliment-scenario-a" }}
+        trigger={<button>Ouvrir</button>}
+        onSaved={vi.fn()}
+      />
+    );
+
+    openDialog();
+    // Aucun avertissement "hors scenario" : la tailleGranule G3 existe bien
+    // dans le scenario courant (resolue vers aliment-g3).
+    await screen.findByRole("combobox", { name: /Cible précise/ });
+    expect(screen.queryByText("Cible actuelle hors de ce scénario")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1));
+    const [, body] = mockPost.mock.calls[0];
+    const ligne = body.lignes.find((l: { sourceCle: string }) => l.sourceCle === "G3");
+    // Recompose avec l'id DU SCENARIO COURANT (aliment-g3), jamais l'id
+    // d'origine (aliment-scenario-a) porte par le cibleId compose existant.
+    expect(ligne.cibleId).toBe("G3::aliment-g3");
+  });
+
+  it("edition : une cible ALIMENT_PREVISION ORPHELINE (tailleGranule absente du scenario courant) declenche l'avertissement hors-scenario et bloque la soumission tant qu'aucune nouvelle cible n'est choisie", async () => {
+    mockAvecAliments();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <MappingFormDialog
+        scenarioId="s1"
+        scenarioNom="Scenario A"
+        source={{ sourceType: SourceRapprochement.MOUVEMENT_STOCK, sourceCle: "G5" }}
+        // G5 n'existe pas dans ALIMENTS_SCENARIO_COURANT (seuls G2/G3) — orphelin.
+        existant={{ cibleType: CibleRapprochement.ALIMENT_PREVISION, cibleId: "G5::aliment-ailleurs" }}
+        trigger={<button>Ouvrir</button>}
+        onSaved={vi.fn()}
+      />
+    );
+
+    openDialog();
+    expect(await screen.findByText("Cible actuelle hors de ce scénario")).toBeInTheDocument();
+    expect(screen.getByText(/n'appartient pas au scénario/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    // Le sentinel orphelin n'est jamais une selection valide : aucun POST.
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(await screen.findByText("Choisissez une cible précise pour ce type.")).toBeInTheDocument();
+  });
+
+  it("edition orpheline : choisir une NOUVELLE cible valide dans le scenario courant remplace la cible orpheline et compose le format attendu", async () => {
+    mockAvecAliments();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <MappingFormDialog
+        scenarioId="s1"
+        scenarioNom="Scenario A"
+        source={{ sourceType: SourceRapprochement.MOUVEMENT_STOCK, sourceCle: "G5" }}
+        existant={{ cibleType: CibleRapprochement.ALIMENT_PREVISION, cibleId: "G5::aliment-ailleurs" }}
+        trigger={<button>Ouvrir</button>}
+        onSaved={vi.fn()}
+      />
+    );
+
+    openDialog();
+    await screen.findByText("Cible actuelle hors de ce scénario");
+
+    const cibleIdTrigger = screen.getByRole("combobox", { name: /Cible précise/ });
+    await user.click(cibleIdTrigger);
+    await user.click(await screen.findByRole("option", { name: "G2 — Granulé 3mm" }));
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1));
+    const [, body] = mockPost.mock.calls[0];
+    const ligne = body.lignes.find((l: { sourceCle: string }) => l.sourceCle === "G5");
+    expect(ligne.cibleId).toBe("G2::aliment-g2");
+  });
+});
+
 describe("MappingFormDialog — garde de fermeture (ERR-145/ERR-146)", () => {
   it("un dialogue non touche se ferme normalement par Echap", async () => {
     const user = userEvent.setup({ delay: null });

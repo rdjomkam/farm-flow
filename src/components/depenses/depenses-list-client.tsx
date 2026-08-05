@@ -201,7 +201,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
               <div className="flex items-center gap-2 text-sm">
                 <RefreshCw className="h-4 w-4 text-muted-foreground" />
                 <span>
-                  {templatesActifsCount} depense{templatesActifsCount !== 1 ? "s" : ""} recurrente{templatesActifsCount !== 1 ? "s" : ""} configuree{templatesActifsCount !== 1 ? "s" : ""}
+                  {t("list.recurringSummary", { count: templatesActifsCount })}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
