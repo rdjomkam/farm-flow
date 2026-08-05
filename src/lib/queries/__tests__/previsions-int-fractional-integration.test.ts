@@ -31,6 +31,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR2.1] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -39,8 +48,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -121,8 +131,7 @@ describe.runIf(requireDatabaseUrl())(
       "replaceAlimentsParVaguePrevue : sacsCalcules=3.7 est REJETE (exception), rien n'est ecrit en base",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR2.1] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const ids = await seed(client, "sacscalc-frac");
         try {
@@ -163,8 +172,7 @@ describe.runIf(requireDatabaseUrl())(
       "updateSacsSaisis : sacsSaisis=12.3 est REJETE (exception), la valeur existante en base n'est pas modifiee",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR2.1] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const ids = await seed(client, "sacssaisis-frac");
         const ligneId = "pr21-int-ligne-sacssaisis";

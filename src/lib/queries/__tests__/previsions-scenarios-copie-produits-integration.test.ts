@@ -41,6 +41,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR2q] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -49,8 +58,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -141,8 +151,7 @@ describe.runIf(requireDatabaseUrl())(
       "cree le scenario ET ses calibres (AlimentPrevision) ET leurs articles (AlimentArticlePrevision), sans jamais exiger de libelle sur le calibre",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR2q] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const ids = await seedSiteEtProduits(client, "nominal", [
           { nom: "Aliment Croissance 3mm", tailleGranule: TailleGranule.G2, contenance: 25, prixUnitaire: 15000 },
@@ -193,8 +202,7 @@ describe.runIf(requireDatabaseUrl())(
       "un Produit ALIMENT actif sans tailleGranule fait echouer copierAlimentsPrevisionDepuisProduits ET annule TOUTE la transaction (aucun ScenarioPrevision, ParametresPrevision, AlimentPrevision ni AlimentArticlePrevision ne survit)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR2q] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const ids = await seedSiteEtProduits(client, "rollback", [
           { nom: "Aliment sans calibre", tailleGranule: null, contenance: 25, prixUnitaire: 15000 },

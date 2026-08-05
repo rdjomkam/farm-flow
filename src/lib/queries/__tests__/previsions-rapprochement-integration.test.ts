@@ -43,6 +43,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3.5/PR3ter.C1] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -51,8 +60,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -166,8 +176,7 @@ describe.runIf(requireDatabaseUrl())(
     "(a) agregation mensuelle avec montants DISTINCTS par mois — pas une constante",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId, clientId, produitId } = await seedSite(client, "agg-mois");
       try {
@@ -191,8 +200,7 @@ describe.runIf(requireDatabaseUrl())(
     "(b) une categorie reelle SANS mapping ressort en NON_RAPPROCHE et est comptee dans le total reel",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId, clientId, produitId } = await seedSite(client, "non-mappe");
       try {
@@ -247,8 +255,7 @@ describe.runIf(requireDatabaseUrl())(
     "(c) IMMUABILITE : un mois CLOTURE garde la version de mapping figee — changer le mapping actif ensuite ne modifie pas le resultat deja calcule",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId, clientId, produitId } = await seedSite(client, "immuable");
       try {
@@ -328,8 +335,7 @@ describe.runIf(requireDatabaseUrl())(
     "(d) une depense ALIMENT sans LigneDepense ressort en GRANULOMETRIE_INCONNUE, pas ignoree",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId, clientId, produitId } = await seedSite(client, "granulo-inconnue");
       try {
@@ -372,8 +378,7 @@ describe.runIf(requireDatabaseUrl())(
     "(d2, story C.1 PR3-ter) aucune collision de categorieCle entre la depense ALIMENT par granulometrie (FCFA) et la sortie MouvementStock par granulometrie (kg), meme granulometrie",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3ter.C1] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId, clientId, produitId } = await seedSite(client, "collision-c1");
       try {
@@ -418,8 +423,7 @@ describe.runIf(requireDatabaseUrl())(
     "(e) le filtre siteId isole bien deux sites",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const siteA = await seedSite(client, "isolation-a");
       const siteB = await seedSite(client, "isolation-b");

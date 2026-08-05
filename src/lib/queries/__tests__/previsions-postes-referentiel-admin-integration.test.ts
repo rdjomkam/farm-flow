@@ -42,6 +42,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[A5.admin.a/A5.admin.b/A5.admin.c/A5.admin.d] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -50,8 +59,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -125,8 +135,7 @@ describe.runIf(requireDatabaseUrl())(
       "(a) un PostePrevision dont le libelle DIVERGE de son entree referentiel reste CORRECTEMENT rapproche — le mapping suit l'id, jamais le texte",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[A5.admin.a] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "divergence");
         try {
@@ -177,8 +186,7 @@ describe.runIf(requireDatabaseUrl())(
       "(b) le RENOMMAGE d'une entree referentiel ne casse AUCUN mapping — le rapprochement produit exactement le meme resultat avant/apres",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[A5.admin.b] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "renommage");
         try {
@@ -234,8 +242,7 @@ describe.runIf(requireDatabaseUrl())(
       "(c) une entree DESACTIVEE refuse un NOUVEAU rattachement (branches a ET b) SANS casser les PostePrevision/MappingRapprochement deja lies",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[A5.admin.c] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "desactivation");
         try {
@@ -321,8 +328,7 @@ describe.runIf(requireDatabaseUrl())(
       "(d) listerPostesReferentielAdmin expose nbPostesRattaches/nbMappingsRattaches en 2 requetes fixes, jamais N (reserve PR2non.3/R3)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[A5.admin.d] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "decomptes");
         try {

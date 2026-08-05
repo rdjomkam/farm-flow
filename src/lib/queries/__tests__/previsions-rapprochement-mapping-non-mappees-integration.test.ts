@@ -31,6 +31,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[non-mappees] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -39,8 +48,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -122,8 +132,7 @@ describe.runIf(requireDatabaseUrl())(
       "une granulometrie SORTIE aliment non mappee (connue G2 + INCONNU) apparait dans le bac a mapper",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[non-mappees] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId, produitConnuId, produitInconnuId } = await seedSite(client, "granulo");
         try {
@@ -152,8 +161,7 @@ describe.runIf(requireDatabaseUrl())(
       "une granulometrie MAPPEE n'apparait plus dans le bac (le mapping actif la couvre)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[non-mappees] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId, produitConnuId, produitInconnuId } = await seedSite(client, "mappee");
         try {
@@ -185,8 +193,7 @@ describe.runIf(requireDatabaseUrl())(
       "un mouvement ENTREE (pas SORTIE) n'est pas pris en compte — meme filtre que getSortiesAlimentReellesParGranulometrie",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[non-mappees] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId, produitConnuId, produitInconnuId } = await seedSite(client, "entree");
         try {
@@ -209,8 +216,7 @@ describe.runIf(requireDatabaseUrl())(
       "site sans MouvementStock : aucune entree MOUVEMENT_STOCK, jamais une erreur (les Produit catalogues restent detectes via PRODUIT_CATEGORIE, comportement pre-existant inchange)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[non-mappees] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId, produitConnuId, produitInconnuId } = await seedSite(client, "vide");
         try {

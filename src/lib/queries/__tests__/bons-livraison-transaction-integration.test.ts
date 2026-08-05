@@ -67,6 +67,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[SU.4] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -75,8 +84,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -234,8 +244,7 @@ describe.runIf(requireDatabaseUrl())(
       "échec en milieu de transaction (verifyAssignationInvariant rejette réellement) → AUCUN effet partiel",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[SU.4] DB de dev injoignable — test ignoré (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
 
         // avecReleveVente=false : anomalie de données délibérée. Le code de
@@ -316,8 +325,7 @@ describe.runIf(requireDatabaseUrl())(
       "double signature concurrente du même BL → une seule gagne, aucun double décrément",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[SU.4] DB de dev injoignable — test ignoré (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
 
         // nombreMortsTransport=0 : isole la question de la concurrence de

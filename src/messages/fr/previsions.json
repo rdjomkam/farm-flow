@@ -906,6 +906,8 @@
       "loadError": "Impossible de charger le mapping de rapprochement.",
       "cibleIntrouvable": "Cible introuvable",
       "cibleNonChargee": "Cible non chargée",
+      "cibleDesactivee": "Cible désactivée",
+      "cibleEtatIndetermine": "État indéterminé (introuvable ou désactivée)",
       "cibleOrpheline": "Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total",
       "versionSelectorLabel": "Version du mapping",
       "versionActiveOption": "Version active (v{version})",

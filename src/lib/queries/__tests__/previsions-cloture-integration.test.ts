@@ -33,6 +33,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3.6] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -41,8 +50,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -96,8 +106,7 @@ describe.runIf(requireDatabaseUrl())(
     "fige versionMapping a la version ACTIVE au moment T — une version ULTERIEURE du mapping ne change JAMAIS la cloture deja ecrite",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.6] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId } = await seedSite(client, "immuabilite");
       try {
@@ -150,8 +159,7 @@ describe.runIf(requireDatabaseUrl())(
     "refuse une SECONDE cloture du meme mois (409) — la premiere cloture n'est jamais ecrasee",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.6] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId } = await seedSite(client, "double-cloture");
       try {
@@ -179,8 +187,7 @@ describe.runIf(requireDatabaseUrl())(
     "refuse une cloture hors de l'horizon du plan (422)",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.6] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId, userId } = await seedSite(client, "hors-horizon");
       try {
@@ -210,8 +217,7 @@ describe.runIf(requireDatabaseUrl())(
     "isolation siteId : le mapping ACTIF du site A n'est jamais visible par le site B (R8)",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.6] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const { siteId: siteA, userId: userA } = await seedSite(client, "isolation-a");
       const { siteId: siteB, userId: userB } = await seedSite(client, "isolation-b");

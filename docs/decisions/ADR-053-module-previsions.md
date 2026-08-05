@@ -3751,6 +3751,225 @@ Namespace `previsions` (`src/messages/{fr,en}/previsions.json`), nouvelles clés
      cohérent avec R9 et avec le risque 2 déjà identifié par la pré-analyse (chemin 409 dormant
      sans test HTTP réel).
 
+## 16.13 Arbitrage (2026-08-06) — `rapprochement-mapping-tab.tsx` confondait « cible absente » et
+« cible désactivée » pour un lecteur `PREVISIONS_VOIR` seul
+
+**Origine.** Le point 1 de « Points restés ouverts » ci-dessus (§16.12), rédigé au moment de la
+story A.5, décrivait ce défaut comme touchant `mapping-form-dialog.tsx` (`cibleReferentielIntrouvableWarning`)
+— **c'était déjà inexact au moment de son écriture** : la story PR2non.2 (réserve R2, postérieure)
+avait entre-temps résolu la distinction dans ce dialog en le rebasculant sur `GET
+/api/previsions/postes-referentiel/admin` (`PREVISIONS_PARAMETRER`, `cibleReferentielAbsenteWarning`
+vs `cibleReferentielDesactiveeWarning`, `mapping-form-dialog.tsx:199-302`). Le défaut réel, jamais
+corrigé, vit ailleurs : `libelleCible` (`mapping-rapprochement-helpers.ts:164-189`), consommée par
+`rapprochement-mapping-tab.tsx:373` — la liste des lignes de mapping du site (pas le formulaire
+d'édition). Cette section ferme donc le point 1 en le corrigeant, et tranche l'arbitrage réel.
+
+**Le problème.** `rapprochement-mapping-tab.tsx` est monté pour **tout** utilisateur
+`PREVISIONS_VOIR` (gate au niveau de la page hôte, `previsions-scenario-detail-page.tsx:79` —
+`PREVISIONS_PARAMETRER` n'y conditionne que l'affichage de boutons, jamais le montage du composant
+ni son `fetchAll`). Son fetch des cibles `POSTE_PREVISION` utilise `GET
+/api/previsions/postes-referentiel` — la route **actifs seulement**, `PREVISIONS_VOIR`. Pour un
+`cibleId` non trouvé dans cette liste, `libelleCible` retombait sur `cibleIntrouvable` que la cible
+n'existe nulle part **ou** qu'elle soit simplement désactivée : un mensonge par omission (même
+famille qu'ERR-173/ERR-185, une certitude affichée là où l'information réelle est en réalité
+absente).
+
+**Options évaluées.**
+- **(a) Enrichir la route `PREVISIONS_VOIR` existante d'un `actif` minimal, sans `code`/dates/
+  compteurs.** Rejetée en l'état : introduire une nouvelle fonction de query allégée pour un besoin
+  strictement inférieur à ce que la route admin fait déjà (elle renvoie déjà `actif` par ligne,
+  sans coût de requête additionnel) aurait dupliqué une troisième forme de DTO pour le même
+  référentiel, sans bénéfice net une fois (b)/(c) écartés — voir décision.
+- **(b) Une permission de lecture distincte (`PREVISIONS_REFERENTIEL` ou équivalent).** Rejetée,
+  **déjà tranchée en sens contraire par §16.12** (« fragmenterait sans bénéfice un périmètre déjà
+  couvert : aucun rôle de l'ADR §6 n'a de raison de vouloir administrer le référentiel sans pouvoir
+  déjà créer des postes de charges ») — rouvrir cette question pour un besoin strictement plus
+  restreint (afficher un statut, pas administrer) serait moins justifié encore. Le coût réel
+  (migration Prisma d'un nouveau membre d'enum `Permission` sur la base de dev PARTAGÉE portant le
+  plan de référence EXCEL-V12 de l'utilisateur, seed, attribution aux rôles existants, tests) est
+  disproportionné pour ce que la permission apporterait : un simple bit `actif`, jamais un accès à
+  une action.
+- **(c) Renoncer à la distinction pour un lecteur `PREVISIONS_VOIR` seul, mais cesser d'affirmer
+  « introuvable » quand l'état réel est indéterminé — retenue, avec une variante par permission.**
+
+**Décision : (c), avec un comportement qui diffère explicitement selon la permission (exigence 5).**
+
+1. **Utilisateur `PREVISIONS_PARAMETRER` (qui inclut toujours `PREVISIONS_VOIR`, §16.12 « aucun rôle
+   n'a `PARAMETRER` sans `VOIR` », pré-analyse §2) :** `rapprochement-mapping-tab.tsx` bascule son
+   fetch des postes sur `GET /api/previsions/postes-referentiel/admin` (toutes entrées, actives et
+   inactives) — **exactement la route déjà consommée par `mapping-form-dialog.tsx` pour le même
+   utilisateur**, donc **aucun élargissement d'accès net** : quiconque voit cette liste complète
+   pouvait déjà l'obtenir en ouvrant le dialog d'édition d'un mapping. `libelleCible` reçoit alors le
+   statut `actif` réel par entrée et distingue précisément absente (`cibleIntrouvable`) de désactivée
+   (`cibleDesactivee`, nouvelle clé).
+2. **Utilisateur `PREVISIONS_VOIR` seul (sans `PREVISIONS_PARAMETRER`) :** le fetch reste inchangé
+   (`GET /postes-referentiel`, actifs seulement — aucun 403, aucune régression du risque documenté
+   par la pré-analyse). `libelleCible` ne peut plus, pour ce cas, distinguer absente de désactivée —
+   elle ne prétend donc plus le savoir : nouvelle clé `cibleEtatIndetermine` (« État indéterminé »),
+   remplace l'ancien `cibleIntrouvable` par défaut pour ce chemin précis.
+
+**Ce que cette décision rend IMPOSSIBLE, énoncé explicitement :**
+- **Un lecteur `PREVISIONS_VOIR` seul ne saura jamais**, depuis cet écran, si une cible de mapping
+  non résolue est absente du référentiel ou simplement désactivée. Il ne peut pas non plus
+  l'apprendre autrement dans l'application : l'écran d'administration du référentiel
+  (`/previsions/postes-referentiel`) et `mapping-form-dialog.tsx` exigent tous deux
+  `PREVISIONS_PARAMETRER`. **Assumé** : le rôle métier associé à `PREVISIONS_VOIR` seul (consultation)
+  n'a pas de responsabilité d'administration du référentiel ; la seule action qu'un tel utilisateur
+  pourrait entreprendre avec cette information (réactiver l'entrée, ou orienter un administrateur)
+  exige de toute façon `PREVISIONS_PARAMETRER` pour être exécutée — l'information ne débloquerait
+  aucune action nouvelle pour lui, seulement une curiosité. Si ce jugement s'avère faux à l'usage
+  (un lecteur seul a réellement besoin de signaler précisément le cas à un administrateur), la
+  correction est un ajout de texte, pas une réouverture de permission : cf. « Extension future »
+  ci-dessous.
+- **Aucune nouvelle route, aucune nouvelle permission, aucune migration Prisma** n'est introduite —
+  cette décision n'ajoute strictement rien à la surface d'API ou au schéma, uniquement un
+  branchement conditionnel côté client sur une route déjà existante et une clé i18n supplémentaire.
+
+**Ce qui reste possible / s'améliore :**
+- Un utilisateur `PREVISIONS_PARAMETRER` obtient, dans `rapprochement-mapping-tab.tsx`, exactement
+  la même précision que dans `mapping-form-dialog.tsx` — les deux écrans deviennent cohérents l'un
+  avec l'autre pour la même permission, alors qu'ils divergeaient jusqu'ici.
+- Un lecteur `PREVISIONS_VOIR` seul cesse de recevoir une affirmation fausse (« introuvable » pour
+  une cible en réalité désactivée) — il reçoit une incertitude honnête, jamais une certitude
+  inventée (ERR-173).
+
+**Extension future, non retenue maintenant.** Si un besoin réel émergeait de donner au lecteur seul
+la distinction précise, la voie la moins coûteuse resterait (a) sous une forme différente de ce qui
+a été évalué ci-dessus : un paramètre optionnel `champsMinimal` sur `listerPostesReferentielActifs`
+transformé en `listerPostesReferentielTousStatuts` réservée à un besoin de lecture pure (sans
+`code`/dates/compteurs), gatée `PREVISIONS_VOIR` — **à condition explicite de n'exposer
+QUE `{ id, libelle, actif }`**, jamais le DTO admin complet, et de documenter à ce moment précisément
+pourquoi exposer l'existence d'entrées désactivées à un lecteur seul cesse d'être un coût net. Non
+fait ici faute de besoin démontré — la pré-analyse ne rapporte aucune demande utilisateur en ce
+sens, seulement un risque de confusion d'affichage, déjà résolu par (c).
+
+### Spécification d'implémentation (@developer)
+
+**Fichiers à modifier :**
+
+1. **`src/components/previsions/mapping-rapprochement-helpers.ts`**
+   - `CiblesDisponibles.postes` : ajouter un champ optionnel `actif?: boolean` à chaque entrée
+     (`Array<{ id: string; libelle: string; actif?: boolean }>`). Les deux routes (`/postes-referentiel`
+     et `/postes-referentiel/admin`) renvoient déjà ce champ sur chaque ligne (aucun `select` ne le
+     filtre côté Prisma) — c'est un ajout de type, pas un changement de payload réseau.
+   - `libelleCible` : nouveau paramètre optionnel en 6e position, `referentielComplet = false`.
+     Signature complète :
+     ```ts
+     export function libelleCible(
+       cibleType: CibleRapprochement,
+       cibleId: string | null,
+       cibles: CiblesDisponibles,
+       translators: { tPrevisions: Translator; tStock: Translator },
+       ciblesChargees = true,
+       referentielComplet = false
+     ): string | null
+     ```
+   - Branche `POSTE_PREVISION` uniquement (la branche `ALIMENT_PREVISION` n'est pas concernée : un
+     `AlimentPrevision` ne porte aucune notion d'`actif`/désactivation) :
+     ```ts
+     if (cibleType === CibleRapprochement.POSTE_PREVISION) {
+       const poste = cibles.postes.find((p) => p.id === cibleId);
+       if (poste) {
+         if (poste.actif === false) return tPrevisions("rapprochementTab.mapping.cibleDesactivee");
+         return poste.libelle;
+       }
+       if (!ciblesChargees) return tPrevisions("rapprochementTab.mapping.cibleNonChargee");
+       return referentielComplet
+         ? tPrevisions("rapprochementTab.mapping.cibleIntrouvable")
+         : tPrevisions("rapprochementTab.mapping.cibleEtatIndetermine");
+     }
+     ```
+   - Mettre à jour le commentaire d'en-tête de `libelleCible` (lignes 132-163) pour documenter ce
+     nouveau paramètre et le renvoi à cette section de l'ADR (§16.13), même discipline que les
+     renvois existants vers §16.7/§16.12.
+
+2. **`src/components/previsions/rapprochement-mapping-tab.tsx`**
+   - `fetchAll` (ligne ~143-145) : remplacer l'URL fixe `/api/previsions/postes-referentiel` par un
+     branchement conditionnel sur `peutParametrer` (déjà calculé ligne 101) :
+     ```ts
+     get<{ data: PosteReferentielOptionDTO[] }>(
+       peutParametrer ? "/api/previsions/postes-referentiel/admin" : "/api/previsions/postes-referentiel",
+       { silentError: true }
+     ),
+     ```
+     Le type `PosteReferentielOptionDTO[]` reste valable pour les deux routes (la route admin renvoie
+     un sur-ensemble structurel, `nbPostesRattaches`/`nbMappingsRattaches` en plus — TypeScript
+     structurel accepte l'assignation, aucun cast nécessaire).
+   - Site de l'appel `libelleCible` (ligne 373) : ajouter le 6e argument `peutParametrer` :
+     ```ts
+     const libelle = libelleCible(
+       m.cibleType,
+       m.cibleId,
+       { postes, aliments },
+       { tPrevisions: t, tStock },
+       ciblesChargees,
+       peutParametrer
+     );
+     ```
+   - Mettre à jour le commentaire d'en-tête du fichier (bloc débutant ligne 22, mention
+     `cibleIntrouvable`/`cibleNonChargee`) pour citer aussi `cibleDesactivee`/`cibleEtatIndetermine`
+     et renvoyer à §16.13.
+
+3. **i18n — déjà fait par cette section (architecte), à ne PAS dupliquer :**
+   `src/messages/fr/previsions.json` et `src/messages/en/previsions.json`,
+   `previsions.rapprochementTab.mapping.cibleDesactivee` / `.cibleEtatIndetermine` — clés déjà
+   ajoutées, aucune action développeur requise sur ces fichiers sauf si une clé supplémentaire
+   s'avère nécessaire en cours d'implémentation (auquel cas suivre le même schéma fr/en).
+
+**Comportement attendu, cas par cas :**
+
+| Utilisateur | Route postes appelée | Cible trouvée, `actif: true` | Cible trouvée, `actif: false` | Cible absente de la liste chargée | Échec réseau isolé (postes/aliments) |
+|---|---|---|---|---|---|
+| `PREVISIONS_PARAMETRER` | `/admin` (toutes) | libellé réel | `cibleDesactivee` | `cibleIntrouvable` (certain, liste complète) | `cibleNonChargee` |
+| `PREVISIONS_VOIR` seul | `/postes-referentiel` (actifs) | libellé réel | *(n'apparaît jamais dans cette liste par construction — retombe sur la ligne suivante)* | `cibleEtatIndetermine` (jamais `cibleIntrouvable`) | `cibleNonChargee` |
+
+**Tests à écrire (@tester) — contrainte d'environnement impérative :** EXCEL-V12 (base de dev
+partagée, lecture seule stricte) ne contient QUE des `PosteReferentiel` actifs — le cas « désactivé »
+n'est PAS reproductible par une requête HTTP réelle contre cette base. Tous les tests ci-dessous
+sont des **tests de composant/unitaires avec données mockées**, jamais des tests d'intégration
+HTTP DB-gated pour ce sous-cas précis.
+
+1. **`mapping-rapprochement-helpers.test.ts`** (fonction pure, aucune DB) :
+   - `libelleCible(POSTE_PREVISION, id, { postes: [{ id, libelle: "X", actif: false }], aliments: [] }, translators, true, true)`
+     → `"rapprochementTab.mapping.cibleDesactivee"`.
+   - `libelleCible(POSTE_PREVISION, id, { postes: [{ id, libelle: "X", actif: true }], aliments: [] }, translators, true, true)`
+     → `"X"` (le libellé, jamais un texte de statut — non-régression du cas nominal).
+   - Cible absente, `referentielComplet: true` → `"rapprochementTab.mapping.cibleIntrouvable"`.
+   - Cible absente, `referentielComplet: false` (ou omis, valeur par défaut) →
+     `"rapprochementTab.mapping.cibleEtatIndetermine"` — **falsification requise** : si un
+     développeur restaure par erreur l'ancien défaut (`cibleIntrouvable`), ce test doit tomber.
+   - `ciblesChargees: false` reste prioritaire sur `referentielComplet` dans les deux configurations
+     (`cibleNonChargee`, jamais `cibleEtatIndetermine` ni `cibleIntrouvable`) — cas déjà couvert pour
+     `ALIMENT_PREVISION`, à dupliquer pour `POSTE_PREVISION`.
+
+2. **`rapprochement-mapping-tab.test.tsx`** (composant, `fetch`/`get` mocké) :
+   - Utilisateur SANS `PREVISIONS_PARAMETRER` (`permissions` sans cette valeur) : mock de
+     `GET /api/previsions/postes-referentiel` renvoyant une liste où l'id ciblé par un mapping est
+     absent → l'écran affiche `"État indéterminé (introuvable ou désactivée)"` (texte fr rendu),
+     jamais `"Cible introuvable"`. **Falsification requise** : ce test doit échouer si le composant
+     affiche encore `cibleIntrouvable` pour ce cas.
+   - Même utilisateur : assertion explicite que `GET /api/previsions/postes-referentiel/admin`
+     n'est **jamais** appelée (mock qui échoue le test s'il est sollicité, ou assertion sur les
+     URLs appelées) — preuve directe qu'aucun 403 n'est possible pour ce profil, contre-preuve du
+     risque documenté par la pré-analyse.
+   - Utilisateur AVEC `PREVISIONS_PARAMETRER` : mock de `GET .../postes-referentiel/admin` renvoyant
+     une entrée `{ id, libelle: "Carburant", actif: false }` ciblée par un mapping → l'écran affiche
+     `"Cible désactivée"`. Une seconde entrée avec un id qui ne correspond à AUCUN mapping affiché
+     (cas non pertinent ici, ou un `cibleId` qui ne correspond à aucune entrée de la liste complète)
+     → `"Cible introuvable"`.
+   - Non-régression : un test existant du fichier (cas nominal, cible trouvée et active) doit rester
+     vert sans modification — falsifier en retirant temporairement le libellé retourné pour prouver
+     que le test le détecterait.
+
+**Hors périmètre de cette story, à ne pas toucher :** `mapping-form-dialog.tsx` (déjà correct depuis
+PR2non.2, ne consomme pas `libelleCible`), `src/lib/previsions/` (le moteur), toute route API
+existante (aucune n'est modifiée — seul le choix de route côté client change), le schéma Prisma.
+
+**Références :** ERR-173, ERR-185, ADR-053 §16.12 (Arbitrage 2, rejet de `PREVISIONS_REFERENTIEL`),
+`docs/analysis/pre-analysis-P2-absent-vs-desactive.md`.
+
+---
+
 ## 17. Amendement (Sprint de résorption des réserves, story PR2non.5 — réserve R5, ERR-184,
 2026-08-05) — le SQL de backfill est un artefact historique, pas un invariant de parité
 

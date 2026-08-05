@@ -30,6 +30,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3.3/PR3ter.C3] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -38,8 +47,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -77,8 +87,7 @@ describe.runIf(requireDatabaseUrl())(
       "v1 puis v2 : v1 reste lisible ET INCHANGEE, getMappingActif ne renvoie que v2",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3.3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "versionnement");
         try {
@@ -135,8 +144,7 @@ describe.runIf(requireDatabaseUrl())(
       "getVersionsDisponibles (story C.3, PR3-ter) : renvoie TOUTES les versions creees, decroissant, jamais seulement la version active",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.C3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "versions-disponibles");
         try {
@@ -186,8 +194,7 @@ describe.runIf(requireDatabaseUrl())(
       "refuse une version vide (BusinessRuleError 422) — jamais de version active sans ligne",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3.3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "vide");
         try {

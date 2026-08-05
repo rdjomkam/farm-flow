@@ -27,6 +27,19 @@
  * introuvable dans ce scenario (RISQUE R1) => libelle explicite dedie via
  * `libelleCible`, jamais un id brut, jamais un vide silencieux.
  *
+ * ADR-053 §16.13 (2026-08-06) : le fetch des postes bascule desormais sur
+ * `GET /api/previsions/postes-referentiel/admin` (toutes entrees, actives
+ * et inactives) pour un utilisateur `PREVISIONS_PARAMETRER`, et reste sur
+ * la route actifs-seuls (`GET /api/previsions/postes-referentiel`) pour un
+ * lecteur `PREVISIONS_VOIR` seul — aucun elargissement d'acces, la route
+ * admin est deja consommee par `mapping-form-dialog.tsx` pour ce meme
+ * profil. `libelleCible` recoit ce meme flag (`peutParametrer`) en 6e
+ * argument et distingue desormais `cibleDesactivee` (trouvee, `actif:
+ * false`) de `cibleIntrouvable` (absente, liste complete, certain) et de
+ * `cibleEtatIndetermine` (absente, liste partielle, incertain — remplace
+ * l'ancien defaut `cibleIntrouvable` pour ce cas, ERR-173 : une certitude
+ * fausse est pire qu'une incertitude affichee).
+ *
  * Sprint PR3-ter, story A.2 : le `GET` du mapping actif porte desormais
  * `?scenarioId=` — chaque ligne renvoyee est augmentee de `cibleOrpheline`
  * (filet de securite NON NEGOCIABLE, story A.1/A.3 : un mapping dont la
@@ -140,9 +153,10 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
       get<{ data: MappingRapprochementAvecOrphelinite[]; version: number | null }>(urlMapping, {
         silentError: true,
       }),
-      get<{ data: PosteReferentielOptionDTO[] }>(`/api/previsions/postes-referentiel`, {
-        silentError: true,
-      }),
+      get<{ data: PosteReferentielOptionDTO[] }>(
+        peutParametrer ? "/api/previsions/postes-referentiel/admin" : "/api/previsions/postes-referentiel",
+        { silentError: true }
+      ),
       get<{ data: AlimentPrevisionDTO[] }>(`/api/previsions/scenarios/${scenarioId}/aliments`, {
         silentError: true,
       }),
@@ -164,7 +178,7 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarioId, versionSelectionnee]);
+  }, [scenarioId, versionSelectionnee, peutParametrer]);
 
   useEffect(() => {
     fetchAll();
@@ -370,7 +384,14 @@ export function RapprochementMappingTab({ scenarioId, scenarioNom, permissions }
                             {t(`rapprochementTab.mapping.cibleTypes.${m.cibleType}`)}
                           </Badge>
                           {(() => {
-                            const libelle = libelleCible(m.cibleType, m.cibleId, { postes, aliments }, { tPrevisions: t, tStock }, ciblesChargees);
+                            const libelle = libelleCible(
+                              m.cibleType,
+                              m.cibleId,
+                              { postes, aliments },
+                              { tPrevisions: t, tStock },
+                              ciblesChargees,
+                              peutParametrer
+                            );
                             return libelle ? (
                               <span className="text-xs font-medium text-foreground">{libelle}</span>
                             ) : null;

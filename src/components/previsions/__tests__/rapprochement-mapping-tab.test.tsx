@@ -71,7 +71,16 @@ function mockApi(options: {
    * fait tout echouer).
    */
   failCibles?: boolean;
-  postes?: Array<{ id: string; libelle: string }>;
+  postes?: Array<{ id: string; libelle: string; actif?: boolean }>;
+  /**
+   * ADR-053 §16.13 : liste distincte renvoyee par la route ADMIN
+   * (`/postes-referentiel/admin`, `PREVISIONS_PARAMETRER`). Si absente, la
+   * route admin renvoie `postes` (comportement historique inchange pour les
+   * tests qui ne testent pas §16.13). ERR-189 : matcher `url.includes("/postes")`
+   * seul ne distinguerait PAS les deux routes (l'une est un prefixe de
+   * l'autre) — voir le branchement explicite ci-dessous.
+   */
+  postesAdmin?: Array<{ id: string; libelle: string; actif?: boolean }>;
   aliments?: Array<{ id: string; tailleGranule: string }>;
   /** Story C.3 (PR3-ter) : versions distinctes disponibles, decroissant — la premiere est la version active. */
   versions?: number[];
@@ -97,7 +106,16 @@ function mockApi(options: {
       }
       return Promise.resolve({ ok: true, data: { data: options.mappingActif ?? [], version: options.version ?? null } });
     }
-    if (url.includes("/postes")) {
+    // ERR-189 : verifier "/postes-referentiel/admin" AVANT le check generique
+    // "/postes-referentiel" (prefixe commun aux deux routes) — un mock qui ne
+    // matcherait que sur `url.includes("/postes")` serait incapable de
+    // distinguer laquelle des deux routes est reellement appelee, exactement
+    // le trou documente par ERR-189 pour ce meme fichier.
+    if (url.includes("/postes-referentiel/admin")) {
+      if (options.failCibles) return Promise.resolve({ ok: false, data: null, error: "erreur reseau" });
+      return Promise.resolve({ ok: true, data: { data: options.postesAdmin ?? options.postes ?? [] } });
+    }
+    if (url.includes("/postes-referentiel")) {
       if (options.failCibles) return Promise.resolve({ ok: false, data: null, error: "erreur reseau" });
       return Promise.resolve({ ok: true, data: { data: options.postes ?? [] } });
     }
@@ -268,7 +286,7 @@ describe("RapprochementMappingTab — mapping actif", () => {
     expect(await screen.findByText("Transport aliments")).toBeInTheDocument();
   });
 
-  it("CORRECTIF C6/C1 + A.4 : un cibleId POSTE_PREVISION sans entree PosteReferentiel correspondante (SITE-scope, plus 'un autre scenario') affiche un libelle explicite, jamais un id brut ni un vide silencieux", async () => {
+  it("CORRECTIF C6/C1 + A.4, ADR-053 §16.13 : un cibleId POSTE_PREVISION sans entree PosteReferentiel correspondante (SITE-scope, plus 'un autre scenario'), pour un lecteur PREVISIONS_VOIR seul (liste actifs-seuls, incertaine), affiche un etat indetermine honnete — jamais un id brut, jamais une certitude fausse 'introuvable'", async () => {
     mockApi({
       mappingActif: [
         {
@@ -292,7 +310,7 @@ describe("RapprochementMappingTab — mapping actif", () => {
     });
     render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
 
-    expect(await screen.findByText("Cible introuvable")).toBeInTheDocument();
+    expect(await screen.findByText("État indéterminé (introuvable ou désactivée)")).toBeInTheDocument();
     expect(screen.queryByText("poste-referentiel-inconnu")).not.toBeInTheDocument();
   });
 
@@ -445,6 +463,146 @@ describe("RapprochementMappingTab — Sprint PR3-ter story A.2 : cible orpheline
     expect(
       screen.queryByText("Cible introuvable dans le plan actif — le montant réel associé n'apparaît dans aucun total")
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("RapprochementMappingTab — ADR-053 §16.13 : absente vs desactivee vs indeterminee, selon la permission", () => {
+  function mappingVersPoste(cibleId: string) {
+    return [
+      {
+        id: "m1",
+        siteId: "site-1",
+        version: 5,
+        sourceType: SourceRapprochement.DEPENSE_CATEGORIE,
+        sourceCle: "ELECTRICITE",
+        cibleType: CibleRapprochement.POSTE_PREVISION,
+        cibleId,
+        actif: true,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+  }
+
+  it("PREVISIONS_VOIR seul : fetch la route ACTIFS-SEULS (`/postes-referentiel`), jamais la route admin — garantie anti-403, coeur de l'arbitrage §16.13", async () => {
+    mockApi({ mappingActif: mappingVersPoste("poste-1"), version: 5, postes: [{ id: "poste-1", libelle: "Electricite du site" }] });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    await screen.findByText("Electricite du site");
+
+    const urlsAppelees = mockGet.mock.calls.map((call) => call[0] as string);
+    expect(urlsAppelees.some((u) => u.includes("/api/previsions/postes-referentiel") && !u.includes("/admin"))).toBe(
+      true
+    );
+    // FALSIFICATION : ce test doit echouer si le composant bascule (a tort)
+    // sur la route admin pour un lecteur sans PREVISIONS_PARAMETRER.
+    expect(urlsAppelees.some((u) => u.includes("/postes-referentiel/admin"))).toBe(false);
+  });
+
+  it("PREVISIONS_PARAMETRER : fetch bien la route ADMIN (`/postes-referentiel/admin`)", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-1"),
+      version: 5,
+      postesAdmin: [{ id: "poste-1", libelle: "Electricite du site", actif: true }],
+    });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    await screen.findByText("Electricite du site");
+
+    const urlsAppelees = mockGet.mock.calls.map((call) => call[0] as string);
+    expect(urlsAppelees.some((u) => u.includes("/api/previsions/postes-referentiel/admin"))).toBe(true);
+  });
+
+  it("PREVISIONS_PARAMETRER, cible trouvee dans la liste complete avec actif: false -> 'Cible désactivée'", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-1"),
+      version: 5,
+      postesAdmin: [{ id: "poste-1", libelle: "Carburant", actif: false }],
+    });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    expect(await screen.findByText("Cible désactivée")).toBeInTheDocument();
+    expect(screen.queryByText("Carburant")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cible introuvable")).not.toBeInTheDocument();
+    expect(screen.queryByText("État indéterminé (introuvable ou désactivée)")).not.toBeInTheDocument();
+  });
+
+  it("PREVISIONS_PARAMETRER, cible absente de la liste complete (id qui ne correspond a AUCUNE entree) -> 'Cible introuvable' (certitude legitime, liste complete)", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-fantome"),
+      version: 5,
+      postesAdmin: [{ id: "poste-autre", libelle: "Une autre charge", actif: true }],
+    });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    expect(await screen.findByText("Cible introuvable")).toBeInTheDocument();
+    expect(screen.queryByText("État indéterminé (introuvable ou désactivée)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cible désactivée")).not.toBeInTheDocument();
+  });
+
+  it("PREVISIONS_VOIR seul, cible absente de la liste actifs-seuls -> 'État indéterminé (introuvable ou désactivée)', JAMAIS 'Cible introuvable'", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-referentiel-inconnu"),
+      version: 5,
+      postes: [{ id: "poste-autre", libelle: "Une autre charge" }],
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    expect(await screen.findByText("État indéterminé (introuvable ou désactivée)")).toBeInTheDocument();
+    // FALSIFICATION : ce test doit echouer si le composant retombe encore sur
+    // l'ancien defaut "Cible introuvable" pour ce chemin (PREVISIONS_VOIR seul).
+    expect(screen.queryByText("Cible introuvable")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cible désactivée")).not.toBeInTheDocument();
+  });
+
+  it("echec reseau des cibles (ciblesChargees: false) reste PRIORITAIRE sur l'etat indetermine, pour les deux permissions — 'Cible non chargée'", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-1"),
+      version: 5,
+      nonMappees: [],
+      failCibles: true,
+    });
+    render(<RapprochementMappingTab scenarioId="s1" scenarioNom="Cycle 2026-A" permissions={[Permission.PREVISIONS_VOIR]} />);
+
+    expect(await screen.findByText("Cible non chargée")).toBeInTheDocument();
+    expect(screen.queryByText("État indéterminé (introuvable ou désactivée)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cible introuvable")).not.toBeInTheDocument();
+  });
+
+  it("echec reseau des cibles pour PREVISIONS_PARAMETRER aussi -> 'Cible non chargée', prioritaire sur 'Cible introuvable'", async () => {
+    mockApi({
+      mappingActif: mappingVersPoste("poste-1"),
+      version: 5,
+      nonMappees: [],
+      failCibles: true,
+    });
+    render(
+      <RapprochementMappingTab
+        scenarioId="s1"
+        scenarioNom="Cycle 2026-A"
+        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
+      />
+    );
+
+    expect(await screen.findByText("Cible non chargée")).toBeInTheDocument();
+    expect(screen.queryByText("Cible introuvable")).not.toBeInTheDocument();
   });
 });
 

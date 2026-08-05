@@ -906,6 +906,8 @@
       "loadError": "Unable to load the reconciliation mapping.",
       "cibleIntrouvable": "Target not found",
       "cibleNonChargee": "Target not loaded",
+      "cibleDesactivee": "Target disabled",
+      "cibleEtatIndetermine": "Indeterminate state (not found or disabled)",
       "cibleOrpheline": "Target not found in the active plan — the associated actual amount is missing from all totals",
       "versionSelectorLabel": "Mapping version",
       "versionActiveOption": "Active version (v{version})",

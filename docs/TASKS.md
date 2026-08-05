@@ -8235,14 +8235,62 @@ Pipeline par story selon `docs/PROCESSES.md` : @pre-analyst → agent assigné �
 - **Capitalisation @knowledge-keeper :** **ERR-190** à **ERR-193** créées ; **ERR-178** et **ERR-184** mises à jour.
 - **Nouvel amendement :** **ADR-053 §17**.
 
+> **Note du @status-updater (2026-08-05).** Les chiffres de clôture ci-dessus sont ceux mesurés **à la clôture de PR2-nonies** (commit `7c39a4a`). Ils ne sont pas rétro-corrigés : les mesures postérieures figurent dans la section du **sprint de clôture P1-P2-P3** ci-dessous.
+
 **Points restés ouverts — consignés (leçon ERR-180 : un risque documenté à un seul endroit redevient invisible). PAS des stories de ce sprint :**
 
 | Sévérité / Nature | Point |
 |---|---|
-| Moyenne — **dette préexistante, non introduite par ce sprint** | **15 des 16 fichiers de tests DB-gated** portent encore le motif de **faux vert** (`catch { dbAvailable = false }` suivi d'un `return` silencieux) **interdit par ADR-052 §6** : sans base, ils passent au lieu d'échouer. Seul le **nouveau** fichier livré par PR2non.5 a été corrigé. Voir **ERR-192**. |
-| Moyenne | `rapprochement-mapping-tab.tsx` **et** `mapping-rapprochement-helpers.ts` **confondent toujours « absente » et « désactivée »** — **non corrigé délibérément** : ce tab est visible aux utilisateurs porteurs de `PREVISIONS_VOIR` **seuls**, et un rebranchement naïf sur la route d'administration les casserait en **403**. Exige une **conception dédiée**, pas un correctif d'alignement. |
+| ~~Moyenne — **dette préexistante, non introduite par ce sprint**~~ → **SOLDÉE par la story P1 (sprint de clôture P1-P2-P3)** | **15 des 16 fichiers de tests DB-gated** portent encore le motif de **faux vert** (`catch { dbAvailable = false }` suivi d'un `return` silencieux) **interdit par ADR-052 §6** : sans base, ils passent au lieu d'échouer. Seul le **nouveau** fichier livré par PR2non.5 a été corrigé. Voir **ERR-192**.<br>**SOLDÉE au 2026-08-05** — les 15 fichiers portent désormais `throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion })` ; base injoignable : **AVANT `15 fichiers passed / 49 tests passed`** (faux vert) → **APRÈS échec bruyant systématique**. **ERR-192 résorbée.** |
+| ~~Moyenne~~ → **SOLDÉE par la story P2 (sprint de clôture P1-P2-P3)** | `rapprochement-mapping-tab.tsx` **et** `mapping-rapprochement-helpers.ts` **confondent toujours « absente » et « désactivée »** — **non corrigé délibérément** : ce tab est visible aux utilisateurs porteurs de `PREVISIONS_VOIR` **seuls**, et un rebranchement naïf sur la route d'administration les casserait en **403**. Exige une **conception dédiée**, pas un correctif d'alignement.<br>**SOLDÉE au 2026-08-05** — la conception dédiée exigée a été **tranchée par l'architecte en [ADR-053 §16.13](decisions/ADR-053-module-previsions.md)** (option c + variante par permission), puis implémentée : `PREVISIONS_VOIR` seul lit « **État indéterminé (introuvable ou désactivée)** », `PREVISIONS_PARAMETRER` bascule sur la route admin existante et obtient la distinction exacte. **Aucun accès élargi, aucune nouvelle permission, aucune migration.** |
 | Moyenne | **178 erreurs `tsc` restantes, non homogènes** : catégorie « **fixtures incomplètes** » (**~72**, chacune à examiner **cas par cas** — risque **ERR-188**) et **casts i18n** (**~9**), **volontairement non traités**. Voir **ERR-191**. |
 | Moyenne — **arbitrage utilisateur, pas décision de sprint** | **8 vrais bugs révélés par le typage**, **confirmés mais non corrigés**. Par priorité : `TypeRemise.POURCENTAGE` / `.FIXE` **inexistants** + **5 appels à 4 arguments au lieu de 3** (**touche la logique de remises facturée**) ; `TypePlan.PRO` **inexistant** ; `previsionnel` vs `prevu` (**assertion morte**) ; `PhaseLot === "LARVE"` (**mock auto-cohérent découplé du domaine réel**) ; `Decimal === number` (**fake Prisma infidèle**). Voir **ERR-191**. |
-| Basse — **test flaky connu, à tracer nommément** | `mapping-form-dialog.test.tsx` a montré **un échec isolé sous charge CPU parallèle**, **vert en 4 exécutions isolées** : un `findByText` **sensible au timing**. Ni assertion affaiblie, ni `retry`, ni `skip` ajouté. |
+
+| ~~Basse — **test flaky connu, à tracer nommément**~~ → **CLOS par la story P3 (sprint de clôture P1-P2-P3) — non reproduit** | `mapping-form-dialog.test.tsx` a montré **un échec isolé sous charge CPU parallèle**, **vert en 4 exécutions isolées** : un `findByText` **sensible au timing**. Ni assertion affaiblie, ni `retry`, ni `skip` ajouté.<br>**CLOS au 2026-08-05, sans modification de code** — **0 échec sur 90 exécutions** (isolé / suite complète / répertoire, parallélisme activé et désactivé, avec et sans `DATABASE_URL`). Le repère historique `user.type` **ne s'applique pas** : le fichier ne l'utilise pas. Piège méthodologique capitalisé en **ERR-194** (mesurer un flaky pendant qu'un autre agent édite le dépôt produit un faux positif). |
+
+**Reprise de ces points :** 3 des 5 lignes ci-dessus sont **soldées par le sprint de clôture P1-P2-P3** (ci-dessous) — faux vert DB-gated → **P1**, « absent » vs « désactivé » → **P2**, flaky `mapping-form-dialog.test.tsx` → **P3**. Les deux lignes restantes (**178 erreurs `tsc` non homogènes** et **8 vrais bugs révélés par le typage**) **restent ouvertes**, hors périmètre du sprint de clôture.
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Sprint de clôture P1-P2-P3 — Solder les trois points restés ouverts après le sprint des réserves
+Voir : *aucun fichier `docs/sprints/SPRINT-CLOTURE-P1-P2-P3*.md` n'existe* — le suivi de ce sprint est porté ici, dans `docs/TASKS.md`, **même convention que PR3-quater, PR3-quinquies et PR2-nonies**.
+
+**Statut :** `FAIT` (**3 points** — P1 et P2 `FAIT`, P3 `CLOS` non reproduit) — **review de sprint `P1/P2/P3 VALIDÉ`, aucun problème bloquant**
+**Objectif :** solder les **trois points restés ouverts** consignés à la clôture de **PR2-nonies** (commit `7c39a4a`). Aucun des trois n'est une régression : ce sont des reports assumés, consignés à la clôture du sprint précédent (leçon **ERR-180** : un report non consigné est un report perdu).
+
+| Point | Type | Sévérité | Sujet | Statut |
+|-------|------|----------|-------|--------|
+| P1 | BUGFIX/TEST | Moyenne (préexistante) | **Faux vert des tests adossés à la base** : 15 fichiers de `src/lib/queries/__tests__/` portaient encore le motif interdit par **ADR-052 §1/§6** (`catch { dbAvailable = false }` puis `return` silencieux dans chaque `it`) — **ERR-192** | `FAIT` |
+| P2 | UI + TEST | Moyenne | **« Absent » vs « désactivé » dans `rapprochement-mapping-tab.tsx`** : deux situations distinctes pour l'exploitant affichées sous un même message — **famille ERR-173** | `FAIT` |
+| P3 | INVESTIGATION | Basse | **Flaky signalé de `mapping-form-dialog.test.tsx`** : un `findByText` supposé sensible au timing sous charge CPU parallèle | `CLOS` — **non reproduit** |
+
+**P1 — `FAIT`.** Le motif muet a été remplacé, dans les **15 fichiers** concernés, par un `throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion })`, **sur le patron du fichier de référence déjà corrigé au sprint précédent** (PR2non.5) — pas un patron inventé pour l'occasion.
+**Preuve falsifiable, base injoignable :** **AVANT `15 fichiers passed / 49 tests passed`** (le faux vert, exactement le défaut décrit par ERR-192) → **APRÈS échec bruyant systématique**, **52 tests en échec sur 16 fichiers d'intégration** — le 16e étant celui **déjà conforme avant ce sprint**. **ERR-192 résorbée.**
+
+**P2 — `FAIT`.** L'arbitrage de permissions que le point ouvert de PR2-nonies exigeait (« une **conception dédiée**, pas un correctif d'alignement ») a été **tranché par l'architecte en [ADR-053 §16.13](decisions/ADR-053-module-previsions.md)** : **option c + variante par permission**.
+- Un utilisateur porteur de **`PREVISIONS_VOIR` seul** affiche désormais « **État indéterminé (introuvable ou désactivée)** » au lieu d'**affirmer à tort** « Cible introuvable » — le message ne ment plus sur ce qu'il sait.
+- Un utilisateur porteur de **`PREVISIONS_PARAMETRER`** bascule sur la **route d'administration déjà existante** et obtient la **distinction exacte** absente / désactivée.
+- **Aucun accès élargi, aucune nouvelle permission, aucune migration.** Le risque de **403** qui avait justifié le report est écarté **par construction** : la décision de route est prise **avant** tout appel réseau, jamais après un échec. **+14 tests.**
+
+**P3 — `CLOS`, non reproduit, sans modification de code.** **0 échec sur 90 exécutions** : isolé, dans la suite complète, à l'échelle du répertoire, **parallélisme activé et désactivé**, **avec et sans `DATABASE_URL`**. Le repère historique `user.type` **ne s'appliquait pas** — le fichier ne l'utilise pas. **Aucune assertion affaiblie, aucun `retry`, aucun `skip` ajouté.** Piège méthodologique capitalisé en **ERR-194** : mesurer un flaky **pendant qu'un autre agent édite le dépôt** produit un faux positif.
+
+**Chiffres de clôture — mesures réelles :**
+- `npx vitest run` : **344 fichiers de test / 9 760 tests passés / 26 todo / 0 échec** (baseline d'entrée de sprint : **344 fichiers / 9 746 tests**).
+- `npx tsc --noEmit` : **178** — **cliquet `scripts/typecheck-budget.sh` au vert, seuil inchangé** (aucune régression, aucun relâchement du seuil posé par PR2non.6).
+- `npm run build` : **OK**.
+- **Intégrité `EXCEL-V12` vérifiée intacte AVANT et APRÈS.**
+- **Review :** [review-sprint-cloture-P1-P2-P3.md](reviews/review-sprint-cloture-P1-P2-P3.md) — **P1/P2/P3 VALIDÉ, aucun problème bloquant.**
+
+**Points de PR2-nonies soldés par ce sprint :** les trois lignes « **faux vert DB-gated (ERR-192)** », « **`rapprochement-mapping-tab.tsx` confond absente et désactivée** » et « **flaky `mapping-form-dialog.test.tsx`** » du tableau « Points restés ouverts » de **PR2-nonies** sont **SOLDÉES / CLOSE** et annotées comme telles ci-dessus (historique conservé, non effacé).
+
+**Points restés ouverts — consignés (leçon ERR-180 : un report non consigné est un report perdu). PAS des points de ce sprint :**
+
+| Sévérité / Nature | Point |
+|---|---|
+| Moyenne — **héritée de PR2-nonies, hors périmètre** | **178 erreurs `tsc` restantes, non homogènes** : catégorie « **fixtures incomplètes** » (**~72**, chacune à examiner **cas par cas** — risque **ERR-188**) et **casts i18n** (**~9**), **volontairement non traités**. Voir **ERR-191**. |
+| Moyenne — **arbitrage utilisateur, héritée de PR2-nonies, hors périmètre** | **8 vrais bugs révélés par le typage**, **confirmés mais non corrigés** — dont `TypeRemise.POURCENTAGE` / `.FIXE` **inexistants** + **5 appels à 4 arguments au lieu de 3** (**touche la logique de remises facturée**). Voir **ERR-191**. |
+| Moyenne — **héritée de PR3-quinquies, toujours ouverte** | **Pas de test end-to-end en navigateur réel** pour l'écran d'administration du référentiel de postes (**ERR-157**). |
 
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**

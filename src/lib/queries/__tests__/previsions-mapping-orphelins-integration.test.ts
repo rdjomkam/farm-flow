@@ -50,6 +50,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3quater.A4.1/PR3quater.A4.2/PR3quater.A4.3/PR3quater.A4.4/PR3quater.A4.5/PR3quater.A4.7/PR3quinquies.A5.6] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -58,8 +67,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -134,8 +144,7 @@ describe.runIf(requireDatabaseUrl())(
       "(1) resolution nominale : une cible POSTE_PREVISION dont cibleId = posteReferentielId n'est JAMAIS orpheline sous le scenario qui la porte",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.1] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "nominal");
         try {
@@ -177,8 +186,7 @@ describe.runIf(requireDatabaseUrl())(
       "(2) PORTABILITE INTER-SCENARIOS — LA PROPRIETE CENTRALE ACHETEE PAR CETTE STORY : un mapping cree contre le scenario A resout AUSSI, sans reconfiguration, sous le scenario B du meme site",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.2] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "portable");
         try {
@@ -250,8 +258,7 @@ describe.runIf(requireDatabaseUrl())(
       "(3) SURVIE A LA SUPPRESSION D'UN SCENARIO : supprimer physiquement le scenario A (cascade sur ses PostePrevision) laisse PosteReferentiel intact et le mapping toujours resolvable sous B",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "suppression");
         try {
@@ -327,8 +334,7 @@ describe.runIf(requireDatabaseUrl())(
       "(4) cas orphelin LEGITIME : un scenario qui n'a jamais eu de PostePrevision pour cette entree referentiel est signale ORPHELIN, jamais confondu avec une corruption",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.4] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "legitime");
         try {
@@ -378,8 +384,7 @@ describe.runIf(requireDatabaseUrl())(
       "(5, Moyenne #3 review PR3-ter, CORRIGE par A.4) COMPOSITION filet + moteur : le filet signale l'orphelinite legitime ET le moteur (vrai pipeline de production) ne fait PLUS disparaitre le montant reel — il bascule explicitement en NON_RAPPROCHE, jamais un `?? 0` muet (defaut ERR-179, CORRIGE ICI, contrairement a l'ancien comportement ALIMENT_PREVISION-seul de la story A.3)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.5] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "composition");
         try {
@@ -465,8 +470,7 @@ describe.runIf(requireDatabaseUrl())(
       "(6, §16.12 'Concurrence', DIVERGENCE EXPLICITE d'avec §16.9 point 10/§16.11) CONCURRENCE REELLE SOUS LE CONTRAT XOR : deux createPostePrevision concomitants avec nouveauPosteReferentielLibelle du meme libelle dans deux scenarios du meme site ne produisent JAMAIS deux entrees PosteReferentiel — mais la requete perdante recoit desormais un 409 explicite, JAMAIS une reutilisation silencieuse",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quinquies.A5.6] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "concurrence");
         try {
@@ -550,8 +554,7 @@ describe.runIf(requireDatabaseUrl())(
       "(7, §16.9 point 4) RESTRICT BLOQUE LA SUPPRESSION : un DELETE SQL direct sur une PosteReferentiel referencee par au moins un PostePrevision echoue avec une violation de contrainte FK Postgres, jamais un succes silencieux",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3quater.A4.7] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "restrict");
         try {

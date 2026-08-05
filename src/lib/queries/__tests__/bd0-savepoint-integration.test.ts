@@ -52,6 +52,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[BD.0-SP] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -60,8 +69,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -163,8 +173,7 @@ describe.runIf(requireDatabaseUrl())(
       "une vraie erreur SQL dans calculerEcartsParBac n'empêche pas la création du COMPTAGE, et le relevé est réellement en base après le commit",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[BD.0-SP] DB de dev injoignable — test ignoré (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
 
         const ids = await seedVagueEtBac(client, "poison");
@@ -225,8 +234,7 @@ describe.runIf(requireDatabaseUrl())(
       "sans erreur SQL (poison inactif), le comportement fonctionnel BD.0 reste inchangé : COMPTAGE résout la dérive",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[BD.0-SP] DB de dev injoignable — test ignoré (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
 
         const ids = await seedVagueEtBac(client, "sain");

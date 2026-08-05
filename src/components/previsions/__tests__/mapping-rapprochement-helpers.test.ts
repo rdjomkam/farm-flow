@@ -100,3 +100,102 @@ describe("A.2 — libelleCible : resolution ALIMENT_PREVISION par tailleGranule 
     expect(libelle).toBe("rapprochementTab.mapping.cibleNonChargee");
   });
 });
+
+describe("ADR-053 §16.13 — libelleCible : distinction absente/desactivee/indeterminee pour POSTE_PREVISION selon referentielComplet", () => {
+  const cibleId = "poste-1";
+
+  it("cible trouvee, actif: false -> cibleDesactivee, quel que soit referentielComplet (vrai)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: cibleId, libelle: "X", actif: false }], aliments: [] },
+      { tPrevisions, tStock },
+      true,
+      true
+    );
+    expect(libelle).toBe("rapprochementTab.mapping.cibleDesactivee");
+  });
+
+  it("cible trouvee, actif: false -> cibleDesactivee, meme avec referentielComplet: false (liste actifs-seuls ne devrait normalement jamais contenir une entree inactive, mais le helper reste correct si c'etait le cas)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: cibleId, libelle: "X", actif: false }], aliments: [] },
+      { tPrevisions, tStock },
+      true,
+      false
+    );
+    expect(libelle).toBe("rapprochementTab.mapping.cibleDesactivee");
+  });
+
+  it("cible trouvee, actif: true -> le libelle reel, jamais un texte de statut (non-regression du cas nominal)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: cibleId, libelle: "X", actif: true }], aliments: [] },
+      { tPrevisions, tStock },
+      true,
+      true
+    );
+    expect(libelle).toBe("X");
+  });
+
+  it("cible absente, referentielComplet: true (liste admin, complete) -> cibleIntrouvable (certitude legitime)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: "autre-poste", libelle: "Y", actif: true }], aliments: [] },
+      { tPrevisions, tStock },
+      true,
+      true
+    );
+    expect(libelle).toBe("rapprochementTab.mapping.cibleIntrouvable");
+  });
+
+  it("FALSIFICATION — cible absente, referentielComplet: false (defaut) -> cibleEtatIndetermine, JAMAIS cibleIntrouvable (si un developpeur restaure par erreur l'ancien defaut, ce test tombe)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: "autre-poste", libelle: "Y", actif: true }], aliments: [] },
+      { tPrevisions, tStock },
+      true
+      // referentielComplet omis -> defaut false
+    );
+    expect(libelle).toBe("rapprochementTab.mapping.cibleEtatIndetermine");
+    expect(libelle).not.toBe("rapprochementTab.mapping.cibleIntrouvable");
+  });
+
+  it("cible absente, referentielComplet: false explicite -> cibleEtatIndetermine (meme resultat qu'omis, prouve la valeur par defaut)", () => {
+    const libelle = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [{ id: "autre-poste", libelle: "Y", actif: true }], aliments: [] },
+      { tPrevisions, tStock },
+      true,
+      false
+    );
+    expect(libelle).toBe("rapprochementTab.mapping.cibleEtatIndetermine");
+  });
+
+  it("ciblesChargees: false reste prioritaire sur referentielComplet dans les DEUX configurations -> cibleNonChargee, jamais cibleEtatIndetermine ni cibleIntrouvable (POSTE_PREVISION, deja couvert pour ALIMENT_PREVISION ci-dessus)", () => {
+    const libelleAvecReferentielComplet = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [], aliments: [] },
+      { tPrevisions, tStock },
+      false,
+      true
+    );
+    expect(libelleAvecReferentielComplet).toBe("rapprochementTab.mapping.cibleNonChargee");
+
+    const libelleSansReferentielComplet = libelleCible(
+      CibleRapprochement.POSTE_PREVISION,
+      cibleId,
+      { postes: [], aliments: [] },
+      { tPrevisions, tStock },
+      false,
+      false
+    );
+    expect(libelleSansReferentielComplet).toBe("rapprochementTab.mapping.cibleNonChargee");
+  });
+});

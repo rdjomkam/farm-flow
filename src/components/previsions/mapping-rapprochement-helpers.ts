@@ -125,7 +125,7 @@ export function libelleSourceCle(
 
 /** Entites minimales necessaires pour resoudre le libelle d'une cible — sous-ensemble de `PostePrevisionDTO`/`AlimentPrevisionDTO`. */
 export interface CiblesDisponibles {
-  postes: Array<{ id: string; libelle: string }>;
+  postes: Array<{ id: string; libelle: string; actif?: boolean }>;
   aliments: Array<{ id: string; tailleGranule: string }>;
 }
 
@@ -160,22 +160,38 @@ export interface CiblesDisponibles {
  * cibleId` directement (ancien comportement pre-A.3) ferait TOUJOURS
  * echouer la recherche desormais, meme pour une cible parfaitement valide —
  * regression evitee ici, couverte par un test dedie.
+ *
+ * ADR-053 §16.13 (2026-08-06) : `referentielComplet` (6e parametre, defaut
+ * `false`) distingue le cas ou la liste `cibles.postes` provient de la route
+ * admin (toutes entrees, actives et inactives, reservee `PREVISIONS_PARAMETRER`)
+ * de celui ou elle provient de la route actifs-seuls (`PREVISIONS_VOIR`).
+ * Avec la liste complete, une cible absente est CERTAINEMENT introuvable
+ * (`cibleIntrouvable`). Avec la liste partielle, une cible absente peut aussi
+ * bien etre desactivee qu'inexistante — affirmer "introuvable" serait une
+ * certitude fausse (ERR-173) : le libelle retourne alors `cibleEtatIndetermine`.
+ * Ne concerne que la branche `POSTE_PREVISION` : un `AlimentPrevision` ne
+ * porte aucune notion d'`actif`/desactivation.
  */
 export function libelleCible(
   cibleType: CibleRapprochement,
   cibleId: string | null,
   cibles: CiblesDisponibles,
   translators: { tPrevisions: Translator; tStock: Translator },
-  ciblesChargees = true
+  ciblesChargees = true,
+  referentielComplet = false
 ): string | null {
   const { tPrevisions, tStock } = translators;
   if (!cibleId) return null;
   if (cibleType === CibleRapprochement.POSTE_PREVISION) {
     const poste = cibles.postes.find((p) => p.id === cibleId);
-    if (poste) return poste.libelle;
-    return ciblesChargees
+    if (poste) {
+      if (poste.actif === false) return tPrevisions("rapprochementTab.mapping.cibleDesactivee");
+      return poste.libelle;
+    }
+    if (!ciblesChargees) return tPrevisions("rapprochementTab.mapping.cibleNonChargee");
+    return referentielComplet
       ? tPrevisions("rapprochementTab.mapping.cibleIntrouvable")
-      : tPrevisions("rapprochementTab.mapping.cibleNonChargee");
+      : tPrevisions("rapprochementTab.mapping.cibleEtatIndetermine");
   }
   if (cibleType === CibleRapprochement.ALIMENT_PREVISION) {
     const tailleGranule = extraireTailleGranuleDeCibleId(cibleId);

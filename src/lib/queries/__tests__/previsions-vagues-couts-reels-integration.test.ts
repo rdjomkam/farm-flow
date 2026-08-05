@@ -29,6 +29,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3.7] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -37,8 +46,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -118,8 +128,7 @@ describe.runIf(requireDatabaseUrl())("PR3.7 — previsions-vagues-couts-reels : 
     "agrege Depense + Vente par Vague, inclut une vague sans mouvement (totaux a 0), et isole le siteId",
     async () => {
       if (!dbAvailable || !client) {
-        console.warn("[PR3.7] DB de dev injoignable — test ignore (dbAvailable=false).");
-        return;
+        throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
       }
       const c = client;
 

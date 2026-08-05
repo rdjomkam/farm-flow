@@ -44,6 +44,15 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let pool: Pool | null = null;
 let client: PoolClient | null = null;
 let dbAvailable = false;
+let erreurConnexion: unknown = null;
+
+const MESSAGE_DB_INJOIGNABLE =
+  "[PR3ter.B3/PR3ter.B4] DATABASE_URL est definie (le gating a legitimement decide que ce " +
+  "test devait tourner) mais la connexion a la base a echoue : ce n'est pas un " +
+  "skip, c'est un echec d'infrastructure du run (contrat ADR-052 3.2 / " +
+  "src/test/require-database-url.ts). Action : verifiez que Postgres tourne " +
+  "(`docker compose up -d`) et que DATABASE_URL pointe vers une base joignable, " +
+  "puis relancez.";
 
 beforeAll(async () => {
   if (!DATABASE_URL) return;
@@ -52,8 +61,9 @@ beforeAll(async () => {
     client = await pool.connect();
     await client.query("SELECT 1");
     dbAvailable = true;
-  } catch {
+  } catch (erreur) {
     dbAvailable = false;
+    erreurConnexion = erreur;
   }
 });
 
@@ -134,8 +144,7 @@ describe.runIf(requireDatabaseUrl())(
       "(a) LE GEL MORD : budgetInitialFCFA reste identique apres edition post-activation, previsionActualiseeFCFA diverge (falsification obligatoire)",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "gel");
         try {
@@ -195,8 +204,7 @@ describe.runIf(requireDatabaseUrl())(
       "(b) scenario JAMAIS active : budgetInitialDisponible=false, budgetInitialFCFA=null sur TOUS les mois",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "jamais-active");
         try {
@@ -237,8 +245,7 @@ describe.runIf(requireDatabaseUrl())(
       "(c) REEL nette le signe (DEPENSE - / ENTREE +) et cumule sur l'horizon complet, report du dernier cumul connu sur un mois sans ligne",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "reel-signe");
         try {
@@ -284,8 +291,7 @@ describe.runIf(requireDatabaseUrl())(
       "(d) REPREVISION GLISSANTE : mois CLOTURE -> REEL, mois NON clos -> PRÉVISION ACTUALISÉE, les deux DIVERGENT par construction",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "reprevision");
         try {
@@ -354,8 +360,7 @@ describe.runIf(requireDatabaseUrl())(
       "(d2, story B.4 PR3-ter) REPREVISION d'un mois CLOS reste IMMUABLE meme si le mapping ACTIF change APRES la cloture — preuve end-to-end via getTresorerieTroisSeries, pas seulement au niveau du moteur de rapprochement",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B4] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const { siteId, userId } = await seedSite(client, "repr-immuable");
         try {
@@ -442,8 +447,7 @@ describe.runIf(requireDatabaseUrl())(
       "(e) le filtre siteId isole deux sites",
       async () => {
         if (!dbAvailable || !client) {
-          console.warn("[PR3ter.B3] DB de dev injoignable — test ignore (dbAvailable=false).");
-          return;
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
         }
         const siteA = await seedSite(client, "isolation-a");
         const siteB = await seedSite(client, "isolation-b");

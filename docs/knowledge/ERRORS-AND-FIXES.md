@@ -1757,7 +1757,16 @@ manquer sans que l'autre le signale.
 ### ERR-116 — Tests DB-gated invisibles : `describe.runIf(!!DATABASE_URL)` skippe silencieusement une garantie centrale
 **Sprint :** BD (stories BD.0, BD.3) | **Date :** 2026-07-27
 **Sévérité :** Moyenne
-**Fichier(s) :** `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts`, `bd0-savepoint-integration-persister-origin.test.ts`, `src/__tests__/bd0-comptage-recalcule-ecart.test.ts`
+**Fichier(s) :** `src/lib/queries/__tests__/bd0-savepoint-integration.test.ts`, `bd0-savepoint-integration-persister-origin.test.ts`
+
+**Correction de référence (Sprint clôture P1-P2-P3, 2026-08-05, dette signalée par ADR-052 §6) :**
+`src/__tests__/bd0-comptage-recalcule-ecart.test.ts`, cité ci-dessus comme 3e fichier DB-gated à l'ouverture
+de cette entrée, ne l'est plus (et n'a d'ailleurs plus de raison de l'être) : vérification faite, ce
+fichier est aujourd'hui **entièrement mocké**, sans `runIf`/`skip`/`dbAvailable` d'aucune sorte — sa
+docstring de tête précise même explicitement qu'il remplace un fichier fusionné et renvoie vers le test
+d'intégration réel, non mocké, qui porte la garantie DB-gated correspondante :
+`src/lib/queries/__tests__/bd0-savepoint-integration.test.ts` (déjà listé ci-dessus). La liste des
+fichiers DB-gated de cette entrée est donc réduite aux deux premiers uniquement.
 
 **Symptôme :**
 Les 3 tests qui prouvent réellement la résilience de BD.0 à une vraie erreur SQL (pas un mock)
@@ -3586,8 +3595,55 @@ rend indétectable tout changement de route — préférer une comparaison exact
 
 ---
 
-### ERR-192 — Un faux vert `catch { dbAvailable = false; return }` sur un test DB-gated réintroduit exactement le motif interdit par ADR-052 §6, non détecté par le test méta qui ne repère que des motifs syntaxiques
-**Sprint :** PR2-nonies (stories PR2non.1-6) | **Date :** 2026-08-05
+### ERR-194 — [PIÈGE MÉTHODOLOGIQUE] Mesurer un flaky test pendant qu'un autre agent édite le dépôt en parallèle produit un faux positif : « lecture déchirée » entre l'assertion figée et le composant recompilé
+**Sprint :** clôture P1-P2-P3 (priorité P3, vérification du flaky signalé de `mapping-form-dialog.test.tsx`) | **Date :** 2026-08-05
+**Sévérité :** — (entrée de **pratique/piège méthodologique**, pas un bug de code)
+**Fichier(s) :** `src/components/previsions/__tests__/mapping-form-dialog.test.tsx` (aucune modification de code requise) — méthode transverse applicable à toute vérification de flakiness dans ce dépôt multi-agents
+
+**Symptôme :**
+Un flaky historique était signalé sur `mapping-form-dialog.test.tsx`, avec pour repère cité un usage de
+`user.type`. Protocole de vérification exécuté : **90 exécutions** de ce fichier (isolé, en suite
+complète, par répertoire ; avec parallélisme activé et désactivé ; avec et sans `DATABASE_URL` exportée).
+**Résultat : 0 échec sur 90.** Le repère historique (`user.type`) ne s'appliquait d'ailleurs pas : le
+fichier ne l'utilise pas du tout, ce qui suggère que le flaky signalé concernait peut-être un état
+antérieur du fichier ou une confusion de nom de fichier. Le **seul** échec observé pendant l'ensemble du
+protocole ne s'est produit qu'une fois, et son message ne correspondait à aucune hypothèse de flakiness
+plausible (timing, ordre des `it`, état partagé) : l'assertion échouait contre un rendu du composant qui
+ne correspondait plus au composant tel qu'écrit au moment où le test avait démarré.
+
+**Cause racine :**
+Un autre agent éditait le dépôt (fichier source du composant testé, ou un fichier qu'il importe) **pendant
+que la suite de 90 exécutions tournait**. Vitest/Node a chargé une version du module au démarrage du
+process de test ; le fichier source a changé sur disque en cours de route (édition concurrente, pas un
+watch mode volontaire) ; une exécution suivante ou une recompilation partielle a lu un état intermédiaire
+du fichier. Le résultat est une variante « lecture déchirée » (torn read) du système de fichiers appliquée
+au code source lui-même, pas aux données qu'il manipule — un faux échec qui n'a **rien** à voir avec un
+vrai flaky (race condition, ordre des tests, état global partagé entre `it`), mais qui lui ressemble
+superficiellement dans un rapport de mesure si on ne l'identifie pas comme tel.
+
+**Fix :**
+Aucun — le flaky n'a jamais été reproduit dans des conditions contrôlées (aucune écriture concurrente
+observable). Clôture sans modification de code, avec la preuve des 90 exécutions consignée.
+
+**Leçon / Règle :**
+Dans un projet où plusieurs agents éditent le dépôt en parallèle (ce qui est la norme opérationnelle de ce
+projet, pas une exception), **toute mesure de flakiness doit être exécutée sans écriture concurrente sur
+le dépôt** — sinon la mesure ne teste pas la stabilité du test, elle mesure le bruit d'un autre agent qui
+modifie les fichiers pendant l'exécution. Avant de lancer un protocole de vérification de flakiness (N
+exécutions répétées) : (1) vérifier `git status` avant et après chaque run pour détecter toute
+modification survenue en cours de mesure ; (2) si un échec isolé et non reproductible apparaît au milieu
+d'un long protocole par ailleurs vert, ne pas le compter automatiquement comme une confirmation du flaky
+signalé — vérifier d'abord si le dépôt a été modifié pendant la fenêtre de l'échec avant de conclure quoi
+que ce soit sur la stabilité réelle du test. Un flaky non reproduit après un protocole large et varié
+(isolé/suite complète, parallélisme on/off, avec/sans dépendance externe) doit être clos comme non
+reproduit, pas laissé ouvert indéfiniment sur la seule foi d'un signalement historique.
+
+**Références :** `docs/reviews/review-sprint-cloture-P1-P2-P3.md`
+
+---
+
+### ERR-192 — [RÉSORBÉ, Sprint clôture P1-P2-P3, 2026-08-05] Un faux vert `catch { dbAvailable = false; return }` sur un test DB-gated réintroduit exactement le motif interdit par ADR-052 §6, non détecté par le test méta qui ne repère que des motifs syntaxiques
+**Sprint :** PR2-nonies (stories PR2non.1-6) ; résorbé au sprint de clôture P1-P2-P3 | **Date :** 2026-08-05 (ouverte) — 2026-08-05 (résorbée)
 **Sévérité :** Haute
 **Fichier(s) :** nouveau test DB-gated de R5 (voir référence de mise à jour ERR-184), `src/test/require-database-url.ts`, ADR-052 §1/§4/§6
 
@@ -3622,21 +3678,47 @@ motifs **syntaxiques** connus à l'avance (ex. `describe.runIf`, certains appels
 repérer un `catch` muet suivi d'un flag booléen et d'un `return` anticipé, qui est une combinaison
 arbitraire de constructions JavaScript ordinaires, invisible à une détection par motif fixe.
 
-**Portée mesurée, non corrigée dans son ensemble ce sprint :** **15 des 16 fichiers de tests DB-gated du
-dépôt portent encore ce défaut** au moment de la rédaction de cette entrée. Seul
-`scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` applique déjà le patron correct
-décrit par ADR-052 §3.3 (échec bruyant, pas de repli silencieux). Ce chiffre doit être traité comme une
-dette connue et non close — tout agent qui touche un fichier de test DB-gated existant devrait vérifier
-s'il porte ce motif avant de le considérer comme fiable.
+**Portée mesurée à l'ouverture, résorbée au sprint de clôture P1-P2-P3 :** **15 des 16 fichiers de tests
+DB-gated du dépôt portaient ce défaut** au moment de la rédaction initiale de cette entrée. Seul
+`scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` appliquait déjà le patron correct
+décrit par ADR-052 §3.3 (échec bruyant, pas de repli silencieux).
+
+**RÉSORPTION (Sprint clôture P1-P2-P3, priorité P1) :** les 15 fichiers de
+`src/lib/queries/__tests__/` portant le motif ont été corrigés en répliquant le patron déjà validé du
+fichier de référence
+`src/__tests__/api/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts` : le
+`beforeAll` ne fait plus `catch { dbAvailable = false }` suivi d'un `return` anticipé dans chaque `it` —
+il fait désormais `throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion })`, donc échoue
+bruyamment plutôt que de « passer » sans avoir exécuté d'assertion.
+
+**Preuve falsifiable mesurée (rejouable), base injoignable
+`postgresql://invalid:invalid@127.0.0.1:1/nonexistent` :**
+- **AVANT** correction : `Test Files 15 passed / Tests 49 passed` — le faux vert exact décrit par cette
+  entrée, base injoignable et pourtant « tout vert ».
+- **APRÈS** correction : `Test Files 15 failed / Tests 48 failed | 1 passed` — le 1 test restant passant
+  est un test mocké, légitimement hors périmètre DB (il ne se connecte à aucune base réelle).
+- Cette mesure — rejouer la suite avec une base délibérément injoignable et vérifier que les fichiers
+  DB-gated **échouent**, jamais ne verdissent — est la méthode de vérification à reproduire à chaque
+  fois qu'on doute qu'un fichier DB-gated protège réellement quelque chose.
 
 **Leçon / Règle — actionnable pour tout nouveau test DB-gated :** ne jamais écrire de `try`/`catch` autour
 de la connexion qui aboutit à un skip silencieux (`console.warn` + `return`) en cas d'échec — utiliser
 systématiquement `requireDatabaseUrl()` (ou le patron équivalent d'ADR-052 §3.3) qui fait échouer le test
-bruyamment. Un mécanisme automatique de détection (test méta) protège seulement contre les motifs qu'il
-connaît déjà — il ne remplace pas une vérification humaine explicite en review de tout nouveau fichier de
-test DB-gated contre ce motif précis.
+bruyamment.
 
-**Références :** ADR-052 §1, §4, §6, ERR-184 (mise à jour du 2026-08-05, story R5), `src/test/require-database-url.ts`, `scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` (patron correct de référence)
+**Leçon structurelle confirmée par la résorption — l'aveuglement du test méta est permanent, pas
+transitoire :** le test méta `src/__tests__/meta/db-gated-tests-registry.test.ts` et l'allowlist
+(`src/test/db-gated-allowlist.ts`) ne détectent que des motifs **syntaxiques** connus à l'avance
+(`describe.runIf`, `*.skip`, `skipIf`) — ils sont, par construction, structurellement incapables de
+repérer un `catch` muet suivi d'un flag booléen et d'un `return` anticipé dans chaque `it`, parce que
+cette combinaison est faite de constructions JavaScript ordinaires, pas d'un appel nommé détectable par
+grep. C'est exactement pourquoi ce défaut a survécu à l'outillage automatique pendant plusieurs sprints
+avant d'être trouvé et corrigé « à la main » : la machine ne peut être la seule ligne de défense pour ce
+motif précis. **La checklist de @code-reviewer reste la deuxième ligne de défense obligatoire** pour tout
+nouveau fichier de test DB-gated — vérifier explicitement l'absence du motif `dbAvailable`/`return`
+anticipé n'est pas optionnel tant qu'aucune détection syntaxique fiable de ce motif n'existe.
+
+**Références :** ADR-052 §1, §4, §6, ERR-184 (mise à jour du 2026-08-05, story R5), `src/test/require-database-url.ts`, `scripts/data-fixes/__tests__/su12-numero-unique-constraint.test.ts` (patron correct de référence), `src/__tests__/api/previsions-poste-referentiel-sql-artefact-historique-integration.test.ts` (patron répliqué pour la résorption), `docs/reviews/review-sprint-cloture-P1-P2-P3.md`
 
 ---
 
@@ -3659,9 +3741,17 @@ La falsification systématique (casser délibérément une règle dans le code d
 
 **Références :** ERR-168, ERR-172, ERR-185, `docs/tests/rapport-story-A5-poste-referentiel-admin.md` §8.3-8.4
 
----
-
-### ERR-188 — Rendre un champ de DTO optionnel « pour ne pas casser les tests » peut masquer une absence réelle d'affichage en production, même quand les tests restent verts
+**Rappel confirmé — un mock d'URL par sous-chaîne matche aussi une route plus spécifique (Sprint clôture
+P1-P2-P3, priorité P2, 2026-08-05) :** en corrigeant `rapprochement-mapping-tab.tsx` pour rebrancher un
+appelant `PREVISIONS_PARAMETRER` sur la route admin déjà existante (voir mise à jour d'ERR-173 pour le
+contexte métier), il a fallu vérifier le mock HTTP des tests concernés : un matcher testant
+`url.includes("/postes")` en premier accepte indifféremment `/postes` **et**
+`/postes-referentiel/admin` (la seconde chaîne contient la première comme sous-chaîne), rendant le test
+incapable de prouver quelle route est réellement appelée — exactement le défaut déjà nommé par ERR-189. Le
+fix retenu ici : tester le motif le plus spécifique (`/admin`) **en premier** dans la chaîne de
+`if`/`includes` du mock, avant le motif générique, plutôt que de changer le matcher en comparaison
+exacte — les deux approches sont valables, mais l'ordre des `includes` doit toujours aller du plus
+spécifique au plus générique quand plusieurs routes réelles partagent un préfixe commun. — Rendre un champ de DTO optionnel « pour ne pas casser les tests » peut masquer une absence réelle d'affichage en production, même quand les tests restent verts
 **Sprint :** PR3-quinquies (story A.5) | **Date :** 2026-08-05
 **Sévérité :** Moyenne
 **Fichier(s) :** `src/components/previsions/api-types.ts` (`PostePrevisionDTO`), `src/components/previsions/charges-tab.tsx`, `src/components/previsions/rapprochement-vue-mensuelle.tsx`
@@ -4104,6 +4194,25 @@ geste qui transforme une absence de donnée en une fausse mesure de zéro. Écri
 chacun des trois cas avant de considérer la couverture de tests suffisante.
 
 **Références :** ERR-155 (série jamais non nulle = angle mort), `docs/analysis/pre-analysis-sprint-PR3.md` section C points (b)-(c), ADR-053 §15.5, `docs/tests/rapport-falsification-sprint-PR3.md` (PR3.4 moteur, PR3.7 UI)
+
+**Récidive directe — application au périmètre « actif vs introuvable » (Sprint clôture P1-P2-P3, priorité
+P2, 2026-08-05) :** `rapprochement-mapping-tab.tsx` affirmait « Cible introuvable » pour tout poste
+référentiel non trouvé dans la liste chargée par l'écran — alors que cette liste ne contient que les
+postes **actifs** : un poste réel mais désactivé produisait exactement le même message qu'un poste
+réellement inexistant, deux causes distinctes confondues dans une seule affirmation fausse dans le cas
+désactivé. Même mécanisme qu'ERR-173 : une source de données **filtrée** ne peut pas servir de base à une
+conclusion sur ce que le filtre lui cache — le composant ne « sait » pas que le poste est absent, il sait
+seulement qu'il est absent **de la vue filtrée**. Arbitrage tranché par ADR-053 §16.13 (option c +
+variante par permission) : avec `PREVISIONS_VOIR` seul, le libellé devient « État indéterminé (introuvable
+ou désactivée) » — une incertitude affichée honnêtement plutôt qu'une certitude fausse ; avec
+`PREVISIONS_PARAMETRER`, l'écran bascule sur la route admin déjà existante (non filtrée) et obtient la
+distinction exacte, sans nouvelle permission ni migration. **Leçon généralisée :** dès qu'un écran affiche
+un jugement binaire (« existe » / « n'existe pas », « trouvé » / « introuvable ») construit à partir d'une
+liste chargée côté client, vérifier explicitement si cette liste est elle-même filtrée (statut actif,
+site, période...) avant d'écrire le message pour le cas négatif — si oui, le message du cas négatif doit
+refléter l'ambiguïté réelle, jamais une certitude que la donnée ne permet pas d'établir.
+
+**Références additionnelles :** ADR-053 §16.13, `docs/reviews/review-sprint-cloture-P1-P2-P3.md`
 
 ---
 
