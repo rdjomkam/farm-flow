@@ -4204,6 +4204,23 @@ export enum CibleRapprochement {
 }
 
 /**
+ * Raison d'invalidite d'un Produit ALIMENT pour la copie vers un
+ * AlimentArticlePrevision a la creation d'un ScenarioPrevision (ADR-053 §18,
+ * story de selection explicite des produits). Code d'enum discriminant,
+ * PAS une chaine libre — R2, et surtout l'i18n doit pouvoir traduire fr/en ;
+ * une chaine de raison ecrite cote serveur serait une chaine non traduite,
+ * interdite. Un `Produit` peut cumuler les deux raisons (ni tailleGranule ni
+ * contenance exploitables) : voir `raisonsInvalidite: [...]` (tableau, pas
+ * un code unique) sur `ProduitAlimentaireEligibleDTO`, src/types/api.ts.
+ */
+export enum RaisonInvaliditeProduitPrevision {
+  /** `Produit.tailleGranule` est `null` — copie interdite (ADR-053 §12.2 arbitrage 5) */
+  TAILLE_GRANULE_MANQUANTE = "TAILLE_GRANULE_MANQUANTE",
+  /** `Produit.contenance` est `null` ou <= 0 — copie silencieuse a 0 kg/sac interdite */
+  CONTENANCE_MANQUANTE = "CONTENANCE_MANQUANTE",
+}
+
+/**
  * ScenarioPrevision — plan de prevision autonome a parametres geles
  * (ADR-053 decision 1). Regroupe tous les sous-modeles du module.
  */

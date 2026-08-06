@@ -3642,6 +3642,65 @@ reproduit, pas laissé ouvert indéfiniment sur la seule foi d'un signalement hi
 
 ---
 
+### ERR-195 — Deux disciplines opposées sur le même champ nullable selon la porte d'entrée : `Produit.contenance` strict en saisie manuelle, `?? 0` silencieux en copie automatique
+**Sprint :** story sélection explicite des produits ALIMENT à la création d'un scénario (ADR-053 §18) | **Date :** 2026-08-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/types/api.ts` (`evaluerEligibiliteProduitAlimentairePrevision`), `src/lib/queries/previsions-scenarios.ts` (`getProduitsAlimentairesEligibles`, `validerProduitIdsEligibles`), `src/app/api/previsions/scenarios/*`, `src/lib/previsions.schema.ts` (`poidsSacKg: z.number().positive()`), `src/components/previsions/scenario-form-dialog.tsx`, `prisma/schema.prisma` (`Produit.contenance`, nullable)
+
+**Symptôme :**
+`Produit.contenance` est nullable en base. Le chemin de **saisie manuelle** d'un article d'aliment
+exigeait strictement `poidsSacKg` positif (`z.number().positive()`). Le chemin de **copie automatique**
+(création d'un scénario recopiant les produits du site vers des `AlimentPrevision`) faisait
+`new Decimal(produit.contenance ?? 0)`, ce qui produisait silencieusement un article à 0 kg/sac et
+0 sac/tonne dès qu'un produit du site avait une `contenance` ou une `tailleGranule` absente — sans
+erreur, sans warning, sans que l'utilisateur choisisse ce produit. Même concept métier
+(« une contenance exploitable pour construire un article d'aliment »), deux définitions contradictoires
+selon la porte par laquelle la donnée entrait.
+
+**Cause racine :**
+Le prédicat d'éligibilité n'existait nulle part comme fonction nommée et partagée — chaque appelant
+réécrivait sa propre version du seuil, et la version de la copie automatique choisissait le repli le plus
+permissif (`?? 0`) plutôt que d'exclure le produit invalide. C'est la famille ERR-185 (le zéro qui ment)
+appliquée à un couplage de chemins : une valeur de repli neutre en apparence, mais qui produit un
+résultat métier faux et indiscernable d'une vraie valeur nulle légitime.
+
+**Fix :**
+Extraction d'une **fonction pure unique**, `evaluerEligibiliteProduitAlimentairePrevision`
+(`src/types/api.ts:825-838` — tailleGranule non nul + contenance strictement positive), devenue le seul
+énoncé de la règle. Consommée par les trois portes : `getProduitsAlimentairesEligibles` (lecture/GET),
+`validerProduitIdsEligibles` (garde serveur en second rideau, atteignable même par appel direct hors UI,
+avant `prisma.$transaction` pour rester en lecture seule) et les tests. Côté UI, la story a en outre
+introduit une **sélection explicite** : l'utilisateur choisit les produits à copier
+(`produitIds` optionnel dans le payload de création — `undefined` = comportement historique « tous les
+produits triés », `[]` = aucun produit, un tableau rempli = filtre explicite ; les trois états restent
+strictement distincts, jamais confondus par un `?? []` ou un `?? [...]`). Les produits inéligibles restent
+**visibles dans le formulaire, marqués, non cochables, avec la raison écrite et un lien pour corriger** —
+jamais filtrés silencieusement (ERR-173).
+
+**Leçon / Règle :**
+Dès qu'un même prédicat métier est évalué à plus d'un endroit du code, il doit être extrait en fonction
+pure partagée — sinon les deux copies divergent avec le temps, et c'est systématiquement la copie la plus
+permissive (celle qui utilise un repli `?? 0`/`?? null` non distingué plutôt qu'une exclusion explicite)
+qui produit la donnée corrompue, silencieusement, sans faire échouer aucun test tant que la fixture ne
+couvre pas ce produit précis.
+
+Deuxième leçon, sur le tout-ou-rien : un garde levé **à l'intérieur d'une transaction** sur des données
+que l'utilisateur n'a pas choisies transforme un produit sans rapport avec l'action en cours en blocage
+total de la fonctionnalité (ici : un seul produit sans granulométrie sur le site bloquait toute création
+de scénario). Le correctif n'est pas de supprimer le garde mais de **rendre le périmètre explicite** :
+l'utilisateur choisit, seul ce qu'il a choisi peut le bloquer, et le garde serveur reste en second rideau
+pour les appels directs qui contournent l'UI.
+
+Troisième leçon, rappel d'ERR-173 : les trois états d'un paramètre optionnel de filtre (absent / vide /
+rempli) doivent rester distincts (`undefined` ≠ `[]`), et un compteur dérivé comme
+`nombreCalibresAlimentsCrees` doit toujours être présent (non optionnel) pour que `0` reste distinguable
+d'un champ non chargé — jamais comblé par un `?? 0` qui efface la distinction entre « zéro réel » et
+« absence de donnée ».
+
+**Références :** ADR-053 §18, ADR-052 §6, ERR-173, ERR-185, `docs/reviews/review-story-selection-produits-scenario.md`
+
+---
+
 ### ERR-192 — [RÉSORBÉ, Sprint clôture P1-P2-P3, 2026-08-05] Un faux vert `catch { dbAvailable = false; return }` sur un test DB-gated réintroduit exactement le motif interdit par ADR-052 §6, non détecté par le test méta qui ne repère que des motifs syntaxiques
 **Sprint :** PR2-nonies (stories PR2non.1-6) ; résorbé au sprint de clôture P1-P2-P3 | **Date :** 2026-08-05 (ouverte) — 2026-08-05 (résorbée)
 **Sévérité :** Haute

@@ -70,6 +70,7 @@ const { SCENARIO, PROJECTION_MINIMALE } = vi.hoisted(() => ({
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     parametres: null,
     paliersRemise: [],
+    _count: { aliments: 0 },
   },
   PROJECTION_MINIMALE: {
     horizonMois: 0,

@@ -8294,3 +8294,41 @@ Voir : *aucun fichier `docs/sprints/SPRINT-CLOTURE-P1-P2-P3*.md` n'existe* — l
 | Moyenne — **héritée de PR3-quinquies, toujours ouverte** | **Pas de test end-to-end en navigateur réel** pour l'écran d'administration du référentiel de postes (**ERR-157**). |
 
 **Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**
+
+---
+
+## Story hors sprint numéroté — Sélection explicite des produits alimentaires à la création d'un scénario Prévisions
+Voir : *aucun fichier de sprint dédié n'existe et cette story n'appartient à aucun sprint numéroté* — le suivi est porté ici, dans `docs/TASKS.md`, **même convention que PR3-quater, PR3-quinquies, PR2-nonies et le sprint de clôture P1-P2-P3**.
+
+> **Note du @status-updater (2026-08-05).** Cette story **ne figurait dans aucun backlog** (ni `docs/TASKS.md`, ni un fichier `docs/sprints/*.md`) alors que son pipeline complet était déjà exécuté et validé. Elle est **ajoutée ici à sa clôture**, sans numéro de story inventé — aucune numérotation ne lui a jamais été attribuée en amont. **Rien n'est déduit** : le contenu ci-dessous provient exclusivement des livrables cités.
+
+**Statut :** `FAIT` — **review de story `VALIDÉ`** (réserve MINEURE K levée ; remarques H et J non bloquantes, reportées)
+**Référence :** [ADR-053 §18](decisions/ADR-053-module-previsions.md).
+
+| Story | Type | Sujet | Pipeline | Statut |
+|-------|------|-------|----------|--------|
+| — (non numérotée) | API + UI + TEST | **Sélection explicite des produits alimentaires à la création d'un scénario Prévisions** (ADR-053 §18) | @pre-analyst → @architect → @developer → @tester (backend) → @tester (UI) → @code-reviewer → @developer (levée de réserve) → @knowledge-keeper → @status-updater | `FAIT` |
+
+**Falsification :** **6 règles falsifiées** côté backend par le @tester, puis **9 points falsifiés** côté UI par un second passage @tester.
+
+**Review :** verdict initial **`VALIDÉ SOUS RÉSERVE`**, réserve **levée par @developer**, verdict final **`VALIDÉ`**.
+
+**Chiffres de clôture — mesures réelles :**
+- `npx vitest run` : **346 fichiers de test / 9 803 tests / 26 todo / 0 skip / 0 échec**.
+- `npx tsc --noEmit` : **178** — **zéro en production**, seuil du garde-fou inchangé.
+- `npm run build` : **OK**.
+- `git diff --stat src/lib/previsions/` : **sortie vide** — le moteur de calcul n'a pas bougé.
+- **Intégrité `EXCEL-V12` vérifiée inchangée.**
+
+**Capitalisation @knowledge-keeper :** **ERR-195** créée, plus le rapport de review.
+
+**Livrables :** [review-story-selection-produits-scenario.md](reviews/review-story-selection-produits-scenario.md) (**VALIDÉ**) ; [pre-analysis-selection-produits-scenario.md](analysis/pre-analysis-selection-produits-scenario.md) ; [ADR-053 §18](decisions/ADR-053-module-previsions.md) ; `docs/knowledge/ERRORS-AND-FIXES.md` (**ERR-195**).
+
+**Points restés ouverts — consignés (leçon ERR-180 : un report non consigné est un report perdu). PAS des points de cette story :**
+
+| Sévérité / Nature | Point |
+|---|---|
+| Basse — **dette légère, remarque H de la review** | La fonction pure `evaluerEligibiliteProduitAlimentairePrevision` est hébergée dans `src/types/api.ts` : un fichier `types/` qui porte une règle métier exécutable perd sa promesse et invite à la duplication. Migration suggérée vers `src/lib/previsions/eligibilite.ts` **dans un futur sprint**, explicitement pas dans cette story. |
+| Mineure — **remarque J de la review** | `<input type="checkbox">` brut plutôt qu'une primitive Radix. **Pas une régression** (aucun composant `Checkbox` Radix n'existe dans `src/components/ui/`) et fonctionnellement accessible (`htmlFor`/`id`, `disabled` natif). |
+
+**Gouvernance :** seul le @status-updater écrit dans `docs/sprints/` et `docs/TASKS.md`. **Aucun commit ni push par les agents.**

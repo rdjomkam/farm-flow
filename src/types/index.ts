@@ -107,6 +107,8 @@ export {
   TypeApportCapital,
   SourceRapprochement,
   CibleRapprochement,
+  // ADR-053 §18 — selection explicite des produits alimentaires a la creation d'un scenario
+  RaisonInvaliditeProduitPrevision,
 } from "./models";
 export type {
   Site,
@@ -329,6 +331,8 @@ export {
 // Pagination API
 export type { PaginationParams, PaginatedResponse } from "./api";
 export { PAGINATION_DEFAULTS, parsePaginationQuery } from "./api";
+// ADR-053 §18 — point unique de la regle d'eligibilite (route de lecture, garde serveur, tests)
+export { evaluerEligibiliteProduitAlimentairePrevision } from "./api";
 
 // DTOs API
 export type {
@@ -362,6 +366,11 @@ export type {
   UpdateProduitDTO,
   ProduitFilters,
   ProduitListResponse,
+  // ADR-053 §18 — selection explicite des produits alimentaires (creation scenario)
+  ProduitAlimentaireEligibiliteInput,
+  EligibiliteProduitAlimentairePrevision,
+  ProduitAlimentaireEligibleDTO,
+  ProduitsAlimentairesEligiblesResponse,
   CreateMouvementDTO,
   MouvementFilters,
   MouvementListResponse,

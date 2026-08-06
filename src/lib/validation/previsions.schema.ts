@@ -98,6 +98,22 @@ export const createScenarioSchema = z.object({
   dureeCycleMois: strictPositiveInt.optional(),
   dateDebutPlan: isoDateString,
   parametres: parametresPrevisionCreateSchema,
+  /**
+   * ADR-053 §18 — selection explicite des Produit ALIMENT a copier vers le
+   * scenario. ABSENT (jamais envoye par le client) : comportement actuel
+   * STRICTEMENT inchange (copie de tous les Produit ALIMENT actifs du site,
+   * garde 422 tout-ou-rien inchange sur `tailleGranule`) — ne pas confondre
+   * avec un tableau vide. PRESENT ET `[]` : selection vide explicitement
+   * autorisee (arbitrage c), scenario cree sans calibre, signal explicite
+   * via `nombreCalibresAlimentsCrees` en reponse (voir
+   * `src/components/previsions/api-types.ts`). PRESENT ET NON VIDE : chaque
+   * id est valide par le garde serveur (appartenance au site, categorie
+   * ALIMENT, actif, ET eligible au sens de
+   * `evaluerEligibiliteProduitAlimentairePrevision`,
+   * `src/types/api.ts`) — AVANT toute ecriture, jamais apres coup dans la
+   * transaction (§18, point 6 des arbitrages deja tranches).
+   */
+  produitIds: z.array(z.string().min(1)).optional(),
 });
 export type CreateScenarioInput = z.infer<typeof createScenarioSchema>;
 

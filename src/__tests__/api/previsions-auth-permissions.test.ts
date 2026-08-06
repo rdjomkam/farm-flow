@@ -61,12 +61,15 @@ const mockUpdateParametresPrevision = vi.fn();
 const mockReplacePaliersRemise = vi.fn();
 const mockArchiverScenario = vi.fn();
 const mockActiverScenario = vi.fn();
+const mockGetProduitsAlimentairesEligibles = vi.fn();
 vi.mock("@/lib/queries/previsions-scenarios", () => ({
   getScenarios: (...a: unknown[]) => mockGetScenarios(...a),
   createScenario: (...a: unknown[]) => mockCreateScenario(...a),
   getScenarioById: (...a: unknown[]) => mockGetScenarioById(...a),
   updateParametresPrevision: (...a: unknown[]) => mockUpdateParametresPrevision(...a),
   replacePaliersRemise: (...a: unknown[]) => mockReplacePaliersRemise(...a),
+  getProduitsAlimentairesEligibles: (...a: unknown[]) =>
+    mockGetProduitsAlimentairesEligibles(...a),
   archiverScenario: (...a: unknown[]) => mockArchiverScenario(...a),
   activerScenario: (...a: unknown[]) => mockActiverScenario(...a),
 }));
@@ -156,6 +159,7 @@ vi.mock("@/lib/previsions/route-orchestration", () => ({
 // ---------------------------------------------------------------------------
 
 import { GET as scenariosGET, POST as scenariosPOST } from "@/app/api/previsions/scenarios/route";
+import { GET as produitsAlimentairesEligiblesGET } from "@/app/api/previsions/produits-alimentaires-eligibles/route";
 import { GET as scenarioDetailGET } from "@/app/api/previsions/scenarios/[id]/route";
 import { PUT as parametresPUT } from "@/app/api/previsions/scenarios/[id]/parametres/route";
 import { PUT as paliersPUT } from "@/app/api/previsions/scenarios/[id]/paliers-remise/route";
@@ -247,6 +251,19 @@ function buildCases(): RouteCase[] {
           })
         ),
       setupSuccess: () => mockCreateScenario.mockResolvedValue({ id: "scenario-1" }),
+    },
+    {
+      // ADR-053 §18.1 — endpoint DEDIE, gardee par PREVISIONS_GERER (jamais
+      // STOCK_VOIR : un Gestionnaire Previsions n'a aucune garantie d'avoir
+      // aussi des droits Stock, cf. ADR-053 §18.1).
+      name: "GET /produits-alimentaires-eligibles",
+      permission: Permission.PREVISIONS_GERER,
+      successStatus: 200,
+      invoke: () =>
+        produitsAlimentairesEligiblesGET(
+          makeRequest("/api/previsions/produits-alimentaires-eligibles")
+        ),
+      setupSuccess: () => mockGetProduitsAlimentairesEligibles.mockResolvedValue([]),
     },
     {
       name: "GET /scenarios/[id]",
@@ -587,8 +604,8 @@ describe("Module Previsions — matrice auth/permissions sur les 22 routes", () 
 
   const cases = buildCases();
 
-  it("couvre bien les 22 routes du sprint (32 combinaisons methode+route, GET/POST/PUT/PATCH/DELETE confondus)", () => {
-    expect(cases.length).toBe(32);
+  it("couvre bien les 22 routes du sprint + la route dediee ADR-053 §18 (33 combinaisons methode+route, GET/POST/PUT/PATCH/DELETE confondus)", () => {
+    expect(cases.length).toBe(33);
   });
 
   for (const c of cases) {

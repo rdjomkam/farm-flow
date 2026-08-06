@@ -199,6 +199,178 @@ describe.runIf(requireDatabaseUrl())(
     );
 
     it(
+      "ADR-053 §18 (regle 4) — produitIds restreint aux DEUX produits de MEME tailleGranule choisis parmi trois disponibles : UN calibre, DEUX articles, somme des parts = 100 exact, contre une vraie transaction Postgres",
+      async () => {
+        if (!dbAvailable || !client) {
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
+        }
+        const ids = await seedSiteEtProduits(client, "sous-ensemble", [
+          { nom: "Marque A G1", tailleGranule: TailleGranule.G1, contenance: 25, prixUnitaire: 15000 },
+          { nom: "Marque B G1", tailleGranule: TailleGranule.G1, contenance: 15, prixUnitaire: 16000 },
+          { nom: "Marque C G2 (non choisie)", tailleGranule: TailleGranule.G2, contenance: 20, prixUnitaire: 14000 },
+        ]);
+        try {
+          const [p1, p2] = ids.produitIds;
+          const scenario = await createScenario(ids.siteId, {
+            code: "PR2Q-COPIE-SOUS-ENSEMBLE",
+            nom: "Scenario sous-ensemble G1",
+            dateDebutPlan: new Date().toISOString(),
+            userId: ids.userId,
+            parametres: parametresBase,
+            produitIds: [p1, p2],
+          });
+
+          expect(scenario.nombreCalibresAlimentsCrees).toBe(1);
+
+          const calibres = await client!.query(
+            `SELECT id, "tailleGranule" FROM "AlimentPrevision" WHERE "scenarioId" = $1`,
+            [scenario.id]
+          );
+          expect(calibres.rows).toHaveLength(1);
+          expect(calibres.rows[0].tailleGranule).toBe(TailleGranule.G1);
+
+          const articles = await client!.query(
+            `SELECT a."produitId", a."partApprovisionnementPct" FROM "AlimentArticlePrevision" a WHERE a."alimentCalibrePrevisionId" = $1`,
+            [calibres.rows[0].id]
+          );
+          expect(articles.rows).toHaveLength(2);
+          expect(articles.rows.map((r) => r.produitId).sort()).toEqual([p1, p2].sort());
+          const somme = articles.rows.reduce((s, r) => s + Number(r.partApprovisionnementPct), 0);
+          expect(somme).toBe(100);
+
+          // Le troisieme produit (G2, non choisi) n'apparait jamais.
+          const calibresTotal = await client!.query(
+            `SELECT id FROM "AlimentPrevision" WHERE "scenarioId" = $1`,
+            [scenario.id]
+          );
+          expect(calibresTotal.rows).toHaveLength(1);
+        } finally {
+          await cleanup(client, ids);
+        }
+      },
+      15000
+    );
+
+    it(
+      "ADR-053 §18 (regle 5) — produitIds: [] explicite : scenario cree SANS aucun calibre, nombreCalibresAlimentsCrees === 0, aucune erreur (contre un vrai Postgres, aucune ligne AlimentPrevision/AlimentArticlePrevision creee)",
+      async () => {
+        if (!dbAvailable || !client) {
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
+        }
+        const ids = await seedSiteEtProduits(client, "selection-vide", [
+          { nom: "Aliment disponible mais non repris", tailleGranule: TailleGranule.G1, contenance: 25, prixUnitaire: 15000 },
+        ]);
+        try {
+          const scenario = await createScenario(ids.siteId, {
+            code: "PR2Q-COPIE-VIDE",
+            nom: "Scenario selection vide",
+            dateDebutPlan: new Date().toISOString(),
+            userId: ids.userId,
+            parametres: parametresBase,
+            produitIds: [],
+          });
+
+          expect(scenario.id).toBeTruthy();
+          expect(scenario.nombreCalibresAlimentsCrees).toBe(0);
+
+          const calibres = await client!.query(
+            `SELECT id FROM "AlimentPrevision" WHERE "scenarioId" = $1`,
+            [scenario.id]
+          );
+          expect(calibres.rows).toHaveLength(0);
+
+          // Le scenario existe bien (pas d'echec silencieux) : une seconde
+          // creation avec le meme code doit etre rejetee pour collision.
+          const scenarioEnBase = await client!.query(
+            `SELECT id FROM "ScenarioPrevision" WHERE id = $1`,
+            [scenario.id]
+          );
+          expect(scenarioEnBase.rows).toHaveLength(1);
+        } finally {
+          await cleanup(client, ids);
+        }
+      },
+      15000
+    );
+
+    it(
+      "ADR-053 §18 (regle 3) — garde serveur : produitIds contenant un id INCONNU rejette AVANT tx.$transaction (422 nommant l'id) : AUCUN ScenarioPrevision ni ParametresPrevision ecrit, prouve contre une vraie base",
+      async () => {
+        if (!dbAvailable || !client) {
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
+        }
+        const ids = await seedSiteEtProduits(client, "id-inconnu", [
+          { nom: "Aliment valide", tailleGranule: TailleGranule.G1, contenance: 25, prixUnitaire: 15000 },
+        ]);
+        try {
+          const idInconnu = "produit-totalement-inexistant";
+          await expect(
+            createScenario(ids.siteId, {
+              code: "PR2Q-COPIE-ID-INCONNU",
+              nom: "Scenario id inconnu",
+              dateDebutPlan: new Date().toISOString(),
+              userId: ids.userId,
+              parametres: parametresBase,
+              produitIds: [ids.produitIds[0], idInconnu],
+            })
+          ).rejects.toThrow(new RegExp(idInconnu));
+
+          const scenarios = await client!.query(
+            `SELECT id FROM "ScenarioPrevision" WHERE code = 'PR2Q-COPIE-ID-INCONNU' AND "siteId" = $1`,
+            [ids.siteId]
+          );
+          expect(scenarios.rows).toHaveLength(0);
+          const parametres = await client!.query(
+            `SELECT id FROM "ParametresPrevision" WHERE "scenarioId" IN (SELECT id FROM "ScenarioPrevision" WHERE "siteId" = $1)`,
+            [ids.siteId]
+          );
+          expect(parametres.rows).toHaveLength(0);
+        } finally {
+          await cleanup(client, ids);
+        }
+      },
+      15000
+    );
+
+    it(
+      "ADR-053 §18 (regle 3) — garde serveur : produit choisi explicitement SANS contenance exploitable (0) rejette (422 CONTENANCE_MANQUANTE), prouve par un vrai INSERT Postgres suivi d'un rejet applicatif, aucune ligne ecrite",
+      async () => {
+        if (!dbAvailable || !client) {
+          throw new Error(MESSAGE_DB_INJOIGNABLE, { cause: erreurConnexion });
+        }
+        const ids = await seedSiteEtProduits(client, "sans-contenance-choisi", [
+          { nom: "Aliment sans contenance", tailleGranule: TailleGranule.G1, contenance: 0, prixUnitaire: 15000 },
+        ]);
+        try {
+          await expect(
+            createScenario(ids.siteId, {
+              code: "PR2Q-COPIE-SANS-CONTENANCE",
+              nom: "Scenario sans contenance",
+              dateDebutPlan: new Date().toISOString(),
+              userId: ids.userId,
+              parametres: parametresBase,
+              produitIds: [ids.produitIds[0]],
+            })
+          ).rejects.toThrow(/non eligible/);
+
+          const scenarios = await client!.query(
+            `SELECT id FROM "ScenarioPrevision" WHERE code = 'PR2Q-COPIE-SANS-CONTENANCE' AND "siteId" = $1`,
+            [ids.siteId]
+          );
+          expect(scenarios.rows).toHaveLength(0);
+          const articles = await client!.query(
+            `SELECT id FROM "AlimentArticlePrevision" WHERE "siteId" = $1`,
+            [ids.siteId]
+          );
+          expect(articles.rows).toHaveLength(0);
+        } finally {
+          await cleanup(client, ids);
+        }
+      },
+      15000
+    );
+
+    it(
       "un Produit ALIMENT actif sans tailleGranule fait echouer copierAlimentsPrevisionDepuisProduits ET annule TOUTE la transaction (aucun ScenarioPrevision, ParametresPrevision, AlimentPrevision ni AlimentArticlePrevision ne survit)",
       async () => {
         if (!dbAvailable || !client) {

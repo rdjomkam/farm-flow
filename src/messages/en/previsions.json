@@ -104,7 +104,27 @@
         "label": "Fingerling transport cost (FCFA)"
       }
     },
+    "produits": {
+      "title": "Feed products to carry over",
+      "description": "Valid active feed products are pre-checked. Uncheck any you don't want to carry over into this scenario.",
+      "emptyState": {
+        "title": "No active feed product on this site",
+        "description": "The scenario will be created without any feed grade. You can configure them manually afterwards, or add products in Stock.",
+        "stockLink": "Go to Stock → Products"
+      },
+      "selectionVideWarning": "No product selected — the scenario will be created without any feed grade.",
+      "raisons": {
+        "TAILLE_GRANULE_MANQUANTE": "Feed grain size not set",
+        "CONTENANCE_MANQUANTE": "Bag content weight not set"
+      },
+      "corrigerLink": "Fix in Stock",
+      "loadError": "Unable to load the feed product list.",
+      "eligibleCount": "{count, plural, one {# eligible product} other {# eligible products}} out of {total}"
+    },
+    "calibresCreesZeroBanner": "Scenario created without any feed grade — enter it manually in the Feed tab.",
     "requiredError": "This field is required.",
+    "next": "Next",
+    "back": "Back",
     "submitting": "Creating...",
     "submit": "Create scenario"
   },

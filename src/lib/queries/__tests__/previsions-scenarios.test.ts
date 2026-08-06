@@ -245,6 +245,366 @@ describe("createScenario — transaction, copie AlimentPrevision (calibre+articl
   });
 });
 
+describe("createScenario — nombreCalibresAlimentsCrees (ADR-053 §18.2(b), signal explicite)", () => {
+  it("expose nombreCalibresAlimentsCrees == 1 pour un seul calibre copie (produitIds absent)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+
+    stores.produit.push({
+      id: "p1",
+      nom: "Granule A",
+      categorie: CategorieProduit.ALIMENT,
+      isActive: true,
+      contenance: 25,
+      prixUnitaire: 15000,
+      tailleGranule: TailleGranule.G1,
+      siteId: "site-A",
+    });
+
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-COUNT",
+      nom: "Plan comptage",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+    });
+
+    expect(scenario.nombreCalibresAlimentsCrees).toBe(1);
+  });
+});
+
+describe("createScenario — ADR-053 §18, selection explicite via produitIds", () => {
+  function seedDeuxCalibresQuatreProduits() {
+    stores.produit.push(
+      { id: "p1", nom: "Marque A G1", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p2", nom: "Marque B G1", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 15, prixUnitaire: 16000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p3", nom: "Marque C G2", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 20, prixUnitaire: 14000, tailleGranule: TailleGranule.G2, siteId: "site-A" },
+      { id: "p4", nom: "Marque D sans calibrage", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: null, prixUnitaire: 12000, tailleGranule: null, siteId: "site-A" }
+    );
+  }
+
+  it("regle 4 — sous-ensemble EXACT : deux produits du meme tailleGranule (G1), un seul coche -> UN calibre, UN article, 100% (pas la repartition a deux)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-SOUS-ENSEMBLE-UN",
+      nom: "Plan sous-ensemble un seul",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+      produitIds: ["p1"],
+    });
+
+    expect(scenario.nombreCalibresAlimentsCrees).toBe(1);
+    const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
+    expect(aliments).toHaveLength(1);
+    expect(aliments[0].tailleGranule).toBe(TailleGranule.G1);
+    const articles = stores.alimentArticlePrevision.filter(
+      (a) => a.alimentCalibrePrevisionId === aliments[0].id
+    );
+    expect(articles).toHaveLength(1);
+    expect(articles[0].produitId).toBe("p1");
+    expect(Number(articles[0].partApprovisionnementPct)).toBe(100);
+  });
+
+  it("regle 4 — sous-ensemble EXACT : les deux produits du meme tailleGranule (G1) coches -> UN calibre, DEUX articles, somme des parts = 100 exact", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-SOUS-ENSEMBLE-DEUX",
+      nom: "Plan sous-ensemble deux",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+      produitIds: ["p1", "p2"],
+    });
+
+    const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
+    expect(aliments).toHaveLength(1);
+    const articles = stores.alimentArticlePrevision.filter(
+      (a) => a.alimentCalibrePrevisionId === aliments[0].id
+    );
+    expect(articles).toHaveLength(2);
+    const somme = articles.reduce((s, a) => s + Number(a.partApprovisionnementPct), 0);
+    expect(somme).toBe(100);
+  });
+
+  it("regle 4 — produitIds restreint aux DEUX calibres choisis, exclut le troisieme produit ALIMENT actif du site non coche", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-DEUX-CALIBRES",
+      nom: "Plan deux calibres",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+      produitIds: ["p1", "p3"],
+    });
+
+    const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
+    expect(aliments).toHaveLength(2);
+    const taillesGranule = aliments.map((a) => a.tailleGranule).sort();
+    expect(taillesGranule).toEqual([TailleGranule.G1, TailleGranule.G2].sort());
+    const tousArticles = stores.alimentArticlePrevision.filter((a) =>
+      aliments.some((al) => al.id === a.alimentCalibrePrevisionId)
+    );
+    expect(tousArticles.map((a) => a.produitId).sort()).toEqual(["p1", "p3"]);
+  });
+
+  it("regle 4 — ORDRE deterministe : filtrer produitIds preserve l'ordre alphabetique (orderBy nom asc), jamais l'ordre de produitIds", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    // p3 ("Marque C G2") vient APRES p1 ("Marque A G1") dans l'ordre alphabetique,
+    // mais produitIds les liste dans l'ordre inverse ([p3, p1]) — l'ordre de
+    // creation des calibres doit rester alphabetique (p1/G1 avant p3/G2),
+    // jamais reconstruit depuis l'ordre du tableau produitIds.
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-ORDRE",
+      nom: "Plan ordre",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+      produitIds: ["p3", "p1"],
+    });
+
+    const aliments = stores.alimentPrevision
+      .filter((a) => a.scenarioId === scenario.id)
+      .sort((a, b) => (a.ordre as number) - (b.ordre as number));
+    expect(aliments.map((a) => a.tailleGranule)).toEqual([TailleGranule.G1, TailleGranule.G2]);
+  });
+
+  it("regle 5 — produitIds: [] (selection vide EXPLICITE) autorisee : scenario cree, nombreCalibresAlimentsCrees === 0, aucune erreur", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    const scenario = await createScenario("site-A", {
+      code: "PLAN-VIDE",
+      nom: "Plan vide",
+      dateDebutPlan: "2026-08-01",
+      userId: "user-1",
+      parametres: PARAMS,
+      produitIds: [],
+    });
+
+    expect(scenario.id).toBeTruthy();
+    expect(scenario.nombreCalibresAlimentsCrees).toBe(0);
+    expect(stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id)).toHaveLength(0);
+  });
+
+  it("regle 6 — produitIds ABSENT (undefined) : comportement historique STRICTEMENT inchange, copie TOUS les Produit ALIMENT actifs (y compris p4 qui serait rejete SI choisi explicitement)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    // p4 n'a pas de tailleGranule : le garde tout-ou-rien doit se declencher
+    // exactement comme avant cet amendement quand produitIds est absent.
+    stores.produit.push(
+      { id: "p1", nom: "Marque A G1", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p4", nom: "Marque D sans calibrage", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 12000, tailleGranule: null, siteId: "site-A" }
+    );
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-ABSENT-TOUT-OU-RIEN",
+        nom: "Plan absent",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        // produitIds volontairement absent du DTO
+      })
+    ).rejects.toThrow(/sans tailleGranule/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-ABSENT-TOUT-OU-RIEN")).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : id inconnu dans produitIds -> 422 NOMMANT l'id, AUCUNE ecriture (le garde s'execute AVANT tx.$transaction)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-ID-INCONNU",
+        nom: "Plan id inconnu",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p1", "id-inexistant"],
+      })
+    ).rejects.toThrow(/id-inexistant/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-ID-INCONNU")).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : id HORS SITE dans produitIds -> 422 (rejete comme introuvable, jamais copie depuis un autre site)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+    stores.produit.push({
+      id: "p-autre-site",
+      nom: "Produit autre site",
+      categorie: CategorieProduit.ALIMENT,
+      isActive: true,
+      contenance: 25,
+      prixUnitaire: 15000,
+      tailleGranule: TailleGranule.G1,
+      siteId: "site-B",
+    });
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-HORS-SITE",
+        nom: "Plan hors site",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p-autre-site"],
+      })
+    ).rejects.toThrow(/p-autre-site/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-HORS-SITE")).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : id d'un produit NON-ALIMENT (autre categorie) dans produitIds -> 422", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    stores.produit.push({
+      id: "p-intrant",
+      nom: "Intrant quelconque",
+      categorie: CategorieProduit.INTRANT,
+      isActive: true,
+      contenance: 25,
+      prixUnitaire: 1000,
+      tailleGranule: TailleGranule.G1,
+      siteId: "site-A",
+    });
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-NON-ALIMENT",
+        nom: "Plan non aliment",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p-intrant"],
+      })
+    ).rejects.toThrow(/p-intrant/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-NON-ALIMENT")).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : id d'un produit INACTIF dans produitIds -> 422", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    stores.produit.push({
+      id: "p-inactif",
+      nom: "Produit inactif",
+      categorie: CategorieProduit.ALIMENT,
+      isActive: false,
+      contenance: 25,
+      prixUnitaire: 15000,
+      tailleGranule: TailleGranule.G1,
+      siteId: "site-A",
+    });
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-INACTIF",
+        nom: "Plan inactif",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p-inactif"],
+      })
+    ).rejects.toThrow(/p-inactif/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-INACTIF")).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : produit choisi explicitement SANS tailleGranule -> 422 nommant le produit ET la raison TAILLE_GRANULE_MANQUANTE", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    seedDeuxCalibresQuatreProduits();
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-SANS-GRANULE-CHOISI",
+        nom: "Plan sans granule choisi",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p1", "p4"],
+      })
+    ).rejects.toThrow(/p4/);
+
+    expect(stores.scenarioPrevision.filter((s) => s.code === "PLAN-SANS-GRANULE-CHOISI")).toHaveLength(0);
+    // Aucune ecriture partielle non plus pour p1 (rejet AVANT toute transaction).
+    expect(stores.alimentPrevision).toHaveLength(0);
+  });
+
+  it("regle 3 — garde serveur : produit choisi explicitement avec contenance <= 0 -> 422 nommant le produit ET CONTENANCE_MANQUANTE (jamais un article a 0 kg/sac silencieux)", async () => {
+    const { createScenario } = await import("@/lib/queries/previsions-scenarios");
+    stores.produit.push({
+      id: "p-sans-contenance",
+      nom: "Produit sans contenance",
+      categorie: CategorieProduit.ALIMENT,
+      isActive: true,
+      contenance: 0,
+      prixUnitaire: 15000,
+      tailleGranule: TailleGranule.G1,
+      siteId: "site-A",
+    });
+
+    await expect(
+      createScenario("site-A", {
+        code: "PLAN-SANS-CONTENANCE-CHOISI",
+        nom: "Plan sans contenance choisi",
+        dateDebutPlan: "2026-08-01",
+        userId: "user-1",
+        parametres: PARAMS,
+        produitIds: ["p-sans-contenance"],
+      })
+    ).rejects.toThrow(/p-sans-contenance/);
+
+    expect(
+      stores.scenarioPrevision.filter((s) => s.code === "PLAN-SANS-CONTENANCE-CHOISI")
+    ).toHaveLength(0);
+    expect(stores.alimentArticlePrevision).toHaveLength(0);
+  });
+});
+
+describe("getProduitsAlimentairesEligibles — ADR-053 §18.1 (GET /produits-alimentaires-eligibles)", () => {
+  it("renvoie TOUS les Produit ALIMENT actifs du site, chacun marque eligible/non-eligible — jamais filtre", async () => {
+    const { getProduitsAlimentairesEligibles } = await import("@/lib/queries/previsions-scenarios");
+    stores.produit.push(
+      { id: "p1", nom: "Eligible", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p2", nom: "Sans granule", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: null, siteId: "site-A" },
+      { id: "p3", nom: "Sans contenance", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: null, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p4", nom: "Inactif", categorie: CategorieProduit.ALIMENT, isActive: false, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p5", nom: "Autre categorie", categorie: CategorieProduit.INTRANT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-A" },
+      { id: "p6", nom: "Autre site", categorie: CategorieProduit.ALIMENT, isActive: true, contenance: 25, prixUnitaire: 15000, tailleGranule: TailleGranule.G1, siteId: "site-B" }
+    );
+
+    const result = await getProduitsAlimentairesEligibles("site-A");
+
+    // Appartenance : seuls les ALIMENT actifs du site — p4/p5/p6 exclus par le where.
+    expect(result.map((p) => p.id).sort()).toEqual(["p1", "p2", "p3"]);
+
+    const p1 = result.find((p) => p.id === "p1")!;
+    expect(p1.eligible).toBe(true);
+    expect(p1.raisonsInvalidite).toEqual([]);
+
+    const p2 = result.find((p) => p.id === "p2")!;
+    expect(p2.eligible).toBe(false);
+    expect(p2.raisonsInvalidite).toContain("TAILLE_GRANULE_MANQUANTE");
+
+    const p3 = result.find((p) => p.id === "p3")!;
+    expect(p3.eligible).toBe(false);
+    expect(p3.raisonsInvalidite).toContain("CONTENANCE_MANQUANTE");
+  });
+
+  it("site sans aucun Produit ALIMENT actif -> tableau vide (signal non ambigu, ADR-053 §18.2(a))", async () => {
+    const { getProduitsAlimentairesEligibles } = await import("@/lib/queries/previsions-scenarios");
+    const result = await getProduitsAlimentairesEligibles("site-A");
+    expect(result).toEqual([]);
+  });
+});
+
 describe("updateParametresPrevision — R8 isolation par site", () => {
   it("rejette la mise a jour si le scenario appartient a un autre site, sans rien modifier", async () => {
     const { updateParametresPrevision } = await import("@/lib/queries/previsions-scenarios");

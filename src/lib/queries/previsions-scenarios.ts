@@ -12,7 +12,12 @@
  *      `create({ data })` (sans include) puis `findUniqueOrThrow({ where, include })`.
  */
 import { prisma } from "@/lib/db";
-import { StatutScenarioPrevision, CategorieProduit, TailleGranule } from "@/types";
+import {
+  StatutScenarioPrevision,
+  CategorieProduit,
+  TailleGranule,
+  evaluerEligibiliteProduitAlimentairePrevision,
+} from "@/types";
 import { Decimal } from "@/lib/previsions/decimal-config";
 import { validerPaliersRemiseCroissants } from "@/lib/previsions/validation";
 import type { PalierRemiseInput } from "@/lib/previsions/types";
@@ -73,6 +78,17 @@ export interface CreateScenarioPrevisionDTO {
     /** §4.1 des exigences — LIBRE, peut etre negative. Optionnel, retombe sur @default(0). */
     tresorerieInitialeFCFA?: number;
   };
+  /**
+   * ADR-053 §18 — selection explicite des Produit ALIMENT a copier vers le
+   * scenario. ABSENT (`undefined`) : comportement historique STRICTEMENT
+   * inchange (copie de tous les Produit ALIMENT actifs du site, garde 422
+   * tout-ou-rien inchange sur `tailleGranule`). Tableau (y compris `[]`) :
+   * exactement cette liste, chaque id valide (appartenance au site,
+   * categorie ALIMENT, actif, ET eligible au sens de
+   * `evaluerEligibiliteProduitAlimentairePrevision`) AVANT toute ecriture
+   * (`validerProduitIdsEligibles`, avant `tx.$transaction`).
+   */
+  produitIds?: string[];
 }
 
 export interface UpdateParametresPrevisionDTO {
@@ -99,6 +115,58 @@ export interface PalierRemiseInputDTO {
   seuilTonnes: number;
   pourcentageRemise: number;
   ordre: number;
+}
+
+// ---------------------------------------------------------------------------
+// Produits alimentaires eligibles (ADR-053 §18 — GET
+// /api/previsions/produits-alimentaires-eligibles)
+// ---------------------------------------------------------------------------
+
+/**
+ * Liste TOUS les `Produit` de categorie ALIMENT actifs du site, chacun avec
+ * `eligible`/`raisonsInvalidite` calcules via l'UNIQUE definition
+ * `evaluerEligibiliteProduitAlimentairePrevision` (jamais recalcule ici a la
+ * main). AUCUN filtrage sur l'eligibilite : un produit invalide reste dans
+ * la reponse, marque comme tel — ERR-173/ERR-185, une liste filtree ne peut
+ * pas servir de base a une conclusion sur ce qu'elle cache. Meme `where` et
+ * meme `orderBy: { nom: "asc" }` que `copierAlimentsPrevisionDepuisProduits`
+ * (ADR-053 §18.1), pour la coherence visuelle avec le regroupement par
+ * calibre.
+ */
+export async function getProduitsAlimentairesEligibles(siteId: string) {
+  const produits = await prisma.produit.findMany({
+    where: { siteId, categorie: CategorieProduit.ALIMENT, isActive: true },
+    orderBy: { nom: "asc" },
+    select: {
+      id: true,
+      nom: true,
+      tailleGranule: true,
+      contenance: true,
+      prixUnitaire: true,
+    },
+  });
+
+  return produits.map((produit) => {
+    // Cast : l'enum genere par Prisma (`@/generated/prisma/enums`) et l'enum
+    // miroir de `@/types/models` partagent les memes valeurs litterales
+    // mais sont deux declarations `enum` distinctes, non compatibles
+    // structurellement pour TypeScript (nominal typing) — meme pattern que
+    // le cast deja utilise plus bas dans ce fichier (:312).
+    const tailleGranule = produit.tailleGranule as TailleGranule | null;
+    const evaluation = evaluerEligibiliteProduitAlimentairePrevision({
+      tailleGranule,
+      contenance: produit.contenance,
+    });
+    return {
+      id: produit.id,
+      nom: produit.nom,
+      tailleGranule,
+      contenance: produit.contenance,
+      prixUnitaire: produit.prixUnitaire,
+      eligible: evaluation.eligible,
+      raisonsInvalidite: evaluation.raisonsInvalidite,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +205,7 @@ export async function getScenarioById(id: string, siteId: string) {
     include: {
       parametres: true,
       paliersRemise: { orderBy: { ordre: "asc" } },
+      _count: { select: { aliments: true } },
     },
   });
 }
@@ -148,6 +217,19 @@ export async function getScenarioById(id: string, siteId: string) {
  * decouplage total — jamais relu depuis Produit au moment du calcul).
  */
 export async function createScenario(siteId: string, data: CreateScenarioPrevisionDTO) {
+  /*
+   * ADR-053 §18.3 point 2 — validation des `produitIds` (si fournis) AVANT
+   * toute ouverture de transaction d'ecriture : un id fautif est rejete par
+   * une simple lecture, sans jamais amorcer `ScenarioPrevision`/
+   * `ParametresPrevision`. Seul un produit EFFECTIVEMENT CHOISI (present
+   * dans `produitIds`) peut faire echouer la creation — le tout-ou-rien
+   * historique sur les Produit ALIMENT actifs du site (garde inchangee plus
+   * bas, chemin `produitIds` absent) ne s'applique jamais ici.
+   */
+  if (data.produitIds !== undefined) {
+    await validerProduitIdsEligibles(siteId, data.produitIds);
+  }
+
   return prisma.$transaction(async (tx) => {
     if (data.dureeCycleMois !== undefined) {
       assertEntierColonneInt(data.dureeCycleMois, "dureeCycleMois");
@@ -234,16 +316,92 @@ export async function createScenario(siteId: string, data: CreateScenarioPrevisi
       },
     });
 
-    await copierAlimentsPrevisionDepuisProduits(tx, scenario.id, siteId);
+    await copierAlimentsPrevisionDepuisProduits(tx, scenario.id, siteId, data.produitIds);
 
-    return tx.scenarioPrevision.findUniqueOrThrow({
+    const scenarioCree = await tx.scenarioPrevision.findUniqueOrThrow({
       where: { id: scenario.id },
       include: {
         parametres: true,
         paliersRemise: { orderBy: { ordre: "asc" } },
+        _count: { select: { aliments: true } },
       },
     });
+
+    /*
+     * ADR-053 §18.2(b) — signal explicite, TOUJOURS present sur une reponse
+     * de creation reussie (jamais `undefined`) : `0` est une valeur
+     * legitime distincte d'un champ non charge (ERR-173/ERR-185). Alimente
+     * par `_count.aliments`, jamais recompte a la main.
+     */
+    const { _count, ...scenarioSansCount } = scenarioCree;
+    return {
+      ...scenarioSansCount,
+      nombreCalibresAlimentsCrees: _count.aliments,
+    };
   });
+}
+
+/**
+ * Valide un tableau `produitIds` (ADR-053 §18.3 point 2) contre deux
+ * familles de rejet DISTINCTES, jamais melangees dans le meme message :
+ *   1. APPARTENANCE — id inconnu, hors site, hors categorie ALIMENT, ou
+ *      inactif : rejete par la requete `findMany` elle-meme (absent du
+ *      resultat = id invalide), jamais rapporte comme "raisonInvalidite".
+ *   2. QUALITE — produit trouve mais `tailleGranule`/`contenance` non
+ *      exploitables au sens de `evaluerEligibiliteProduitAlimentairePrevision`
+ *      (l'UNIQUE definition de la regle, partagee avec la route GET
+ *      `/api/previsions/produits-alimentaires-eligibles`).
+ * Un tableau vide (`[]`) est une selection vide legitime (arbitrage c,
+ * ADR-053 §18) — ne declenche aucune lecture ni rejet.
+ *
+ * @throws {BusinessRuleError} 422 nommant le ou les produits fautifs.
+ */
+async function validerProduitIdsEligibles(siteId: string, produitIds: string[]): Promise<void> {
+  if (produitIds.length === 0) return;
+
+  const produitsTrouves = await prisma.produit.findMany({
+    where: {
+      id: { in: produitIds },
+      siteId,
+      categorie: CategorieProduit.ALIMENT,
+      isActive: true,
+    },
+    select: { id: true, nom: true, tailleGranule: true, contenance: true },
+  });
+
+  const trouveParId = new Map(produitsTrouves.map((p) => [p.id, p]));
+
+  const idsIntrouvables = produitIds.filter((id) => !trouveParId.has(id));
+  if (idsIntrouvables.length > 0) {
+    throw new BusinessRuleError(
+      `produitIds invalide(s) — introuvable(s), hors site, hors categorie ALIMENT, ou inactif(s) : ${idsIntrouvables.join(", ")}.`,
+      422
+    );
+  }
+
+  const produitsNonEligibles = produitsTrouves
+    .map((p) => ({
+      produit: p,
+      // Cast : voir le commentaire equivalent de `getProduitsAlimentairesEligibles`.
+      evaluation: evaluerEligibiliteProduitAlimentairePrevision({
+        tailleGranule: p.tailleGranule as TailleGranule | null,
+        contenance: p.contenance,
+      }),
+    }))
+    .filter((entree) => !entree.evaluation.eligible);
+
+  if (produitsNonEligibles.length > 0) {
+    const detail = produitsNonEligibles
+      .map(
+        ({ produit, evaluation }) =>
+          `${produit.nom} (${produit.id}) : ${evaluation.raisonsInvalidite.join(", ")}`
+      )
+      .join(" ; ");
+    throw new BusinessRuleError(
+      `Produit(s) alimentaire(s) non eligible(s) pour ce scenario : ${detail}.`,
+      422
+    );
+  }
 }
 
 /**
@@ -252,6 +410,14 @@ export async function createScenario(siteId: string, data: CreateScenarioPrevisi
  * nouvellement cree (ADR-053 decision 1 : "pre-remplies par copie depuis
  * Produit a la creation" ; restructuration a deux niveaux, amendement §12,
  * Sprint PR2-quater).
+ *
+ * `produitIds` (ADR-053 §18) : `undefined` -> comportement historique
+ * STRICTEMENT inchange (tous les Produit ALIMENT actifs du site, garde
+ * 422 tout-ou-rien inchange sur `tailleGranule`). Tableau (deja valide par
+ * `validerProduitIdsEligibles` avant l'ouverture de la transaction) -> le
+ * groupe est restreint a ce sous-ensemble APRES le tri `orderBy: nom asc`
+ * (`Array.filter` preserve l'ordre relatif — ne jamais reconstruire l'ordre
+ * depuis `produitIds`, qui n'a aucune garantie d'ordre cote client).
  *
  * REGROUPEMENT PAR `tailleGranule` (ADR-053 §12.4) : `tailleGranule` etant
  * devenue l'IDENTITE du calibre (`@@unique([scenarioId, tailleGranule])`),
@@ -288,12 +454,18 @@ export async function createScenario(siteId: string, data: CreateScenarioPrevisi
 async function copierAlimentsPrevisionDepuisProduits(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   scenarioId: string,
-  siteId: string
+  siteId: string,
+  produitIds?: string[]
 ): Promise<void> {
-  const produits = await tx.produit.findMany({
+  const produitsTries = await tx.produit.findMany({
     where: { siteId, categorie: CategorieProduit.ALIMENT, isActive: true },
     orderBy: { nom: "asc" },
   });
+
+  const produits =
+    produitIds === undefined
+      ? produitsTries
+      : produitsTries.filter((p) => produitIds.includes(p.id));
 
   if (produits.length === 0) return;
 

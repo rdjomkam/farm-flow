@@ -402,6 +402,9 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
       ordre: p.ordre,
       siteId: p.siteId,
     })),
+    // ADR-053 §18.2(b) — toujours present, alimente par _count.aliments
+    // (getScenarioById), jamais recompte a la main.
+    nombreCalibresAlimentsCrees: scenario._count.aliments,
   };
 
   const alimentsDto: AlimentPrevisionDTO[] = aliments.map((a) => ({

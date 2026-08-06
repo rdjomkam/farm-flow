@@ -104,7 +104,27 @@
         "label": "Coût transport alevins (FCFA)"
       }
     },
+    "produits": {
+      "title": "Produits alimentaires à reprendre",
+      "description": "Les produits alimentaires actifs valides sont pré-cochés. Décochez ceux que vous ne voulez pas reprendre dans ce scénario.",
+      "emptyState": {
+        "title": "Aucun produit alimentaire actif sur ce site",
+        "description": "Le scénario sera créé sans calibre d'aliment. Vous pourrez les configurer manuellement ensuite, ou ajouter des produits dans Stock.",
+        "stockLink": "Aller à Stock → Produits"
+      },
+      "selectionVideWarning": "Aucun produit sélectionné — le scénario sera créé sans calibre d'aliment.",
+      "raisons": {
+        "TAILLE_GRANULE_MANQUANTE": "Granulométrie non renseignée",
+        "CONTENANCE_MANQUANTE": "Contenance du sac non renseignée"
+      },
+      "corrigerLink": "Corriger dans Stock",
+      "loadError": "Impossible de charger la liste des produits alimentaires.",
+      "eligibleCount": "{count, plural, one {# produit éligible} other {# produits éligibles}} sur {total}"
+    },
+    "calibresCreesZeroBanner": "Scénario créé sans calibre d'aliment — à saisir manuellement dans l'onglet Aliments.",
     "requiredError": "Ce champ est obligatoire.",
+    "next": "Suivant",
+    "back": "Retour",
     "submitting": "Création...",
     "submit": "Créer le scénario"
   },

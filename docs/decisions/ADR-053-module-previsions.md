@@ -4153,3 +4153,269 @@ ni JS — il n'y a plus de comparaison à faire (§17.2). Un test qui recalculer
 de caractères ou une nouvelle table de vérité serait une régression vers l'option A écartée.
 
 **Références :** ERR-184, R10, R11, ADR-052 §3.1/§3.4, ADR-053 §16.11, §16.12.
+
+## 18. Amendement (2026-08-06) — sélection explicite des produits copiés vers un scénario, la faute
+tout-ou-rien et le zéro silencieux de `copierAlimentsPrevisionDepuisProduits`
+
+**Contexte.** `copierAlimentsPrevisionDepuisProduits` (`src/lib/queries/previsions-scenarios.ts:288-355`,
+appelée par `createScenario` dans sa transaction, `:237`) copie TOUS les `Produit` de catégorie
+`ALIMENT` actifs du site à la création d'un `ScenarioPrevision`, sans filtre ni sélection. Trois cas
+étaient invisibles à l'utilisateur — même famille qu'ERR-173/ERR-185 (« le `0` qui ment ») :
+
+1. **Tout-ou-rien.** Si UN SEUL `Produit` ALIMENT actif du site (sans rapport avec le scénario en
+   cours de création) n'a pas de `tailleGranule`, `BusinessRuleError` 422 **dans** la transaction :
+   toute création de scénario est bloquée sur le site entier tant que ce produit n'est pas corrigé.
+2. **Zéro silencieux sur `contenance`.** Aucun `throw` équivalent n'existe pour `contenance` : un
+   `Produit` ALIMENT actif sans `contenance` produit un `AlimentArticlePrevision` à `0 kg/sac`,
+   `0 sac/tonne`, sans aucun signal — alors que la saisie manuelle du même champ logique
+   (`poidsSacKg`, `src/lib/validation/previsions.schema.ts`) exige `.positive()`. Deux disciplines
+   opposées sur le même champ logique selon la porte d'entrée.
+3. **Site sans aucun produit ALIMENT actif.** `if (produits.length === 0) return;` — retour
+   totalement silencieux : le scénario se crée sans aucun calibre, sans qu'aucun message
+   n'informe l'utilisateur que rien n'a été copié.
+
+**Décision (arbitrages déjà tranchés en amont de cet amendement, non rouverts ici) :** une étape de
+sélection explicite est ajoutée à la création d'un scénario — l'utilisateur coche les produits qu'il
+reprend ; les produits invalides restent visibles, marqués, non cochables, avec la raison écrite et
+un lien vers `/stock/produits/{id}`. Tous les produits valides sont pré-cochés ; les invalides sont
+décochés et verrouillés. Une sélection vide est autorisée (scénario créé sans calibre, à saisir à la
+main ensuite), avec mention explicite à l'écran. La transaction reste unique : la sélection/validation
+se fait AVANT toute écriture, jamais un scénario créé puis complété après coup.
+
+Cet amendement tranche les deux points que la pré-analyse
+(`docs/analysis/pre-analysis-selection-produits-scenario.md`) a explicitement laissés ouverts : Q1
+(endpoint de lecture des produits éligibles) et Q2 (forme du signal « sélection vide » / « site sans
+aucun produit alimentaire »).
+
+### 18.1 Q1 — Endpoint dédié `GET /api/previsions/produits-alimentaires-eligibles`, pas de réutilisation
+de `GET /api/produits`
+
+**Décision : endpoint dédié.** `GET /api/previsions/produits-alimentaires-eligibles`, gardé par
+`Permission.PREVISIONS_GERER` (la même permission que `POST /api/previsions/scenarios`, jamais
+`STOCK_VOIR`).
+
+**Pourquoi pas (a) élargir la permission de `GET /api/produits` (OR `STOCK_VOIR` /
+`PREVISIONS_GERER`) :**
+- `SiteRole.permissions` est un tableau libre par site (`prisma/schema.prisma:1148-1162`), pas des
+  rôles fixes couplés entre modules. Le tableau de rôles par défaut de ce même ADR (§6) attribue au
+  Gestionnaire Prévisions `PREVISIONS_VOIR`, `PREVISIONS_GERER` — **aucune** permission Stock. Un
+  Gestionnaire Prévisions sans droits Stock est un cas nominal, pas un cas limite : élargir la
+  permission de lecture des produits couplerait silencieusement deux modules qui n'ont, par ailleurs,
+  aucune raison métier d'être couplés en lecture.
+- Coder l'éligibilité (`tailleGranule` non nul, `contenance` strictement positive) côté client à
+  partir de la réponse brute de `GET /api/produits` dupliquerait la règle métier déjà appliquée par
+  `copierAlimentsPrevisionDepuisProduits` — la duplication, pas la protection contre elle, est
+  exactement le défaut d'origine de cet amendement (deux disciplines opposées sur `contenance` selon
+  la porte d'entrée). Un endpoint dédié calcule `eligible`/`raisonsInvalidite` côté serveur, la seule
+  discipline conforme à « un seul endroit » (§18.3).
+
+**Forme exacte de la réponse** (`ProduitsAlimentairesEligiblesResponse`,
+`src/types/api.ts`) :
+
+```ts
+GET /api/previsions/produits-alimentaires-eligibles
+→ 200 { data: ProduitAlimentaireEligibleDTO[] }
+
+interface ProduitAlimentaireEligibleDTO {
+  id: string;
+  nom: string;
+  tailleGranule: TailleGranule | null;
+  contenance: number | null;
+  prixUnitaire: number;
+  eligible: boolean;
+  raisonsInvalidite: RaisonInvaliditeProduitPrevision[];
+}
+```
+
+Filtre serveur identique à celui de `copierAlimentsPrevisionDepuisProduits` (`where: { siteId,
+categorie: ALIMENT, isActive: true }`, `orderBy: { nom: "asc" }` — même ordre que la copie, pour la
+cohérence visuelle avec le regroupement par calibre côté scénario déjà créé). `eligible` et
+`raisonsInvalidite` calculés via `evaluerEligibiliteProduitAlimentairePrevision`
+(`src/types/api.ts`, §18.3) — jamais recalculés côté client.
+
+### 18.2 Q2 — Le signal « sélection vide » et « aucun produit alimentaire sur le site »
+
+Deux emplacements distincts portent ce signal, jamais un seul retour silencieux :
+
+**(a) Côté liste des produits éligibles (`GET .../produits-alimentaires-eligibles`) : aucun champ
+API dédié.** `data: []` est déjà un signal non ambigu pour CET endpoint précis : il n'a ni
+pagination ni filtre variable (toujours « tous les `Produit` ALIMENT actifs du site », rien d'autre),
+donc un tableau vide ne peut signifier qu'une seule chose — la requête a réussi et le site n'a
+vraiment aucun produit ALIMENT actif. Ce n'est pas un cas d'ERR-173 (qui portait sur un `0` capable de
+recouvrir plusieurs états distincts) : ici il n'existe qu'un seul état possible derrière `[]`.
+**Ce qui EST exigé côté UI** : un état vide dédié, explicite, jamais une simple absence silencieuse de
+cases à cocher — message du type « Aucun produit alimentaire actif sur ce site. Le scénario sera créé
+sans calibre. Ajoutez des produits dans Stock pour les rattacher plus tard. », avec un lien vers
+`/stock/produits`.
+
+**(b) Côté création du scénario (`POST /api/previsions/scenarios`) : champ explicite
+`nombreCalibresAlimentsCrees: number` sur `ScenarioPrevisionDetailDTO`
+(`src/components/previsions/api-types.ts`).** Toujours présent sur une réponse de création réussie
+(jamais `undefined`) — `0` est une valeur légitime et distincte d'un champ non encore chargé, la même
+distinction qu'ERR-173/ERR-185 exigent ailleurs dans ce module. Alimenté par `_count.aliments`
+sur le `findUniqueOrThrow` qui clôt `createScenario`. Deux chemins légitimes produisent `0` :
+`produitIds: []` fourni explicitement (arbitrage c), ou aucun produit ALIMENT actif sur le site quand
+`produitIds` est absent (cas 3 de la section Contexte, corrigé par ce même amendement). **L'UI DOIT**
+afficher un message explicite quand cette valeur est `0` (« Scénario créé sans calibre d'aliment — à
+saisir manuellement dans l'onglet Aliments »), jamais un silence après la redirection vers le
+scénario nouvellement créé.
+
+Le retour `if (produits.length === 0) return;` de `copierAlimentsPrevisionDepuisProduits` n'est PAS
+supprimé par cet amendement (il reste correct : aucun calibre à créer quand la liste filtrée est
+vide) — c'est le silence côté DTO de réponse et côté UI qui est corrigé, pas le comportement de la
+fonction elle-même.
+
+### 18.3 La règle d'éligibilité — un seul endroit, trois consommateurs
+
+**Fonction pure exportée, unique définition :** `evaluerEligibiliteProduitAlimentairePrevision`,
+`src/types/api.ts`.
+
+```ts
+export interface ProduitAlimentaireEligibiliteInput {
+  tailleGranule: TailleGranule | null;
+  contenance: number | null;
+}
+
+export interface EligibiliteProduitAlimentairePrevision {
+  eligible: boolean;
+  raisonsInvalidite: RaisonInvaliditeProduitPrevision[];
+}
+
+export function evaluerEligibiliteProduitAlimentairePrevision(
+  produit: ProduitAlimentaireEligibiliteInput
+): EligibiliteProduitAlimentairePrevision;
+```
+
+Réutilisée telle quelle par les trois portes d'entrée qui, avant cet amendement, appliquaient (ou
+n'appliquaient pas) la règle chacune à sa manière :
+
+1. `GET /api/previsions/produits-alimentaires-eligibles` — calcule `eligible`/`raisonsInvalidite`
+   par produit avant de répondre (§18.1).
+2. Le garde serveur de `POST /api/previsions/scenarios` quand `produitIds` est fourni — rejette
+   tout id dont ce prédicat renvoie `eligible: false`, 422 nommant le produit fautif (même discipline
+   que le message actuel de `copierAlimentsPrevisionDepuisProduits:302-308`, étendue à `contenance`).
+   Cette validation doit s'exécuter par une lecture (`findMany`) **avant** `tx.$transaction` — elle
+   couvre alors, dans le même passage, la vérification d'appartenance (site, catégorie ALIMENT, actif)
+   ET d'éligibilité, sans ouvrir de transaction d'écriture pour un id qui sera de toute façon rejeté.
+3. Les tests des deux routes ci-dessus (mockés et DB-gated).
+
+**Le garde serveur reste en second rideau, même si l'UI filtre déjà.** L'UI ne coche jamais un
+produit invalide (verrouillé, §18 Contexte), mais le serveur revalide chaque id de `produitIds`
+intégralement au moment du `POST` — jamais une confiance aveugle dans ce que l'UI a envoyé. Deux
+raisons concrètes, pas seulement une posture défensive générique : (i) la sélection peut dater de
+plusieurs minutes (formulaire ouvert, produit désactivé ou modifié entre-temps par un autre
+utilisateur du même site) ; (ii) `POST /api/previsions/scenarios` reste appelable directement (script,
+test, futur client mobile) sans jamais passer par l'écran de sélection. Un id qui échoue ce
+second-rideau produit le même 422 nommant le produit que le garde tout-ou-rien actuel — jamais un
+423/500 générique qui masquerait la cause.
+
+**Deux familles de rejet, jamais mélangées dans le même champ.** `evaluerEligibiliteProduitAlimentairePrevision`
+ne vérifie QUE la qualité d'un produit déjà dans la liste (`tailleGranule`, `contenance`) — jamais
+`categorie`/`isActive`/`siteId`, qui sont des critères D'APPARTENANCE (le `where` de la requête
+appelante). Un id hors site, hors catégorie ALIMENT, ou inactif est rejeté par la requête `findMany`
+de validation elle-même (absent du résultat = id invalide), avant même d'atteindre ce prédicat —
+jamais reporté comme une `raisonInvalidite` de ce prédicat, qui ne connaît que la qualité de
+calibrage. Mélanger les deux familles produirait un message ambigu (« ce produit n'est pas éligible »
+— parce qu'il n'existe pas sur ce site, ou parce qu'il lui manque une contenance ? deux corrections
+totalement différentes pour l'utilisateur).
+
+**`raisonsInvalidite` est un TABLEAU, jamais un code unique.** Un `Produit` peut cumuler les deux
+raisons (ni `tailleGranule` ni `contenance` exploitables) — un code unique masquerait l'une des deux :
+l'utilisateur corrigerait la première raison affichée, re-soumettrait, et ne découvrirait la seconde
+qu'au deuxième essai. Le tableau reste extensible si une troisième condition de qualité s'ajoute plus
+tard, sans rouvrir la forme du contrat.
+
+### 18.4 Extension du payload de création
+
+`produitIds?: string[]` ajouté à `createScenarioSchema`
+(`src/lib/validation/previsions.schema.ts`) — champ optionnel, zod (`z.array(z.string().min(1))`), pas
+un DTO dupliqué dans `src/types/` (le type `CreateScenarioInput` de ce module est déjà, par
+convention établie de ce fichier, dérivé du schéma zod via `z.infer`, jamais une seconde interface
+maintenue en parallèle — dupliquer aurait recréé la même classe de divergence que celle documentée en
+§18 Contexte).
+
+- **Absent** (jamais envoyé par le client) : comportement actuel strictement inchangé — copie de
+  tous les `Produit` ALIMENT actifs du site, garde 422 tout-ou-rien inchangé sur `tailleGranule`
+  (préservation exigée : les tests d'intégration DB-gated existants,
+  `previsions-scenarios-copie-produits-integration.test.ts`, doivent rester verts sans modification).
+- **`[]` explicite** : sélection vide autorisée (arbitrage c) — distincte d'`undefined`, jamais
+  confondue avec lui côté validation ou côté requête `findMany` de résolution.
+- **Non vide** : chaque id validé par le garde serveur (§18.3, point 2) avant toute écriture.
+
+### 18.5 DTO de la ligne de sélection et enum de raison
+
+`RaisonInvaliditeProduitPrevision` (`src/types/models.ts`, R1 : valeurs MAJUSCULES) — code d'enum
+discriminant, pas une chaîne libre : l'i18n doit pouvoir traduire fr/en ; une chaîne de raison écrite
+côté serveur serait une chaîne non traduite, interdite dans ce dépôt.
+
+```ts
+export enum RaisonInvaliditeProduitPrevision {
+  TAILLE_GRANULE_MANQUANTE = "TAILLE_GRANULE_MANQUANTE",
+  CONTENANCE_MANQUANTE = "CONTENANCE_MANQUANTE",
+}
+```
+
+`ProduitAlimentaireEligibleDTO` (§18.1) porte `raisonsInvalidite: RaisonInvaliditeProduitPrevision[]`
+— vide si `eligible === true`.
+
+### 18.6 i18n — clés à créer (fr ET en, aucune chaîne en dur)
+
+Namespace `src/messages/{fr,en}/previsions.json`, nouvelle section `scenarioForm.produits.*` (à côté
+de `scenarioForm.sections.*`/`scenarioForm.fields.*` déjà existants) :
+
+| Clé | fr | en |
+|---|---|---|
+| `scenarioForm.produits.title` | « Produits alimentaires à reprendre » | « Feed products to carry over » |
+| `scenarioForm.produits.description` | « Les produits alimentaires actifs valides sont pré-cochés. Décochez ceux que vous ne voulez pas reprendre dans ce scénario. » | « Valid active feed products are pre-checked. Uncheck any you don't want to carry over into this scenario. » |
+| `scenarioForm.produits.emptyState.title` | « Aucun produit alimentaire actif sur ce site » | « No active feed product on this site » |
+| `scenarioForm.produits.emptyState.description` | « Le scénario sera créé sans calibre d'aliment. Vous pourrez les configurer manuellement ensuite, ou ajouter des produits dans Stock. » | « The scenario will be created without any feed grade. You can configure them manually afterwards, or add products in Stock. » |
+| `scenarioForm.produits.emptyState.stockLink` | « Aller à Stock → Produits » | « Go to Stock → Products » |
+| `scenarioForm.produits.selectionVideWarning` | « Aucun produit sélectionné — le scénario sera créé sans calibre d'aliment. » | « No product selected — the scenario will be created without any feed grade. » |
+| `scenarioForm.produits.raisons.TAILLE_GRANULE_MANQUANTE` | « Granulométrie non renseignée » | « Feed grain size not set » |
+| `scenarioForm.produits.raisons.CONTENANCE_MANQUANTE` | « Contenance du sac non renseignée » | « Bag content weight not set » |
+| `scenarioForm.produits.corrigerLink` | « Corriger dans Stock » | « Fix in Stock » |
+| `scenarioForm.produits.loadError` | « Impossible de charger la liste des produits alimentaires. » | « Unable to load the feed product list. » |
+| `scenarioForm.produits.eligibleCount` | « {count, plural, one {# produit éligible} other {# produits éligibles}} sur {total} » | « {count, plural, one {# eligible product} other {# eligible products}} out of {total} » |
+| `scenarioForm.calibresCreesZeroBanner` | « Scénario créé sans calibre d'aliment — à saisir manuellement dans l'onglet Aliments. » | « Scenario created without any feed grade — enter it manually in the Feed tab. » |
+
+`scenarioForm.produits.raisons.*` : une clé par valeur de `RaisonInvaliditeProduitPrevision` — au
+pluriel côté UI, les deux raisons d'un même produit s'affichent comme deux lignes/puces distinctes
+(jamais concaténées en une phrase construite côté serveur), cohérent avec `raisonsInvalidite` en
+tableau (§18.3).
+
+### 18.7 Ce que l'implémenteur fait ensuite, étape par étape
+
+1. `npx prisma` : rien — aucune migration de schéma (`produitIds` est un paramètre de requête, pas
+   une colonne ; les enums/interfaces ajoutés par cet amendement sont TypeScript uniquement).
+2. Créer `src/app/api/previsions/produits-alimentaires-eligibles/route.ts` (GET), gardé par
+   `Permission.PREVISIONS_GERER`, qui appelle `getProduits`-équivalent filtré (`siteId`, `categorie:
+   ALIMENT`, `isActive: true`, `orderBy: nom asc`) puis mappe chaque ligne via
+   `evaluerEligibiliteProduitAlimentairePrevision` vers `ProduitAlimentaireEligibleDTO` — jamais de
+   logique d'éligibilité réécrite dans la route.
+3. Étendre le garde serveur de `POST /api/previsions/scenarios` (ou de `createScenario`,
+   `src/lib/queries/previsions-scenarios.ts`) : quand `produitIds` est fourni, `findMany({ where: {
+   id: { in: produitIds }, siteId, categorie: ALIMENT, isActive: true } })` AVANT `tx.$transaction` ;
+   tout id absent du résultat → 422 nommant l'id ; tout produit du résultat pour lequel
+   `evaluerEligibiliteProduitAlimentairePrevision(...).eligible === false` → 422 nommant le produit et
+   ses `raisonsInvalidite`. Filtrer `produits` par ce sous-ensemble AVANT le regroupement par
+   `tailleGranule` de `copierAlimentsPrevisionDepuisProduits`, en conservant l'ordre déjà trié par
+   `orderBy: nom asc` (filtrer un tableau trié préserve l'ordre relatif — ne jamais reconstruire
+   l'ordre depuis `produitIds`, qui n'a aucune garantie d'ordre côté client).
+4. Ajouter `_count: { select: { aliments: true } }` à l'`include` du
+   `findUniqueOrThrow` qui clôt `createScenario`, et exposer `nombreCalibresAlimentsCrees:
+   scenario._count.aliments` sur la réponse (`ScenarioPrevisionDetailDTO`).
+5. UI : nouvelle étape/section dans `scenario-form-dialog.tsx` (§18.6 pour les clés i18n), état vide
+   dédié si `data.length === 0`, cases à cocher verrouillées pour les produits `eligible: false` avec
+   la ou les raisons affichées + lien `/stock/produits/{id}` (nouvel onglet, cf. pré-analyse §4), et
+   bandeau `scenarioForm.calibresCreesZeroBanner` si la réponse de création porte
+   `nombreCalibresAlimentsCrees === 0`.
+6. Tests (`@tester`) : étendre `previsions-scenarios-copie-produits-integration.test.ts` (nouveaux cas
+   `produitIds` fourni, jamais remplacer les deux tests existants qui doivent rester verts sans
+   modification), tests unitaires de `evaluerEligibiliteProduitAlimentairePrevision` (les quatre
+   combinaisons `tailleGranule`/`contenance` × présent/absent), test API de la nouvelle route GET
+   (permission `PREVISIONS_GERER`, forme de réponse, filtre site/catégorie/actif), et vérifier un par
+   un les fichiers listés en pré-analyse §5 dont le comportement par défaut (`produitIds` absent) doit
+   rester bit-à-bit identique.
+
+**Références :** ADR-053 §12 (amendement Sprint PR2-quater, modèle calibre → articles), ERR-173,
+ERR-185, R1, R2, R7, `docs/analysis/pre-analysis-selection-produits-scenario.md`.

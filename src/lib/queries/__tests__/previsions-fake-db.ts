@@ -317,6 +317,11 @@ const INCLUDE_RESOLVERS: Record<keyof Stores, Record<string, (row: FakeRow, s: S
       s.palierRemise
         .filter((p) => p.scenarioId === row.id)
         .sort((a, b) => (a.ordre as number) - (b.ordre as number)),
+    // ADR-053 §18.2(b) — `_count: { select: { aliments: true } }`, consomme
+    // par `createScenario`/`getScenarioById` pour `nombreCalibresAlimentsCrees`.
+    _count: (row, s) => ({
+      aliments: s.alimentPrevision.filter((a) => a.scenarioId === row.id).length,
+    }),
   },
   parametresPrevision: {},
   palierRemise: {},

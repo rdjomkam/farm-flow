@@ -80,6 +80,23 @@ export interface ScenarioPrevisionSummaryDTO {
 export interface ScenarioPrevisionDetailDTO extends ScenarioPrevisionSummaryDTO {
   parametres: ParametresPrevisionDTO | null;
   paliersRemise: PalierRemiseDTO[];
+  /**
+   * ADR-053 §18 — signal explicite du nombre de calibres d'aliment copies a
+   * la creation du scenario (`AlimentPrevision` cree dans la transaction de
+   * `createScenario`). Toujours present sur une reponse de creation reussie
+   * (jamais `undefined`) : `0` est une valeur legitime distincte d'une
+   * absence de champ, exactement la distinction qu'ERR-173/ERR-185 exigent
+   * — ne PAS confondre "0 calibre cree, information connue" avec "champ pas
+   * encore charge". Deux cas legitimes produisent `0` : `produitIds: []`
+   * fourni explicitement (arbitrage c), OU aucun produit ALIMENT actif sur
+   * le site quand `produitIds` est absent (§18, troisieme cas invisible
+   * corrige). L'UI DOIT afficher un message explicite quand cette valeur
+   * est `0` ("scenario cree sans calibre d'aliment — a saisir manuellement
+   * ensuite"), jamais un silence. Alimente par `_count.aliments`
+   * sur le `findUniqueOrThrow` de `createScenario`
+   * (`src/lib/queries/previsions-scenarios.ts`).
+   */
+  nombreCalibresAlimentsCrees: number;
 }
 
 export interface RepartitionMoisAlimentDTO {

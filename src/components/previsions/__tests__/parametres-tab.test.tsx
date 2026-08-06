@@ -77,6 +77,7 @@ const scenario: ScenarioPrevisionDetailDTO = {
     alevinsAchetesParDefaut: false,
   },
   paliersRemise: [],
+  nombreCalibresAlimentsCrees: 0,
 };
 
 describe("ParametresTab — signalement des parametres (lus ou non par le moteur)", () => {
