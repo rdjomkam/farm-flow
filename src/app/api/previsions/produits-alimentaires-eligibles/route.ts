@@ -18,7 +18,7 @@ import { handleApiError } from "@/lib/api-utils";
  * de base a une conclusion sur ce qu'elle cache) — chacun porte
  * `eligible`/`raisonsInvalidite` calcules cote serveur par l'unique
  * definition `evaluerEligibiliteProduitAlimentairePrevision`
- * (`src/types/api.ts`). `data: []` est deja un signal non ambigu pour cet
+ * (`src/lib/previsions/eligibilite.ts`). `data: []` est deja un signal non ambigu pour cet
  * endpoint precis (pas de pagination, pas de filtre variable) : "aucun
  * produit ALIMENT actif sur ce site" — a l'UI de le rendre visible via un
  * etat vide dedie.

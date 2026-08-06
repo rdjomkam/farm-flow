@@ -317,7 +317,7 @@ describe("ChargeMensuellePrevue — upsert + R8 isolation", () => {
     seedPoste("p1", "s1", "site-A");
 
     const result = await upsertChargeMensuelle("p1", "site-A", 0, 50000);
-    expect(result.montantFCFA).toBe(50000);
+    expect(Number(result.montantFCFA)).toBe(50000);
     expect(stores.chargeMensuellePrevue.filter((c) => c.posteId === "p1")).toHaveLength(1);
   });
 
@@ -329,7 +329,7 @@ describe("ChargeMensuellePrevue — upsert + R8 isolation", () => {
     await upsertChargeMensuelle("p1", "site-A", 0, 50000);
     const second = await upsertChargeMensuelle("p1", "site-A", 0, 75000);
 
-    expect(second.montantFCFA).toBe(75000);
+    expect(Number(second.montantFCFA)).toBe(75000);
     expect(stores.chargeMensuellePrevue.filter((c) => c.posteId === "p1")).toHaveLength(1);
   });
 
@@ -378,7 +378,7 @@ describe("reporterChargeMensuelle — report en lot atomique (story PR2ter.1)", 
     const lignes = await reporterChargeMensuelle("p1", "site-A", 500000, 0, 4);
 
     expect(lignes).toHaveLength(5);
-    expect(lignes.every((l) => l.montantFCFA === 500000)).toBe(true);
+    expect(lignes.every((l) => Number(l.montantFCFA) === 500000)).toBe(true);
     expect(stores.chargeMensuellePrevue.filter((c) => c.posteId === "p1")).toHaveLength(5);
   });
 
@@ -397,7 +397,7 @@ describe("reporterChargeMensuelle — report en lot atomique (story PR2ter.1)", 
     const moisDeux = stores.chargeMensuellePrevue.find(
       (c) => c.posteId === "p1" && c.moisAbsolu === 2
     );
-    expect(moisDeux?.montantFCFA).toBe(500000);
+    expect(Number(moisDeux?.montantFCFA)).toBe(500000);
   });
 
   it("R8 — rejette si le poste est d'un autre site, aucune charge creee (atomicite)", async () => {
@@ -546,7 +546,7 @@ describe("JournalDepensePrevue — R8 isolation + filtre vaguePrevueId null expl
     await expect(
       updateJournalDepensePrevue("j1", "site-B", { montantFCFA: 99999 })
     ).rejects.toThrow("Ligne de journal introuvable");
-    expect(stores.journalDepensePrevue.find((j) => j.id === "j1")!.montantFCFA).toBe(10000);
+    expect(Number(stores.journalDepensePrevue.find((j) => j.id === "j1")!.montantFCFA)).toBe(10000);
   });
 
   it("deleteJournalDepensePrevue — R8 : rejette et ne supprime rien pour un autre site", async () => {

@@ -331,8 +331,11 @@ export {
 // Pagination API
 export type { PaginationParams, PaginatedResponse } from "./api";
 export { PAGINATION_DEFAULTS, parsePaginationQuery } from "./api";
-// ADR-053 §18 — point unique de la regle d'eligibilite (route de lecture, garde serveur, tests)
-export { evaluerEligibiliteProduitAlimentairePrevision } from "./api";
+// ADR-053 §18 — la regle d'eligibilite (`evaluerEligibiliteProduitAlimentairePrevision`
+// et ses types `ProduitAlimentaireEligibiliteInput`/`EligibiliteProduitAlimentairePrevision`)
+// est une regle metier executable, pas un type de donnees : elle vit dans
+// `src/lib/previsions/eligibilite.ts`, pas ici — importer directement depuis ce
+// module (route de lecture, garde serveur, composant client, tests).
 
 // DTOs API
 export type {
@@ -367,8 +370,6 @@ export type {
   ProduitFilters,
   ProduitListResponse,
   // ADR-053 §18 — selection explicite des produits alimentaires (creation scenario)
-  ProduitAlimentaireEligibiliteInput,
-  EligibiliteProduitAlimentairePrevision,
   ProduitAlimentaireEligibleDTO,
   ProduitsAlimentairesEligiblesResponse,
   CreateMouvementDTO,

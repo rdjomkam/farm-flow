@@ -230,7 +230,7 @@ describe.runIf(requireDatabaseUrl())(
           const apresRenommage = await calculerRapprochementScenario(scenario.id, siteId, 0, 0);
           const ligneApres = apresRenommage.find((l) => l.statutRapprochement === "RAPPROCHE" && l.reel?.toNumber() === 30000);
           expect(ligneApres).toBeDefined();
-          expect(ligneApres?.previsionnel?.toNumber()).toBe(ligneAvant?.previsionnel?.toNumber());
+          expect(ligneApres?.prevu?.toNumber()).toBe(ligneAvant?.prevu?.toNumber());
         } finally {
           await cleanup(client, siteId, userId);
         }

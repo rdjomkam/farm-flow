@@ -12,12 +12,8 @@
  *      `create({ data })` (sans include) puis `findUniqueOrThrow({ where, include })`.
  */
 import { prisma } from "@/lib/db";
-import {
-  StatutScenarioPrevision,
-  CategorieProduit,
-  TailleGranule,
-  evaluerEligibiliteProduitAlimentairePrevision,
-} from "@/types";
+import { StatutScenarioPrevision, CategorieProduit, TailleGranule } from "@/types";
+import { evaluerEligibiliteProduitAlimentairePrevision } from "@/lib/previsions/eligibilite";
 import { Decimal } from "@/lib/previsions/decimal-config";
 import { validerPaliersRemiseCroissants } from "@/lib/previsions/validation";
 import type { PalierRemiseInput } from "@/lib/previsions/types";

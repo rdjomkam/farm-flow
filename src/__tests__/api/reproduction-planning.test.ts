@@ -92,7 +92,7 @@ const FAKE_PLANNING_EVENTS = {
     {
       id: "lot-1",
       code: "LOT-2026-001",
-      phase: "LARVE",
+      phase: "LARVAIRE",
       dateDebutPhase: new Date("2026-03-01"),
       ageJours: 14,
       nombreActuel: 500,

@@ -287,7 +287,7 @@ describe("Parcours 1 — Souscription complète plan ELEVEUR", () => {
       statut: StatutPaiementAbo.INITIE,
     });
 
-    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, SITE_ID, {
+    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, {
       abonnementId: ABONNEMENT_ID,
       fournisseur: FournisseurPaiement.MANUEL,
       phoneNumber: "+237600000001",
@@ -375,9 +375,10 @@ describe("Parcours 1 — Souscription complète plan ELEVEUR", () => {
     // Paiement EN_ATTENTE existant → idempotence
     mockGetPaiementsByAbonnement.mockResolvedValue([paiementExistant]);
 
-    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, SITE_ID, {
+    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, {
       abonnementId: ABONNEMENT_ID,
       fournisseur: FournisseurPaiement.MANUEL,
+      phoneNumber: "+237600000001",
     });
 
     // Retourner le paiement existant sans en créer un nouveau
@@ -402,7 +403,7 @@ describe("Parcours 2 — Souscription avec code promo valide", () => {
       id: "remise-1",
       nom: "Soldes 10%",
       code: "SOLDES10",
-      type: TypeRemise.POURCENTAGE,
+      type: TypeRemise.MANUELLE,
       valeur: 10,
       estPourcentage: true,
       dateDebut: new Date(),
@@ -429,7 +430,7 @@ describe("Parcours 2 — Souscription avec code promo valide", () => {
       id: "remise-2",
       nom: "Remise fixe 500",
       code: "FIXE500",
-      type: TypeRemise.FIXE,
+      type: TypeRemise.MANUELLE,
       valeur: 500,
       estPourcentage: false,
       dateDebut: new Date(),
@@ -455,7 +456,7 @@ describe("Parcours 2 — Souscription avec code promo valide", () => {
       id: "remise-3",
       nom: "Remise totale",
       code: "FREE100",
-      type: TypeRemise.FIXE,
+      type: TypeRemise.MANUELLE,
       valeur: 5000, // Supérieur au prix de 3000
       estPourcentage: false,
       dateDebut: new Date(),
@@ -574,7 +575,7 @@ describe("Parcours 3 — Echec paiement → retry possible", () => {
     });
     mockPrismaPaiementUpdateMany.mockResolvedValue({ count: 1 });
 
-    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, SITE_ID, {
+    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, {
       abonnementId: ABONNEMENT_ID,
       fournisseur: FournisseurPaiement.MTN_MOMO,
       phoneNumber: "+237670000001",
@@ -616,7 +617,7 @@ describe("Parcours 3 — Echec paiement → retry possible", () => {
       statut: StatutPaiementAbo.INITIE,
     });
 
-    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, SITE_ID, {
+    const result = await initierPaiement(ABONNEMENT_ID, USER_ID, {
       abonnementId: ABONNEMENT_ID,
       fournisseur: FournisseurPaiement.ORANGE_MONEY,
       phoneNumber: "+237690000001",
@@ -708,9 +709,10 @@ describe("Parcours 4 — Renouvellement abonnement EN_GRACE", () => {
     });
 
     // Simuler le flow de renouvellement : initier paiement sur le nouvel abonnement
-    const result = await initierPaiement("abo-renouvelé-1", USER_ID, SITE_ID, {
+    const result = await initierPaiement("abo-renouvelé-1", USER_ID, {
       abonnementId: "abo-renouvelé-1",
       fournisseur: FournisseurPaiement.MANUEL,
+      phoneNumber: "+237600000001",
     });
 
     expect(result.statut).toBe(StatutPaiementAbo.INITIE);

@@ -144,7 +144,7 @@ const fakeBacsDuSite: BacResponse[] = [
     nombrePoissons: 200,
     nombreInitial: 250,
     poidsMoyenInitial: null,
-    typeSysteme: TypeSystemeBac.BASSIN,
+    typeSysteme: TypeSystemeBac.BAC_BETON,
     isBlocked: false,
     vagueId: null,
     siteId: "site-1",

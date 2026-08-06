@@ -107,12 +107,12 @@ const FAKE_KPIS = {
 
 const FAKE_LOTS_KPIS = {
   parPhase: [
-    { phase: "LARVE", count: 2, totalPoissons: 1200 },
-    { phase: "ALEVIN", count: 1, totalPoissons: 600 },
+    { phase: "LARVAIRE", count: 2, totalPoissons: 1200 },
+    { phase: "ALEVINAGE", count: 1, totalPoissons: 600 },
   ],
   phaseMoyenneDureeJours: [
-    { phase: "LARVE", dureeJours: 14 },
-    { phase: "ALEVIN", dureeJours: 21 },
+    { phase: "LARVAIRE", dureeJours: 14 },
+    { phase: "ALEVINAGE", dureeJours: 21 },
   ],
 };
 

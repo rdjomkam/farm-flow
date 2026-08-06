@@ -1,8 +1,8 @@
 /**
  * Tests unitaires — `evaluerEligibiliteProduitAlimentairePrevision`
- * (`src/types/api.ts`), ADR-053 §18.3 : l'UNIQUE definition de la regle
- * d'eligibilite d'un `Produit` ALIMENT pour la copie vers un scenario de
- * previsions. Reutilisee par `getProduitsAlimentairesEligibles`,
+ * (`src/lib/previsions/eligibilite.ts`), ADR-053 §18.3 : l'UNIQUE definition
+ * de la regle d'eligibilite d'un `Produit` ALIMENT pour la copie vers un
+ * scenario de previsions. Reutilisee par `getProduitsAlimentairesEligibles`,
  * `validerProduitIdsEligibles` (`src/lib/queries/previsions-scenarios.ts`)
  * et l'UI (`scenario-form-dialog.tsx`) — jamais recalculee ailleurs.
  *
@@ -10,13 +10,46 @@
  * exigees par ADR-053 §18.7 point 6, plus les cas limites de `contenance`
  * (zero, negative) qui font toute la difference avec la faute d'origine
  * (ERR-185 : zero silencieux sur `contenance`).
+ *
+ * Deplace depuis `src/types/__tests__/` (le fichier source a suivi la meme
+ * migration, review post-implementation ADR-053 §18) — aucun changement de
+ * comportement, seuls les chemins d'import sont ajustes.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   evaluerEligibiliteProduitAlimentairePrevision,
   type ProduitAlimentaireEligibiliteInput,
-} from "@/types/api";
+} from "@/lib/previsions/eligibilite";
 import { RaisonInvaliditeProduitPrevision, TailleGranule } from "@/types/models";
+
+describe("evaluerEligibiliteProduitAlimentairePrevision — purete, importable depuis un composant \"use client\"", () => {
+  it("n'importe aucune dependance serveur (prisma, next/server, fs, lib/db) — directement ni transitivement via @/types/models", () => {
+    const source = readFileSync(
+      join(__dirname, "..", "eligibilite.ts"),
+      "utf-8"
+    );
+    const importLines = source
+      .split("\n")
+      .filter((line) => line.trim().startsWith("import"));
+    expect(importLines).toEqual([
+      'import { RaisonInvaliditeProduitPrevision, type TailleGranule } from "@/types/models";',
+    ]);
+
+    // `@/types/models` est le seul import — il doit lui-meme n'avoir AUCUN
+    // import (enums/interfaces pures), condition necessaire pour que la
+    // chaine complete soit sans dependance serveur.
+    const modelsSource = readFileSync(
+      join(__dirname, "..", "..", "..", "types", "models.ts"),
+      "utf-8"
+    );
+    const modelsImportLines = modelsSource
+      .split("\n")
+      .filter((line) => line.trim().startsWith("import"));
+    expect(modelsImportLines).toEqual([]);
+  });
+});
 
 function input(
   overrides: Partial<ProduitAlimentaireEligibiliteInput>

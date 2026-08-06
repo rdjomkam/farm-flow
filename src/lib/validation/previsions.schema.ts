@@ -110,7 +110,7 @@ export const createScenarioSchema = z.object({
    * id est valide par le garde serveur (appartenance au site, categorie
    * ALIMENT, actif, ET eligible au sens de
    * `evaluerEligibiliteProduitAlimentairePrevision`,
-   * `src/types/api.ts`) — AVANT toute ecriture, jamais apres coup dans la
+   * `src/lib/previsions/eligibilite.ts`) — AVANT toute ecriture, jamais apres coup dans la
    * transaction (§18, point 6 des arbitrages deja tranches).
    */
   produitIds: z.array(z.string().min(1)).optional(),

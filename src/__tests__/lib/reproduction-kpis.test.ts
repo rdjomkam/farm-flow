@@ -324,16 +324,16 @@ describe("getReproductionLotsKpis", () => {
     const dateDebutPhase = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 jours avant
 
     mockLotAlevinsFindMany.mockResolvedValue([
-      { phase: "LARVE", nombreActuel: 500, dateDebutPhase },
-      { phase: "LARVE", nombreActuel: 300, dateDebutPhase },
-      { phase: "ALEVIN", nombreActuel: 200, dateDebutPhase },
+      { phase: "LARVAIRE", nombreActuel: 500, dateDebutPhase },
+      { phase: "LARVAIRE", nombreActuel: 300, dateDebutPhase },
+      { phase: "ALEVINAGE", nombreActuel: 200, dateDebutPhase },
     ]);
 
     const result = await getReproductionLotsKpis(SITE_ID);
 
-    expect(result.parPhase).toHaveLength(2); // LARVE et ALEVIN
-    const larvePhasе = result.parPhase.find((p) => p.phase === "LARVE");
-    const alevinPhase = result.parPhase.find((p) => p.phase === "ALEVIN");
+    expect(result.parPhase).toHaveLength(2); // LARVAIRE et ALEVINAGE
+    const larvePhasе = result.parPhase.find((p) => p.phase === "LARVAIRE");
+    const alevinPhase = result.parPhase.find((p) => p.phase === "ALEVINAGE");
 
     expect(larvePhasе).toBeDefined();
     expect(larvePhasе!.count).toBe(2);
@@ -351,14 +351,14 @@ describe("getReproductionLotsKpis", () => {
     const date20 = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000);
 
     mockLotAlevinsFindMany.mockResolvedValue([
-      { phase: "LARVE", nombreActuel: 300, dateDebutPhase: date10 },
-      { phase: "LARVE", nombreActuel: 400, dateDebutPhase: date20 },
+      { phase: "LARVAIRE", nombreActuel: 300, dateDebutPhase: date10 },
+      { phase: "LARVAIRE", nombreActuel: 400, dateDebutPhase: date20 },
     ]);
 
     const result = await getReproductionLotsKpis(SITE_ID);
 
     const larveDuree = result.phaseMoyenneDureeJours.find(
-      (p) => p.phase === "LARVE"
+      (p) => p.phase === "LARVAIRE"
     );
     expect(larveDuree).toBeDefined();
     // Moyenne de 10 et 20 = 15 jours (arrondi)
@@ -369,13 +369,13 @@ describe("getReproductionLotsKpis", () => {
     // Phase avec count = 0 ne devrait pas etre dans le map
     // Mais si elle y etait, la division par zero serait evitee
     mockLotAlevinsFindMany.mockResolvedValue([
-      { phase: "ALEVIN", nombreActuel: 100, dateDebutPhase: new Date() },
+      { phase: "ALEVINAGE", nombreActuel: 100, dateDebutPhase: new Date() },
     ]);
 
     const result = await getReproductionLotsKpis(SITE_ID);
 
     const alevinDuree = result.phaseMoyenneDureeJours.find(
-      (p) => p.phase === "ALEVIN"
+      (p) => p.phase === "ALEVINAGE"
     );
     expect(alevinDuree).toBeDefined();
     expect(alevinDuree!.dureeJours).toBeGreaterThanOrEqual(0);
@@ -400,7 +400,7 @@ describe("getReproductionLotsKpis", () => {
   it("retourne les champs count et totalPoissons dans parPhase", async () => {
     mockLotAlevinsFindMany.mockResolvedValue([
       {
-        phase: "LARVE",
+        phase: "LARVAIRE",
         nombreActuel: 600,
         dateDebutPhase: new Date(),
       },
@@ -544,7 +544,7 @@ describe("getReproductionPlanningEvents", () => {
     const fakeLot = {
       id: "lot-1",
       code: "LOT-001",
-      phase: "LARVE",
+      phase: "LARVAIRE",
       dateDebutPhase: new Date("2026-03-01"),
       ageJours: 14,
       nombreActuel: 500,
@@ -559,7 +559,7 @@ describe("getReproductionPlanningEvents", () => {
 
     expect(events.lotsEnElevage).toHaveLength(1);
     expect(events.lotsEnElevage[0].id).toBe("lot-1");
-    expect(events.lotsEnElevage[0].phase).toBe("LARVE");
+    expect(events.lotsEnElevage[0].phase).toBe("LARVAIRE");
     expect(events.lotsEnElevage[0].ageJours).toBe(14);
     expect(events.lotsEnElevage[0].nombreActuel).toBe(500);
   });

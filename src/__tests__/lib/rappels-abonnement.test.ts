@@ -80,7 +80,7 @@ function makeAbonnement(overrides: {
     dateFin: overrides.dateFin,
     plan: {
       nom: overrides.planNom ?? "Pro Mensuel",
-      typePlan: overrides.typePlan ?? TypePlan.PRO,
+      typePlan: overrides.typePlan ?? TypePlan.PROFESSIONNEL,
     },
   };
 }

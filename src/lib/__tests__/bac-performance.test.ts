@@ -127,10 +127,7 @@ describe("computeBacPerformance — single bac with 2 biometries", () => {
     const result = computeBacPerformance(makeInput({ releves }));
     const d = result[0].derniereBiometrieDate;
     expect(d).not.toBeNull();
-    const iso =
-      d instanceof Date
-        ? d.toISOString().slice(0, 10)
-        : new Date(d as string | Date).toISOString().slice(0, 10);
+    const iso = new Date(d as string).toISOString().slice(0, 10);
     expect(iso).toBe("2026-01-21");
   });
 
