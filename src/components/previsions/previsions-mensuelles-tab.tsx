@@ -226,7 +226,7 @@ type TotalMode = "somme" | "derniereValeur";
  * disproportionnee de l'espace utile) — voir doc d'en-tete du fichier,
  * section "Tableau unique a toutes les tailles".
  */
-const COLONNE_INDICATEUR_CLASSES = "w-28 max-w-28 sm:w-40 sm:max-w-40 md:w-56 md:max-w-56";
+const COLONNE_INDICATEUR_CLASSES = "w-28 sm:w-40 md:w-56 min-w-28 sm:min-w-40 md:min-w-56";
 
 /** Format d'affichage d'une ligne (§7.4) — declare une fois par ligne, jamais devine par nom de champ. */
 type LigneFormat = "montant" | "tonnage" | "entier";
@@ -333,7 +333,7 @@ function EnTeteRepliable({
           ) : (
             <ChevronRight className="h-3.5 w-3.5 shrink-0" />
           )}
-          <span className="truncate">{title}</span>
+          <span className="break-words">{title}</span>
         </button>
       </td>
       <td colSpan={nbColonnesRestantes} className="bg-muted/60 px-2 py-1.5 sm:px-3" aria-hidden="true" />
@@ -387,7 +387,7 @@ function LigneRow({
         )}
       >
         <span className="inline-flex w-full items-center gap-1">
-          <span className="truncate">{l.label}</span>
+          <span className="break-words">{l.label}</span>
           <ExplicationLigne formule={l.formule} ariaLabel={t("previsionsMensuellesTab.rowAria", { label: l.label })} />
         </span>
       </td>
@@ -740,7 +740,7 @@ export function PrevisionsMensuellesTab({
                   COLONNE_INDICATEUR_CLASSES
                 )}
               >
-                <span className="block truncate">{t("previsionsMensuellesTab.indicatorColumn")}</span>
+                <span className="block break-words">{t("previsionsMensuellesTab.indicatorColumn")}</span>
               </th>
               {mois.map((m) => (
                 <th key={m.moisAbsolu} className="px-2 py-2 text-right font-medium whitespace-nowrap sm:px-3">
