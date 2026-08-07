@@ -415,49 +415,6 @@ export function calculerCoutAlimentGranulometrieParMois(
 }
 
 /**
- * repartirSacsEntreArticles — ADR-053 §12.2, arbitrage 1 (revise 2026-08-03),
- * amendement Sprint PR2-quater. FONCTION AJOUTEE, ne remplace ni ne modifie
- * aucune fonction existante de ce fichier (§12.4).
- *
- * Repartit un total ENTIER de sacs d'UN calibre (deja `ceil` en amont par
- * l'appelant, jamais recalcule ici) entre les articles de ce calibre, au
- * prorata de `partApprovisionnementPct` (Decimal, Sigma = 100 exactement,
- * validee a l'ecriture par `validerSommeApprovisionnementArticles`,
- * validation.ts) — methode du plus fort reste (Hare-Niemeyer), deterministe,
- * SANS JAMAIS depasser `totalSacs`.
- *
- * Algorithme (ADR-053 §12.2, arbitrage 1) :
- *   1. partiExacte_i = totalSacs * partPct_i / 100 (Decimal exact)
- *   2. plancher_i = floor(partiExacte_i)
- *   3. restant_i = partiExacte_i - plancher_i, dans [0, 1[
- *   4. restantATtribuer = totalSacs - Sigma(plancher_i) — entier dans [0, n-1]
- *   5. Tri par restant_i DECROISSANT, depart des ex aequo par `ordre`
- *      CROISSANT puis `id` CROISSANT (lexicographique) — deterministe.
- *   6. +1 aux `restantATtribuer` premiers articles de ce tri.
- *
- * Preuve : Sigma(sacs_i) = totalSacs EXACTEMENT (jamais un second arrondi).
- * Cas degenere N=1, part=100% : sacs_1 = totalSacs exactement, aucun
- * plancher/reste — identite byte-pour-byte avec le calcul d'avant
- * l'amendement §12 (recette 1270 tests / 0 ecart preservee).
- *
- * @param totalSacs - nombre ENTIER de sacs du calibre, deja `ceil` par l'appelant (jamais recalcule ici)
- * @param articles - articles du calibre, avec leur part d'approvisionnement (Decimal, Sigma = 100)
- * @returns un nombre de sacs entier par article, dans le MEME ordre que `articles`, dont la somme vaut exactement `totalSacs`
- */
-export interface ArticleRepartitionInput {
-  id: string;
-  /** depart des ex aequo (ADR-053 §12.2, arbitrage 1, etape 5) */
-  ordre: number;
-  /** 0..100, Sigma sur tous les articles du meme calibre = 100 exactement (valide en amont) */
-  partApprovisionnementPct: Decimal;
-}
-
-export interface ArticleRepartitionResult {
-  id: string;
-  sacs: number;
-}
-
-/**
  * calculerDetailConsommationMensuelle — Sprint PR2-sexies (story PR2sex.2).
  *
  * Serie « DETAIL PAR VAGUE — sacs consommes dans le mois (indicatif) »
@@ -557,46 +514,4 @@ export function calculerDetailConsommationMensuelle(
     moisCycle: ligne.moisCycle,
     sacsConsommes,
   };
-}
-
-export function repartirSacsEntreArticles(
-  totalSacs: number,
-  articles: ArticleRepartitionInput[]
-): ArticleRepartitionResult[] {
-  if (articles.length === 0) {
-    return [];
-  }
-
-  const total = new Decimal(totalSacs);
-
-  const decomposes = articles.map((article) => {
-    const partExacte = total.times(article.partApprovisionnementPct).dividedBy(100);
-    const plancher = partExacte.floor();
-    const restant = partExacte.minus(plancher);
-    return { article, plancher, restant };
-  });
-
-  const sommePlanchers = decomposes.reduce((s, d) => s.plus(d.plancher), new Decimal(0));
-  const restantATtribuer = total.minus(sommePlanchers).toNumber();
-
-  const tries = [...decomposes].sort((a, b) => {
-    const cmpRestant = b.restant.comparedTo(a.restant); // decroissant
-    if (cmpRestant !== 0) return cmpRestant;
-    if (a.article.ordre !== b.article.ordre) return a.article.ordre - b.article.ordre;
-    return a.article.id < b.article.id ? -1 : a.article.id > b.article.id ? 1 : 0;
-  });
-
-  const sacsParId = new Map<string, Decimal>();
-  for (const d of decomposes) {
-    sacsParId.set(d.article.id, d.plancher);
-  }
-  for (let i = 0; i < restantATtribuer; i++) {
-    const id = tries[i].article.id;
-    sacsParId.set(id, sacsParId.get(id)!.plus(1));
-  }
-
-  return articles.map((article) => ({
-    id: article.id,
-    sacs: sacsParId.get(article.id)!.toNumber(),
-  }));
 }

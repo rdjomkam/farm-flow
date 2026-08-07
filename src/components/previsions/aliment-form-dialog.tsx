@@ -3,25 +3,25 @@
 /**
  * src/components/previsions/aliment-form-dialog.tsx
  *
- * Dialog de creation d'un calibre previsionnel (`AlimentPrevision`) ET de son
- * unique article (`AlimentArticlePrevision`), dans le MEME geste (ADR-053
- * §12.6 : "creer un calibre cree son article dans le meme geste") — un seul
- * appel a la route transactionnelle POST
- * /api/previsions/scenarios/[id]/aliments, jamais deux appels distincts.
+ * Dialog de creation d'un calibre previsionnel (`AlimentPrevision`), qui
+ * porte desormais directement ses champs d'article (fusion
+ * `AlimentArticlePrevision` -> `AlimentPrevision`, ADR-053 §12.1/§12.3/§12.6
+ * amendement post-PR2-quater) — un seul calibre = un seul article, un seul
+ * appel a la route POST /api/previsions/scenarios/[id]/aliments avec tous
+ * les champs a plat.
  *
- * `tailleGranule` est desormais un SELECTEUR OBLIGATOIRE sur l'enum
- * `TailleGranule` (jamais une chaine libre) — c'est l'identite du calibre
- * (ADR-053 §12.1/§12.3). `produitId` est optionnel, choisi dans le catalogue
+ * `tailleGranule` est un SELECTEUR OBLIGATOIRE sur l'enum `TailleGranule`
+ * (jamais une chaine libre) — c'est l'identite du calibre (ADR-053
+ * §12.1/§12.3). `produitId` est optionnel, choisi dans le catalogue
  * `Produit` du site (categorie ALIMENT) pour permettre le rapprochement
  * prevu/reel de PR3.
  *
- * La part d'approvisionnement (`partApprovisionnementPct`) n'apparait PAS
- * ici : elle vaut 100% implicitement, ecrite par le serveur (ADR-053 §12.6).
+ * La part d'approvisionnement n'existe plus (elle valait 100% implicitement
+ * dans l'ancien modele a plusieurs articles) : chaque calibre est desormais
+ * intrinsequement a 100%.
  *
  * Pas de PUT sur le calibre lui-meme cote API (PR2.2) — une fois cree, seule
- * la repartition mensuelle reste modifiable (`RepartitionMoisDialog`), et un
- * second article s'ajoute via une action secondaire distincte
- * (`AlimentArticleFormDialog`).
+ * la repartition mensuelle reste modifiable (`RepartitionMoisDialog`).
  */
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -154,12 +154,10 @@ export function AlimentFormDialog({
         tailleGranule,
         sacsParTonneStandard: sacsParTonneStandard.trim() ? Number(sacsParTonneStandard) : null,
         ordre: ordreSuivant,
-        article: {
-          libelle: libelle.trim(),
-          poidsSacKg: Number(poidsSacKg),
-          prixSacFCFA: Number(prixSacFCFA),
-          produitId: produitId === AUCUN_PRODUIT ? null : produitId,
-        },
+        libelle: libelle.trim(),
+        poidsSacKg: Number(poidsSacKg),
+        prixSacFCFA: Number(prixSacFCFA),
+        produitId: produitId === AUCUN_PRODUIT ? null : produitId,
       });
       if (result.ok && result.data) {
         onCreated(result.data);

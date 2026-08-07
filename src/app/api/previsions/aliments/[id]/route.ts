@@ -33,9 +33,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 /**
  * PATCH /api/previsions/aliments/[id] — modifie les champs du CALIBRE
- * (`sacsParTonneStandard`, `ordre`) — jamais `tailleGranule` (identite du
- * calibre, ADR-053 §12.3) ni les champs d'un article (voir la route
- * `.../articles/[articleId]`). PREVISIONS_PARAMETRER.
+ * (`sacsParTonneStandard`, `ordre`, champs article : `libelle`, `poidsSacKg`,
+ * `prixSacFCFA`, `produitId`) — jamais `tailleGranule` (identite du calibre).
+ * PREVISIONS_PARAMETRER.
  */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

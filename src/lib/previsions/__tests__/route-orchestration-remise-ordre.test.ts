@@ -70,18 +70,11 @@ function buildCalibre(
       { moisCycle: 1, pourcentage: new Decimal(50) },
       { moisCycle: 2, pourcentage: new Decimal(50) },
     ],
-    articles: [
-      {
-        id: `${id}-article-unique`,
-        produitId: null,
-        libelle: taille,
-        poidsSacKg: new Decimal(25),
-        prixSacFCFA,
-        sacsParTonneUnitaire: new Decimal(1000).dividedBy(25),
-        partApprovisionnementPct: new Decimal(100),
-        ordre: 0,
-      },
-    ],
+    produitId: null,
+    libelle: taille,
+    poidsSacKg: new Decimal(25),
+    prixSacFCFA,
+    sacsParTonneUnitaire: new Decimal(1000).dividedBy(25),
   };
 }
 

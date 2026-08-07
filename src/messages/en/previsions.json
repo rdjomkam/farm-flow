@@ -219,7 +219,6 @@
   "aliments": {
     "emptyTitle": "No feed grade",
     "emptyDescription": "Add the feed grades used in this scenario.",
-    "weightPrice": "{poids} kg/bag — {prix}",
     "articleSummary": "{libelle} — {poids} kg/bag — {prix}",
     "deleteAria": "Delete {libelle}",
     "needLabel": "Requirement: {value} bags/tonne of fish",
@@ -228,11 +227,7 @@
     "monthlyRepartitionFormule": "Monthly split = sum of the percentages entered over all months of the cycle",
     "monthLabel": "Month {count}",
     "monthlyRepartitionAria": "Explain the monthly split for {libelle}",
-    "spreadButton": "Spread over the cycle",
-    "articlesTitle": "Articles for this grade",
-    "articlePart": "{value} of supply",
-    "addArticleButton": "Add an article",
-    "addArticleAria": "Add an article for feed grade {calibre}"
+    "spreadButton": "Spread over the cycle"
   },
   "alimentForm": {
     "triggerButton": "New feed grade",
@@ -269,40 +264,6 @@
     },
     "submitting": "Creating...",
     "submit": "Create"
-  },
-  "alimentArticleForm": {
-    "triggerButton": "Add an article",
-    "dialogTitle": "Add an article — {calibre}",
-    "existingArticlesTitle": "Articles already supplying this grade",
-    "fields": {
-      "libelle": {
-        "label": "Label",
-        "placeholder": "e.g. Brand A — 15kg bag"
-      },
-      "poidsSacKg": {
-        "label": "Bag weight (kg)"
-      },
-      "prixSacFCFA": {
-        "label": "Bag price (FCFA)"
-      },
-      "produitId": {
-        "label": "Catalog product (optional)",
-        "none": "No product match"
-      },
-      "partApprovisionnementPct": {
-        "label": "Supply share (%)"
-      }
-    },
-    "sumLabel": "Sum of shares",
-    "sumValue": "{value} % / 100 %",
-    "errors": {
-      "libelleRequired": "The label is required.",
-      "poidsSacKgPositive": "Must be strictly greater than 0.",
-      "required": "This field is required.",
-      "sumMustBe100": "The supply shares must add up to 100 %."
-    },
-    "submitting": "Adding...",
-    "submit": "Add"
   },
   "repartitionDialog": {
     "dialogTitle": "Monthly split — {libelle}",

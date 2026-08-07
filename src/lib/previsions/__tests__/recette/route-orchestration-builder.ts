@@ -124,21 +124,14 @@ function buildAliments(aliments: GoldenAliment[]): AlimentPrevisionPourCalcul[] 
       { moisCycle: 2, pourcentage: pctFixtureVersMoteur(a.repartitionPctMois2) },
       { moisCycle: 3, pourcentage: pctFixtureVersMoteur(a.repartitionPctMois3) },
     ],
-    articles: [
-      {
-        id: `${a.granulometrie}-article-unique`,
-        produitId: null,
-        libelle: a.granulometrie,
-        poidsSacKg: new Decimal(a.poidsSacKg),
-        prixSacFCFA: new Decimal(a.prixSacFCFA),
-        // Pur ratio d'unite (1000 / poidsSacKg) — ne doit JAMAIS entrer dans le
-        // calcul de besoin (ERR-138) ; construit uniquement pour respecter la
-        // forme complete du type d'entree.
-        sacsParTonneUnitaire: new Decimal(1000).dividedBy(a.poidsSacKg),
-        partApprovisionnementPct: new Decimal(100),
-        ordre: 0,
-      },
-    ],
+    produitId: null,
+    libelle: a.granulometrie,
+    poidsSacKg: new Decimal(a.poidsSacKg),
+    prixSacFCFA: new Decimal(a.prixSacFCFA),
+    // Pur ratio d'unite (1000 / poidsSacKg) — ne doit JAMAIS entrer dans le
+    // calcul de besoin (ERR-138) ; construit uniquement pour respecter la
+    // forme complete du type d'entree.
+    sacsParTonneUnitaire: new Decimal(1000).dividedBy(a.poidsSacKg),
   }));
 }
 

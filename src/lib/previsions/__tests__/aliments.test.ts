@@ -7,7 +7,6 @@ import {
   calculerCoutAlimentVague,
   apportionnerCoutAlimentMensuel,
   calculerCoutAlimentGranulometrieParMois,
-  repartirSacsEntreArticles,
   calculerDetailConsommationMensuelle,
 } from "../aliments";
 import type {
@@ -324,128 +323,6 @@ describe("apportionnerCoutAlimentMensuel", () => {
       { moisCycle: 2, pourcentage: new Decimal(100) },
     ]);
     expect(resultats.map((r) => r.moisCycle)).toEqual([2]);
-  });
-});
-
-describe("repartirSacsEntreArticles — ADR-053 §12.2 arbitrage 1 (revise), methode du plus fort reste (Hare-Niemeyer), amendement Sprint PR2-quater", () => {
-  it("liste d'articles vide -> tableau vide", () => {
-    expect(repartirSacsEntreArticles(100, [])).toEqual([]);
-  });
-
-  it("cas degenere N=1, part=100% : sacs = totalSacs exactement, aucun plancher/reste (non-regression byte-pour-byte de la recette, ADR-053 §12.2 preuve chiffree)", () => {
-    const resultat = repartirSacsEntreArticles(120, [
-      { id: "unique", ordre: 0, partApprovisionnementPct: new Decimal(100) },
-    ]);
-    expect(resultat).toEqual([{ id: "unique", sacs: 120 }]);
-  });
-
-  it("N=2, calcule a la main : totalSacs=101, parts 50/50 -> partExacte=50.5 chacun, ex aequo sur le reste -> depart par `ordre` croissant (l'article ordre=0 recoit le sac supplementaire)", () => {
-    const resultat = repartirSacsEntreArticles(101, [
-      { id: "article-A", ordre: 0, partApprovisionnementPct: new Decimal(50) },
-      { id: "article-B", ordre: 1, partApprovisionnementPct: new Decimal(50) },
-    ]);
-    expect(resultat).toEqual([
-      { id: "article-A", sacs: 51 },
-      { id: "article-B", sacs: 50 },
-    ]);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(101);
-  });
-
-  it("N=3, calcule a la main : totalSacs=10, parts 33/33/34 -> partExacte=3.3/3.3/3.4, planchers=3/3/3 (somme 9), le reste unique va au plus grand reste (article a 34%)", () => {
-    const resultat = repartirSacsEntreArticles(10, [
-      { id: "article-A", ordre: 0, partApprovisionnementPct: new Decimal(33) },
-      { id: "article-B", ordre: 1, partApprovisionnementPct: new Decimal(33) },
-      { id: "article-C", ordre: 2, partApprovisionnementPct: new Decimal(34) },
-    ]);
-    expect(resultat).toEqual([
-      { id: "article-A", sacs: 3 },
-      { id: "article-B", sacs: 3 },
-      { id: "article-C", sacs: 4 },
-    ]);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(10);
-  });
-
-  it("ex aequo EXPLICITE sur `ordre` (deux articles au meme `ordre`) : depart par `id` croissant (lexicographique)", () => {
-    // totalSacs=3, parts 50/50 -> partExacte=1.5 chacun, planchers=1/1 (somme 2),
-    // reste=1 a attribuer, restants egaux (0.5/0.5) ET ordre egal (0/0) ->
-    // depart par id croissant : "a" < "b" recoit le sac supplementaire.
-    const resultat = repartirSacsEntreArticles(3, [
-      { id: "b", ordre: 0, partApprovisionnementPct: new Decimal(50) },
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(50) },
-    ]);
-    expect(resultat.find((r) => r.id === "a")!.sacs).toBe(2);
-    expect(resultat.find((r) => r.id === "b")!.sacs).toBe(1);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(3);
-  });
-
-  it("Sigma(sacs) = totalSacs exactement, jamais plus, jamais moins (preuve generale ADR-053 §12.2)", () => {
-    const resultat = repartirSacsEntreArticles(37, [
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(17) },
-      { id: "b", ordre: 1, partApprovisionnementPct: new Decimal(29) },
-      { id: "c", ordre: 2, partApprovisionnementPct: new Decimal(54) },
-    ]);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(37);
-  });
-
-  it("conserve l'ORDRE des articles en entree dans le resultat (pas l'ordre de tri interne)", () => {
-    const resultat = repartirSacsEntreArticles(10, [
-      { id: "article-C", ordre: 2, partApprovisionnementPct: new Decimal(34) },
-      { id: "article-A", ordre: 0, partApprovisionnementPct: new Decimal(33) },
-      { id: "article-B", ordre: 1, partApprovisionnementPct: new Decimal(33) },
-    ]);
-    expect(resultat.map((r) => r.id)).toEqual(["article-C", "article-A", "article-B"]);
-  });
-
-  it("totalSacs=0 -> chaque article recoit 0, sans erreur", () => {
-    const resultat = repartirSacsEntreArticles(0, [
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(50) },
-      { id: "b", ordre: 1, partApprovisionnementPct: new Decimal(50) },
-    ]);
-    expect(resultat).toEqual([
-      { id: "a", sacs: 0 },
-      { id: "b", sacs: 0 },
-    ]);
-  });
-
-  it("cas limite : totalSacs=1 pour 3 articles, dont un a 0% -> le sac unique va au plus fort reste, l'article a 0% recoit toujours 0 (jamais un reste artificiel)", () => {
-    // partExacte = 1*40/100=0.4, 1*60/100=0.6, 1*0/100=0. planchers tous 0
-    // (somme 0), restantATtribuer = 1 -> va au plus grand reste (0.6, article B).
-    const resultat = repartirSacsEntreArticles(1, [
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(40) },
-      { id: "b", ordre: 1, partApprovisionnementPct: new Decimal(60) },
-      { id: "c", ordre: 2, partApprovisionnementPct: new Decimal(0) },
-    ]);
-    expect(resultat).toEqual([
-      { id: "a", sacs: 0 },
-      { id: "b", sacs: 1 },
-      { id: "c", sacs: 0 },
-    ]);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(1);
-  });
-
-  it("un article a 0% ne recoit jamais de sac, meme si son `ordre` le favoriserait au depart des ex aequo (le reste exact de 0% est 0, jamais candidat)", () => {
-    // 50/50/0 sur 3 sacs : partExacte = 1.5/1.5/0, planchers 1/1/0 (somme 2),
-    // restantATtribuer=1, ex aequo entre a et b (restant 0.5 chacun) -> depart
-    // par ordre croissant -> a (ordre 0) recoit le sac supplementaire. c (0%)
-    // n'entre jamais en lice (restant=0, toujours le plus petit).
-    const resultat = repartirSacsEntreArticles(3, [
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(50) },
-      { id: "b", ordre: 1, partApprovisionnementPct: new Decimal(50) },
-      { id: "c", ordre: 2, partApprovisionnementPct: new Decimal(0) },
-    ]);
-    expect(resultat.find((r) => r.id === "c")!.sacs).toBe(0);
-    expect(resultat.reduce((s, r) => s + r.sacs, 0)).toBe(3);
-  });
-
-  it("determinisme : deux appels sur la MEME entree (nouveaux objets, mais valeurs identiques) produisent EXACTEMENT le meme resultat (reproductibilite exigee par ADR-053 §12.2 arbitrage 1)", () => {
-    const construireArticles = () => [
-      { id: "b", ordre: 0, partApprovisionnementPct: new Decimal(33.33) },
-      { id: "a", ordre: 0, partApprovisionnementPct: new Decimal(33.33) },
-      { id: "c", ordre: 1, partApprovisionnementPct: new Decimal(33.34) },
-    ];
-    const resultat1 = repartirSacsEntreArticles(17, construireArticles());
-    const resultat2 = repartirSacsEntreArticles(17, construireArticles());
-    expect(resultat1).toEqual(resultat2);
   });
 });
 

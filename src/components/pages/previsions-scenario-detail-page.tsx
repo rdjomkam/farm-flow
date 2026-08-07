@@ -412,6 +412,11 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     scenarioId: a.scenarioId,
     tailleGranule: a.tailleGranule as TailleGranule,
     sacsParTonneStandard: decimalToNumber(a.sacsParTonneStandard),
+    produitId: a.produitId,
+    libelle: a.libelle,
+    poidsSacKg: decimalToNumber(a.poidsSacKg),
+    prixSacFCFA: decimalToNumber(a.prixSacFCFA),
+    sacsParTonneUnitaire: decimalToNumber(a.sacsParTonneUnitaire),
     ordre: a.ordre,
     siteId: a.siteId,
     repartitions: a.repartitions.map((r) => ({
@@ -420,18 +425,6 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
       moisCycle: r.moisCycle,
       pourcentage: decimalToNumber(r.pourcentage),
       siteId: r.siteId,
-    })),
-    articles: a.articles.map((art) => ({
-      id: art.id,
-      alimentCalibrePrevisionId: art.alimentCalibrePrevisionId,
-      produitId: art.produitId,
-      libelle: art.libelle,
-      poidsSacKg: decimalToNumber(art.poidsSacKg),
-      prixSacFCFA: decimalToNumber(art.prixSacFCFA),
-      sacsParTonneUnitaire: decimalToNumber(art.sacsParTonneUnitaire),
-      partApprovisionnementPct: decimalToNumber(art.partApprovisionnementPct),
-      ordre: art.ordre,
-      siteId: art.siteId,
     })),
   }));
 

@@ -70,9 +70,8 @@ DELETE FROM "PostePrevision";
 -- ADR-053 §16 (story A.4) — PosteReferentiel apres PostePrevision (FK Restrict)
 DELETE FROM "PosteReferentiel";
 DELETE FROM "RepartitionMoisAliment";
--- ADR-053 §12 (amendement PR2-quater) — AlimentArticlePrevision (niveau article) avant
--- AlimentPrevision (niveau calibre), sa table parente (FK alimentCalibrePrevisionId)
-DELETE FROM "AlimentArticlePrevision";
+-- ADR-053 §12, fusion post-amendement (AlimentArticlePrevision fusionne dans AlimentPrevision,
+-- migration 20260807120000) — un seul DELETE desormais, plus de table fille a nettoyer avant.
 DELETE FROM "AlimentPrevision";
 DELETE FROM "PalierRemise";
 DELETE FROM "ParametresPrevision";

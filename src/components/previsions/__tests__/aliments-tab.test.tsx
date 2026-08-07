@@ -6,14 +6,17 @@
  * repartition mensuelle d'un aliment) — meme famille que le finding #1 de
  * ChargesTab : doit etre explicable via `ValeurCalculee`, pas affiche en
  * texte brut.
+ *
+ * Fixtures a plat (fusion `AlimentArticlePrevision` -> `AlimentPrevision`,
+ * ADR-053 §12.1/§12.3 amendement post-PR2-quater) : chaque calibre = un seul
+ * article, plus de sous-liste `articles[]` ni de part d'approvisionnement.
  */
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { AlimentsTab } from "@/components/previsions/aliments-tab";
 import { Permission, TailleGranule } from "@/types";
-import type { AlimentArticlePrevisionDTO, AlimentPrevisionDTO } from "@/components/previsions/api-types";
+import type { AlimentPrevisionDTO } from "@/components/previsions/api-types";
 import frPrevisions from "@/messages/fr/previsions.json";
 import frStock from "@/messages/fr/stock.json";
 
@@ -54,26 +57,24 @@ const aliment: AlimentPrevisionDTO = {
   scenarioId: "scenario-1",
   tailleGranule: TailleGranule.P2,
   sacsParTonneStandard: 8,
+  produitId: null,
+  libelle: libelleArticle,
+  poidsSacKg: 25,
+  prixSacFCFA: 15000,
+  sacsParTonneUnitaire: 40,
   ordre: 0,
   siteId: "site-1",
   repartitions: [
     { id: "r1", alimentPrevisionId: "aliment-1", moisCycle: 1, pourcentage: 60, siteId: "site-1" },
     { id: "r2", alimentPrevisionId: "aliment-1", moisCycle: 2, pourcentage: 40, siteId: "site-1" },
   ],
-  articles: [
-    {
-      id: "article-1",
-      alimentCalibrePrevisionId: "aliment-1",
-      produitId: null,
-      libelle: libelleArticle,
-      poidsSacKg: 25,
-      prixSacFCFA: 15000,
-      sacsParTonneUnitaire: 40,
-      partApprovisionnementPct: 100,
-      ordre: 0,
-      siteId: "site-1",
-    },
-  ],
+};
+
+const alimentG2: AlimentPrevisionDTO = {
+  ...aliment,
+  id: "aliment-2",
+  tailleGranule: TailleGranule.G2,
+  libelle: "Marque B",
 };
 
 describe("AlimentsTab — explicabilite de la repartition mensuelle (§7.4, finding de review #2)", () => {
@@ -93,6 +94,7 @@ describe("AlimentsTab — explicabilite de la repartition mensuelle (§7.4, find
   });
 
   it("le popover affiche la formule et le detail par mois du cycle", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup({ delay: null });
     render(
       <AlimentsTab
@@ -113,28 +115,8 @@ describe("AlimentsTab — explicabilite de la repartition mensuelle (§7.4, find
   });
 });
 
-const article2: AlimentArticlePrevisionDTO = {
-  id: "article-2",
-  alimentCalibrePrevisionId: "aliment-1",
-  produitId: null,
-  libelle: "Marque B",
-  poidsSacKg: 20,
-  prixSacFCFA: 14000,
-  sacsParTonneUnitaire: 50,
-  partApprovisionnementPct: 40,
-  ordre: 1,
-  siteId: "site-1",
-};
-
-const alimentMulti: AlimentPrevisionDTO = {
-  ...aliment,
-  id: "aliment-2",
-  tailleGranule: TailleGranule.G2,
-  articles: [{ ...aliment.articles[0], partApprovisionnementPct: 60 }, article2],
-};
-
-describe("AlimentsTab — ergonomie a deux niveaux (ADR-053 §12.6, story PR2q.5)", () => {
-  it("cas nominal (un seul article) : aucune part d'approvisionnement n'est affichee, la carte se lit comme une ligne simple", () => {
+describe("AlimentsTab — un calibre = un article (fusion post-PR2-quater)", () => {
+  it("affiche le libelle, le poids et le prix de l'article directement sur la carte du calibre", () => {
     render(
       <AlimentsTab
         scenarioId="scenario-1"
@@ -145,26 +127,9 @@ describe("AlimentsTab — ergonomie a deux niveaux (ADR-053 §12.6, story PR2q.5
     );
 
     expect(screen.getByText(new RegExp(libelleArticle))).toBeInTheDocument();
-    expect(screen.queryByText(/de l'approvisionnement/)).not.toBeInTheDocument();
   });
 
-  it("des qu'un second article existe, la hierarchie se revele : les deux articles et leurs parts sont affiches", () => {
-    render(
-      <AlimentsTab
-        scenarioId="scenario-1"
-        dureeCycleMois={7}
-        initialAliments={[alimentMulti]}
-        permissions={[Permission.PREVISIONS_VOIR]}
-      />
-    );
-
-    expect(screen.getByText(libelleArticle)).toBeInTheDocument();
-    expect(screen.getByText("Marque B")).toBeInTheDocument();
-    expect(screen.getByText("60,0 % de l'approvisionnement")).toBeInTheDocument();
-    expect(screen.getByText("40,0 % de l'approvisionnement")).toBeInTheDocument();
-  });
-
-  it("le titre de la carte est le calibre (tailleGranule), jamais le nom de l'article — meme quand un seul article existe", () => {
+  it("le titre de la carte est le calibre (tailleGranule), jamais le nom de l'article", () => {
     render(
       <AlimentsTab
         scenarioId="scenario-1"
@@ -180,39 +145,18 @@ describe("AlimentsTab — ergonomie a deux niveaux (ADR-053 §12.6, story PR2q.5
     expect(screen.getByText(new RegExp(libelleArticle))).toBeInTheDocument();
   });
 
-  it("avec deux articles sur le meme calibre, le titre reste le calibre — aucune ambiguite sur lequel des deux noms gagnerait", () => {
+  it("deux calibres distincts affichent chacun leur propre titre de calibre", () => {
     render(
       <AlimentsTab
         scenarioId="scenario-1"
         dureeCycleMois={7}
-        initialAliments={[alimentMulti]}
+        initialAliments={[aliment, alimentG2]}
         permissions={[Permission.PREVISIONS_VOIR]}
       />
     );
 
+    expect(screen.getByText(calibreLabelP2)).toBeInTheDocument();
     expect(screen.getByText(calibreLabelG2)).toBeInTheDocument();
-  });
-
-  it("l'action 'Ajouter un article' n'est visible qu'avec la permission PREVISIONS_PARAMETRER", () => {
-    const { rerender } = render(
-      <AlimentsTab
-        scenarioId="scenario-1"
-        dureeCycleMois={7}
-        initialAliments={[aliment]}
-        permissions={[Permission.PREVISIONS_VOIR]}
-      />
-    );
-    expect(screen.queryByRole("button", { name: /Ajouter un article/ })).not.toBeInTheDocument();
-
-    rerender(
-      <AlimentsTab
-        scenarioId="scenario-1"
-        dureeCycleMois={7}
-        initialAliments={[aliment]}
-        permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
-      />
-    );
-    expect(screen.getByRole("button", { name: /Ajouter un article/ })).toBeInTheDocument();
   });
 
   it("mobile-first (360px) : aucun tableau, uniquement des cartes empilees", () => {
@@ -222,7 +166,7 @@ describe("AlimentsTab — ergonomie a deux niveaux (ADR-053 §12.6, story PR2q.5
       <AlimentsTab
         scenarioId="scenario-1"
         dureeCycleMois={7}
-        initialAliments={[aliment, alimentMulti]}
+        initialAliments={[aliment, alimentG2]}
         permissions={[Permission.PREVISIONS_VOIR, Permission.PREVISIONS_PARAMETRER]}
       />
     );

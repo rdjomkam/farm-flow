@@ -84,48 +84,33 @@ export interface ParametresPourCalcul {
 }
 
 /**
- * Un ARTICLE achete pour un calibre donne (ADR-053 §12.3, amendement Sprint
- * PR2-quater) — miroir Decimal-moteur de `AlimentArticlePrevision`.
+ * Le CALIBRE d'aliment previsionnel — porte directement les champs article
+ * (fusion `AlimentArticlePrevision` -> `AlimentPrevision` : chaque calibre
+ * correspond a exactement un article/produit, plus de sous-liste
+ * `articles[]` ni de `partApprovisionnementPct`).
  */
-export interface AlimentArticlePourCalcul {
+export interface AlimentPrevisionPourCalcul {
   id: string;
+  /** identite du calibre — NOT NULL */
+  tailleGranule: TailleGranule;
+  /**
+   * Coefficient de besoin en aliment (sacs de cette granulometrie par tonne
+   * de POISSON produit). Nullable : `null` = non configure, tout calcul qui
+   * en depend doit rejeter explicitement.
+   */
+  sacsParTonneStandard: Decimal | null;
+  ordre: number;
+  repartitions: RepartitionMoisInput[];
+  /** rapprochement uniquement — jamais lu par le moteur */
   produitId: string | null;
   libelle: string;
   poidsSacKg: Decimal;
   prixSacFCFA: Decimal;
   /**
    * Pur ratio d'unite de poids (1000 / poidsSacKg) — ne doit JAMAIS entrer
-   * dans un calcul de besoin en aliment par tonne de POISSON produit
-   * (ADR-053, amendement Sprint PR2 §11 ; descend au niveau article depuis
-   * l'amendement §12, Sprint PR2-quater).
+   * dans un calcul de besoin en aliment par tonne de POISSON produit.
    */
   sacsParTonneUnitaire: Decimal;
-  /** 0..100, Sigma sur tous les articles du meme calibre = 100 exactement (ADR-053 §12.2 arbitrage 3) */
-  partApprovisionnementPct: Decimal;
-  /** depart des ex aequo de `repartirSacsEntreArticles` (ADR-053 §12.2 arbitrage 1, etape 5) */
-  ordre: number;
-}
-
-/**
- * Le CALIBRE d'aliment previsionnel (ADR-053 §12.3, amendement Sprint
- * PR2-quater) — ne porte plus `produitId`/`libelle`/`poidsSacKg`/
- * `prixSacFCFA`/`sacsParTonneUnitaire` (deplaces vers `articles`, §12.1).
- */
-export interface AlimentPrevisionPourCalcul {
-  id: string;
-  /** identite du calibre (ADR-053 §12.3) — NOT NULL depuis l'amendement §12 */
-  tailleGranule: TailleGranule;
-  /**
-   * Coefficient de besoin en aliment (sacs de cette granulometrie par tonne
-   * de POISSON produit). Nullable : `null` = non configure, tout calcul qui
-   * en depend doit rejeter explicitement (ADR-053, amendement Sprint PR2 §11).
-   * Reste au niveau CALIBRE, inchange par l'amendement §12.
-   */
-  sacsParTonneStandard: Decimal | null;
-  ordre: number;
-  repartitions: RepartitionMoisInput[];
-  /** un ou plusieurs articles (marques/conditionnements) de ce calibre — cas nominal : un seul, a 100% (ADR-053 §12.6) */
-  articles: AlimentArticlePourCalcul[];
 }
 
 /**
@@ -253,7 +238,6 @@ export async function chargerScenarioPourMoteur(
       where: { scenarioId, siteId },
       include: {
         repartitions: { orderBy: { moisCycle: "asc" } },
-        articles: { orderBy: { ordre: "asc" } },
       },
       orderBy: { ordre: "asc" },
     }),
@@ -327,16 +311,11 @@ export async function chargerScenarioPourMoteur(
         moisCycle: r.moisCycle,
         pourcentage: prismaDecimalToEngine(r.pourcentage),
       })),
-      articles: a.articles.map((art) => ({
-        id: art.id,
-        produitId: art.produitId,
-        libelle: art.libelle,
-        poidsSacKg: prismaDecimalToEngine(art.poidsSacKg),
-        prixSacFCFA: prismaDecimalToEngine(art.prixSacFCFA),
-        sacsParTonneUnitaire: prismaDecimalToEngine(art.sacsParTonneUnitaire),
-        partApprovisionnementPct: prismaDecimalToEngine(art.partApprovisionnementPct),
-        ordre: art.ordre,
-      })),
+      produitId: a.produitId,
+      libelle: a.libelle,
+      poidsSacKg: prismaDecimalToEngine(a.poidsSacKg),
+      prixSacFCFA: prismaDecimalToEngine(a.prixSacFCFA),
+      sacsParTonneUnitaire: prismaDecimalToEngine(a.sacsParTonneUnitaire),
     })),
     vaguesPrevues: vaguesPrevues.map((v) => ({
       id: v.id,

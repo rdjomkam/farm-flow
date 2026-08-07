@@ -108,37 +108,25 @@ export interface RepartitionMoisAlimentDTO {
 }
 
 /**
- * Un ARTICLE d'un calibre d'aliment previsionnel (ADR-053 §12.3, amendement
- * Sprint PR2-quater).
- */
-export interface AlimentArticlePrevisionDTO {
-  id: string;
-  alimentCalibrePrevisionId: string;
-  produitId: string | null;
-  libelle: string;
-  poidsSacKg: Dec;
-  prixSacFCFA: Dec;
-  sacsParTonneUnitaire: Dec;
-  partApprovisionnementPct: Dec;
-  ordre: number;
-  siteId: string;
-}
-
-/**
- * Le CALIBRE d'aliment previsionnel — ne porte plus `produitId`/`libelle`/
- * `poidsSacKg`/`prixSacFCFA`/`sacsParTonneUnitaire` (deplaces vers
- * `articles`, ADR-053 §12.1/§12.3, amendement Sprint PR2-quater).
+ * Le CALIBRE d'aliment previsionnel — porte desormais directement les champs
+ * d'article (fusion `AlimentArticlePrevision` -> `AlimentPrevision`, ADR-053
+ * §12.1/§12.3 amendement post-PR2-quater) : chaque calibre correspond a
+ * exactement UN article/produit, plus de sous-liste `articles[]` ni de
+ * `partApprovisionnementPct` (toujours 100% implicite, plus jamais un champ).
  */
 export interface AlimentPrevisionDTO {
   id: string;
   scenarioId: string;
   tailleGranule: TailleGranule;
   sacsParTonneStandard: Dec | null;
+  produitId: string | null;
+  libelle: string;
+  poidsSacKg: Dec;
+  prixSacFCFA: Dec;
+  sacsParTonneUnitaire: Dec;
   ordre: number;
   siteId: string;
   repartitions: RepartitionMoisAlimentDTO[];
-  /** un ou plusieurs articles (marques/conditionnements) — cas nominal : un seul, a 100% (ADR-053 §12.6) */
-  articles: AlimentArticlePrevisionDTO[];
 }
 
 export interface AlimentParVaguePrevueDTO {

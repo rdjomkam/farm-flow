@@ -14,13 +14,11 @@
  * convertie en TONNES avant la formule, et rejet explicite (422) quand
  * `sacsParTonneStandard` est `null`.
  *
- * ADR-053 §12 (amendement Sprint PR2-quater) : `AlimentPrevision` est
- * desormais le CALIBRE (porte `tailleGranule`/`sacsParTonneStandard`), et
- * `poidsSacKg`/`prixSacFCFA` sont descendus au niveau ARTICLE
- * (`aliment.articles[]`). Tous les scenarios construits ici portent UN SEUL
- * article a 100% par calibre (cas nominal, §12.6) — la non-regression
- * byte-pour-byte de ces tests face au comportement d'avant l'amendement est
- * garantie par la preuve chiffree de l'ADR (§12.2 arbitrage 1).
+ * Fusion `AlimentArticlePrevision` -> `AlimentPrevision` : chaque calibre
+ * porte directement `produitId`/`libelle`/`poidsSacKg`/`prixSacFCFA`/
+ * `sacsParTonneUnitaire` — plus de sous-liste `articles[]` ni de
+ * `partApprovisionnementPct` (chaque calibre correspond a exactement un
+ * article/produit).
  */
 import { describe, it, expect } from "vitest";
 import { Decimal } from "@/lib/previsions/decimal-config";
@@ -33,8 +31,8 @@ function transportNul() {
 }
 
 /**
- * Construit un calibre avec son unique article a 100% (cas nominal, ADR-053
- * §12.6) — remplace la construction a plat d'avant l'amendement §12.
+ * Construit un calibre avec ses champs article directement portes (fusion
+ * `AlimentArticlePrevision` -> `AlimentPrevision`).
  */
 function buildAlimentUnArticle(overrides: {
   id: string;
@@ -52,20 +50,13 @@ function buildAlimentUnArticle(overrides: {
       overrides.sacsParTonneStandard === null ? null : new Decimal(overrides.sacsParTonneStandard),
     ordre: overrides.ordre ?? 1,
     repartitions: overrides.repartitions ?? [{ moisCycle: 1, pourcentage: new Decimal(100) }],
-    articles: [
-      {
-        id: `${overrides.id}-article-unique`,
-        produitId: null,
-        libelle: overrides.id,
-        poidsSacKg: new Decimal(overrides.poidsSacKg),
-        prixSacFCFA: new Decimal(overrides.prixSacFCFA),
-        // Formule production reelle (previsions-scenarios.ts) : 1000 / poidsSacKg. Ne DOIT
-        // JAMAIS entrer dans le calcul de besoin (GAP 1, corrige).
-        sacsParTonneUnitaire: new Decimal(1000).dividedBy(overrides.poidsSacKg),
-        partApprovisionnementPct: new Decimal(100),
-        ordre: 0,
-      },
-    ],
+    produitId: null,
+    libelle: overrides.id,
+    poidsSacKg: new Decimal(overrides.poidsSacKg),
+    prixSacFCFA: new Decimal(overrides.prixSacFCFA),
+    // Formule production reelle (previsions-scenarios.ts) : 1000 / poidsSacKg. Ne DOIT
+    // JAMAIS entrer dans le calcul de besoin (GAP 1, corrige).
+    sacsParTonneUnitaire: new Decimal(1000).dividedBy(overrides.poidsSacKg),
   };
 }
 
@@ -409,274 +400,5 @@ describe("calculerProjectionScenario — decision 6 (base_repartition exclut le 
 
     const projection = calculerProjectionScenario(scenario);
     expect(projection.mois[0].baseRepartitionFCFA.toNumber()).toBe(0);
-  });
-});
-
-describe("calculerProjectionScenario — ADR-053 §12.2 arbitrage 1 (somme par article) : N articles d'un meme calibre", () => {
-  it("le cout d'un calibre a 2 articles est la somme (sacs_i x prix_i), jamais une moyenne des prix", () => {
-    // sacsParTonneStandard = 25.25, tonnage = 4 tonnes -> totalSacsCalibre =
-    // ceil(4 * 25.25) = 101 (entier exact, le ceil ne modifie rien) —
-    // independant de tout poidsSacKg (ADR-053 §12.2 arbitrage 1).
-    // Hare-Niemeyer, parts 50/50 : partExacte = 50.5 chacun, plancher = 50
-    // chacun, reste = 0.5 chacun (ex aequo) -> depart par `ordre` croissant,
-    // article-A (ordre 0) recoit le sac supplementaire : sacs_A=51, sacs_B=50.
-    const scenario = buildScenario({
-      aliments: [
-        {
-          id: "aliment-2mm",
-          tailleGranule: TailleGranule.G1,
-          sacsParTonneStandard: new Decimal(25.25),
-          ordre: 1,
-          repartitions: [{ moisCycle: 1, pourcentage: new Decimal(100) }],
-          articles: [
-            {
-              id: "article-A",
-              produitId: null,
-              libelle: "Marque A",
-              poidsSacKg: new Decimal(15),
-              prixSacFCFA: new Decimal(18000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(15),
-              partApprovisionnementPct: new Decimal(50),
-              ordre: 0,
-            },
-            {
-              id: "article-B",
-              produitId: null,
-              libelle: "Marque B",
-              poidsSacKg: new Decimal(20),
-              prixSacFCFA: new Decimal(20000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(20),
-              partApprovisionnementPct: new Decimal(50),
-              ordre: 1,
-            },
-          ],
-        },
-      ],
-    });
-
-    const projection = calculerProjectionScenario(scenario);
-    const vague = projection.vagues[0];
-    const ligneMois1 = vague.alimentsParMois.find((a) => a.moisCycle === 1)!;
-
-    // Somme article par article : 51*18000 + 50*20000 = 918000 + 1000000 = 1918000.
-    const coutSommeArticles = 51 * 18000 + 50 * 20000;
-    // Contre-preuve explicite : une moyenne des prix (19000) appliquee au
-    // total de 101 sacs donnerait 1919000 — UN MONTANT DIFFERENT, exactement
-    // la confusion que l'arbitrage 1 (revise) proscrit.
-    const coutSiMoyennePonderee = 101 * 19000;
-
-    expect(ligneMois1.montantFCFA.toNumber()).toBe(coutSommeArticles);
-    expect(ligneMois1.montantFCFA.toNumber()).not.toBe(coutSiMoyennePonderee);
-  });
-
-  it("cas d'ecart plus marque (parts asymetriques 30/70, prix tres differents) : la somme et la moyenne ponderee divergent de facon mesurable, pas seulement d'un sac d'arrondi", () => {
-    // totalSacsCalibre = ceil(4 * 8) = 32 (tonnage/sacsParTonneStandard par defaut de buildScenario).
-    // Hare-Niemeyer 30/70 sur 32 : partExacte = 9.6 / 22.4, planchers = 9/22 (somme 31),
-    // reste = 0.6 (A) / 0.4 (B) -> le sac supplementaire va a A (plus grand reste) : sacsA=10, sacsB=22.
-    const scenario = buildScenario({
-      aliments: [
-        {
-          id: "aliment-2mm",
-          tailleGranule: TailleGranule.G1,
-          sacsParTonneStandard: new Decimal(8),
-          ordre: 1,
-          repartitions: [{ moisCycle: 1, pourcentage: new Decimal(100) }],
-          articles: [
-            {
-              id: "article-cher",
-              produitId: null,
-              libelle: "Marque premium",
-              poidsSacKg: new Decimal(15),
-              prixSacFCFA: new Decimal(30000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(15),
-              partApprovisionnementPct: new Decimal(30),
-              ordre: 0,
-            },
-            {
-              id: "article-eco",
-              produitId: null,
-              libelle: "Marque economique",
-              poidsSacKg: new Decimal(25),
-              prixSacFCFA: new Decimal(10000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(25),
-              partApprovisionnementPct: new Decimal(70),
-              ordre: 1,
-            },
-          ],
-        },
-      ],
-    });
-
-    const projection = calculerProjectionScenario(scenario);
-    const coutTotal = projection.vagues[0].coutAlimentFCFA.toNumber();
-
-    // Somme article par article (REGLE RETENUE, ADR-053 §12.2 arbitrage 1) : 10*30000 + 22*10000.
-    const coutSommeArticles = 10 * 30000 + 22 * 10000; // 300000 + 220000 = 520000
-    // Moyenne SIMPLE des prix (19999.5..) x total : rejetee explicitement par l'ADR (ni ponderee ni
-    // simple ne sont la bonne grandeur), utilisee ici uniquement comme contre-preuve chiffree.
-    const coutSiMoyenneSimple = 32 * ((30000 + 10000) / 2); // 32 * 20000 = 640000
-    // Moyenne PONDEREE par les parts declarees (30%/70%) x total : le candidat le plus proche,
-    // explicitement invalide par l'utilisateur (ADR-053 §12.2 arbitrage 1, revision 2026-08-03).
-    const coutSiMoyennePonderee = 32 * (30000 * 0.3 + 10000 * 0.7); // 32 * 16000 = 512000
-
-    expect(coutTotal).toBe(coutSommeArticles);
-    expect(coutTotal).not.toBe(coutSiMoyenneSimple);
-    expect(coutTotal).not.toBe(coutSiMoyennePonderee);
-    // Ecart avec la moyenne ponderee : 8000 FCFA, pas 1 FCFA d'arrondi — la divergence
-    // est structurelle (methode de calcul), pas un artefact de precision.
-    expect(Math.abs(coutTotal - coutSiMoyennePonderee)).toBe(8000);
-  });
-
-  it("le NOMBRE TOTAL DE SACS DU CALIBRE (et donc le cout a prix egal) est INDEPENDANT du poidsSacKg des articles — ne depend que du tonnage et de sacsParTonneStandard (ADR-053 §12.2 arbitrage 1)", () => {
-    // Deux scenarios, memes tonnage/sacsParTonneStandard, MEME prix par sac (1000 FCFA) sur
-    // tous les articles, mais poidsSacKg tres differents (15 vs 30) et repartis 30/70 dans le
-    // scenario a deux articles. Si le total de sacs du calibre dependait, meme partiellement,
-    // d'un poidsSacKg de reference, les deux couts totaux divergeraient (des poidsSacKg
-    // differents produiraient des poidsSacKgReference differents). Ils doivent etre identiques.
-    const scenarioUnArticle = buildScenario({
-      aliments: [
-        buildAlimentUnArticle({
-          id: "aliment-2mm",
-          tailleGranule: TailleGranule.G1,
-          poidsSacKg: 15,
-          prixSacFCFA: 1000,
-          sacsParTonneStandard: 8,
-        }),
-      ],
-    });
-
-    const scenarioDeuxArticles = buildScenario({
-      aliments: [
-        {
-          id: "aliment-2mm",
-          tailleGranule: TailleGranule.G1,
-          sacsParTonneStandard: new Decimal(8),
-          ordre: 1,
-          repartitions: [{ moisCycle: 1, pourcentage: new Decimal(100) }],
-          articles: [
-            {
-              id: "article-A",
-              produitId: null,
-              libelle: "Marque A",
-              poidsSacKg: new Decimal(15),
-              prixSacFCFA: new Decimal(1000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(15),
-              partApprovisionnementPct: new Decimal(30),
-              ordre: 0,
-            },
-            {
-              id: "article-B",
-              produitId: null,
-              libelle: "Marque B (sac deux fois plus lourd)",
-              poidsSacKg: new Decimal(30),
-              prixSacFCFA: new Decimal(1000),
-              sacsParTonneUnitaire: new Decimal(1000).dividedBy(30),
-              partApprovisionnementPct: new Decimal(70),
-              ordre: 1,
-            },
-          ],
-        },
-      ],
-    });
-
-    const coutUnArticle = calculerProjectionScenario(scenarioUnArticle).vagues[0].coutAlimentFCFA.toNumber();
-    const coutDeuxArticles = calculerProjectionScenario(scenarioDeuxArticles).vagues[0].coutAlimentFCFA.toNumber();
-
-    // Meme prix (1000) partout -> le cout total ne peut etre identique QUE si le nombre total
-    // de sacs (32, ceil(4*8)) est identique dans les deux scenarios, quel que soit poidsSacKg.
-    expect(coutUnArticle).toBe(32 * 1000);
-    expect(coutDeuxArticles).toBe(32 * 1000);
-    expect(coutDeuxArticles).toBe(coutUnArticle);
-  });
-
-  it("ajouter un second article a un calibre ne change PAS la repartition mensuelle (les pourcentages de RepartitionMoisAliment restent la seule source de la ventilation par mois du cout deja remise)", () => {
-    // Repartition mensuelle asymetrique (60% mois 1, 40% mois 2) — cycle de 2 mois.
-    const repartitionsAsymetriques = [
-      { moisCycle: 1, pourcentage: new Decimal(60) },
-      { moisCycle: 2, pourcentage: new Decimal(40) },
-    ];
-
-    function buildAvecNArticles(articles: AlimentPrevisionPourCalcul["articles"]) {
-      return buildScenario({
-        vaguesPrevues: [
-          {
-            id: "vp-1",
-            code: "V1",
-            dateStockagePrevue: new Date("2026-08-01"),
-            effectifAlevinsPrevu: 5000,
-            poidsMoyenInitialG: new Decimal(5),
-            dureeCycleMoisFigee: 2,
-            statut: StatutVaguePrevue.PLANIFIEE,
-            vaguePrevueParentId: null,
-            vagueReelleId: null,
-            alevinsAchetes: false,
-            alimentsParMois: [],
-          },
-        ],
-        aliments: [
-          {
-            id: "aliment-2mm",
-            tailleGranule: TailleGranule.G1,
-            sacsParTonneStandard: new Decimal(8),
-            ordre: 1,
-            repartitions: repartitionsAsymetriques,
-            articles,
-          },
-        ],
-      });
-    }
-
-    const projectionUnArticle = calculerProjectionScenario(
-      buildAvecNArticles([
-        {
-          id: "article-unique",
-          produitId: null,
-          libelle: "Marque unique",
-          poidsSacKg: new Decimal(15),
-          prixSacFCFA: new Decimal(18000),
-          sacsParTonneUnitaire: new Decimal(1000).dividedBy(15),
-          partApprovisionnementPct: new Decimal(100),
-          ordre: 0,
-        },
-      ])
-    );
-
-    const projectionDeuxArticles = calculerProjectionScenario(
-      buildAvecNArticles([
-        {
-          id: "article-A",
-          produitId: null,
-          libelle: "Marque A",
-          poidsSacKg: new Decimal(15),
-          prixSacFCFA: new Decimal(18000),
-          sacsParTonneUnitaire: new Decimal(1000).dividedBy(15),
-          partApprovisionnementPct: new Decimal(45),
-          ordre: 0,
-        },
-        {
-          id: "article-B",
-          produitId: null,
-          libelle: "Marque B",
-          poidsSacKg: new Decimal(20),
-          prixSacFCFA: new Decimal(22000),
-          sacsParTonneUnitaire: new Decimal(1000).dividedBy(20),
-          partApprovisionnementPct: new Decimal(55),
-          ordre: 1,
-        },
-      ])
-    );
-
-    for (const projection of [projectionUnArticle, projectionDeuxArticles]) {
-      const vague = projection.vagues[0];
-      const mois1 = vague.alimentsParMois.find((a) => a.moisCycle === 1)!;
-      const mois2 = vague.alimentsParMois.find((a) => a.moisCycle === 2)!;
-      const total = vague.coutAlimentFCFA;
-
-      // Le ratio mois1/total et mois2/total reste EXACTEMENT 60%/40% (les pourcentages de
-      // RepartitionMoisAliment), que le calibre porte un ou deux articles — la ventilation
-      // mensuelle est une propriete du CALIBRE (repartitions), jamais de l'ARTICLE.
-      expect(mois1.montantFCFA.dividedBy(total).toNumber()).toBeCloseTo(0.6, 10);
-      expect(mois2.montantFCFA.dividedBy(total).toNumber()).toBeCloseTo(0.4, 10);
-    }
   });
 });

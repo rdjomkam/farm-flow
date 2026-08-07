@@ -101,13 +101,15 @@ describe("AlimentFormDialog — calibre obligatoire (ADR-053 §12.1/§12.3, stor
     expect(mockPost).not.toHaveBeenCalled();
   });
 
-  it("soumission reussie avec un calibre selectionne : envoie tailleGranule et l'article dans le meme appel", async () => {
+  it("soumission reussie avec un calibre selectionne : envoie tailleGranule et les champs d'article a plat dans le meme appel", async () => {
     mockPost.mockResolvedValueOnce({
       ok: true,
       data: {
         id: "a1",
         tailleGranule: TailleGranule.G1,
-        articles: [{ id: "art1", libelle: "Granule 2mm", poidsSacKg: 25, prixSacFCFA: 15000 }],
+        libelle: "Granule 2mm",
+        poidsSacKg: 25,
+        prixSacFCFA: 15000,
       },
     });
     const onCreated = vi.fn();
@@ -125,17 +127,16 @@ describe("AlimentFormDialog — calibre obligatoire (ADR-053 §12.1/§12.3, stor
       "/api/previsions/scenarios/s1/aliments",
       expect.objectContaining({
         tailleGranule: TailleGranule.G1,
-        article: expect.objectContaining({
-          libelle: "Granule 2mm",
-          poidsSacKg: 25,
-          prixSacFCFA: 15000,
-          produitId: null,
-        }),
+        libelle: "Granule 2mm",
+        poidsSacKg: 25,
+        prixSacFCFA: 15000,
+        produitId: null,
       })
     );
     // Le payload ne porte plus de part d'approvisionnement (100% implicite, ecrit par le serveur — ADR-053 §12.6)
-    const payload = mockPost.mock.calls[0][1] as { article: Record<string, unknown> };
-    expect(payload.article).not.toHaveProperty("partApprovisionnementPct");
+    const payload = mockPost.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("partApprovisionnementPct");
+    expect(payload).not.toHaveProperty("article");
   });
 
   it("les calibres deja utilises dans le scenario sont exclus des options", async () => {
@@ -177,7 +178,7 @@ describe("AlimentFormDialog — Bug B : reinitialisation a chaque fermeture", ()
   it("soumission reussie : reinitialise le formulaire (y compris le calibre)", async () => {
     mockPost.mockResolvedValueOnce({
       ok: true,
-      data: { id: "a1", tailleGranule: TailleGranule.G1, articles: [{ id: "art1", libelle: "Granule 2mm" }] },
+      data: { id: "a1", tailleGranule: TailleGranule.G1, libelle: "Granule 2mm" },
     });
     const onCreated = vi.fn();
     const user = userEvent.setup({ delay: null });

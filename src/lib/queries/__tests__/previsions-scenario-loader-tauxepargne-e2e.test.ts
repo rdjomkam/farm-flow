@@ -81,18 +81,11 @@ function seedScenario(siteId: string, tauxEpargnePct: string) {
     tailleGranule: TailleGranule.G1,
     sacsParTonneStandard: "40",
     ordre: 0,
-    siteId,
-  });
-  stores.alimentArticlePrevision.push({
-    id: "art1",
-    alimentCalibrePrevisionId: "a1",
     produitId: null,
     libelle: "Granule",
     poidsSacKg: "25",
     prixSacFCFA: "15000",
     sacsParTonneUnitaire: "40",
-    partApprovisionnementPct: "100",
-    ordre: 0,
     siteId,
   });
   stores.repartitionMoisAliment.push({

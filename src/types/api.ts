@@ -140,8 +140,6 @@ import type {
   AlimentTailleEntree,
   AlimentTauxEntree,
   AlimentPrevision,
-  AlimentArticlePrevision,
-  AlimentPrevisionWithArticles,
   Bac,
   CalibrageModificationWithUser,
   CalibrageWithModifications,
@@ -3565,132 +3563,60 @@ export interface UpdateArrivageGroupeDTO {
 }
 
 // ---------------------------------------------------------------------------
-// Prévisions — Aliments : calibre + article (ADR-053 §12, Sprint PR2-quater)
+// Prévisions — Aliments (calibre, champs article fusionnés sur le calibre)
 // ---------------------------------------------------------------------------
 
 /**
- * Caractéristiques d'un article d'aliment, saisies telles quelles côté API
- * (pas de `partApprovisionnementPct` ici — ADR-053 §12.6 : tant qu'il n'y a
- * qu'un seul article pour ce calibre, cette part n'est jamais demandée à
- * l'utilisateur, elle est écrite à 100 par le serveur).
- */
-export interface AlimentArticlePrevisionInputDTO {
-  /** copié depuis Produit.nom si `produitId` est fourni, sinon libre */
-  libelle: string;
-  poidsSacKg: number;
-  prixSacFCFA: number;
-  /** rapprochement uniquement — jamais lu par le moteur (ADR-053 décision 1) */
-  produitId?: string;
-  /** ordre d'affichage de cet article au sein du calibre — défaut : 0 */
-  ordre?: number;
-}
-
-/**
- * DTO pour créer un calibre d'aliment prévisionnel — crée dans le MÊME
- * appel, dans la MÊME transaction Prisma, le calibre (`AlimentPrevision`)
- * ET son unique article (`AlimentArticlePrevision`) enfant (ADR-053 §12.6 :
- * « créer un calibre crée son article dans le même geste », jamais deux
- * appels distincts côté client). `POST /api/previsions/scenarios/[id]/aliments`.
- *
- * `partApprovisionnementPct` de l'article créé n'apparaît PAS dans ce DTO :
- * elle vaut 100 implicitement (le serveur l'écrit, R7 — voir le commentaire
- * sur `AlimentArticlePrevision.partApprovisionnementPct` dans `models.ts`),
- * cohérent avec l'ergonomie « article unique = cas nominal invisible ».
+ * DTO pour créer un calibre d'aliment prévisionnel — les champs article
+ * (`libelle`, `poidsSacKg`, `prixSacFCFA`, `produitId`) sont fusionnés
+ * directement sur ce DTO depuis la suppression du modèle intermédiaire
+ * `AlimentArticlePrevision` (chaque calibre = un seul article, cas qui
+ * était déjà le seul cas réellement utilisé).
+ * `POST /api/previsions/scenarios/[id]/aliments`.
  */
 export interface CreateAlimentPrevisionDTO {
   tailleGranule: TailleGranule;
   /**
    * Coefficient de besoin biologique (sacs par tonne de poisson) — nullable
-   * en entrée comme en base (ADR-053 §11.2, §12.3) : aucune source de repli
-   * automatique n'existe, l'utilisateur peut le laisser non configuré et le
-   * renseigner plus tard, mais tout calcul qui en dépend rejette tant qu'il
-   * est absent.
+   * en entrée comme en base : aucune source de repli automatique n'existe,
+   * l'utilisateur peut le laisser non configuré et le renseigner plus tard,
+   * mais tout calcul qui en dépend rejette tant qu'il est absent.
    */
   sacsParTonneStandard?: number | null;
   /** ordre d'affichage du calibre parmi les autres calibres — défaut : 0 */
   ordre?: number;
-  /** l'article unique créé avec ce calibre (§12.6) */
-  article: AlimentArticlePrevisionInputDTO;
+  /** copié depuis Produit.nom si `produitId` est fourni, sinon libre */
+  libelle: string;
+  poidsSacKg: number;
+  prixSacFCFA: number;
+  /** rapprochement uniquement — jamais lu par le moteur */
+  produitId?: string;
 }
 
 /**
- * DTO pour modifier les champs propres au CALIBRE (jamais ceux de ses
- * articles — voir `UpdateAlimentArticlePrevisionDTO` pour ça).
- * `tailleGranule` n'est volontairement pas modifiable ici : c'est l'identité
- * du calibre (`@@unique([scenarioId, tailleGranule])`, ADR-053 §12.3) — la
- * changer reviendrait à recréer un autre calibre, pas à éditer celui-ci.
+ * DTO pour modifier les champs d'un calibre existant (coefficient de besoin
+ * et/ou champs article). `tailleGranule` n'est volontairement pas
+ * modifiable ici : c'est l'identité du calibre
+ * (`@@unique([scenarioId, tailleGranule])`) — la changer reviendrait à
+ * recréer un autre calibre, pas à éditer celui-ci.
  */
 export interface UpdateAlimentPrevisionDTO {
   /** `null` explicite pour effacer une valeur déjà configurée */
   sacsParTonneStandard?: number | null;
   ordre?: number;
-}
-
-/**
- * DTO pour modifier un article existant (marque, poids de sac, prix) —
- * distinct de la répartition des parts d'approvisionnement, qui se modifie
- * exclusivement via `AddAlimentArticlePrevisionDTO`/son pendant de mise à
- * jour de répartition (ADR-053 §12.6 : la part ne devient éditable qu'à
- * partir du moment où un second article existe).
- */
-export interface UpdateAlimentArticlePrevisionDTO {
   libelle?: string;
   poidsSacKg?: number;
   prixSacFCFA?: number;
-  /** `null` explicite pour délier l'article du catalogue produit */
+  /** `null` explicite pour délier le calibre du catalogue produit */
   produitId?: string | null;
-  ordre?: number;
 }
 
-/**
- * Un élément de la répartition complète des parts d'approvisionnement,
- * envoyée en entier à chaque appel qui la modifie (jamais un delta partiel
- * — R4, cohérent avec la validation bloquante « somme = 100 » de ADR-053
- * §12.2 arbitrage 3, qui ne peut se vérifier que sur l'ensemble complet).
- */
-export interface AlimentArticlePartInputDTO {
-  /**
-   * Id de l'article existant concerné par cette part. Absent uniquement
-   * pour l'unique élément qui désigne le nouvel article créé par le même
-   * appel (`AddAlimentArticlePrevisionDTO` ci-dessous) — jamais absent dans
-   * un appel qui ne fait que rééquilibrer des parts entre articles déjà
-   * existants.
-   */
-  articleId?: string;
-  partApprovisionnementPct: number;
-}
-
-/**
- * DTO pour ajouter un second (ou N-ième) article à un calibre existant —
- * action secondaire explicite, jamais visible par défaut tant qu'un seul
- * article suffit (ADR-053 §12.6). C'est cet appel, et lui seul, qui rend la
- * part d'approvisionnement saisissable : le corps porte donc la répartition
- * COMPLÈTE de tous les articles du calibre après ajout (l'article déjà
- * existant, dont la part passe de 100 % implicite à une valeur explicite,
- * inclus) — jamais seulement la part du nouvel article. Somme des
- * `partApprovisionnementPct` de `repartition` = 100 exactement, validée de
- * façon bloquante à l'écriture, dans la même transaction Prisma que la
- * création de l'article (R4, ADR-053 §12.2 arbitrage 3).
- * `POST /api/previsions/scenarios/[id]/aliments/[alimentId]/articles`.
- */
-export interface AddAlimentArticlePrevisionDTO {
-  /** le nouvel article à créer sur ce calibre */
-  nouvelArticle: AlimentArticlePrevisionInputDTO;
-  /**
-   * Répartition complète des parts d'approvisionnement de TOUS les articles
-   * du calibre après ajout. Exactement un élément de ce tableau doit être
-   * sans `articleId` (celui du `nouvelArticle` ci-dessus) ; tous les autres
-   * doivent référencer un article existant du même calibre.
-   */
-  repartition: AlimentArticlePartInputDTO[];
-}
-
-/** Réponse d'un calibre d'aliment prévisionnel avec son ou ses articles chargés. */
-export type AlimentPrevisionResponse = AlimentPrevisionWithArticles;
+/** Réponse d'un calibre d'aliment prévisionnel. */
+export type AlimentPrevisionResponse = AlimentPrevision;
 
 /** Réponse de liste des calibres d'aliment prévisionnel d'un scénario. */
 export interface AlimentPrevisionListResponse {
   aliments: AlimentPrevisionResponse[];
 }
 
-export type { AlimentPrevision, AlimentArticlePrevision, AlimentPrevisionWithArticles };
+export type { AlimentPrevision };

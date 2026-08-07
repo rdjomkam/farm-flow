@@ -185,66 +185,32 @@ const sacsParTonneStandardSchema = z
   .optional();
 
 /**
- * Caracteristiques d'un ARTICLE (ADR-053 §12.3) — pas de
- * `partApprovisionnementPct` ici : tant qu'un seul article existe pour un
- * calibre, elle vaut 100% implicitement, ecrite par le serveur (§12.6),
- * jamais demandee dans ce payload.
- */
-export const alimentArticlePrevisionInputSchema = z.object({
-  libelle: z.string().min(1, "Le libelle est obligatoire."),
-  poidsSacKg: z.number().positive({ message: "Doit etre strictement superieur a 0." }),
-  prixSacFCFA: nonNegativeNumber,
-  produitId: z.string().nullable().optional(),
-  ordre: positiveInt.optional(),
-});
-export type AlimentArticlePrevisionInput = z.infer<typeof alimentArticlePrevisionInputSchema>;
-
-/**
- * Cree un CALIBRE + son unique ARTICLE, dans le meme geste (ADR-053 §12.6) —
- * `tailleGranule` obligatoire (identite du calibre, NOT NULL depuis
- * l'amendement §12).
+ * Cree un CALIBRE — champs article (`libelle`, `poidsSacKg`, `prixSacFCFA`,
+ * `produitId`) fusionnes directement dans ce schema (chaque calibre = un
+ * seul article). `tailleGranule` obligatoire (identite du calibre, NOT NULL).
  */
 export const createAlimentPrevisionSchema = z.object({
   tailleGranule: z.nativeEnum(TailleGranule),
   sacsParTonneStandard: sacsParTonneStandardSchema,
   ordre: positiveInt.optional(),
-  article: alimentArticlePrevisionInputSchema,
+  libelle: z.string().min(1, "Le libelle est obligatoire."),
+  poidsSacKg: z.number().positive({ message: "Doit etre strictement superieur a 0." }),
+  prixSacFCFA: nonNegativeNumber,
+  produitId: z.string().nullable().optional(),
   repartitions: z.array(repartitionMoisAlimentInputSchema).optional(),
 });
 export type CreateAlimentPrevisionInput = z.infer<typeof createAlimentPrevisionSchema>;
 
-/** Modifie les champs du CALIBRE uniquement — `tailleGranule` n'est jamais modifiable (identite, ADR-053 §12.3). */
+/** Modifie les champs d'un calibre existant (coefficient de besoin et/ou champs article) — `tailleGranule` n'est jamais modifiable (identite). */
 export const updateAlimentPrevisionSchema = z.object({
   sacsParTonneStandard: sacsParTonneStandardSchema,
   ordre: positiveInt.optional(),
-});
-export type UpdateAlimentPrevisionInput = z.infer<typeof updateAlimentPrevisionSchema>;
-
-/** Modifie un article existant (marque, poids de sac, prix) — jamais sa part d'approvisionnement. */
-export const updateAlimentArticlePrevisionSchema = z.object({
   libelle: z.string().min(1, "Le libelle est obligatoire.").optional(),
   poidsSacKg: z.number().positive({ message: "Doit etre strictement superieur a 0." }).optional(),
   prixSacFCFA: nonNegativeNumber.optional(),
   produitId: z.string().nullable().optional(),
-  ordre: positiveInt.optional(),
 });
-export type UpdateAlimentArticlePrevisionInput = z.infer<typeof updateAlimentArticlePrevisionSchema>;
-
-const alimentArticlePartInputSchema = z.object({
-  articleId: z.string().optional(),
-  partApprovisionnementPct: z.number().min(0).max(100, "La part doit etre entre 0 et 100."),
-});
-
-/**
- * Ajoute un second (ou N-ieme) article a un calibre existant — action
- * secondaire explicite (ADR-053 §12.6). `repartition` porte la part
- * COMPLETE de tous les articles du calibre apres ajout.
- */
-export const addAlimentArticlePrevisionSchema = z.object({
-  nouvelArticle: alimentArticlePrevisionInputSchema,
-  repartition: z.array(alimentArticlePartInputSchema).min(1),
-});
-export type AddAlimentArticlePrevisionInput = z.infer<typeof addAlimentArticlePrevisionSchema>;
+export type UpdateAlimentPrevisionInput = z.infer<typeof updateAlimentPrevisionSchema>;
 
 export const replaceRepartitionsMoisAlimentSchema = z.object({
   repartitions: z.array(repartitionMoisAlimentInputSchema),

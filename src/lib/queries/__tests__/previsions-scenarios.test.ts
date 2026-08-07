@@ -124,8 +124,8 @@ describe("getScenarioById — R8 isolation par site", () => {
   });
 });
 
-describe("createScenario — transaction, copie AlimentPrevision (calibre+article, ADR-053 §12), isolation site", () => {
-  it("cree le scenario + parametres et copie uniquement les Produit ALIMENT actifs DU MEME SITE, un calibre + un article a 100% par produit", async () => {
+describe("createScenario — transaction, copie AlimentPrevision (calibre, champs article fusionnes), isolation site", () => {
+  it("cree le scenario + parametres et copie uniquement les Produit ALIMENT actifs DU MEME SITE, un calibre par produit", async () => {
     const { createScenario } = await import("@/lib/queries/previsions-scenarios");
 
     stores.produit.push(
@@ -150,17 +150,11 @@ describe("createScenario — transaction, copie AlimentPrevision (calibre+articl
     expect(aliments).toHaveLength(1);
     expect(aliments[0].tailleGranule).toBe(TailleGranule.G1);
     expect(aliments[0].siteId).toBe("site-A");
-
-    const articles = stores.alimentArticlePrevision.filter(
-      (a) => a.alimentCalibrePrevisionId === aliments[0].id
-    );
-    expect(articles).toHaveLength(1);
-    expect(articles[0].produitId).toBe("p1");
-    expect(Number(articles[0].partApprovisionnementPct)).toBe(100);
-    expect(articles[0].siteId).toBe("site-A");
+    expect(aliments[0].produitId).toBe("p1");
+    expect(aliments[0].libelle).toBe("Granule A");
   });
 
-  it("ADR-053 §12.4 — regroupe par tailleGranule : deux Produit de la meme granulometrie deviennent UN calibre + DEUX articles dont la somme des parts vaut 100", async () => {
+  it("ADR-053 §12.4 — regroupe par tailleGranule : deux Produit de la meme granulometrie deviennent UN SEUL calibre, seul le premier alphabetique est copie", async () => {
     const { createScenario } = await import("@/lib/queries/previsions-scenarios");
 
     stores.produit.push(
@@ -178,13 +172,7 @@ describe("createScenario — transaction, copie AlimentPrevision (calibre+articl
 
     const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
     expect(aliments).toHaveLength(1); // UN SEUL calibre pour les deux produits du meme tailleGranule
-
-    const articles = stores.alimentArticlePrevision.filter(
-      (a) => a.alimentCalibrePrevisionId === aliments[0].id
-    );
-    expect(articles).toHaveLength(2);
-    const sommeParts = articles.reduce((s, a) => s + Number(a.partApprovisionnementPct), 0);
-    expect(sommeParts).toBe(100);
+    expect(aliments[0].produitId).toBe("p1"); // premier alphabetique ("Marque A" < "Marque B")
   });
 
   it("ADR-053 §12.2 arbitrage 5 — rejet NOMME (jamais une valeur devinee) si un Produit ALIMENT actif n'a pas de tailleGranule : AUCUN scenario cree", async () => {
@@ -282,7 +270,7 @@ describe("createScenario — ADR-053 §18, selection explicite via produitIds", 
     );
   }
 
-  it("regle 4 — sous-ensemble EXACT : deux produits du meme tailleGranule (G1), un seul coche -> UN calibre, UN article, 100% (pas la repartition a deux)", async () => {
+  it("regle 4 — sous-ensemble EXACT : deux produits du meme tailleGranule (G1), un seul coche -> UN calibre, ce produit", async () => {
     const { createScenario } = await import("@/lib/queries/previsions-scenarios");
     seedDeuxCalibresQuatreProduits();
 
@@ -299,15 +287,10 @@ describe("createScenario — ADR-053 §18, selection explicite via produitIds", 
     const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
     expect(aliments).toHaveLength(1);
     expect(aliments[0].tailleGranule).toBe(TailleGranule.G1);
-    const articles = stores.alimentArticlePrevision.filter(
-      (a) => a.alimentCalibrePrevisionId === aliments[0].id
-    );
-    expect(articles).toHaveLength(1);
-    expect(articles[0].produitId).toBe("p1");
-    expect(Number(articles[0].partApprovisionnementPct)).toBe(100);
+    expect(aliments[0].produitId).toBe("p1");
   });
 
-  it("regle 4 — sous-ensemble EXACT : les deux produits du meme tailleGranule (G1) coches -> UN calibre, DEUX articles, somme des parts = 100 exact", async () => {
+  it("regle 4 — sous-ensemble EXACT : les deux produits du meme tailleGranule (G1) coches -> UN SEUL calibre, le premier alphabetique retenu", async () => {
     const { createScenario } = await import("@/lib/queries/previsions-scenarios");
     seedDeuxCalibresQuatreProduits();
 
@@ -322,12 +305,7 @@ describe("createScenario — ADR-053 §18, selection explicite via produitIds", 
 
     const aliments = stores.alimentPrevision.filter((a) => a.scenarioId === scenario.id);
     expect(aliments).toHaveLength(1);
-    const articles = stores.alimentArticlePrevision.filter(
-      (a) => a.alimentCalibrePrevisionId === aliments[0].id
-    );
-    expect(articles).toHaveLength(2);
-    const somme = articles.reduce((s, a) => s + Number(a.partApprovisionnementPct), 0);
-    expect(somme).toBe(100);
+    expect(aliments[0].produitId).toBe("p1"); // "Marque A G1" < "Marque B G1"
   });
 
   it("regle 4 — produitIds restreint aux DEUX calibres choisis, exclut le troisieme produit ALIMENT actif du site non coche", async () => {
@@ -347,10 +325,7 @@ describe("createScenario — ADR-053 §18, selection explicite via produitIds", 
     expect(aliments).toHaveLength(2);
     const taillesGranule = aliments.map((a) => a.tailleGranule).sort();
     expect(taillesGranule).toEqual([TailleGranule.G1, TailleGranule.G2].sort());
-    const tousArticles = stores.alimentArticlePrevision.filter((a) =>
-      aliments.some((al) => al.id === a.alimentCalibrePrevisionId)
-    );
-    expect(tousArticles.map((a) => a.produitId).sort()).toEqual(["p1", "p3"]);
+    expect(aliments.map((a) => a.produitId).sort()).toEqual(["p1", "p3"]);
   });
 
   it("regle 4 — ORDRE deterministe : filtrer produitIds preserve l'ordre alphabetique (orderBy nom asc), jamais l'ordre de produitIds", async () => {
@@ -564,7 +539,7 @@ describe("createScenario — ADR-053 §18, selection explicite via produitIds", 
     expect(
       stores.scenarioPrevision.filter((s) => s.code === "PLAN-SANS-CONTENANCE-CHOISI")
     ).toHaveLength(0);
-    expect(stores.alimentArticlePrevision).toHaveLength(0);
+    expect(stores.alimentPrevision).toHaveLength(0);
   });
 });
 

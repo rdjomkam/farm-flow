@@ -149,11 +149,9 @@ import {
   determinerPourcentageRemise,
   appliquerTauxRemise,
   apportionnerCoutAlimentMensuel,
-  repartirSacsEntreArticles,
   calculerDetailConsommationMensuelle,
 } from "./aliments";
 import type { AlimentPrevisionCalcInput } from "./types";
-import type { AlimentPrevisionPourCalcul } from "@/lib/queries/previsions-scenario-loader";
 import { calculerLogistiqueMensuelle } from "./logistique";
 import { calculerBaseRepartition, calculerQuotePartVague } from "./charges";
 import type { ChargePourBaseInput, JournalEntryInput } from "./charges";
@@ -332,30 +330,6 @@ function ceilViaMoteur(alimentId: string, poidsSacKg: Decimal, besoinKg: Decimal
 }
 
 /**
- * poidsSacKgReference — ADR-053 §12.2 arbitrage 1 (amendement Sprint
- * PR2-quater). Depuis que `poidsSacKg` a migre au niveau ARTICLE (§12.1), il
- * n'existe plus une seule valeur de calibre pour alimenter le `ceil`
- * MENSUEL du moteur pur (`calculerBesoinAlimentMensuel`, inchange §12.4) ni
- * l'agregation calendaire (GAP 2). Ce point n'est PAS ambigu pour le TOTAL
- * DE CYCLE (calcule directement, cf. plus bas, independamment de tout
- * `poidsSacKg` — l'ADR le demontre algebriquement) ni pour le COUT (somme
- * par article, jamais une moyenne, cf. plus bas) : cette reference n'est
- * utilisee QUE pour la ventilation mensuelle en kg/sacs AFFICHEE
- * (`AlimentParVagueEtMoisProjection.quantiteKg`/`.sacs`), une grandeur
- * d'affichage, jamais reinjectee dans le cout. Moyenne ponderee par
- * `partApprovisionnementPct` — cas degenere N=1 a 100% : egale EXACTEMENT le
- * `poidsSacKg` de l'unique article (`x * 100 / 100 = x`, Decimal, aucune
- * perte), ce qui preserve la recette (1270 tests) byte pour byte (ADR-053
- * §12.2 arbitrage 1, preuve chiffree du cas degenere).
- */
-function poidsSacKgReference(articles: AlimentPrevisionPourCalcul["articles"]): Decimal {
-  return articles.reduce(
-    (acc, article) => acc.plus(article.poidsSacKg.times(article.partApprovisionnementPct).dividedBy(100)),
-    new Decimal(0)
-  );
-}
-
-/**
  * calculerProjectionScenario — orchestre le moteur pur sur un scenario
  * complet deja charge (`chargerScenarioPourMoteur`, PR2.1) pour produire la
  * projection de l'horizon (ADR-053 §7.2) : series mensuelles, tresorerie
@@ -443,14 +417,11 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
       // directement ici, jamais via un poidsSacKg de calibre invente.
       const sacsCalculesCycle = tonnageCibleTonnes.times(aliment.sacsParTonneStandard).ceil().toNumber();
 
-      // Reference d'affichage UNIQUEMENT (jamais le cout, jamais le total de
-      // sacs ci-dessus) — voir JSDoc de `poidsSacKgReference`.
-      const poidsSacKgRef = poidsSacKgReference(aliment.articles);
-      const besoinTotalCycleKg = tonnageCibleTonnes.times(aliment.sacsParTonneStandard).times(poidsSacKgRef);
+      const besoinTotalCycleKg = tonnageCibleTonnes.times(aliment.sacsParTonneStandard).times(aliment.poidsSacKg);
 
       const alimentCalcInput: AlimentPrevisionCalcInput = {
         id: aliment.id,
-        poidsSacKg: poidsSacKgRef,
+        poidsSacKg: aliment.poidsSacKg,
         besoinTotalCycleKg,
         repartitions: aliment.repartitions,
       };
@@ -489,27 +460,15 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
         sacsSaisisCycle = totalCycle;
       }
 
-      // ADR-053 §12.2 arbitrage 1 (revise 2026-08-03) : le cout d'un calibre
-      // est la SOMME article par article de (sacs de cet article x son prix
-      // de sac), JAMAIS une moyenne appliquee a un total de sacs.
+      // Cout d'un calibre = sacs effectifs x prix du sac de ce calibre
+      // (fusion article -> calibre : plus de repartition entre articles,
+      // chaque calibre porte directement son propre prix de sac).
       // ADR-053 §13.7 : `COALESCE(sacsSaisis, sacsCalcules)` pilote le
       // MONTANT (ici et en aval), jamais le taux de remise — celui-ci est
       // deja decide au niveau de la vague, sur son tonnage.
       const sacsEffectifsCycle = sacsSaisisCycle ?? sacsCalculesCycle;
 
-      const repartitionSacs = repartirSacsEntreArticles(
-        sacsEffectifsCycle,
-        aliment.articles.map((article) => ({
-          id: article.id,
-          ordre: article.ordre,
-          partApprovisionnementPct: article.partApprovisionnementPct,
-        }))
-      );
-
-      const coutBrutFCFA = repartitionSacs.reduce((somme, r) => {
-        const article = aliment.articles.find((a) => a.id === r.id)!;
-        return somme.plus(article.prixSacFCFA.times(r.sacs));
-      }, new Decimal(0));
+      const coutBrutFCFA = aliment.prixSacFCFA.times(sacsEffectifsCycle);
       // Le taux est celui de la VAGUE (identique pour tous les calibres) :
       // remiser chaque calibre puis sommer donne exactement le meme resultat
       // que remiser le cout agrege de la vague (`Σ cᵢ(1−r) = (Σ cᵢ)(1−r)`).
@@ -692,7 +651,7 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
       if (!kgDuMois || kgDuMois.lte(0)) continue;
       besoinAlimentsTotalKgDuMois = besoinAlimentsTotalKgDuMois.plus(kgDuMois);
       const aliment = scenario.aliments.find((a) => a.id === alimentId)!;
-      const sacs = ceilViaMoteur(alimentId, poidsSacKgReference(aliment.articles), kgDuMois);
+      const sacs = ceilViaMoteur(alimentId, aliment.poidsSacKg, kgDuMois);
       sacsAlimentsDuMois = sacsAlimentsDuMois.plus(sacs);
       sacsParGranulometrieDuMois[aliment.tailleGranule] =
         (sacsParGranulometrieDuMois[aliment.tailleGranule] ?? 0) + sacs;

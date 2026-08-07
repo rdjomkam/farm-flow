@@ -851,7 +851,6 @@ model Site {
   scenariosPrevision       ScenarioPrevision[]
   paliersRemisePrevision   PalierRemise[]
   alimentsPrevision        AlimentPrevision[]
-  alimentsArticlePrevision AlimentArticlePrevision[]
   repartitionsMoisAliment  RepartitionMoisAliment[]
   vaguesPrevues            VaguePrevue[]
   alimentsParVaguePrevue   AlimentParVaguePrevue[]
@@ -1619,9 +1618,9 @@ model Produit {
   // Sprint 21 — Moteur d'activités
   activitesRecommandees    Activite[]                @relation("ActiviteProduitRecommande")
   // Sprint PR1 — Prévisions
-  // ADR-053 §12.3 (amendement PR2-quater) : produitId descend au niveau article — le
-  // rapprochement se fait par article acheté, pas par calibre abstrait.
-  alimentsArticlePrevision AlimentArticlePrevision[]
+  // ADR-053 §12.3 (amendement PR2-quater), fusion post-amendement : produitId remonte au
+  // niveau calibre (AlimentPrevision) — le rapprochement se fait par produit acheté.
+  alimentsPrevision        AlimentPrevision[]
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
 
@@ -4508,11 +4507,12 @@ model PalierRemise {
 }
 
 /**
- * Niveau CALIBRE (ADR-053 §12.3, amendement PR2-quater) — porte l'identité de la granulométrie
- * et le coefficient de besoin biologique, communs à tous les articles (marques) qui la composent.
- * Le niveau ARTICLE (marque, poids de sac, prix) est porté par AlimentArticlePrevision, un ou
- * plusieurs enfants de ce modèle. Voir §12.1-12.3 de l'ADR pour la justification du passage à
- * deux niveaux et le tableau champ par champ de ce qui a migré vers l'article.
+ * Niveau CALIBRE+ARTICLE fusionné (ADR-053 §12.3, amendement post-PR2-quater "merge article into
+ * calibre") — porte à la fois l'identité de la granulométrie et son coefficient de besoin
+ * biologique, ET l'article (marque, poids de sac, prix) qui l'approvisionne. Relation 1:1 entre
+ * calibre et article : le modèle AlimentArticlePrevision (1:N, avec partApprovisionnementPct) a
+ * été supprimé — le cas N > 1 (plusieurs marques par calibre) n'était jamais utilisé en pratique
+ * (§12.6) et complexifiait inutilement le moteur de calcul et l'UI.
  */
 model AlimentPrevision {
   id                   String            @id @default(cuid())
@@ -4531,11 +4531,33 @@ model AlimentPrevision {
    * null = non configuré, tout calcul qui en dépend rejette explicitement (§11.2).
    */
   sacsParTonneStandard Decimal?
-  ordre                Int // ordre d'affichage des calibres dans le scénario
-  siteId               String
-  site                 Site              @relation(fields: [siteId], references: [id])
+  /**
+   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053 décision 1, inchangée).
+   * Nullable : un calibre prévisionnel peut ne correspondre à aucun produit réel du catalogue
+   * (ex. produit pas encore créé, ou scénario prospectif). Remonté depuis AlimentArticlePrevision
+   * (fusion post-amendement).
+   */
+  produitId             String?
+  produit               Produit?          @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  /**
+   * Libellé de l'article — copié depuis Produit.nom à la création, puis libre (ex. "Marque A —
+   * sac 15kg"). Remonté depuis AlimentArticlePrevision (fusion post-amendement).
+   */
+  libelle               String
+  // Copié depuis Produit.contenance à la création. Remonté depuis AlimentArticlePrevision.
+  poidsSacKg            Decimal
+  // Copié depuis Produit.prixUnitaire à la création. Remonté depuis AlimentArticlePrevision.
+  prixSacFCFA           Decimal
+  /**
+   * Pur ratio d'unité de poids (1000 / poidsSacKg), dérivé de poidsSacKg (ERR-138 : ne doit jamais
+   * entrer dans un calcul de besoin par tonne de poisson, cf. sacsParTonneStandard). Remonté depuis
+   * AlimentArticlePrevision (fusion post-amendement).
+   */
+  sacsParTonneUnitaire  Decimal
+  ordre                 Int // ordre d'affichage des calibres dans le scénario
+  siteId                String
+  site                  Site              @relation(fields: [siteId], references: [id])
 
-  articles      AlimentArticlePrevision[]
   repartitions  RepartitionMoisAliment[] // grain calibre, inchangé (§12.2, arbitrage 2)
   vaguesPrevues AlimentParVaguePrevue[]
 
@@ -4544,53 +4566,6 @@ model AlimentPrevision {
 
   @@unique([scenarioId, tailleGranule]) // AJOUTE (amendement PR2-quater) — un calibre par scénario
   @@index([scenarioId])
-  @@index([siteId])
-}
-
-/**
- * Niveau ARTICLE (ADR-053 §12.3, amendement PR2-quater) — une marque/un conditionnement précis
- * pour un calibre donné. Un ou plusieurs par AlimentPrevision (calibre) ; le cas nominal reste un
- * seul article à 100 % (§12.6), mais le modèle reste correct pour N > 1 (répartition
- * d'approvisionnement, §12.2 arbitrage 1 et 3).
- */
-model AlimentArticlePrevision {
-  id                        String           @id @default(cuid())
-  alimentCalibrePrevisionId String
-  alimentCalibrePrevision   AlimentPrevision @relation(fields: [alimentCalibrePrevisionId], references: [id], onDelete: Cascade)
-  /**
-   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053 décision 1, inchangée).
-   * Nullable : un article prévisionnel peut ne correspondre à aucun produit réel du catalogue
-   * (ex. produit pas encore créé, ou scénario prospectif).
-   */
-  produitId                 String?
-  produit                   Produit?         @relation(fields: [produitId], references: [id], onDelete: SetNull)
-  libelle                   String // copié depuis Produit.nom à la création, puis libre (ex. "Marque A —
-  // sac 15kg") — descend depuis le calibre (§12.1)
-  poidsSacKg                Decimal // copié depuis Produit.contenance à la création — descend depuis le calibre
-  prixSacFCFA               Decimal // copié depuis Produit.prixUnitaire à la création — descend depuis le calibre
-  /**
-   * Pur ratio d'unité de poids (1000 / poidsSacKg) — descend depuis le calibre avec poidsSacKg,
-   * dont il est dérivé (ERR-138 : ne doit jamais entrer dans un calcul de besoin par tonne de
-   * poisson, cf. sacsParTonneStandard qui lui reste au calibre).
-   */
-  sacsParTonneUnitaire      Decimal
-  /**
-   * Part de cet article dans l'approvisionnement du calibre, en pourcentage (0..100). La somme des
-   * partApprovisionnementPct de tous les articles d'un même calibre doit valoir exactement 100 —
-   * validée à l'écriture (§12.2 arbitrage 3), jamais par contrainte SQL (même raison qu'en §3.5).
-   * Non nullable : le cas nominal (un seul article) écrit 100 côté serveur sans le demander à
-   * l'utilisateur (§12.6) — aucune sémantique null = 100 à inventer.
-   */
-  partApprovisionnementPct  Decimal
-  ordre                     Int // ordre d'affichage des articles au sein du calibre — sert aussi de départage
-  // déterministe des ex æquo dans la répartition des sacs (§12.2 arbitrage 1, étape 5)
-  siteId                    String
-  site                      Site             @relation(fields: [siteId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([alimentCalibrePrevisionId])
   @@index([siteId])
   @@index([produitId])
 }

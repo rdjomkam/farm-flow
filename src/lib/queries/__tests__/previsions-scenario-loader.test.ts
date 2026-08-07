@@ -99,18 +99,11 @@ function seedFullScenario(siteId: string, nbVagues: number) {
     tailleGranule: TailleGranule.G1,
     sacsParTonneStandard: null,
     ordre: 0,
-    siteId,
-  });
-  stores.alimentArticlePrevision.push({
-    id: "art1",
-    alimentCalibrePrevisionId: "a1",
     produitId: null,
     libelle: "Granule",
     poidsSacKg: "25",
     prixSacFCFA: "15000",
     sacsParTonneUnitaire: "40",
-    partApprovisionnementPct: "100",
-    ordre: 0,
     siteId,
   });
   stores.repartitionMoisAliment.push({
@@ -203,7 +196,7 @@ describe("chargerScenarioPourMoteur — conversion Decimal Prisma -> Decimal mot
     // Decimal moteur : la valeur doit rester exacte (pas de number intermediaire)
     expect(result.parametres.prixVenteKgFCFA.toString()).toBe("1500.123456789012345");
     expect(result.paliersRemise[0].seuilTonnes.toString()).toBe("10");
-    expect(result.aliments[0].articles[0].poidsSacKg.toString()).toBe("25");
+    expect(result.aliments[0].poidsSacKg.toString()).toBe("25");
     expect(result.vaguesPrevues[0].alimentsParMois[0].quantiteKgCalculee.toString()).toBe("125");
     expect(result.postes[0].chargesMensuelles[0].montantFCFA.toString()).toBe("50000");
   });

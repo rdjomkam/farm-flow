@@ -402,10 +402,11 @@ async function validerProduitIdsEligibles(siteId: string, produitIds: string[]):
 
 /**
  * Copie les Produit de categorie ALIMENT actifs du site en calibres
- * (AlimentPrevision) + articles (AlimentArticlePrevision) du scenario
+ * (AlimentPrevision, champs article inclus directement) du scenario
  * nouvellement cree (ADR-053 decision 1 : "pre-remplies par copie depuis
- * Produit a la creation" ; restructuration a deux niveaux, amendement §12,
- * Sprint PR2-quater).
+ * Produit a la creation"). Le modele intermediaire `AlimentArticlePrevision`
+ * a ete supprime (fusion article -> calibre) : chaque calibre correspond a
+ * exactement un Produit.
  *
  * `produitIds` (ADR-053 §18) : `undefined` -> comportement historique
  * STRICTEMENT inchange (tous les Produit ALIMENT actifs du site, garde
@@ -415,12 +416,13 @@ async function validerProduitIdsEligibles(siteId: string, produitIds: string[]):
  * (`Array.filter` preserve l'ordre relatif — ne jamais reconstruire l'ordre
  * depuis `produitIds`, qui n'a aucune garantie d'ordre cote client).
  *
- * REGROUPEMENT PAR `tailleGranule` (ADR-053 §12.4) : `tailleGranule` etant
- * devenue l'IDENTITE du calibre (`@@unique([scenarioId, tailleGranule])`),
- * plusieurs `Produit` partageant la meme granulometrie deviennent
- * naturellement plusieurs ARTICLES d'UN SEUL calibre — c'est exactement le
- * cas multi-marque que l'amendement §12 rend possible (§12.1, §12.5), pas
- * une degenerescence a eviter.
+ * `tailleGranule` etant l'IDENTITE du calibre (`@@unique([scenarioId,
+ * tailleGranule])`), au plus UN Produit par granulometrie peut devenir un
+ * calibre : si plusieurs Produit partagent la meme `tailleGranule`, seul le
+ * PREMIER dans l'ordre alphabetique (`nom`, deterministe) est copie, les
+ * autres sont silencieusement ignores pour cette copie automatique
+ * (l'utilisateur peut toujours creer un calibre supplementaire manuellement
+ * pour une autre granulometrie, mais pas dupliquer la meme).
  *
  * `Produit.tailleGranule` NULLABLE (ADR-053 §12.2 arbitrage 5) : un produit
  * ALIMENT sans granulometrie ne peut PAS etre copie sans DEVINER une valeur
@@ -430,9 +432,7 @@ async function validerProduitIdsEligibles(siteId: string, produitIds: string[]):
  * de la discipline deja appliquee par la migration (§12.2 arbitrage 5).
  *
  * `ordre` d'affichage : ordre alphabetique sur `nom` du Produit source, pour
- * un resultat deterministe (pas d'ordre implicite dependant de l'insertion)
- * — au niveau calibre (premier `Produit` alphabetique du groupe) ET au
- * niveau article (au sein d'un meme groupe).
+ * un resultat deterministe (pas d'ordre implicite dependant de l'insertion).
  * `sacsParTonneUnitaire` : derive de `poidsSacKg` (1000 / poidsSacKg), calcule en
  * Decimal moteur pour rester coherent avec le reste du module — jamais
  * recalcule depuis Produit apres la creation (decouplage total, decision 1).
@@ -441,11 +441,6 @@ async function validerProduitIdsEligibles(siteId: string, produitIds: string[]):
  * derivation automatique n'existe dans Produit (ADR-053, amendement Sprint
  * PR2 §11) — l'utilisateur doit le saisir avant que le calcul du scenario
  * soit fiable.
- * `partApprovisionnementPct` : repartie egalement entre les articles d'un
- * meme calibre (Decimal exact, reste attribue au dernier article du groupe
- * pour garantir Sigma = 100 exactement) — valeur de depart raisonnable,
- * modifiable ensuite par l'utilisateur (ADR-053 §12.2 arbitrage 3). N=1 ->
- * 100% exactement, cas nominal inchange (§12.6).
  */
 async function copierAlimentsPrevisionDepuisProduits(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
@@ -475,72 +470,38 @@ async function copierAlimentsPrevisionDepuisProduits(
     );
   }
 
-  const groupesParTailleGranule = new Map<TailleGranule, typeof produits>();
+  // Au plus un calibre par tailleGranule (identite du calibre) : le premier
+  // Produit alphabetique de chaque granulometrie est retenu, les eventuels
+  // suivants sont ignores (voir JSDoc ci-dessus).
+  const premierProduitParTailleGranule = new Map<TailleGranule, (typeof produits)[number]>();
   for (const produit of produits) {
     const taille = produit.tailleGranule as TailleGranule;
-    const groupe = groupesParTailleGranule.get(taille);
-    if (groupe) {
-      groupe.push(produit);
-    } else {
-      groupesParTailleGranule.set(taille, [produit]);
+    if (!premierProduitParTailleGranule.has(taille)) {
+      premierProduitParTailleGranule.set(taille, produit);
     }
   }
 
   let ordreCalibre = 0;
-  for (const [tailleGranule, groupe] of groupesParTailleGranule) {
-    const calibre = await tx.alimentPrevision.create({
+  for (const [tailleGranule, produit] of premierProduitParTailleGranule) {
+    const poidsSacKg = new Decimal(produit.contenance ?? 0);
+    const sacsParTonneUnitaire = poidsSacKg.lte(0) ? new Decimal(0) : new Decimal(1000).dividedBy(poidsSacKg);
+
+    await tx.alimentPrevision.create({
       data: {
         scenarioId,
         tailleGranule,
         sacsParTonneStandard: null,
         ordre: ordreCalibre,
+        produitId: produit.id,
+        libelle: produit.nom,
+        poidsSacKg: poidsSacKg.toString(),
+        prixSacFCFA: produit.prixUnitaire,
+        sacsParTonneUnitaire: sacsParTonneUnitaire.toString(),
         siteId,
       },
     });
     ordreCalibre += 1;
-
-    const parts = repartirPourcentagesEgaux(groupe.length);
-
-    await tx.alimentArticlePrevision.createMany({
-      data: groupe.map((produit, indexArticle) => {
-        const poidsSacKg = new Decimal(produit.contenance ?? 0);
-        const sacsParTonneUnitaire = poidsSacKg.lte(0) ? new Decimal(0) : new Decimal(1000).dividedBy(poidsSacKg);
-
-        return {
-          alimentCalibrePrevisionId: calibre.id,
-          produitId: produit.id,
-          libelle: produit.nom,
-          poidsSacKg: poidsSacKg.toString(),
-          prixSacFCFA: produit.prixUnitaire,
-          sacsParTonneUnitaire: sacsParTonneUnitaire.toString(),
-          partApprovisionnementPct: parts[indexArticle].toString(),
-          ordre: indexArticle,
-          siteId,
-        };
-      }),
-    });
   }
-}
-
-/**
- * repartirPourcentagesEgaux — repartition de depart EGALE entre `n`
- * articles issus de la copie automatique (§12.2 arbitrage 5 : valeur de
- * depart raisonnable, PAS la repartition d'achat reelle des sacs — celle-ci
- * reste `repartirSacsEntreArticles`, aliments.ts, methode du plus fort
- * reste, exigee par l'ADR pour la repartition DES SACS). Ici : simple
- * partage de depart des pourcentages de configuration, Sigma = 100
- * EXACTEMENT (le reste de la division va au DERNIER article, ordre croissant
- * — deterministe). N=1 -> [100] exactement (cas nominal, §12.6).
- */
-function repartirPourcentagesEgaux(n: number): Decimal[] {
-  if (n <= 1) return [new Decimal(100)];
-
-  const base = new Decimal(100).dividedBy(n).toDecimalPlaces(4, Decimal.ROUND_DOWN);
-  const parts = Array.from({ length: n }, () => base);
-  const somme = parts.reduce((s, p) => s.plus(p), new Decimal(0));
-  const reste = new Decimal(100).minus(somme);
-  parts[n - 1] = parts[n - 1].plus(reste);
-  return parts;
 }
 
 /** Met a jour les ParametresPrevision d'un scenario (1-1, update cible, pas de bulk replace). */

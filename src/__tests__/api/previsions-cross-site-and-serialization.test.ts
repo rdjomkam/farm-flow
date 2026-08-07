@@ -177,19 +177,12 @@ describe("GET /scenarios/[id]/calculer — serialisation : aucun Decimal brut da
           sacsParTonneStandard: new Decimal(8),
           ordre: 1,
           repartitions: [{ moisCycle: 1, pourcentage: new Decimal(100) }],
-          // ADR-053 §12.6 : cas nominal, un seul article a 100%.
-          articles: [
-            {
-              id: "article-1",
-              produitId: null,
-              libelle: "2mm",
-              poidsSacKg: new Decimal(15),
-              prixSacFCFA: new Decimal(18000),
-              sacsParTonneUnitaire: new Decimal(66.67),
-              partApprovisionnementPct: new Decimal(100),
-              ordre: 0,
-            },
-          ],
+          // Fusion AlimentArticlePrevision -> AlimentPrevision : champs article portes directement.
+          produitId: null,
+          libelle: "2mm",
+          poidsSacKg: new Decimal(15),
+          prixSacFCFA: new Decimal(18000),
+          sacsParTonneUnitaire: new Decimal(66.67),
         },
       ],
       vaguesPrevues: [

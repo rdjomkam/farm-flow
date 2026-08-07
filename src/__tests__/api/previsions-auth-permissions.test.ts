@@ -89,13 +89,13 @@ const mockGetAlimentPrevisionById = vi.fn();
 const mockDeleteAlimentPrevision = vi.fn();
 const mockReplaceRepartitionsMoisAliment = vi.fn();
 const mockGetAlimentsPrevisionParScenario = vi.fn();
-const mockCreateAlimentPrevisionAvecArticle = vi.fn();
+const mockCreateAlimentPrevision = vi.fn();
 vi.mock("@/lib/queries/previsions-aliments", () => ({
   getAlimentPrevisionById: (...a: unknown[]) => mockGetAlimentPrevisionById(...a),
   deleteAlimentPrevision: (...a: unknown[]) => mockDeleteAlimentPrevision(...a),
   replaceRepartitionsMoisAliment: (...a: unknown[]) => mockReplaceRepartitionsMoisAliment(...a),
   getAlimentsPrevisionParScenario: (...a: unknown[]) => mockGetAlimentsPrevisionParScenario(...a),
-  createAlimentPrevisionAvecArticle: (...a: unknown[]) => mockCreateAlimentPrevisionAvecArticle(...a),
+  createAlimentPrevision: (...a: unknown[]) => mockCreateAlimentPrevision(...a),
 }));
 
 // previsions-vagues
@@ -326,11 +326,13 @@ function buildCases(): RouteCase[] {
           jsonRequest("/api/previsions/scenarios/id-1/aliments", "POST", {
             tailleGranule: TailleGranule.G1,
             ordre: 1,
-            article: { libelle: "2mm", poidsSacKg: 15, prixSacFCFA: 18000 },
+            libelle: "2mm",
+            poidsSacKg: 15,
+            prixSacFCFA: 18000,
           }),
           idParams()
         ),
-      setupSuccess: () => mockCreateAlimentPrevisionAvecArticle.mockResolvedValue({ id: "aliment-1" }),
+      setupSuccess: () => mockCreateAlimentPrevision.mockResolvedValue({ id: "aliment-1" }),
     },
     {
       name: "GET /aliments/[id]",

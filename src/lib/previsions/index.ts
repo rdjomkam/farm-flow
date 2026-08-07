@@ -31,7 +31,6 @@ export {
   calculerCoutAlimentVague,
   apportionnerCoutAlimentMensuel,
   calculerCoutAlimentGranulometrieParMois,
-  repartirSacsEntreArticles,
   calculerDetailConsommationMensuelle,
 } from "./aliments";
 export type {
@@ -41,8 +40,6 @@ export type {
   CoutAlimentMoisResult,
   AlimentParVagueMensuelCalcInput,
   CoutAlimentGranulometrieMoisResult,
-  ArticleRepartitionInput,
-  ArticleRepartitionResult,
   DetailConsommationCycleInput,
   DetailConsommationMoisResult,
 } from "./aliments";

@@ -142,26 +142,3 @@ export function validerPaliersRemiseCroissants(paliers: PalierRemiseInput[]): vo
   }
 }
 
-/**
- * validerSommeApprovisionnementArticles — validation bloquante (ADR-053 §12.2,
- * arbitrage 3, amendement Sprint PR2-quater).
- *
- * La somme des `partApprovisionnementPct` de tous les `AlimentArticlePrevision`
- * d'un meme calibre (`AlimentPrevision`) doit valoir EXACTEMENT 100 — meme
- * patron que `validerSommeRepartitionMoisAliment` ci-dessus : bloquante,
- * appelee dans la MEME transaction Prisma que l'ecriture (R4), jamais une
- * contrainte SQL (un `CHECK` ne voit qu'une ligne a la fois).
- *
- * @param parts - les `partApprovisionnementPct` de TOUS les articles d'UN SEUL calibre (remplace-tout)
- * @throws {BusinessRuleError} (status 422) si la somme des parts != 100 — ERR-165
- */
-export function validerSommeApprovisionnementArticles(parts: Decimal[]): void {
-  const somme = parts.reduce((s, p) => s.plus(p), new Decimal(0));
-
-  if (!somme.eq(100)) {
-    throw new BusinessRuleError(
-      `La somme des parts d'approvisionnement des articles d'un aliment previsionnel doit valoir 100 (obtenu : ${somme.toString()}).`,
-      422
-    );
-  }
-}

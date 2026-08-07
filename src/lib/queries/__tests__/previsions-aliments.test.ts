@@ -1,20 +1,22 @@
 /**
- * Tests unitaires — story PR2.1 / amendement ADR-053 §12 (Sprint PR2-quater),
- * `src/lib/queries/previsions-aliments.ts`.
+ * Tests unitaires — story PR2.1, `src/lib/queries/previsions-aliments.ts`.
+ *
+ * Fusion `AlimentArticlePrevision` -> `AlimentPrevision` : chaque calibre
+ * porte directement `produitId`/`libelle`/`poidsSacKg`/`prixSacFCFA`/
+ * `sacsParTonneUnitaire` — plus de sous-liste `articles[]`, plus de
+ * `partApprovisionnementPct`, plus d'action secondaire "ajouter un
+ * article".
  *
  * Couvre :
  *  1. R8 — isolation par site sur toutes les fonctions.
- *  2. R4 — `createAlimentPrevisionAvecArticle` : la validation "somme = 100%"
+ *  2. R4 — `createAlimentPrevision` : la validation "somme = 100%"
  *     (repartitions) a lieu AVANT le `create()` du calibre lui-meme -> si
- *     elle rejette, AUCUN AlimentPrevision ni article n'est cree.
- *  3. ADR-053 §12.6 — creer un calibre cree son unique article DANS LE MEME
- *     GESTE, avec `partApprovisionnementPct = 100` ecrit par le serveur,
- *     jamais demande a l'appelant.
- *  4. ADR-053 §12.2 arbitrage 3 — `addAlimentArticlePrevision` : ajout d'un
- *     second article, validation bloquante "somme des parts = 100%".
- *  5. R4 — `replaceRepartitionsMoisAliment` : validation puis ecriture dans
+ *     elle rejette, AUCUN AlimentPrevision n'est cree.
+ *  3. `updateAlimentPrevision` : met a jour les champs (coefficient de
+ *     besoin et/ou champs article), scope au site.
+ *  4. R4 — `replaceRepartitionsMoisAliment` : validation puis ecriture dans
  *     la meme transaction -> rejet => anciennes repartitions intactes.
- *  6. `deleteAlimentPrevision` : verification d'existence scopee au site
+ *  5. `deleteAlimentPrevision` : verification d'existence scopee au site
  *     avant suppression.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -42,21 +44,11 @@ function seedAliment(id: string, scenarioId: string, siteId: string) {
     tailleGranule: TailleGranule.G1,
     sacsParTonneStandard: null,
     ordre: 0,
-    siteId,
-  });
-}
-
-function seedArticle(id: string, alimentCalibrePrevisionId: string, siteId: string, part = "100") {
-  stores.alimentArticlePrevision.push({
-    id,
-    alimentCalibrePrevisionId,
     produitId: null,
     libelle: "Granule 2mm",
     poidsSacKg: "25",
     prixSacFCFA: "15000",
     sacsParTonneUnitaire: "40",
-    partApprovisionnementPct: part,
-    ordre: 0,
     siteId,
   });
 }
@@ -66,7 +58,6 @@ describe("getAlimentsPrevisionParScenario / getAlimentPrevisionById — R8 isola
     const { getAlimentsPrevisionParScenario } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
     const result = await getAlimentsPrevisionParScenario("s1", "site-B");
     expect(result).toHaveLength(0);
@@ -76,17 +67,15 @@ describe("getAlimentsPrevisionParScenario / getAlimentPrevisionById — R8 isola
     const { getAlimentPrevisionById } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
     const result = await getAlimentPrevisionById("a1", "site-B");
     expect(result).toBeNull();
   });
 
-  it("inclut les repartitions triees par moisCycle et les articles pour le bon site", async () => {
+  it("inclut les repartitions triees par moisCycle pour le bon site", async () => {
     const { getAlimentPrevisionById } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
     stores.repartitionMoisAliment.push(
       { id: "r2", alimentPrevisionId: "a1", moisCycle: 2, pourcentage: "40", siteId: "site-A" },
       { id: "r1", alimentPrevisionId: "a1", moisCycle: 1, pourcentage: "60", siteId: "site-A" }
@@ -94,39 +83,31 @@ describe("getAlimentsPrevisionParScenario / getAlimentPrevisionById — R8 isola
 
     const result = await getAlimentPrevisionById("a1", "site-A");
     expect(result!.repartitions.map((r: { moisCycle: number }) => r.moisCycle)).toEqual([1, 2]);
-    expect(result!.articles).toHaveLength(1);
-    expect(result!.articles[0].id).toBe("art1");
+    expect(result!.libelle).toBe("Granule 2mm");
   });
 });
 
-describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + article dans le meme geste) + R4/R8", () => {
-  const articleValide = { libelle: "Granule", poidsSacKg: 25, prixSacFCFA: 15000 };
+describe("createAlimentPrevision — champs article fusionnes + R4/R8", () => {
+  const alimentValide = { tailleGranule: TailleGranule.G1, ordre: 0, libelle: "Granule", poidsSacKg: 25, prixSacFCFA: 15000 };
 
-  it("R8 — rejette si le scenario est d'un autre site, aucun AlimentPrevision ni article cree", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+  it("R8 — rejette si le scenario est d'un autre site, aucun AlimentPrevision cree", async () => {
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
 
-    await expect(
-      createAlimentPrevisionAvecArticle("s1", "site-B", {
-        tailleGranule: TailleGranule.G1,
-        ordre: 0,
-        article: articleValide,
-      })
-    ).rejects.toThrow("Scenario introuvable");
+    await expect(createAlimentPrevision("s1", "site-B", alimentValide)).rejects.toThrow(
+      "Scenario introuvable"
+    );
 
     expect(stores.alimentPrevision).toHaveLength(0);
-    expect(stores.alimentArticlePrevision).toHaveLength(0);
   });
 
-  it("R4 — somme des repartitions != 100% rejetee -> AUCUN AlimentPrevision NI article crees", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+  it("R4 — somme des repartitions != 100% rejetee -> AUCUN AlimentPrevision cree", async () => {
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
 
     await expect(
-      createAlimentPrevisionAvecArticle("s1", "site-A", {
-        tailleGranule: TailleGranule.G1,
-        ordre: 0,
-        article: articleValide,
+      createAlimentPrevision("s1", "site-A", {
+        ...alimentValide,
         repartitions: [
           { moisCycle: 1, pourcentage: 50 },
           { moisCycle: 2, pourcentage: 40 }, // somme = 90, pas 100
@@ -135,25 +116,22 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
     ).rejects.toThrow(/doit valoir 100/);
 
     // Le point le plus important : la validation a lieu AVANT le create() du
-    // calibre — un bug destructeur serait de creer le calibre (et son
-    // article) SANS ses repartitions. Ici on prouve qu'il n'existe PAS DU TOUT.
+    // calibre — un bug destructeur serait de creer le calibre SANS ses
+    // repartitions. Ici on prouve qu'il n'existe PAS DU TOUT.
     expect(stores.alimentPrevision).toHaveLength(0);
-    expect(stores.alimentArticlePrevision).toHaveLength(0);
     expect(stores.repartitionMoisAliment).toHaveLength(0);
   });
 
-  it("cree le calibre + son unique article (partApprovisionnementPct = 100 ecrit par le serveur) + repartitions (somme = 100%) dans la meme transaction", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+  it("cree le calibre (champs article inclus) + repartitions (somme = 100%) dans la meme transaction", async () => {
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     // dureeCycleMois=2 explicite : ce test fournit 2 mois de repartition
     // (ERR-162, validerCouvertureMoisRepartition exige desormais que la
     // couverture corresponde exactement a scenario.dureeCycleMois).
     seedScenario("s1", "site-A", 2);
 
-    const result = await createAlimentPrevisionAvecArticle("s1", "site-A", {
-      tailleGranule: TailleGranule.G1,
+    const result = await createAlimentPrevision("s1", "site-A", {
+      ...alimentValide,
       sacsParTonneStandard: 8,
-      ordre: 0,
-      article: articleValide,
       repartitions: [
         { moisCycle: 1, pourcentage: 60 },
         { moisCycle: 2, pourcentage: 40 },
@@ -161,31 +139,25 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
     });
 
     expect(result.repartitions).toHaveLength(2);
-    expect(result.articles).toHaveLength(1);
-    expect(Number(result.articles[0].partApprovisionnementPct)).toBe(100);
+    expect(result.libelle).toBe("Granule");
+    expect(Number(result.poidsSacKg)).toBe(25);
+    expect(Number(result.prixSacFCFA)).toBe(15000);
     expect(stores.alimentPrevision).toHaveLength(1);
     expect(stores.alimentPrevision[0].siteId).toBe("site-A");
     expect(stores.alimentPrevision[0].tailleGranule).toBe(TailleGranule.G1);
-    expect(stores.alimentArticlePrevision).toHaveLength(1);
-    expect(stores.alimentArticlePrevision[0].siteId).toBe("site-A");
   });
 
   it("permet la creation sans repartitions (optionnelles a la creation)", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
 
-    const result = await createAlimentPrevisionAvecArticle("s1", "site-A", {
-      tailleGranule: TailleGranule.G1,
-      ordre: 0,
-      article: articleValide,
-    });
+    const result = await createAlimentPrevision("s1", "site-A", alimentValide);
 
     expect(result.repartitions).toHaveLength(0);
-    expect(result.articles).toHaveLength(1);
   });
 
-  it("ERR-162 — repartitions FOURNIES mais incompletes (2 mois sur un cycle de 3, somme=100%) rejetees -> AUCUN AlimentPrevision NI article crees", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+  it("ERR-162 — repartitions FOURNIES mais incompletes (2 mois sur un cycle de 3, somme=100%) rejetees -> AUCUN AlimentPrevision cree", async () => {
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A", 3);
 
     // Somme = 100% (validerSommeRepartitionMoisAliment seule ne detecterait
@@ -193,10 +165,8 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
     // ERR-162 : sans validerCouvertureMoisRepartition, ce mois vaudrait 0%
     // silencieusement.
     await expect(
-      createAlimentPrevisionAvecArticle("s1", "site-A", {
-        tailleGranule: TailleGranule.G1,
-        ordre: 0,
-        article: articleValide,
+      createAlimentPrevision("s1", "site-A", {
+        ...alimentValide,
         repartitions: [
           { moisCycle: 1, pourcentage: 60 },
           { moisCycle: 2, pourcentage: 40 },
@@ -205,106 +175,57 @@ describe("createAlimentPrevisionAvecArticle — ADR-053 §12.6 (calibre + articl
     ).rejects.toThrow(/mois manquant/);
 
     expect(stores.alimentPrevision).toHaveLength(0);
-    expect(stores.alimentArticlePrevision).toHaveLength(0);
     expect(stores.repartitionMoisAliment).toHaveLength(0);
   });
 
-  it("le payload de creation n'accepte jamais partApprovisionnementPct — elle vaut toujours 100 (§12.6)", async () => {
-    const { createAlimentPrevisionAvecArticle } = await import("@/lib/queries/previsions-aliments");
+  it("calcule sacsParTonneUnitaire (1000 / poidsSacKg) au moment de la creation", async () => {
+    const { createAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
 
-    const result = await createAlimentPrevisionAvecArticle("s1", "site-A", {
-      tailleGranule: TailleGranule.G2,
-      ordre: 0,
-      // @ts-expect-error — partApprovisionnementPct n'existe pas dans AlimentArticlePrevisionInputDTO,
-      // meme si un appelant JS non type l'envoyait, le serveur l'ignore et ecrit 100 quand meme.
-      article: { ...articleValide, partApprovisionnementPct: 42 },
-    });
+    const result = await createAlimentPrevision("s1", "site-A", { ...alimentValide, poidsSacKg: 20 });
 
-    expect(Number(result.articles[0].partApprovisionnementPct)).toBe(100);
+    expect(Number(stores.alimentPrevision[0].sacsParTonneUnitaire)).toBe(50); // 1000 / 20
+    expect(result.libelle).toBe("Granule");
   });
 });
 
-describe("addAlimentArticlePrevision — ADR-053 §12.2 arbitrage 3 (somme des parts = 100%, action secondaire)", () => {
-  it("R8 — rejette si le calibre est d'un autre site, aucun article ajoute", async () => {
-    const { addAlimentArticlePrevision } = await import("@/lib/queries/previsions-aliments");
+describe("updateAlimentPrevision — R8 isolation", () => {
+  it("R8 — rejette si l'aliment est d'un autre site", async () => {
+    const { updateAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
     await expect(
-      addAlimentArticlePrevision("a1", "site-B", {
-        nouvelArticle: { libelle: "Marque B", poidsSacKg: 15, prixSacFCFA: 16000 },
-        repartition: [
-          { articleId: "art1", partApprovisionnementPct: 50 },
-          { partApprovisionnementPct: 50 },
-        ],
-      })
+      updateAlimentPrevision("a1", "site-B", { libelle: "Nouveau libelle" })
     ).rejects.toThrow("Aliment previsionnel introuvable");
-
-    expect(stores.alimentArticlePrevision).toHaveLength(1);
   });
 
-  it("R4 — somme des parts != 100% rejetee : AUCUN nouvel article cree, part de l'existant intacte", async () => {
-    const { addAlimentArticlePrevision } = await import("@/lib/queries/previsions-aliments");
+  it("met a jour les champs article (libelle, poidsSacKg, prixSacFCFA) et recalcule sacsParTonneUnitaire", async () => {
+    const { updateAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
-    await expect(
-      addAlimentArticlePrevision("a1", "site-A", {
-        nouvelArticle: { libelle: "Marque B", poidsSacKg: 15, prixSacFCFA: 16000 },
-        repartition: [
-          { articleId: "art1", partApprovisionnementPct: 60 },
-          { partApprovisionnementPct: 60 }, // somme = 120, pas 100
-        ],
-      })
-    ).rejects.toThrow(/doit valoir 100/);
-
-    expect(stores.alimentArticlePrevision).toHaveLength(1);
-    expect(Number(stores.alimentArticlePrevision[0].partApprovisionnementPct)).toBe(100);
-  });
-
-  it("ajoute le second article et repartit les parts (somme = 100%) dans la meme transaction", async () => {
-    const { addAlimentArticlePrevision } = await import("@/lib/queries/previsions-aliments");
-    seedScenario("s1", "site-A");
-    seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
-
-    const result = await addAlimentArticlePrevision("a1", "site-A", {
-      nouvelArticle: { libelle: "Marque B", poidsSacKg: 15, prixSacFCFA: 16000 },
-      repartition: [
-        { articleId: "art1", partApprovisionnementPct: 70 },
-        { partApprovisionnementPct: 30 },
-      ],
+    const result = await updateAlimentPrevision("a1", "site-A", {
+      libelle: "Nouvelle marque",
+      poidsSacKg: 10,
+      prixSacFCFA: 20000,
     });
 
-    expect(result.articles).toHaveLength(2);
-    const parts = result.articles.map((a: { partApprovisionnementPct: unknown }) =>
-      Number(a.partApprovisionnementPct)
-    );
-    expect(parts.reduce((s: number, p: number) => s + p, 0)).toBe(100);
-    expect(stores.alimentArticlePrevision).toHaveLength(2);
+    expect(result.libelle).toBe("Nouvelle marque");
+    expect(Number(stores.alimentPrevision[0].poidsSacKg)).toBe(10);
+    expect(Number(stores.alimentPrevision[0].prixSacFCFA)).toBe(20000);
+    expect(Number(stores.alimentPrevision[0].sacsParTonneUnitaire)).toBe(100); // 1000/10
   });
 
-  it("rejette une repartition sans exactement un element sans articleId, avec une ValidationError typee (jamais un 500 — bug PR2q.4 §6, rapport @tester)", async () => {
-    const { addAlimentArticlePrevision } = await import("@/lib/queries/previsions-aliments");
-    const { ValidationError } = await import("@/lib/errors");
+  it("met a jour uniquement sacsParTonneStandard sans toucher aux champs article", async () => {
+    const { updateAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
-    const call = addAlimentArticlePrevision("a1", "site-A", {
-      nouvelArticle: { libelle: "Marque B", poidsSacKg: 15, prixSacFCFA: 16000 },
-      repartition: [{ articleId: "art1", partApprovisionnementPct: 100 }],
-    });
+    await updateAlimentPrevision("a1", "site-A", { sacsParTonneStandard: 8 });
 
-    await expect(call).rejects.toThrow(/exactement un element sans articleId/);
-    // Le type importe autant que le message : c'est en etant une
-    // ValidationError (et non une Error nue) que handleApiError la mappe en
-    // 400 sans dependre du mecanisme fragile de PREVISIONS_STATUS_MAP
-    // (mapping par sous-chaine, cf. review-sprint-PR2-bis.md reserve 6).
-    await expect(call).rejects.toBeInstanceOf(ValidationError);
+    expect(Number(stores.alimentPrevision[0].sacsParTonneStandard)).toBe(8);
+    expect(stores.alimentPrevision[0].libelle).toBe("Granule 2mm"); // inchange
   });
 });
 
@@ -403,7 +324,6 @@ describe("deleteAlimentPrevision — R8 isolation par site", () => {
     const { deleteAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
     await expect(deleteAlimentPrevision("a1", "site-B")).rejects.toThrow(
       "Aliment previsionnel introuvable"
@@ -415,7 +335,6 @@ describe("deleteAlimentPrevision — R8 isolation par site", () => {
     const { deleteAlimentPrevision } = await import("@/lib/queries/previsions-aliments");
     seedScenario("s1", "site-A");
     seedAliment("a1", "s1", "site-A");
-    seedArticle("art1", "a1", "site-A");
 
     await deleteAlimentPrevision("a1", "site-A");
     expect(stores.alimentPrevision.find((a) => a.id === "a1")).toBeUndefined();

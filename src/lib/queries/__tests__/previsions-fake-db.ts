@@ -38,7 +38,6 @@ export interface Stores {
   parametresPrevision: FakeRow[];
   palierRemise: FakeRow[];
   alimentPrevision: FakeRow[];
-  alimentArticlePrevision: FakeRow[];
   repartitionMoisAliment: FakeRow[];
   vaguePrevue: FakeRow[];
   alimentParVaguePrevue: FakeRow[];
@@ -58,7 +57,6 @@ export function createEmptyStores(): Stores {
     parametresPrevision: [],
     palierRemise: [],
     alimentPrevision: [],
-    alimentArticlePrevision: [],
     repartitionMoisAliment: [],
     vaguePrevue: [],
     alimentParVaguePrevue: [],
@@ -330,12 +328,7 @@ const INCLUDE_RESOLVERS: Record<keyof Stores, Record<string, (row: FakeRow, s: S
       s.repartitionMoisAliment
         .filter((r) => r.alimentPrevisionId === row.id)
         .sort((a, b) => (a.moisCycle as number) - (b.moisCycle as number)),
-    articles: (row, s) =>
-      s.alimentArticlePrevision
-        .filter((a) => a.alimentCalibrePrevisionId === row.id)
-        .sort((a, b) => (a.ordre as number) - (b.ordre as number)),
   },
-  alimentArticlePrevision: {},
   repartitionMoisAliment: {},
   vaguePrevue: {
     alimentsParMois: (row, s) => s.alimentParVaguePrevue.filter((a) => a.vaguePrevueId === row.id),

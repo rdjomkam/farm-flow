@@ -4205,7 +4205,7 @@ export enum CibleRapprochement {
 
 /**
  * Raison d'invalidite d'un Produit ALIMENT pour la copie vers un
- * AlimentArticlePrevision a la creation d'un ScenarioPrevision (ADR-053 §18,
+ * AlimentPrevision a la creation d'un ScenarioPrevision (ADR-053 §18,
  * story de selection explicite des produits). Code d'enum discriminant,
  * PAS une chaine libre — R2, et surtout l'i18n doit pouvoir traduire fr/en ;
  * une chaine de raison ecrite cote serveur serait une chaine non traduite,
@@ -4316,65 +4316,44 @@ export interface PalierRemise {
 
 /**
  * AlimentPrevision — le CALIBRE d'aliment previsionnel (ex. "2 mm"), niveau
- * granulometrique du plan (ADR-053 §12, amendement Sprint PR2-quater).
+ * granulometrique du plan.
  *
- * Jusqu'a l'amendement §12, ce modele portait a la fois l'identite du
- * calibre ET les caracteristiques d'un article achete (marque, poids de
- * sac, prix) — une confusion de deux natures qui ne coincidaient que tant
- * qu'un calibre n'avait jamais qu'un seul fournisseur (§12.1, §12.5). Les
- * champs propres a l'article (`produitId`, `libelle`, `poidsSacKg`,
- * `prixSacFCFA`, `sacsParTonneUnitaire`) ont ete deplaces vers
- * `AlimentArticlePrevision` (ci-dessous) ; ce modele ne porte plus que ce
- * qui depend de la granulometrie elle-meme, jamais de la marque qui la
- * fabrique.
+ * Fusion article -> calibre : ce modele renvoyait jusqu'ici a un
+ * `AlimentArticlePrevision` enfant separe pour les caracteristiques
+ * d'article (marque, poids de sac, prix) — une indirection qui ne se
+ * justifiait que tant qu'un calibre pouvait avoir plusieurs fournisseurs,
+ * cas qui ne s'est jamais produit en pratique (un seul article par calibre).
+ * Le modele intermediaire a ete supprime : les champs article (`produitId`,
+ * `libelle`, `poidsSacKg`, `prixSacFCFA`, `sacsParTonneUnitaire`) sont
+ * desormais portes directement par ce modele. `partApprovisionnementPct`
+ * disparait avec la fusion (n'avait de sens que pour repartir entre
+ * plusieurs articles d'un meme calibre).
  */
 export interface AlimentPrevision {
   id: string;
   scenarioId: string;
   /**
-   * Taille de granule — porte desormais L'IDENTITE du calibre. NOT NULL
-   * (ADR-053 §12.3, amendement Sprint PR2-quater) : une granulometrie non
-   * identifiee ne peut plus etre creee ni persister — R7, decision
-   * explicite, pas une nullabilite par defaut heritee de l'ancien modele.
+   * Taille de granule — porte L'IDENTITE du calibre. NOT NULL : une
+   * granulometrie non identifiee ne peut pas etre creee ni persister — R7,
+   * decision explicite.
    */
   tailleGranule: TailleGranule;
   /**
    * Coefficient de BESOIN EN ALIMENT : nombre de sacs de CETTE
    * granulometrie necessaires par tonne de POISSON produit (taux de
    * conversion alimentaire biologique, ex. 8/18/50 dans le jeu d'or de
-   * recette pour 2mm/3mm/4mm) — inchange depuis l'amendement Sprint PR2
-   * (ADR-053 section 11.2), reste au niveau CALIBRE, jamais a l'article
-   * (§12.1) : ce coefficient depend de la granulometrie, pas de la marque
-   * qui la fabrique. Nullable : AUCUNE source de derivation automatique
-   * n'existe dans le catalogue `Produit` actuel — doit etre saisi
-   * manuellement par l'utilisateur. `null` = non configure : tout calcul
-   * de besoin en aliment reposant sur cette granulometrie DOIT etre rejete
-   * explicitement (jamais un `0`/`1`/valeur derivee substitue
+   * recette pour 2mm/3mm/4mm). Nullable : AUCUNE source de derivation
+   * automatique n'existe dans le catalogue `Produit` actuel — doit etre
+   * saisi manuellement par l'utilisateur. `null` = non configure : tout
+   * calcul de besoin en aliment reposant sur cette granulometrie DOIT etre
+   * rejete explicitement (jamais un `0`/`1`/valeur derivee substitue
    * silencieusement).
    */
   sacsParTonneStandard: number | null;
-  /** ordre d'affichage des CALIBRES entre eux dans le scenario */
-  ordre: number;
-  siteId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/**
- * AlimentArticlePrevision — un ARTICLE achete pour un calibre donne (ex.
- * "Marque A — sac 15kg" pour le calibre 2 mm). Ajoute par l'amendement
- * ADR-053 §12 (Sprint PR2-quater) pour permettre a un meme calibre d'avoir
- * plusieurs fournisseurs/marques — cas nominal : un seul article par
- * calibre (§12.6), mais le modele reste correct pour N > 1.
- */
-export interface AlimentArticlePrevision {
-  id: string;
-  /** FK vers le calibre parent (AlimentPrevision) */
-  alimentCalibrePrevisionId: string;
   /**
-   * Rapprochement uniquement — jamais lu par le moteur de calcul (ADR-053
-   * decision 1, inchangee). Nullable : un article previsionnel peut ne
-   * correspondre a aucun produit reel du catalogue.
+   * Rapprochement uniquement — jamais lu par le moteur de calcul. Nullable :
+   * un calibre previsionnel peut ne correspondre a aucun produit reel du
+   * catalogue.
    */
   produitId: string | null;
   /** copie depuis Produit.nom a la creation, puis libre (ex. "Marque A — sac 15kg") */
@@ -4384,45 +4363,18 @@ export interface AlimentArticlePrevision {
   /** copie depuis Produit.prixUnitaire a la creation */
   prixSacFCFA: number;
   /**
-   * Pur ratio d'UNITE DE POIDS : 1000 / poidsSacKg (nombre de sacs de CET
-   * ARTICLE, de CE poidsSacKg, pour faire une tonne de CE PRODUIT).
-   * Derivable de poidsSacKg, mais stocke et gele (ADR-053 decision 1) —
-   * descend au niveau article avec l'amendement §12 (ERR-138 : ne doit
-   * JAMAIS entrer dans le calcul d'un besoin en aliment par tonne de
-   * POISSON produit, cf. `AlimentPrevision.sacsParTonneStandard` ci-dessus,
-   * qui lui reste au calibre).
+   * Pur ratio d'UNITE DE POIDS : 1000 / poidsSacKg (nombre de sacs, de CE
+   * poidsSacKg, pour faire une tonne). Derivable de poidsSacKg, mais stocke
+   * et gele (ERR-138 : ne doit JAMAIS entrer dans le calcul d'un besoin en
+   * aliment par tonne de POISSON produit, cf. `sacsParTonneStandard`
+   * ci-dessus).
    */
   sacsParTonneUnitaire: number;
-  /**
-   * Part de CET article dans l'approvisionnement du calibre parent, en
-   * pourcentage (0..100). La somme des `partApprovisionnementPct` de tous
-   * les articles d'un meme calibre doit valoir exactement 100 — validee a
-   * l'ecriture (ADR-053 §12.2 arbitrage 3), jamais par contrainte SQL
-   * (meme raison qu'en §3.5 pour RepartitionMoisAliment).
-   *
-   * R7 — nullabilite tranchee explicitement : NOT NULL, PAS de sentinelle
-   * `null` = 100%. Tant qu'un calibre n'a qu'un seul article, l'UI ne
-   * demande pas cette valeur a l'utilisateur (ADR-053 §12.6) — c'est le
-   * SERVEUR qui ecrit 100 dans la meme transaction que la creation, jamais
-   * un champ optionnel cote API interprete comme "100 si absent" par
-   * chaque appelant : la valeur reelle existe toujours en base, seule sa
-   * saisie est masquee dans le cas nominal.
-   */
-  partApprovisionnementPct: number;
-  /** ordre d'affichage des ARTICLES au sein du calibre */
+  /** ordre d'affichage des CALIBRES entre eux dans le scenario */
   ordre: number;
   siteId: string;
   createdAt: Date;
   updatedAt: Date;
-}
-
-/**
- * AlimentPrevision (calibre) avec ses articles charges — forme de lecture
- * la plus courante de l'API (ADR-053 §12.6 : l'UI affiche un calibre comme
- * une seule entite tant qu'il n'a qu'un article).
- */
-export interface AlimentPrevisionWithArticles extends AlimentPrevision {
-  articles: AlimentArticlePrevision[];
 }
 
 /**

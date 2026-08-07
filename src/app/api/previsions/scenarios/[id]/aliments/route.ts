@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAlimentsPrevisionParScenario,
-  createAlimentPrevisionAvecArticle,
+  createAlimentPrevision,
 } from "@/lib/queries/previsions-aliments";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
@@ -28,15 +28,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 /**
  * POST /api/previsions/scenarios/[id]/aliments — cree un AlimentPrevision
- * (le CALIBRE) ET son unique AlimentArticlePrevision (l'ARTICLE), dans le
- * MEME appel, meme transaction Prisma (ADR-053 §12.6 : "creer un calibre
- * cree son article dans le meme geste", jamais deux appels distincts cote
- * client). PREVISIONS_PARAMETRER (ADR-053 section 6, explicite : referentiel
- * aliments/granulometries).
+ * (le CALIBRE), champs article (libelle, poidsSacKg, prixSacFCFA, produitId)
+ * inclus directement dans le meme appel, meme transaction Prisma.
+ * PREVISIONS_PARAMETRER (referentiel aliments/granulometries).
  *
  * Validation bloquante §8(a) (somme des repartitions mensuelles = 100%) si
  * des `repartitions` sont fournies a la creation : levee par
- * `createAlimentPrevisionAvecArticle` (meme transaction que l'ecriture, R4) —
+ * `createAlimentPrevision` (meme transaction que l'ecriture, R4) —
  * levee en `BusinessRuleError(msg, 422)` (ERR-165).
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -48,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const parsed = parseBody(createAlimentPrevisionSchema, body);
     if (parsed.error) return parsed.error;
 
-    const aliment = await createAlimentPrevisionAvecArticle(id, auth.activeSiteId, parsed.data);
+    const aliment = await createAlimentPrevision(id, auth.activeSiteId, parsed.data);
     return NextResponse.json(aliment, { status: 201 });
   } catch (error) {
     return handleApiError(

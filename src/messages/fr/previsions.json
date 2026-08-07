@@ -219,7 +219,6 @@
   "aliments": {
     "emptyTitle": "Aucune granulométrie",
     "emptyDescription": "Ajoutez les granulométries d'aliment utilisées dans ce scénario.",
-    "weightPrice": "{poids} kg/sac — {prix}",
     "articleSummary": "{libelle} — {poids} kg/sac — {prix}",
     "deleteAria": "Supprimer {libelle}",
     "needLabel": "Besoin : {value} sacs/tonne de poisson",
@@ -228,11 +227,7 @@
     "monthlyRepartitionFormule": "Répartition mensuelle = somme des pourcentages saisis sur tous les mois du cycle",
     "monthLabel": "Mois {count}",
     "monthlyRepartitionAria": "Expliquer la répartition mensuelle de {libelle}",
-    "spreadButton": "Répartir sur le cycle",
-    "articlesTitle": "Articles de ce calibre",
-    "articlePart": "{value} de l'approvisionnement",
-    "addArticleButton": "Ajouter un article",
-    "addArticleAria": "Ajouter un article pour le calibre {calibre}"
+    "spreadButton": "Répartir sur le cycle"
   },
   "alimentForm": {
     "triggerButton": "Nouvelle granulométrie",
@@ -269,40 +264,6 @@
     },
     "submitting": "Création...",
     "submit": "Créer"
-  },
-  "alimentArticleForm": {
-    "triggerButton": "Ajouter un article",
-    "dialogTitle": "Ajouter un article — {calibre}",
-    "existingArticlesTitle": "Articles déjà en approvisionnement",
-    "fields": {
-      "libelle": {
-        "label": "Libellé",
-        "placeholder": "ex. Marque A — sac 15kg"
-      },
-      "poidsSacKg": {
-        "label": "Poids du sac (kg)"
-      },
-      "prixSacFCFA": {
-        "label": "Prix du sac (FCFA)"
-      },
-      "produitId": {
-        "label": "Produit du catalogue (optionnel)",
-        "none": "Aucun rapprochement produit"
-      },
-      "partApprovisionnementPct": {
-        "label": "Part d'approvisionnement (%)"
-      }
-    },
-    "sumLabel": "Somme des parts",
-    "sumValue": "{value} % / 100 %",
-    "errors": {
-      "libelleRequired": "Le libellé est obligatoire.",
-      "poidsSacKgPositive": "Doit être strictement supérieur à 0.",
-      "required": "Ce champ est obligatoire.",
-      "sumMustBe100": "La somme des parts d'approvisionnement doit être égale à 100 %."
-    },
-    "submitting": "Ajout...",
-    "submit": "Ajouter"
   },
   "repartitionDialog": {
     "dialogTitle": "Répartition mensuelle — {libelle}",

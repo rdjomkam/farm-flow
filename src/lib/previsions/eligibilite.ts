@@ -5,7 +5,7 @@
  * (ADR-053 §18, story de selection explicite des produits).
  *
  * UN SEUL ENDROIT pour la regle "ce Produit ALIMENT est-il exploitable pour
- * une copie vers AlimentArticlePrevision ?" — reutilise tel quel par :
+ * une copie vers AlimentPrevision ?" — reutilise tel quel par :
  *   1. GET /api/previsions/produits-alimentaires-eligibles (calcule `eligible`
  *      et `raisonsInvalidite` par produit avant de repondre) ;
  *   2. le garde serveur de POST /api/previsions/scenarios quand `produitIds`

@@ -55,18 +55,11 @@ function buildAlimentUnique(repartitionsParMoisCycle: Array<{ moisCycle: number;
       moisCycle: r.moisCycle,
       pourcentage: new Decimal(r.pourcentage),
     })),
-    articles: [
-      {
-        id: "aliment-g1-article-unique",
-        produitId: null,
-        libelle: "G1",
-        poidsSacKg: new Decimal(25),
-        prixSacFCFA: new Decimal(15000),
-        sacsParTonneUnitaire: new Decimal(1000).dividedBy(25),
-        partApprovisionnementPct: new Decimal(100),
-        ordre: 0,
-      },
-    ],
+    produitId: null,
+    libelle: "G1",
+    poidsSacKg: new Decimal(25),
+    prixSacFCFA: new Decimal(15000),
+    sacsParTonneUnitaire: new Decimal(1000).dividedBy(25),
   };
 }
 
