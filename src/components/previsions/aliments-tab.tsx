@@ -19,6 +19,7 @@ import { Permission } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import { ValeurCalculee } from "@/components/previsions/valeur-calculee";
 import { AlimentFormDialog } from "@/components/previsions/aliment-form-dialog";
+import { AlimentEditDialog } from "@/components/previsions/aliment-edit-dialog";
 import { RepartitionMoisDialog } from "@/components/previsions/repartition-mois-dialog";
 import { formatMontantPrevision, formatPourcentagePrevision } from "@/lib/previsions/format-previsions";
 import type { AlimentPrevisionDTO } from "@/components/previsions/api-types";
@@ -43,6 +44,7 @@ export function AlimentsTab({
   const tStock = useTranslations("stock");
   const { del } = usePrevisionsApi();
   const [aliments, setAliments] = useState(initialAliments);
+  const [editingAliment, setEditingAliment] = useState<AlimentPrevisionDTO | null>(null);
   const peutParametrer = permissions.includes(Permission.PREVISIONS_PARAMETRER);
 
   async function handleDelete(id: string) {
@@ -82,40 +84,49 @@ export function AlimentsTab({
             const calibreLabel = tStock(`produits.taillesGranule.${a.tailleGranule}`);
             return (
               <div key={a.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{calibreLabel}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {t("aliments.articleSummary", {
-                        libelle: a.libelle,
-                        poids: Number(a.poidsSacKg),
-                        prix: formatMontantPrevision(a.prixSacFCFA),
-                      })}
-                    </p>
+                <button
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => peutParametrer && setEditingAliment(a)}
+                  disabled={!peutParametrer}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{calibreLabel}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {t("aliments.articleSummary", {
+                          libelle: a.libelle,
+                          poids: Number(a.poidsSacKg),
+                          prix: formatMontantPrevision(a.prixSacFCFA),
+                        })}
+                      </p>
+                    </div>
+                    {peutParametrer && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); handleDelete(a.id); } }}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center text-danger"
+                        aria-label={t("aliments.deleteAria", { libelle: calibreLabel })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </span>
+                    )}
                   </div>
-                  {peutParametrer && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(a.id)}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center text-danger"
-                      aria-label={t("aliments.deleteAria", { libelle: calibreLabel })}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {a.sacsParTonneStandard !== null ? (
-                    <span className="rounded-md bg-muted px-2 py-1 text-sm text-muted-foreground">
-                      {t("aliments.needLabel", { value: Number(a.sacsParTonneStandard) })}
-                    </span>
-                  ) : (
-                    <span className="rounded-md bg-accent-amber-muted px-2 py-1 text-sm text-accent-amber">
-                      {t("aliments.needMissing")}
-                    </span>
-                  )}
-                </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {a.sacsParTonneStandard !== null ? (
+                      <span className="rounded-md bg-muted px-2 py-1 text-sm text-muted-foreground">
+                        {t("aliments.needLabel", { value: Number(a.sacsParTonneStandard) })}
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-accent-amber-muted px-2 py-1 text-sm text-accent-amber">
+                        {t("aliments.needMissing")}
+                      </span>
+                    )}
+                  </div>
+                </button>
 
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -166,6 +177,17 @@ export function AlimentsTab({
             );
           })}
         </div>
+      )}
+      {editingAliment && (
+        <AlimentEditDialog
+          aliment={editingAliment}
+          open={!!editingAliment}
+          onOpenChange={(next) => { if (!next) setEditingAliment(null); }}
+          onUpdated={(updated) => {
+            setAliments((prev) => prev.map((a) => (a.id === updated.id ? { ...updated, repartitions: a.repartitions } : a)));
+            onDataChanged?.();
+          }}
+        />
       )}
     </div>
   );

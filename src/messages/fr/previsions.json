@@ -265,6 +265,11 @@
     "submitting": "Création...",
     "submit": "Créer"
   },
+  "alimentEditForm": {
+    "dialogTitle": "Modifier la granulométrie",
+    "submitting": "Enregistrement...",
+    "submit": "Enregistrer"
+  },
   "repartitionDialog": {
     "dialogTitle": "Répartition mensuelle — {libelle}",
     "totalLabel": "Total réparti",

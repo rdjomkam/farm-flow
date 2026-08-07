@@ -265,6 +265,11 @@
     "submitting": "Creating...",
     "submit": "Create"
   },
+  "alimentEditForm": {
+    "dialogTitle": "Edit feed grade",
+    "submitting": "Saving...",
+    "submit": "Save"
+  },
   "repartitionDialog": {
     "dialogTitle": "Monthly split — {libelle}",
     "totalLabel": "Total split",
