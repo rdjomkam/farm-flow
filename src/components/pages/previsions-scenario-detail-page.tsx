@@ -34,6 +34,7 @@ import { decimalToNumber } from "@/lib/previsions/decimal-io";
 import type { Prisma } from "@/generated/prisma/client";
 import { ScenarioDetailClient } from "@/components/previsions/scenario-detail-client";
 import { ExportPrevisionsButton } from "@/components/previsions/export-previsions-button";
+import { ChainerScenarioButton } from "@/components/previsions/chainer-scenario-button";
 import type {
   ScenarioPrevisionDetailDTO,
   AlimentPrevisionDTO,
@@ -373,6 +374,10 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     siteId: scenario.siteId,
     createdAt: scenario.createdAt.toISOString(),
     updatedAt: scenario.updatedAt.toISOString(),
+    scenarioParentId: scenario.scenarioParentId ?? null,
+    scenarioParent: scenario.scenarioParent
+      ? { id: scenario.scenarioParent.id, nom: scenario.scenarioParent.nom, code: scenario.scenarioParent.code }
+      : null,
     parametres: scenario.parametres
       ? {
           id: scenario.parametres.id,
@@ -393,6 +398,7 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
           coutTransportAlevinsFCFA: decimalToNumber(scenario.parametres.coutTransportAlevinsFCFA),
           tauxEpargnePct: decimalToNumber(scenario.parametres.tauxEpargnePct),
           alevinsAchetesParDefaut: scenario.parametres.alevinsAchetesParDefaut,
+          tresorerieInitialeFCFA: decimalToNumber(scenario.parametres.tresorerieInitialeFCFA),
         }
       : null,
     paliersRemise: scenario.paliersRemise.map((p) => ({
@@ -525,7 +531,10 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
   return (
     <>
       <Header title={scenario.nom}>
-        <ExportPrevisionsButton scenarioId={scenario.id} scenarioNom={scenario.nom} />
+        <div className="flex items-center gap-2">
+          <ChainerScenarioButton scenarioId={scenario.id} />
+          <ExportPrevisionsButton scenarioId={scenario.id} scenarioNom={scenario.nom} />
+        </div>
       </Header>
       <div className="p-4 md:p-6">
         <ScenarioDetailClient

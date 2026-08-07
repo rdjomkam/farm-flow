@@ -52,6 +52,7 @@ export interface ParametresPrevisionDTO {
   tauxEpargnePct: Dec;
   /** ADR-053 §14 / ERR-170 — defaut applique a la creation des VaguePrevue */
   alevinsAchetesParDefaut: boolean;
+  tresorerieInitialeFCFA: Dec;
 }
 
 export interface PalierRemiseDTO {
@@ -61,6 +62,12 @@ export interface PalierRemiseDTO {
   pourcentageRemise: Dec;
   ordre: number;
   siteId: string;
+}
+
+export interface ScenarioParentInfoDTO {
+  id: string;
+  nom: string;
+  code: string;
 }
 
 export interface ScenarioPrevisionSummaryDTO {
@@ -75,6 +82,8 @@ export interface ScenarioPrevisionSummaryDTO {
   siteId: string;
   createdAt: string;
   updatedAt: string;
+  scenarioParentId: string | null;
+  scenarioParent: ScenarioParentInfoDTO | null;
 }
 
 export interface ScenarioPrevisionDetailDTO extends ScenarioPrevisionSummaryDTO {

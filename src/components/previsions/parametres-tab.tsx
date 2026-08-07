@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormSection } from "@/components/ui/form-section";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Link2 } from "lucide-react";
 import { Permission } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import type { ScenarioPrevisionDetailDTO, ParametresPrevisionDTO, PalierRemiseDTO } from "@/components/previsions/api-types";
@@ -133,6 +133,9 @@ function toFormValues(p: ParametresPrevisionDTO | null): Record<string, string> 
     const v = p[key];
     result[key] = v === null || v === undefined ? "" : String(v);
   }
+  result.tresorerieInitialeFCFA = p.tresorerieInitialeFCFA === null || p.tresorerieInitialeFCFA === undefined
+    ? "0"
+    : String(p.tresorerieInitialeFCFA);
   return result;
 }
 
@@ -186,6 +189,10 @@ export function ParametresTab({ scenario, permissions, onDataChanged }: Parametr
       for (const key of [...CHAMPS, ...CHAMPS_TRANSPORT]) {
         const raw = values[key];
         if (raw !== undefined && raw.trim() !== "") body[key] = Number(raw);
+      }
+      const rawTreso = values.tresorerieInitialeFCFA;
+      if (rawTreso !== undefined && rawTreso.trim() !== "") {
+        body.tresorerieInitialeFCFA = Number(rawTreso);
       }
       const result = await put(`/api/previsions/scenarios/${scenario.id}/parametres`, body);
       if (result.ok) {
@@ -356,6 +363,50 @@ export function ParametresTab({ scenario, permissions, onDataChanged }: Parametr
         ))}
       </FormSection>
 
+      <FormSection
+        title={t("parametresTab.tresorerieTitle")}
+        description={scenario.scenarioParentId
+          ? t("parametresTab.tresorerieChainee", { parentNom: scenario.scenarioParent?.nom ?? "" })
+          : t("parametresTab.tresorerieDescription")
+        }
+      >
+        <Input
+          label={t("parametresTab.fields.tresorerieInitialeFCFA.label")}
+          type="number"
+          inputMode="decimal"
+          step="any"
+          value={values.tresorerieInitialeFCFA ?? "0"}
+          disabled={!peutParametrer || !!scenario.scenarioParentId}
+          onChange={(e) => {
+            setValues((v) => ({ ...v, tresorerieInitialeFCFA: e.target.value }));
+          }}
+          error={fieldErrors.tresorerieInitialeFCFA}
+          hint={scenario.scenarioParentId
+            ? t("parametresTab.fields.tresorerieInitialeFCFA.hintChainee")
+            : undefined
+          }
+        />
+        {!scenario.scenarioParentId && peutParametrer && (
+          <ImportTresorerieSelector
+            scenarioId={scenario.id}
+            onImport={(solde) => {
+              setValues((v) => ({ ...v, tresorerieInitialeFCFA: String(solde) }));
+            }}
+          />
+        )}
+        {scenario.scenarioParent && (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            <Link2 className="h-4 w-4 shrink-0" />
+            <span>
+              {t("parametresTab.chaineeDepuis", {
+                code: scenario.scenarioParent.code,
+                nom: scenario.scenarioParent.nom,
+              })}
+            </span>
+          </div>
+        )}
+      </FormSection>
+
       {peutParametrer && (
         <Button onClick={handleSaveParametres} disabled={saving} className="w-full md:w-auto">
           {saving ? t("parametresTab.saving") : t("parametresTab.saveButton")}
@@ -452,6 +503,98 @@ export function ParametresTab({ scenario, permissions, onDataChanged }: Parametr
           )}
         </div>
       </FormSection>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Import trésorerie depuis un autre scénario (option 2)
+// ---------------------------------------------------------------------------
+
+interface ImportTresorerieProps {
+  scenarioId: string;
+  onImport: (soldeFinal: number) => void;
+}
+
+function ImportTresorerieSelector({ scenarioId, onImport }: ImportTresorerieProps) {
+  const t = useTranslations("previsions");
+  const { get } = usePrevisionsApi();
+  const [scenarios, setScenarios] = useState<{ id: string; nom: string; code: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState<string | null>(null);
+
+  async function loadScenarios() {
+    if (scenarios) return;
+    setLoading(true);
+    try {
+      const result = await get("/api/previsions/scenarios");
+      if (result.ok && result.data?.data) {
+        setScenarios(
+          result.data.data
+            .filter((s: { id: string }) => s.id !== scenarioId)
+            .map((s: { id: string; nom: string; code: string }) => ({
+              id: s.id,
+              nom: s.nom,
+              code: s.code,
+            }))
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleImport(fromId: string) {
+    setImportLoading(fromId);
+    try {
+      const result = await get(`/api/previsions/scenarios/${fromId}/solde-final`);
+      if (result.ok && result.data) {
+        onImport(result.data.soldeFinalFCFA);
+      }
+    } finally {
+      setImportLoading(null);
+    }
+  }
+
+  if (!scenarios) {
+    return (
+      <Button variant="outline" size="sm" onClick={loadScenarios} disabled={loading}>
+        {loading
+          ? t("parametresTab.importTresorerie.chargement")
+          : t("parametresTab.importTresorerie.bouton")}
+      </Button>
+    );
+  }
+
+  if (scenarios.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {t("parametresTab.importTresorerie.aucunScenario")}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-muted-foreground">
+        {t("parametresTab.importTresorerie.titre")}
+      </p>
+      {scenarios.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => handleImport(s.id)}
+          disabled={importLoading !== null}
+          className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50 text-left"
+        >
+          <span>
+            <span className="font-medium">{s.code}</span>
+            <span className="text-muted-foreground ml-2">{s.nom}</span>
+          </span>
+          {importLoading === s.id && (
+            <span className="text-xs text-muted-foreground">{t("parametresTab.importTresorerie.calcul")}</span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }

@@ -51,6 +51,7 @@ export interface CreateScenarioPrevisionDTO {
   dureeCycleMois?: number;
   dateDebutPlan: string;
   userId: string;
+  scenarioParentId?: string | null;
   /** ParametresPrevision — 1-1 obligatoire des la creation (ADR-053 section 3.3) */
   parametres: {
     effectifAlevinsParVague: number;
@@ -201,6 +202,7 @@ export async function getScenarioById(id: string, siteId: string) {
     include: {
       parametres: true,
       paliersRemise: { orderBy: { ordre: "asc" } },
+      scenarioParent: { select: { id: true, nom: true, code: true } },
       _count: { select: { aliments: true } },
     },
   });
@@ -275,6 +277,7 @@ export async function createScenario(siteId: string, data: CreateScenarioPrevisi
         statut: StatutScenarioPrevision.BROUILLON,
         userId: data.userId,
         siteId,
+        ...(data.scenarioParentId && { scenarioParentId: data.scenarioParentId }),
       },
     });
 

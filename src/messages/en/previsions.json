@@ -152,10 +152,25 @@
     "excel": "Export Excel (.xlsx)",
     "pdf": "Export PDF"
   },
+  "chainer": {
+    "bouton": "Chain",
+    "enCours": "Creating..."
+  },
   "parametresTab": {
     "sectionTitle": "Scenario parameters",
     "sectionDescription": "Initial copy used for each newly planned batch.",
     "transportTitle": "Transport (optional)",
+    "tresorerieTitle": "Initial treasury",
+    "tresorerieDescription": "Starting amount for the plan. You can import the final balance from another scenario.",
+    "tresorerieChainee": "This scenario is chained from \"{parentNom}\". The initial treasury was imported automatically and cannot be changed here.",
+    "chaineeDepuis": "Chained from {code} — {nom}",
+    "importTresorerie": {
+      "bouton": "Import from another scenario",
+      "chargement": "Loading...",
+      "titre": "Import final balance from:",
+      "aucunScenario": "No other scenario available.",
+      "calcul": "Calculating..."
+    },
     "saveButton": "Save parameters",
     "saving": "Saving...",
     "fields": {
@@ -193,6 +208,10 @@
       "alevinsAchetesParDefaut": {
         "label": "Purchased fingerlings by default",
         "hint": "Applied to each newly planned batch; editable afterwards on a per-batch basis."
+      },
+      "tresorerieInitialeFCFA": {
+        "label": "Initial treasury (FCFA)",
+        "hintChainee": "Value imported from parent scenario. To modify, create an independent scenario."
       }
     },
     "transportFields": {

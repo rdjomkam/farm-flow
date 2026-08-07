@@ -152,10 +152,25 @@
     "excel": "Export Excel (.xlsx)",
     "pdf": "Export PDF"
   },
+  "chainer": {
+    "bouton": "Chaîner",
+    "enCours": "Création..."
+  },
   "parametresTab": {
     "sectionTitle": "Paramètres du scénario",
     "sectionDescription": "Copie initiale utilisée pour chaque nouvelle vague planifiée.",
     "transportTitle": "Transport (optionnel)",
+    "tresorerieTitle": "Trésorerie initiale",
+    "tresorerieDescription": "Montant de départ du plan. Vous pouvez importer le solde final d'un autre scénario.",
+    "tresorerieChainee": "Ce scénario est chaîné depuis « {parentNom} ». La trésorerie initiale a été importée automatiquement et ne peut pas être modifiée ici.",
+    "chaineeDepuis": "Chaîné depuis {code} — {nom}",
+    "importTresorerie": {
+      "bouton": "Importer depuis un autre scénario",
+      "chargement": "Chargement...",
+      "titre": "Importer le solde final depuis :",
+      "aucunScenario": "Aucun autre scénario disponible.",
+      "calcul": "Calcul..."
+    },
     "saveButton": "Enregistrer les paramètres",
     "saving": "Enregistrement...",
     "fields": {
@@ -193,6 +208,10 @@
       "alevinsAchetesParDefaut": {
         "label": "Alevins achetés par défaut",
         "hint": "S'applique à chaque nouvelle vague planifiée ; modifiable ensuite vague par vague."
+      },
+      "tresorerieInitialeFCFA": {
+        "label": "Trésorerie initiale (FCFA)",
+        "hintChainee": "Valeur importée du scénario parent. Pour modifier, créez un scénario indépendant."
       }
     },
     "transportFields": {

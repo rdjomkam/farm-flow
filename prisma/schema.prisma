@@ -4401,12 +4401,17 @@ model ScenarioPrevision {
   clotures               ClotureMois[]
   snapshotsBudgetInitial SnapshotBudgetInitial[]
 
+  scenarioParentId String?
+  scenarioParent   ScenarioPrevision?  @relation("ScenarioChaining", fields: [scenarioParentId], references: [id])
+  scenariosEnfants ScenarioPrevision[] @relation("ScenarioChaining")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([siteId, code])
   @@index([siteId])
   @@index([siteId, statut])
+  @@index([scenarioParentId])
 }
 
 model ParametresPrevision {

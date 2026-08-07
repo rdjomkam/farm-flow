@@ -4241,6 +4241,8 @@ export interface ScenarioPrevision {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** scenario d'origine dont celui-ci a ete derive — nullable : racine si absent */
+  scenarioParentId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

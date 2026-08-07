@@ -114,6 +114,7 @@ export const createScenarioSchema = z.object({
    * transaction (§18, point 6 des arbitrages deja tranches).
    */
   produitIds: z.array(z.string().min(1)).optional(),
+  scenarioParentId: z.string().min(1).nullable().optional(),
 });
 export type CreateScenarioInput = z.infer<typeof createScenarioSchema>;
 
