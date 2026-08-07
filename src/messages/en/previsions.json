@@ -146,6 +146,12 @@
     "rapprochement": "Reconciliation",
     "tresorerie": "Cash flow"
   },
+  "export": {
+    "bouton": "Export",
+    "enCours": "Exporting...",
+    "excel": "Export Excel (.xlsx)",
+    "pdf": "Export PDF"
+  },
   "parametresTab": {
     "sectionTitle": "Scenario parameters",
     "sectionDescription": "Initial copy used for each newly planned batch.",

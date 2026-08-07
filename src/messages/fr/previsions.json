@@ -146,6 +146,12 @@
     "rapprochement": "Rapprochement",
     "tresorerie": "Trésorerie"
   },
+  "export": {
+    "bouton": "Export",
+    "enCours": "Export...",
+    "excel": "Export Excel (.xlsx)",
+    "pdf": "Export PDF"
+  },
   "parametresTab": {
     "sectionTitle": "Paramètres du scénario",
     "sectionDescription": "Copie initiale utilisée pour chaque nouvelle vague planifiée.",

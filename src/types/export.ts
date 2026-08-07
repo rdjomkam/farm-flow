@@ -970,3 +970,105 @@ export interface CreateBonLivraisonPDFDTO {
   /** Date de génération du PDF (pied de page) */
   dateGeneration: string;
 }
+
+// ---------------------------------------------------------------------------
+// DTOs Excel + PDF — Prévisions (scénario)
+// ---------------------------------------------------------------------------
+
+/**
+ * Résumé d'un scénario de prévision pour l'en-tête d'export.
+ */
+export interface ScenarioExportInfo {
+  id: string;
+  nom: string;
+  code: string;
+  /** ISO string */
+  dateDebutPlan: string;
+  dureeCycleMois: number;
+  statut: string;
+}
+
+/**
+ * Paramètres du scénario nécessaires à la feuille/page "Paramètres" de
+ * l'export — déjà convertis en `number` (jamais un `Decimal`, cf.
+ * `decimalToNumber` côté route).
+ */
+export interface ParametresExportInfo {
+  effectifAlevinsParVague: number;
+  margeSecuriteAlevinsPct: number;
+  poidsMoyenInitialG: number;
+  poidsObjectifG: number;
+  prixAlevinUnitaireFCFA: number;
+  prixVenteKgFCFA: number;
+  nombreBacsSimultanesCible: number;
+  frequenceStockageMois: number;
+  tauxEpargnePct: number;
+  tresorerieInitialeFCFA: number;
+}
+
+/**
+ * Granulométrie (calibre d'aliment) pour la feuille/page "Paramètres".
+ */
+export interface AlimentExportInfo {
+  libelle: string;
+  tailleGranule: string;
+  poidsSacKg: number;
+  prixSacFCFA: number;
+}
+
+/**
+ * DTO pour exporter la projection complète d'un scénario de prévision
+ * (Excel .xlsx multi-feuilles ou PDF paysage) — assemblé par
+ * `GET /api/previsions/scenarios/[id]/export`.
+ *
+ * `projection` reprend la forme de `ProjectionScenarioDTO`
+ * (`src/components/previsions/projection-types.ts`) mais ce fichier ne
+ * l'importe pas directement (types/ ne dépend jamais de components/) : les
+ * champs nécessaires sont dupliqués ici via les types locaux ci-dessous.
+ */
+export interface MoisProjectionExportInfo {
+  moisAbsolu: number;
+  revenusFCFA: number;
+  coutAlimentsFCFA: number;
+  coutAlevinsFCFA: number;
+  baseRepartitionFCFA: number;
+  investissementsFCFA: number;
+  depensesFCFA: number;
+  apportsFCFA: number;
+  resultatFCFA: number;
+  epargneFCFA: number;
+  soldeFCFA: number;
+  empoissonneKg: number;
+  ventesKg: number;
+  alevinsACommanderNb: number;
+  besoinAlimentsTotalKg: number;
+  sacsAlimentsTotal: number;
+  sacsParGranulometrie: Record<string, number>;
+}
+
+export interface BudgetTotalPlanExportInfo {
+  totalCoutsProductionFCFA: number;
+  totalChargesHorsProductionFCFA: number;
+  totalApportsFCFA: number;
+  budgetTotalFCFA: number;
+}
+
+export interface PointBasExportInfo {
+  pointBasFCFA: number;
+  moisAbsolu: number;
+}
+
+export interface CreatePrevisionExportDTO {
+  scenario: ScenarioExportInfo;
+  parametres: ParametresExportInfo;
+  aliments: AlimentExportInfo[];
+  projection: {
+    horizonMois: number;
+    mois: MoisProjectionExportInfo[];
+    budget: BudgetTotalPlanExportInfo;
+    pointBas: PointBasExportInfo | null;
+  };
+  siteName: string;
+  /** ISO string — date de génération de l'export */
+  exportDate: string;
+}

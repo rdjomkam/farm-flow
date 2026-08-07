@@ -33,6 +33,7 @@ import {
 import { decimalToNumber } from "@/lib/previsions/decimal-io";
 import type { Prisma } from "@/generated/prisma/client";
 import { ScenarioDetailClient } from "@/components/previsions/scenario-detail-client";
+import { ExportPrevisionsButton } from "@/components/previsions/export-previsions-button";
 import type {
   ScenarioPrevisionDetailDTO,
   AlimentPrevisionDTO,
@@ -523,7 +524,9 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
 
   return (
     <>
-      <Header title={scenario.nom} />
+      <Header title={scenario.nom}>
+        <ExportPrevisionsButton scenarioId={scenario.id} scenarioNom={scenario.nom} />
+      </Header>
       <div className="p-4 md:p-6">
         <ScenarioDetailClient
           scenario={scenarioDetail}
