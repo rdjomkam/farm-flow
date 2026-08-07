@@ -206,6 +206,13 @@ export async function getScenarioById(id: string, siteId: string) {
   });
 }
 
+/** Supprime un scenario et toutes ses donnees enfants (CASCADE). */
+export async function deleteScenario(id: string, siteId: string) {
+  return prisma.scenarioPrevision.delete({
+    where: { id, siteId },
+  });
+}
+
 /**
  * Cree un scenario complet en transaction : ScenarioPrevision + ParametresPrevision
  * (1-1 obligatoire, ADR-053 section 3.3) + copie des AlimentPrevision depuis les

@@ -125,6 +125,7 @@ export const permissionLabels: Record<string, string> = {
   [Permission.PREVISIONS_GERER]: "Gerer les previsions",
   [Permission.PREVISIONS_PARAMETRER]: "Parametrer les previsions",
   [Permission.PREVISIONS_CLOTURER]: "Cloturer un mois de prevision",
+  [Permission.PREVISIONS_SUPPRIMER]: "Supprimer un scenario de prevision",
 };
 
 // ---------------------------------------------------------------------------

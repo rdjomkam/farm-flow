@@ -61,6 +61,7 @@ const mockUpdateParametresPrevision = vi.fn();
 const mockReplacePaliersRemise = vi.fn();
 const mockArchiverScenario = vi.fn();
 const mockActiverScenario = vi.fn();
+const mockDeleteScenario = vi.fn();
 const mockGetProduitsAlimentairesEligibles = vi.fn();
 vi.mock("@/lib/queries/previsions-scenarios", () => ({
   getScenarios: (...a: unknown[]) => mockGetScenarios(...a),
@@ -72,6 +73,7 @@ vi.mock("@/lib/queries/previsions-scenarios", () => ({
     mockGetProduitsAlimentairesEligibles(...a),
   archiverScenario: (...a: unknown[]) => mockArchiverScenario(...a),
   activerScenario: (...a: unknown[]) => mockActiverScenario(...a),
+  deleteScenario: (...a: unknown[]) => mockDeleteScenario(...a),
 }));
 
 // previsions-snapshot-budget (Sprint PR3, story PR3.3) — la route
@@ -160,7 +162,7 @@ vi.mock("@/lib/previsions/route-orchestration", () => ({
 
 import { GET as scenariosGET, POST as scenariosPOST } from "@/app/api/previsions/scenarios/route";
 import { GET as produitsAlimentairesEligiblesGET } from "@/app/api/previsions/produits-alimentaires-eligibles/route";
-import { GET as scenarioDetailGET } from "@/app/api/previsions/scenarios/[id]/route";
+import { GET as scenarioDetailGET, DELETE as scenarioDELETE } from "@/app/api/previsions/scenarios/[id]/route";
 import { PUT as parametresPUT } from "@/app/api/previsions/scenarios/[id]/parametres/route";
 import { PUT as paliersPUT } from "@/app/api/previsions/scenarios/[id]/paliers-remise/route";
 import { POST as archiverPOST } from "@/app/api/previsions/scenarios/[id]/archiver/route";
@@ -302,6 +304,16 @@ function buildCases(): RouteCase[] {
       successStatus: 200,
       invoke: () => archiverPOST(makeRequest("/api/previsions/scenarios/id-1/archiver", { method: "POST" }), idParams()),
       setupSuccess: () => mockArchiverScenario.mockResolvedValue({ id: "id-1", statut: "ARCHIVE" }),
+    },
+    {
+      name: "DELETE /scenarios/[id]",
+      permission: Permission.PREVISIONS_SUPPRIMER,
+      successStatus: 204,
+      invoke: () => scenarioDELETE(makeRequest("/api/previsions/scenarios/id-1", { method: "DELETE" }), idParams()),
+      setupSuccess: () => {
+        mockGetScenarioById.mockResolvedValue({ id: "id-1" });
+        mockDeleteScenario.mockResolvedValue({ id: "id-1" });
+      },
     },
     {
       name: "POST /scenarios/[id]/activer",
@@ -606,8 +618,8 @@ describe("Module Previsions — matrice auth/permissions sur les 22 routes", () 
 
   const cases = buildCases();
 
-  it("couvre bien les 22 routes du sprint + la route dediee ADR-053 §18 (33 combinaisons methode+route, GET/POST/PUT/PATCH/DELETE confondus)", () => {
-    expect(cases.length).toBe(33);
+  it("couvre bien les 23 routes du sprint + la route dediee ADR-053 §18 (34 combinaisons methode+route, GET/POST/PUT/PATCH/DELETE confondus)", () => {
+    expect(cases.length).toBe(34);
   });
 
   for (const c of cases) {

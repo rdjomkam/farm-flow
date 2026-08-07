@@ -222,7 +222,8 @@ VALUES
       'PREVISIONS_VOIR',
       'PREVISIONS_GERER',
       'PREVISIONS_PARAMETRER',
-      'PREVISIONS_CLOTURER'
+      'PREVISIONS_CLOTURER',
+      'PREVISIONS_SUPPRIMER'
       -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021, admin plateforme)
       -- volontairement absentes : reservees au Role.ADMIN global (bypass getServerPermissions),
       -- pas des permissions de SiteRole.
@@ -455,7 +456,8 @@ VALUES
       'PREVISIONS_VOIR',
       'PREVISIONS_GERER',
       'PREVISIONS_PARAMETRER',
-      'PREVISIONS_CLOTURER'
+      'PREVISIONS_CLOTURER',
+      'PREVISIONS_SUPPRIMER'
       -- NB: SITES_VOIR / SITES_GERER / ANALYTICS_PLATEFORME (ADR-021) volontairement absentes
       -- (reserve Role.ADMIN global) — cf. story SU.10.
     ]::"Permission"[],

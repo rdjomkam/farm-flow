@@ -203,6 +203,7 @@ export const PERMISSION_GROUPS = {
     Permission.PREVISIONS_GERER,
     Permission.PREVISIONS_PARAMETRER,
     Permission.PREVISIONS_CLOTURER,
+    Permission.PREVISIONS_SUPPRIMER,
   ],
 } as const;
 

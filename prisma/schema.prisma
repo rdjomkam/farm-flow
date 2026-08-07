@@ -314,6 +314,7 @@ enum Permission {
   PREVISIONS_GERER
   PREVISIONS_PARAMETRER
   PREVISIONS_CLOTURER
+  PREVISIONS_SUPPRIMER
 }
 
 // ──────────────────────────────────────────
