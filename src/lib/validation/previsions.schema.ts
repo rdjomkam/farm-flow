@@ -420,6 +420,15 @@ export const createApportCapitalSchema = z.object({
 });
 export type CreateApportCapitalInput = z.infer<typeof createApportCapitalSchema>;
 
+export const updateApportCapitalSchema = z.object({
+  date: isoDateString.optional(),
+  libelle: z.string().min(1, "Le libelle est obligatoire.").optional(),
+  montantFCFA: nonNegativeNumber.optional(),
+  type: z.nativeEnum(TypeApportCapital).optional(),
+  actif: z.boolean().optional(),
+});
+export type UpdateApportCapitalInput = z.infer<typeof updateApportCapitalSchema>;
+
 // ---------------------------------------------------------------------------
 // MappingRapprochement / ClotureMois (Sprint PR3, story PR3.6)
 // ---------------------------------------------------------------------------

@@ -101,6 +101,7 @@ function buildScenario(tresorerieInitialeFCFA: number): ScenarioPourCalcul {
         libelle: "Apport synthetique",
         montantFCFA: new Decimal(APPORT_MOIS0_FCFA),
         type: TypeApportCapital.CAPITAL,
+        actif: true,
       },
     ],
   };

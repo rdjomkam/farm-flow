@@ -187,6 +187,7 @@ describe("ChargesTab — permissions PREVISIONS_VOIR seule", () => {
     type: TypePostePrevision.CHARGE_EXPLOITATION,
     inclusBaseRepartition: true,
     ordre: 0,
+    actif: true,
     siteId: "site-1",
     posteReferentielId: "ref-1",
     posteReferentiel: { libelle: "Electricite", actif: true },

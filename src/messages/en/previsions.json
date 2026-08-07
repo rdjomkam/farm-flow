@@ -457,7 +457,11 @@
     "totalLabel": "Total for the month:",
     "totalFormule": "Total for the month = sum of the expense amounts for each line for this month",
     "totalAria": "Explain the total for the month",
-    "gererReferentielLink": "Manage cost item reference"
+    "gererReferentielLink": "Manage cost item reference",
+    "desactiver": "Disable",
+    "reactiver": "Enable",
+    "inactifBadge": "Disabled",
+    "inactifHint": "This cost item and its expenses are excluded from forecasts."
   },
   "reporterChargeDialog": {
     "triggerButton": "Roll over to several months",
@@ -651,7 +655,16 @@
     "types": {
       "CREDIT": "Loan received",
       "CAPITAL": "Equity"
-    }
+    },
+    "total": "Total",
+    "editButton": "Edit",
+    "deleteButton": "Delete",
+    "deleteConfirm": "Delete this contribution?",
+    "deleting": "Deleting...",
+    "desactiver": "Disable",
+    "reactiver": "Enable",
+    "inactifBadge": "Disabled",
+    "inactifHint": "This contribution is excluded from forecasts."
   },
   "apportForm": {
     "triggerButton": "New contribution",
@@ -678,7 +691,10 @@
       "dateAndLibelleRequired": "The date and label are required."
     },
     "submitting": "Creating...",
-    "submit": "Create"
+    "submit": "Create",
+    "editDialogTitle": "Edit contribution",
+    "editSubmitting": "Saving...",
+    "editSubmit": "Save"
   },
   "tableauBordTab": {
     "errorHint": "The indicators below are empty because of this error — this is not a real absence of batches or expenses. Fix the reported configuration issue then reload this page.",

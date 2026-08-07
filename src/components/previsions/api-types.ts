@@ -230,6 +230,7 @@ export interface PostePrevisionDTO {
   type: TypePostePrevision;
   inclusBaseRepartition: boolean;
   ordre: number;
+  actif: boolean;
   siteId: string;
   posteReferentielId: string;
   posteReferentiel: {
@@ -400,6 +401,7 @@ export interface ApportCapitalDTO {
   libelle: string;
   montantFCFA: Dec;
   type: TypeApportCapital;
+  actif: boolean;
   siteId: string;
 }
 

@@ -159,6 +159,8 @@ export interface PostePrevisionPourCalcul {
   type: TypePostePrevision;
   inclusBaseRepartition: boolean;
   ordre: number;
+  /** desactivation logique — un poste inactif est exclu du calcul de projection sans etre supprime */
+  actif: boolean;
   /**
    * ADR-053 §16 (story A.4) — identite stable, site-scopee, resolue par
    * `resoudreCibleCleDuScenarioCourant` (`previsions-mapping-orphelins.ts`) pour retrouver, dans
@@ -184,6 +186,8 @@ export interface ApportCapitalPourCalcul {
   libelle: string;
   montantFCFA: Decimal;
   type: TypeApportCapital;
+  /** desactivation logique — un apport inactif est exclu du calcul de projection sans etre supprime */
+  actif: boolean;
 }
 
 export interface ScenarioPourCalcul {
@@ -344,6 +348,7 @@ export async function chargerScenarioPourMoteur(
       type: p.type as TypePostePrevision,
       inclusBaseRepartition: p.inclusBaseRepartition,
       ordre: p.ordre,
+      actif: p.actif,
       posteReferentielId: p.posteReferentielId,
       chargesMensuelles: p.chargesMensuelles.map((c) => ({
         id: c.id,
@@ -366,6 +371,7 @@ export async function chargerScenarioPourMoteur(
       libelle: a.libelle,
       montantFCFA: prismaDecimalToEngine(a.montantFCFA),
       type: a.type as TypeApportCapital,
+      actif: a.actif,
     })),
   };
 }

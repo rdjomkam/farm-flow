@@ -583,20 +583,22 @@ export function calculerProjectionScenario(scenario: ScenarioPourCalcul): Projec
   // ---------------------------------------------------------------------
   // 2. Charges/journal/apports a plat, par mois absolu (entrees brutes).
   // ---------------------------------------------------------------------
-  const chargesFlat: (ChargePourBaseInput & { moisAbsolu: number })[] = scenario.postes.flatMap((poste) =>
-    poste.chargesMensuelles.map((c) => ({
-      moisAbsolu: c.moisAbsolu,
-      montantFCFA: c.montantFCFA,
-      inclusBaseRepartition: poste.inclusBaseRepartition,
-    }))
-  );
+  const chargesFlat: (ChargePourBaseInput & { moisAbsolu: number })[] = scenario.postes
+    .filter((poste) => poste.actif !== false)
+    .flatMap((poste) =>
+      poste.chargesMensuelles.map((c) => ({
+        moisAbsolu: c.moisAbsolu,
+        montantFCFA: c.montantFCFA,
+        inclusBaseRepartition: poste.inclusBaseRepartition,
+      }))
+    );
   const journalFlat: (JournalEntryInput & { moisAbsolu: number })[] = scenario.journal.map((j) => ({
     moisAbsolu: moisAbsoluDepuis(scenario.dateDebutPlan, j.date),
     montantFCFA: j.montantFCFA,
     categorie: j.categorie,
     vaguePrevueId: j.vaguePrevueId,
   }));
-  const apportsFlat = scenario.apports.map((a) => ({
+  const apportsFlat = scenario.apports.filter((a) => a.actif !== false).map((a) => ({
     moisAbsolu: moisAbsoluDepuis(scenario.dateDebutPlan, a.date),
     montantFCFA: a.montantFCFA,
   }));

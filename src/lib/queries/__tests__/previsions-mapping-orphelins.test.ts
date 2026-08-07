@@ -158,6 +158,7 @@ describe("A.3 — resoudreCibleCleDuScenarioCourant : resolution DYNAMIQUE par t
           type: TypePostePrevision.CHARGE_EXPLOITATION,
           inclusBaseRepartition: true,
           ordre: 0,
+          actif: true,
           chargesMensuelles: [],
           posteReferentielId: "referentiel-salaires",
         },
@@ -186,6 +187,7 @@ describe("A.3 — resoudreCibleCleDuScenarioCourant : resolution DYNAMIQUE par t
           type: TypePostePrevision.CHARGE_EXPLOITATION,
           inclusBaseRepartition: true,
           ordre: 0,
+          actif: true,
           chargesMensuelles: [],
           posteReferentielId: "referentiel-electricite",
         },
@@ -206,6 +208,7 @@ describe("A.3 — resoudreCibleCleDuScenarioCourant : resolution DYNAMIQUE par t
       type: TypePostePrevision.CHARGE_EXPLOITATION,
       inclusBaseRepartition: true,
       ordre: 0,
+      actif: true,
       chargesMensuelles: [],
       posteReferentielId: "referentiel-salaires",
     };
@@ -215,6 +218,7 @@ describe("A.3 — resoudreCibleCleDuScenarioCourant : resolution DYNAMIQUE par t
       type: TypePostePrevision.CHARGE_EXPLOITATION,
       inclusBaseRepartition: true,
       ordre: 0,
+      actif: true,
       chargesMensuelles: [],
       posteReferentielId: "referentiel-salaires",
     };
@@ -251,7 +255,7 @@ describe("A.1 — construireClesCiblesValidesDuScenario : miroir des cle produit
   it("contient les postes, les aliments, les cles ventes/apport fixes — rien de plus, rien de moins", () => {
     const scenario = scenarioFactice({
       postes: [
-        { id: "poste-1", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
+        { id: "poste-1", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
       ],
       aliments: [
         { id: "aliment-1", tailleGranule: TailleGranule.G1, sacsParTonneStandard: null, ordre: 0, repartitions: [], articles: [] },
@@ -274,7 +278,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
     const scenarioB = scenarioFactice({
       id: "scenario-b",
       postes: [
-        { id: "poste-scenario-b", libelle: "Electricite", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-electricite" },
+        { id: "poste-scenario-b", libelle: "Electricite", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-electricite" },
       ],
     });
 
@@ -305,7 +309,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
     const scenarioA = scenarioFactice({
       id: "scenario-a",
       postes: [
-        { id: "poste-id-dans-a", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
+        { id: "poste-id-dans-a", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
       ],
     });
     const scenarioB = scenarioFactice({
@@ -316,7 +320,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
         // propriete que la story achete : le mapping suit l'entree
         // referentiel, jamais l'id scenario-scope figé au moment de la
         // creation du mapping.
-        { id: "poste-id-dans-b", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
+        { id: "poste-id-dans-b", libelle: "Salaires", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-salaires" },
       ],
     });
 
@@ -332,7 +336,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
   it("une cible qui EXISTE dans le scenario courant n'est jamais signalee orpheline", () => {
     const scenario = scenarioFactice({
       postes: [
-        { id: "poste-ok", libelle: "Transport", type: TypePostePrevision.LOGISTIQUE, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-transport" },
+        { id: "poste-ok", libelle: "Transport", type: TypePostePrevision.LOGISTIQUE, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-transport" },
       ],
     });
     const mapping = [ligneMapping({ cibleType: CibleRapprochement.POSTE_PREVISION, cibleId: "referentiel-transport" })];
@@ -406,7 +410,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
     ];
     const avantRenommage = scenarioFactice({
       postes: [
-        { id: "poste-energie", libelle: "Energie", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-energie" },
+        { id: "poste-energie", libelle: "Energie", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-energie" },
       ],
     });
     const apresRenommage = scenarioFactice({
@@ -414,7 +418,7 @@ describe("A.1 — detecterCiblesOrphelines : le filet de securite non negociable
       // pur, PosteReferentiel — le mecanisme de resolution ne lit jamais ce
       // champ) — `id`/`posteReferentielId` restent strictement identiques.
       postes: [
-        { id: "poste-energie", libelle: "Energie et Carburant", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, chargesMensuelles: [], posteReferentielId: "referentiel-energie" },
+        { id: "poste-energie", libelle: "Energie et Carburant", type: TypePostePrevision.CHARGE_EXPLOITATION, inclusBaseRepartition: true, ordre: 0, actif: true, chargesMensuelles: [], posteReferentielId: "referentiel-energie" },
       ],
     });
 

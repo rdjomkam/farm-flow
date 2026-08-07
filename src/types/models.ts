@@ -4527,6 +4527,8 @@ export interface PostePrevision {
    */
   inclusBaseRepartition: boolean;
   ordre: number;
+  /** desactivation logique — un poste inactif est exclu du calcul de projection sans etre supprime */
+  actif: boolean;
   siteId: string;
 }
 
@@ -4573,6 +4575,8 @@ export interface ApportCapital {
   /** un credit encaisse est un apport de tresorerie, jamais un
    * investissement (ADR-053 §7) */
   type: TypeApportCapital;
+  /** desactivation logique — un apport inactif est exclu du calcul de projection sans etre supprime */
+  actif: boolean;
   siteId: string;
 }
 

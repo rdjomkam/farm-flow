@@ -622,3 +622,56 @@ export async function createApportCapital(
     },
   });
 }
+
+/** Met a jour un ApportCapital (partiellement). */
+export async function updateApportCapital(
+  apportId: string,
+  siteId: string,
+  data: Partial<CreateApportCapitalDTO> & { actif?: boolean }
+) {
+  const apport = await prisma.apportCapital.findFirst({
+    where: { id: apportId, siteId },
+  });
+  if (!apport) {
+    throw new Error("Apport introuvable");
+  }
+
+  return prisma.apportCapital.update({
+    where: { id: apportId },
+    data: {
+      ...(data.date !== undefined && { date: new Date(data.date) }),
+      ...(data.libelle !== undefined && { libelle: data.libelle }),
+      ...(data.montantFCFA !== undefined && { montantFCFA: data.montantFCFA }),
+      ...(data.type !== undefined && { type: data.type }),
+      ...(data.actif !== undefined && { actif: data.actif }),
+    },
+  });
+}
+
+/** Supprime un ApportCapital. */
+export async function deleteApportCapital(apportId: string, siteId: string) {
+  const apport = await prisma.apportCapital.findFirst({
+    where: { id: apportId, siteId },
+  });
+  if (!apport) {
+    throw new Error("Apport introuvable");
+  }
+
+  return prisma.apportCapital.delete({ where: { id: apportId } });
+}
+
+/** Active/desactive un PostePrevision (desactivation logique, R4). */
+export async function togglePostePrevisionActif(posteId: string, siteId: string, actif: boolean) {
+  const poste = await prisma.postePrevision.findFirst({
+    where: { id: posteId, siteId },
+  });
+  if (!poste) {
+    throw new Error("Poste introuvable");
+  }
+
+  return prisma.postePrevision.update({
+    where: { id: posteId },
+    data: { actif },
+    include: { posteReferentiel: { select: { libelle: true, actif: true } } },
+  });
+}

@@ -457,7 +457,11 @@
     "totalLabel": "Total du mois :",
     "totalFormule": "Total du mois = somme des montants de charge de chaque poste pour ce mois",
     "totalAria": "Expliquer le total du mois",
-    "gererReferentielLink": "Gérer le référentiel des postes"
+    "gererReferentielLink": "Gérer le référentiel des postes",
+    "desactiver": "Désactiver",
+    "reactiver": "Réactiver",
+    "inactifBadge": "Inactif",
+    "inactifHint": "Ce poste et ses charges sont exclus des prévisions."
   },
   "reporterChargeDialog": {
     "triggerButton": "Reporter sur plusieurs mois",
@@ -651,7 +655,16 @@
     "types": {
       "CREDIT": "Crédit encaissé",
       "CAPITAL": "Capital propre"
-    }
+    },
+    "total": "Total",
+    "editButton": "Modifier",
+    "deleteButton": "Supprimer",
+    "deleteConfirm": "Supprimer cet apport ?",
+    "deleting": "Suppression...",
+    "desactiver": "Désactiver",
+    "reactiver": "Réactiver",
+    "inactifBadge": "Inactif",
+    "inactifHint": "Cet apport est exclu des prévisions."
   },
   "apportForm": {
     "triggerButton": "Nouvel apport",
@@ -678,7 +691,10 @@
       "dateAndLibelleRequired": "La date et le libellé sont obligatoires."
     },
     "submitting": "Création...",
-    "submit": "Créer"
+    "submit": "Créer",
+    "editDialogTitle": "Modifier l'apport",
+    "editSubmitting": "Enregistrement...",
+    "editSubmit": "Enregistrer"
   },
   "tableauBordTab": {
     "errorHint": "Les indicateurs ci-dessous sont vides à cause de cette erreur — ce n'est pas une absence réelle de vagues ou de charges. Corrigez la configuration signalée puis rechargez cette page.",

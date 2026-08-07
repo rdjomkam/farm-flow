@@ -393,6 +393,8 @@ describe("calculerProjectionScenario — decision 6 (base_repartition exclut le 
           type: TypePostePrevision.CHARGE_EXPLOITATION,
           inclusBaseRepartition: false,
           ordre: 1,
+          actif: true,
+          posteReferentielId: "referentiel-poste-1",
           chargesMensuelles: [{ id: "charge-1", posteId: "poste-1", moisAbsolu: 0, montantFCFA: new Decimal(1_000_000) }],
         },
       ],

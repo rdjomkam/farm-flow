@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * src/components/previsions/apport-form-dialog.tsx
- *
- * Dialog de creation d'un ApportCapital (CAPITAL ou CREDIT — un credit
- * encaisse est un apport de tresorerie, jamais un investissement, ADR-053
- * §3.1/§7). Pas d'edition/suppression cote API pour ce modele (PR2.2 :
- * seules `GET`/`POST /scenarios/[id]/apports` existent) — creation
- * uniquement, coherent avec la surface reelle de l'API.
- */
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -29,7 +20,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { TypeApportCapital } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
 import { useDialogCloseGuard } from "@/hooks/use-dialog-close-guard";
@@ -37,17 +28,19 @@ import type { ApportCapitalDTO } from "@/components/previsions/api-types";
 
 interface ApportFormDialogProps {
   scenarioId: string;
+  editApport?: ApportCapitalDTO;
   onCreated: (apport: ApportCapitalDTO) => void;
 }
 
-export function ApportFormDialog({ scenarioId, onCreated }: ApportFormDialogProps) {
+export function ApportFormDialog({ scenarioId, editApport, onCreated }: ApportFormDialogProps) {
   const t = useTranslations("previsions");
   const tCommon = useTranslations("common");
+  const isEdit = !!editApport;
   const TYPE_LABELS: Record<TypeApportCapital, string> = {
     [TypeApportCapital.CAPITAL]: t("apportForm.types.CAPITAL"),
     [TypeApportCapital.CREDIT]: t("apportForm.types.CREDIT"),
   };
-  const { post } = usePrevisionsApi();
+  const { post, put } = usePrevisionsApi();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
   const [libelle, setLibelle] = useState("");
@@ -59,17 +52,28 @@ export function ApportFormDialog({ scenarioId, onCreated }: ApportFormDialogProp
   const { onInteractOutside, onEscapeKeyDown } = useDialogCloseGuard(touched);
 
   function resetForm() {
-    setDate("");
-    setLibelle("");
-    setMontantFCFA("");
-    setType(TypeApportCapital.CAPITAL);
+    if (editApport) {
+      setDate(editApport.date.slice(0, 10));
+      setLibelle(editApport.libelle);
+      setMontantFCFA(String(editApport.montantFCFA));
+      setType(editApport.type);
+    } else {
+      setDate("");
+      setLibelle("");
+      setMontantFCFA("");
+      setType(TypeApportCapital.CAPITAL);
+    }
     setError(null);
     setTouched(false);
   }
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
-    if (!next) resetForm();
+    if (next) resetForm();
+    if (!next) {
+      setError(null);
+      setTouched(false);
+    }
   }
 
   async function handleSubmit() {
@@ -79,15 +83,28 @@ export function ApportFormDialog({ scenarioId, onCreated }: ApportFormDialogProp
     }
     setSubmitting(true);
     try {
-      const result = await post<ApportCapitalDTO>(`/api/previsions/scenarios/${scenarioId}/apports`, {
-        date: new Date(date).toISOString(),
-        libelle: libelle.trim(),
-        montantFCFA: Number(montantFCFA) || 0,
-        type,
-      });
-      if (result.ok && result.data) {
-        onCreated(result.data);
-        handleOpenChange(false);
+      if (isEdit) {
+        const result = await put<ApportCapitalDTO>(`/api/previsions/apports/${editApport.id}`, {
+          date: new Date(date).toISOString(),
+          libelle: libelle.trim(),
+          montantFCFA: Number(montantFCFA) || 0,
+          type,
+        });
+        if (result.ok && result.data) {
+          onCreated(result.data);
+          handleOpenChange(false);
+        }
+      } else {
+        const result = await post<ApportCapitalDTO>(`/api/previsions/scenarios/${scenarioId}/apports`, {
+          date: new Date(date).toISOString(),
+          libelle: libelle.trim(),
+          montantFCFA: Number(montantFCFA) || 0,
+          type,
+        });
+        if (result.ok && result.data) {
+          onCreated(result.data);
+          handleOpenChange(false);
+        }
       }
     } finally {
       setSubmitting(false);
@@ -97,14 +114,22 @@ export function ApportFormDialog({ scenarioId, onCreated }: ApportFormDialogProp
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="w-full md:w-auto">
-          <Plus className="h-4 w-4" />
-          {t("apportForm.triggerButton")}
-        </Button>
+        {isEdit ? (
+          <Button variant="ghost" size="sm">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button className="w-full md:w-auto">
+            <Plus className="h-4 w-4" />
+            {t("apportForm.triggerButton")}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent onInteractOutside={onInteractOutside} onEscapeKeyDown={onEscapeKeyDown}>
         <DialogHeader>
-          <DialogTitle>{t("apportForm.dialogTitle")}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t("apportForm.editDialogTitle") : t("apportForm.dialogTitle")}
+          </DialogTitle>
         </DialogHeader>
         <DialogBody>
           <div className="flex flex-col gap-3">
@@ -164,7 +189,9 @@ export function ApportFormDialog({ scenarioId, onCreated }: ApportFormDialogProp
             {tCommon("buttons.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? t("apportForm.submitting") : t("apportForm.submit")}
+            {submitting
+              ? (isEdit ? t("apportForm.editSubmitting") : t("apportForm.submitting"))
+              : (isEdit ? t("apportForm.editSubmit") : t("apportForm.submit"))}
           </Button>
         </DialogFooter>
       </DialogContent>

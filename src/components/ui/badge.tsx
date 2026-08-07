@@ -9,6 +9,8 @@ const variants = {
   warning: "bg-accent-amber-muted text-accent-amber",
   // ADR-043 — badge générique vert (assignation active, statut positif)
   success: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  // badge générique neutre (ex. état "inactif" — desactivation logique, pas une erreur)
+  secondary: "bg-secondary text-secondary-foreground",
 };
 
 const shapes = {

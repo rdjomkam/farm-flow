@@ -127,6 +127,7 @@ const apports: ApportCapitalDTO[] = [
     libelle: "Apport fondateur",
     montantFCFA: 100000,
     type: TypeApportCapital.CAPITAL,
+    actif: true,
     siteId: "site-1",
   },
   {
@@ -136,6 +137,7 @@ const apports: ApportCapitalDTO[] = [
     libelle: "Emprunt bancaire",
     montantFCFA: 50000,
     type: TypeApportCapital.CREDIT,
+    actif: true,
     siteId: "site-1",
   },
 ];
@@ -148,6 +150,7 @@ const postes: PostePrevisionDTO[] = [
     type: TypePostePrevision.CHARGE_EXPLOITATION,
     inclusBaseRepartition: true,
     ordre: 1,
+    actif: true,
     siteId: "site-1",
     posteReferentielId: "ref-1",
     posteReferentiel: { libelle: "Loyer", actif: true },
@@ -159,6 +162,7 @@ const postes: PostePrevisionDTO[] = [
     type: TypePostePrevision.CHARGE_EXPLOITATION,
     inclusBaseRepartition: false,
     ordre: 2,
+    actif: true,
     siteId: "site-1",
     posteReferentielId: "ref-2",
     posteReferentiel: { libelle: "Poste hors base (memo)", actif: true },
@@ -170,6 +174,7 @@ const postes: PostePrevisionDTO[] = [
     type: TypePostePrevision.CHARGE_EXPLOITATION,
     inclusBaseRepartition: true,
     ordre: 3,
+    actif: true,
     siteId: "site-1",
     posteReferentielId: "ref-3",
     // ADR-053 §16.12 — divergence deliberee (libelle scenario != libelle

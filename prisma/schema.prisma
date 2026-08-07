@@ -4704,6 +4704,7 @@ model PostePrevision {
    * dilue la quote-part de toutes les vagues).
    */
   inclusBaseRepartition Boolean            @default(true)
+  actif                 Boolean            @default(true)
   ordre                 Int
   siteId                String
   site                  Site               @relation(fields: [siteId], references: [id])
@@ -4770,6 +4771,7 @@ model ApportCapital {
   montantFCFA Decimal
   type        TypeApportCapital // CAPITAL | CREDIT — un crédit encaissé est un apport de
   // trésorerie, jamais un investissement (ADR-053 §7)
+  actif       Boolean           @default(true)
   siteId      String
   site        Site              @relation(fields: [siteId], references: [id])
 

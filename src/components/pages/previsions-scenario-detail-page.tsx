@@ -483,6 +483,7 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     type: p.type as TypePostePrevision,
     inclusBaseRepartition: p.inclusBaseRepartition,
     ordre: p.ordre,
+    actif: p.actif,
     siteId: p.siteId,
     posteReferentielId: p.posteReferentielId,
     posteReferentiel: {
@@ -518,6 +519,7 @@ export default async function PrevisionsScenarioDetailPage({ params }: PageProps
     libelle: a.libelle,
     montantFCFA: decimalToNumber(a.montantFCFA),
     type: a.type as TypeApportCapital,
+    actif: a.actif,
     siteId: a.siteId,
   }));
 

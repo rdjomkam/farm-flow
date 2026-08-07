@@ -165,6 +165,8 @@ function buildPostesChargesExploitation(fixture: GoldenFixture): PostePrevisionP
       type: TypePostePrevision.CHARGE_EXPLOITATION,
       inclusBaseRepartition: true,
       ordre: index,
+      actif: true,
+      posteReferentielId: `poste-referentiel-${posteId}`,
       chargesMensuelles: poste.valeursParMoisFCFA.map((montant, m) => ({
         id: `${posteId}-mois-${m}`,
         posteId,
@@ -227,6 +229,7 @@ function buildApportsCapital(fixture: GoldenFixture): ApportCapitalPourCalcul[] 
       libelle: `Apport ${fixture.mois[moisAbsolu]} (jeu d'or)`,
       montantFCFA: new Decimal(montantFCFA),
       type: TypeApportCapital.CAPITAL,
+      actif: true,
     }));
 }
 
