@@ -87,9 +87,11 @@
  *   le geste de navigation precedente/suivante du navigateur (Safari/Chrome
  *   mobile interpretent un scroll horizontal qui chaine jusqu'au document
  *   comme un balayage de navigation) — `overscroll-behavior-x: contain`
- *   arrete la chaine de defilement a la limite du conteneur. `touch-pan-x`
- *   documente explicitement au moteur de rendu que ce conteneur gere son
- *   propre defilement horizontal au doigt.
+ *   arrete la chaine de defilement a la limite du conteneur. `touch-auto`
+ *   laisse le navigateur gerer le defilement au doigt dans les deux axes
+ *   (horizontal dans le tableau, vertical pour la page) — `touch-pan-x`
+ *   bloquait le scroll vertical quand les sections depliees allongeaient
+ *   le tableau au-dela de l'ecran.
  * - Indicateur discret de contenu hors ecran (item 4 de la demande
  *   utilisateur, "rien ne signale qu'on peut glisser") : DEUX signaux
  *   complementaires plutot qu'un seul, choisis parce qu'aucun des deux ne
@@ -729,7 +731,7 @@ export function PrevisionsMensuellesTab({
      */
     <div className="relative">
       <div
-        className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-lg border border-border [-webkit-overflow-scrolling:touch]"
+        className="overflow-x-auto overscroll-x-contain touch-auto rounded-lg border border-border [-webkit-overflow-scrolling:touch]"
       >
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
