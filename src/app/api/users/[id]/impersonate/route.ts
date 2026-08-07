@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return apiError(403, "Impossible d'impersonner un compte desactive.");
     }
 
-    if (targetUser.role === Role.ADMIN) {
+    if (targetUser.role === Role.ADMIN || targetUser.role === Role.PROMOTEUR) {
       return apiError(403, "Impossible d'impersonner un administrateur.");
     }
 

@@ -7,8 +7,8 @@ import type { UserSession } from "@/types";
 /** Load effective permissions for active site. Uses React cache() for dedup within a request. */
 export const getServerPermissions = cache(async (session: UserSession): Promise<Permission[]> => {
   if (!session.activeSiteId) return [];
-  // ADR-022: isPlatform removed. ADMIN gets all permissions on any site.
-  if (session.role === Role.ADMIN) {
+  // ADR-022: isPlatform removed. ADMIN/PROMOTEUR gets all permissions on any site.
+  if (session.role === Role.ADMIN || session.role === Role.PROMOTEUR) {
     return Object.values(Permission);
   }
   const member = await getSiteMember(session.activeSiteId, session.userId);

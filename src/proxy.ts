@@ -57,7 +57,7 @@ const FARM_ONLY_PREFIXES = [
 ];
 
 /** Rôles autorisés sur les routes FARM_ONLY */
-const FARM_ROLES = [Role.ADMIN, Role.GERANT, Role.PISCICULTEUR];
+const FARM_ROLES = [Role.PROMOTEUR, Role.ADMIN, Role.GERANT, Role.PISCICULTEUR];
 
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];

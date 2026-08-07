@@ -1,4 +1,24 @@
-import { Permission, SiteModule } from "@/types";
+import { Permission, Role, SiteModule } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Role hierarchy — higher index = higher authority
+// ---------------------------------------------------------------------------
+
+const ROLE_RANK: Record<Role, number> = {
+  [Role.PISCICULTEUR]: 0,
+  [Role.GERANT]: 1,
+  [Role.INGENIEUR]: 1,
+  [Role.ADMIN]: 2,
+  [Role.PROMOTEUR]: 3,
+};
+
+export function canManageRole(callerRole: Role, targetRole: Role): boolean {
+  return ROLE_RANK[callerRole] > ROLE_RANK[targetRole];
+}
+
+export function canAssignGlobalRole(callerRole: Role, newRole: Role): boolean {
+  return ROLE_RANK[callerRole] > ROLE_RANK[newRole];
+}
 
 // ---------------------------------------------------------------------------
 // System role definitions (used when creating a new site)

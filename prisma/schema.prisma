@@ -75,6 +75,7 @@ enum MethodeComptage {
 }
 
 enum Role {
+  PROMOTEUR
   ADMIN
   GERANT
   PISCICULTEUR

@@ -21,6 +21,7 @@ export function ImpersonationBanner({
   const authService = useAuthService();
 
   const ROLE_LABELS: Record<Role, string> = {
+    [Role.PROMOTEUR]: t("roles.PROMOTEUR"),
     [Role.ADMIN]: t("roles.ADMIN"),
     [Role.GERANT]: t("roles.GERANT"),
     [Role.PISCICULTEUR]: t("roles.PISCICULTEUR"),

@@ -35,7 +35,7 @@ export default async function SitesPage() {
         <SitesListClient
           sites={sitesData}
           activeSiteId={session.activeSiteId}
-          canCreate={session.role === Role.ADMIN}
+          canCreate={session.role === Role.ADMIN || session.role === Role.PROMOTEUR}
           isOwner={isOwner}
         />
       </div>

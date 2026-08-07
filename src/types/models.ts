@@ -20,6 +20,7 @@
 
 /** Role d'un utilisateur */
 export enum Role {
+  PROMOTEUR = "PROMOTEUR",
   ADMIN = "ADMIN",
   GERANT = "GERANT",
   PISCICULTEUR = "PISCICULTEUR",

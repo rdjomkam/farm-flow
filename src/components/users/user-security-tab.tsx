@@ -60,7 +60,7 @@ export function UserSecurityTab({
   const [impersonateOpen, setImpersonateOpen] = useState(false);
 
   const impersonationDisabled =
-    userRole === Role.ADMIN || isSystem || !isActive;
+    userRole === Role.ADMIN || userRole === Role.PROMOTEUR || isSystem || !isActive;
 
   async function handlePasswordReset(e: React.FormEvent) {
     e.preventDefault();
@@ -185,7 +185,7 @@ export function UserSecurityTab({
         >
           {impersonationDisabled ? (
             <p className="text-sm text-muted-foreground">
-              {userRole === Role.ADMIN
+              {userRole === Role.ADMIN || userRole === Role.PROMOTEUR
                 ? t("impersonation.disabled.admin")
                 : !isActive
                 ? t("impersonation.disabled.desactive")

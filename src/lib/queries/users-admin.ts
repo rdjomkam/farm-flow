@@ -192,7 +192,7 @@ export async function updateUserAdmin(
 export async function countActiveAdmins(): Promise<number> {
   return prisma.user.count({
     where: {
-      role: "ADMIN",
+      role: { in: ["ADMIN", "PROMOTEUR"] },
       isActive: true,
       isSystem: false,
     },

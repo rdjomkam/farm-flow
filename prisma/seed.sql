@@ -95,7 +95,7 @@ DELETE FROM "ModuleDefinition";
 
 INSERT INTO "User" (id, email, phone, name, "passwordHash", role, "isActive", "isSystem", "createdAt", "updatedAt")
 VALUES
-  ('user_admin', 'admin@dkfarm.cm', '+237699000000', 'Administrateur', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'ADMIN', true, false, NOW(), NOW()),
+  ('user_admin', 'admin@dkfarm.cm', '+237699000000', 'Administrateur', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'PROMOTEUR', true, false, NOW(), NOW()),
   ('user_gerant', 'gerant@dkfarm.cm', '+237677000000', 'Jean Kamga', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, false, NOW(), NOW()),
   -- Ingenieur DKFarm — suit les clients et envoie des notes de monitoring
   ('user_ingenieur', 'ingenieur@dkfarm.cm', '+237666000001', 'Paul Nkomo', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'INGENIEUR', true, false, NOW(), NOW()),

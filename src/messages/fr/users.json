@@ -40,6 +40,7 @@
     }
   },
   "roles": {
+    "PROMOTEUR": "Promoteur",
     "ADMIN": "Administrateur global",
     "GERANT": "Gerant",
     "PISCICULTEUR": "Pisciculteur",

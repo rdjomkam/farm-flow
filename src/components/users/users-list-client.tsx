@@ -39,6 +39,7 @@ export function UsersListClient({ users, currentUserId }: UsersListClientProps) 
 
   const ROLE_OPTIONS: { value: string; label: string }[] = [
     { value: "all", label: t("list.allRoles") },
+    { value: Role.PROMOTEUR, label: t("roles.PROMOTEUR") },
     { value: Role.ADMIN, label: t("roles.ADMIN") },
     { value: Role.GERANT, label: t("roles.GERANT") },
     { value: Role.PISCICULTEUR, label: t("roles.PISCICULTEUR") },

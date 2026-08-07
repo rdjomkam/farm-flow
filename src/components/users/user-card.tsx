@@ -22,6 +22,7 @@ interface UserCardProps {
 }
 
 const ROLE_AVATAR_COLOR: Record<Role, string> = {
+  [Role.PROMOTEUR]: "bg-purple-600",
   [Role.ADMIN]: "bg-red-500",
   [Role.GERANT]: "bg-orange-500",
   [Role.PISCICULTEUR]: "bg-green-500",

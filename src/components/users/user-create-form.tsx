@@ -33,6 +33,7 @@ export function UserCreateForm() {
     { value: Role.GERANT, label: t("roles.GERANT") },
     { value: Role.INGENIEUR, label: t("roles.INGENIEUR") },
     { value: Role.ADMIN, label: t("roles.ADMIN") },
+    { value: Role.PROMOTEUR, label: t("roles.PROMOTEUR") },
   ];
 
   async function handleSubmit(e: React.FormEvent) {

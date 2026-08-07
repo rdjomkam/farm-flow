@@ -62,8 +62,8 @@ export async function requireHasPermission(
 ): Promise<UserSession> {
   const session = await requireAuth(request);
 
-  // Global ADMIN — check maintenance for non-super-admins
-  if (session.role === Role.ADMIN) {
+  // Global ADMIN/PROMOTEUR — check maintenance for non-super-admins
+  if (session.role === Role.ADMIN || session.role === Role.PROMOTEUR) {
     const userRow = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { isSuperAdmin: true },
@@ -103,8 +103,8 @@ export async function requirePermission(
 ): Promise<AuthContext> {
   const session = await requireAuth(request);
 
-  // Global ADMIN has all permissions — bypass membership and activeSiteId check
-  if (session.role === Role.ADMIN) {
+  // Global ADMIN/PROMOTEUR has all permissions — bypass membership and activeSiteId check
+  if (session.role === Role.ADMIN || session.role === Role.PROMOTEUR) {
     const activeSiteId = session.activeSiteId ?? "";
     // Load isSuperAdmin from DB for accurate AuthContext
     const userRow = await prisma.user.findUnique({

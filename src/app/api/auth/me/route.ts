@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     let permissions: Permission[] = [];
     if (userSession.activeSiteId) {
-      if (userSession.role === Role.ADMIN) {
+      if (userSession.role === Role.ADMIN || userSession.role === Role.PROMOTEUR) {
         permissions = Object.values(Permission);
       } else {
         const member = await getSiteMember(userSession.activeSiteId, userSession.userId);

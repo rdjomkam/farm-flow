@@ -336,6 +336,7 @@ const SHEET_GROUPS: SheetNavGroup[] = [
 ];
 
 const roleKeyMap: Record<Role, string> = {
+  PROMOTEUR: "admin",
   ADMIN: "admin",
   GERANT: "gerant",
   PISCICULTEUR: "pisciculteur",

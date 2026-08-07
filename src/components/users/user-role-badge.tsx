@@ -9,6 +9,7 @@ interface UserRoleBadgeProps {
 }
 
 const ROLE_COLOR_CLASS: Record<Role, string> = {
+  [Role.PROMOTEUR]: "bg-accent-purple-muted text-accent-purple border-accent-purple/30",
   [Role.ADMIN]: "bg-accent-red-muted text-accent-red border-accent-red/30",
   [Role.GERANT]: "bg-accent-orange-muted text-accent-orange border-accent-orange/30",
   [Role.PISCICULTEUR]: "bg-accent-green-muted text-accent-green border-accent-green/30",

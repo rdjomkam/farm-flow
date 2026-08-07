@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
 
-    if (session.role !== Role.ADMIN) {
+    if (session.role !== Role.ADMIN && session.role !== Role.PROMOTEUR) {
       return apiError(403, "Seuls les administrateurs peuvent creer des sites.");
     }
 

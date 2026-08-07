@@ -65,8 +65,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return apiError(403, "Impossible de modifier un utilisateur systeme.");
     }
 
-    // Guard: cannot deactivate the last ADMIN
-    if (body.isActive === false && target.globalRole === Role.ADMIN) {
+    // Guard: cannot deactivate the last ADMIN/PROMOTEUR
+    if (body.isActive === false && (target.globalRole === Role.ADMIN || target.globalRole === Role.PROMOTEUR)) {
       const adminCount = await countActiveAdmins();
       if (adminCount <= 1) {
         return apiError(409, "Impossible de desactiver le seul administrateur de la plateforme.");
@@ -78,6 +78,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       const validRoles = Object.values(Role);
       if (!validRoles.includes(body.globalRole)) {
         return apiError(400, "Role invalide.");
+      }
+    }
+
+    // Role hierarchy enforcement: caller must outrank target and new role
+    if (body.globalRole !== undefined) {
+      const { canManageRole, canAssignGlobalRole } = await import("@/lib/permissions-constants");
+      const callerSession = await requireHasPermission(request, Permission.UTILISATEURS_GERER);
+      const callerRole = callerSession.role as Role;
+      if (!canManageRole(callerRole, target.globalRole as Role)) {
+        return apiError(403, "Vous ne pouvez pas modifier un utilisateur de rang superieur ou egal.");
+      }
+      if (!canAssignGlobalRole(callerRole, body.globalRole as Role)) {
+        return apiError(403, "Vous ne pouvez pas assigner un role superieur ou egal au votre.");
       }
     }
 
