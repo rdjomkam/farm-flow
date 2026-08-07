@@ -2,10 +2,9 @@
  * Générateur PDF — Prévisions (scénario)
  *
  * Document A4 paysage : une page de prélude (identité du scénario,
- * paramètres, granulométries, budget) puis des pages de données par
- * section (Résultat, Production, Aliments, Détail Entrées-Dépenses),
- * découpées en tranches de 7 mois par page (une ligne par indicateur, une
- * colonne par mois).
+ * paramètres, granulométries, budget) puis des pages de données où
+ * TOUS les indicateurs (Résultat, Production, Aliments, Entrées-Dépenses)
+ * apparaissent sur chaque page, découpés en tranches de 7 mois.
  */
 
 import {
@@ -83,6 +82,11 @@ interface LigneIndicateur {
   agregation?: "somme" | "dernier";
 }
 
+interface SectionIndicateurs {
+  titre: string;
+  lignes: LigneIndicateur[];
+}
+
 // ---------------------------------------------------------------------------
 // Couleurs & Styles
 // ---------------------------------------------------------------------------
@@ -93,6 +97,7 @@ const colors = {
   muted: "#64748b",
   border: "#e2e8f0",
   lightBg: "#f8fafc",
+  sectionBg: "#e2e8f0",
   success: "#16a34a",
   danger: "#dc2626",
 };
@@ -143,7 +148,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 14,
   },
-  // Tableau clé-valeur (prélude)
   kvTable: { marginBottom: 4 },
   kvRow: {
     flexDirection: "row",
@@ -155,7 +159,6 @@ const styles = StyleSheet.create({
   },
   kvLabel: { flex: 2, fontSize: 8, color: colors.muted },
   kvValue: { flex: 2, fontSize: 8, fontFamily: "Helvetica-Bold" },
-  // Tableau mensuel
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#f1f5f9",
@@ -173,26 +176,29 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     fontSize: 7,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    backgroundColor: colors.sectionBg,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderText: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: colors.dark,
+    textTransform: "uppercase",
+  },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 4,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     borderBottomStyle: "solid",
   },
-  tableRowTotal: {
-    flexDirection: "row",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    borderTopWidth: 1.5,
-    borderTopColor: colors.dark,
-    borderTopStyle: "solid",
-    backgroundColor: colors.lightBg,
-  },
-  colLabel: { flex: 2.4, fontSize: 7.5, fontFamily: "Helvetica-Bold" },
-  colValue: { flex: 1, fontSize: 7.5, textAlign: "right" },
-  colValueTotal: { flex: 1, fontSize: 7.5, textAlign: "right", fontFamily: "Helvetica-Bold" },
+  colLabel: { flex: 2.4, fontSize: 7, paddingLeft: 6 },
+  colValue: { flex: 1, fontSize: 7, textAlign: "right" },
+  colValueTotal: { flex: 1, fontSize: 7, textAlign: "right", fontFamily: "Helvetica-Bold" },
   footer: {
     position: "absolute",
     bottom: 22,
@@ -248,29 +254,34 @@ function PageHeader({
   );
 }
 
-/** Une page de tableau mensuel : N lignes d'indicateur x jusqu'à 7 colonnes-mois + total sur la dernière tranche. */
-function TableauMensuelPage({
-  titreSection,
+/** Page de données : TOUTES les sections d'indicateurs, pour une tranche de mois. */
+function TableauCompletPage({
   data,
   dateDebutPlan,
   tranche,
-  estDerniereTranche,
-  lignes,
+  trancheIndex,
+  totalTranches,
+  sections,
 }: {
-  titreSection: string;
   data: CreatePrevisionExportDTO;
   dateDebutPlan: Date;
   tranche: MoisProjectionExportInfo[];
-  estDerniereTranche: boolean;
-  lignes: LigneIndicateur[];
+  trancheIndex: number;
+  totalTranches: number;
+  sections: SectionIndicateurs[];
 }) {
+  const estDerniereTranche = trancheIndex === totalTranches - 1;
+  const periodeLabel = `Mois ${tranche[0].moisAbsolu + 1}–${tranche[tranche.length - 1].moisAbsolu + 1} sur ${data.projection.horizonMois}`;
+
   return (
     <Page size="A4" orientation="landscape" style={styles.page} wrap>
       <PageHeader
         titre={data.scenario.nom}
-        sousTitre={`${titreSection} — ${data.siteName}`}
+        sousTitre={`${periodeLabel} — ${data.siteName}`}
         dateExport={data.exportDate}
       />
+
+      {/* En-tête colonnes */}
       <View style={styles.tableHeader}>
         <Text style={[styles.tableHeaderLabel, { flex: 2.4 }]}>Indicateur</Text>
         {tranche.map((m) => (
@@ -282,37 +293,50 @@ function TableauMensuelPage({
           <Text style={[styles.tableHeaderText, { flex: 1 }]}>TOTAL</Text>
         )}
       </View>
-      {lignes.map((ligne, i) => {
-        const valeurs = tranche.map((m) => ligne.accessor(m));
-        let total: number | null = null;
-        if (estDerniereTranche) {
-          const toutesValeurs = data.projection.mois.map((m) => ligne.accessor(m));
-          total =
-            ligne.agregation === "dernier"
-              ? (toutesValeurs[toutesValeurs.length - 1] ?? 0)
-              : toutesValeurs.reduce((s, v) => s + v, 0);
-        }
-        return (
-          <View key={i} style={styles.tableRow} wrap={false}>
-            <Text style={styles.colLabel}>{ligne.libelle}</Text>
-            {valeurs.map((v, j) => (
-              <Text
-                key={j}
-                style={[styles.colValue, { color: v < 0 ? colors.danger : colors.dark }]}
-              >
-                {fmtNum(v)}
-              </Text>
-            ))}
-            {estDerniereTranche && total !== null && (
-              <Text
-                style={[styles.colValueTotal, { color: total < 0 ? colors.danger : colors.dark }]}
-              >
-                {fmtNum(total)}
-              </Text>
-            )}
+
+      {/* Toutes les sections empilées */}
+      {sections.map((section) => (
+        <View key={section.titre}>
+          {/* Bandeau de section */}
+          <View style={styles.sectionHeaderRow} wrap={false}>
+            <Text style={styles.sectionHeaderText}>{section.titre}</Text>
           </View>
-        );
-      })}
+
+          {/* Lignes d'indicateurs */}
+          {section.lignes.map((ligne, i) => {
+            const valeurs = tranche.map((m) => ligne.accessor(m));
+            let total: number | null = null;
+            if (estDerniereTranche) {
+              const toutesValeurs = data.projection.mois.map((m) => ligne.accessor(m));
+              total =
+                ligne.agregation === "dernier"
+                  ? (toutesValeurs[toutesValeurs.length - 1] ?? 0)
+                  : toutesValeurs.reduce((s, v) => s + v, 0);
+            }
+            return (
+              <View key={i} style={styles.tableRow} wrap={false}>
+                <Text style={styles.colLabel}>{ligne.libelle}</Text>
+                {valeurs.map((v, j) => (
+                  <Text
+                    key={j}
+                    style={[styles.colValue, { color: v < 0 ? colors.danger : colors.dark }]}
+                  >
+                    {fmtNum(v)}
+                  </Text>
+                ))}
+                {estDerniereTranche && total !== null && (
+                  <Text
+                    style={[styles.colValueTotal, { color: total < 0 ? colors.danger : colors.dark }]}
+                  >
+                    {fmtNum(total)}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ))}
+
       <Footer siteName={data.siteName} />
     </Page>
   );
@@ -330,14 +354,14 @@ export function PrevisionPDF({ data }: { data: CreatePrevisionExportDTO }) {
     new Set(data.projection.mois.flatMap((m) => Object.keys(m.sacsParGranulometrie)))
   ).sort();
 
-  const sections: { titre: string; lignes: LigneIndicateur[] }[] = [
+  const sections: SectionIndicateurs[] = [
     {
       titre: "Résultat",
       lignes: [
-        { libelle: "Total entrées", accessor: (m) => m.revenusFCFA + m.apportsFCFA },
-        { libelle: "Total dépenses", accessor: (m) => m.depensesFCFA },
-        { libelle: "Résultat mensuel", accessor: (m) => m.resultatFCFA },
-        { libelle: "Solde cumulé", accessor: (m) => m.soldeFCFA, agregation: "dernier" },
+        { libelle: "Total entrées (FCFA)", accessor: (m) => m.revenusFCFA + m.apportsFCFA },
+        { libelle: "Total dépenses (FCFA)", accessor: (m) => m.depensesFCFA },
+        { libelle: "Résultat mensuel (FCFA)", accessor: (m) => m.resultatFCFA },
+        { libelle: "Solde cumulé (FCFA)", accessor: (m) => m.soldeFCFA, agregation: "dernier" },
       ],
     },
     {
@@ -362,13 +386,13 @@ export function PrevisionPDF({ data }: { data: CreatePrevisionExportDTO }) {
     {
       titre: "Entrées & Dépenses détaillées",
       lignes: [
-        { libelle: "Revenus", accessor: (m) => m.revenusFCFA },
-        { libelle: "Apports", accessor: (m) => m.apportsFCFA },
-        { libelle: "Coût aliments", accessor: (m) => m.coutAlimentsFCFA },
-        { libelle: "Coût alevins", accessor: (m) => m.coutAlevinsFCFA },
-        { libelle: "Charges réparties", accessor: (m) => m.baseRepartitionFCFA },
-        { libelle: "Investissements", accessor: (m) => m.investissementsFCFA },
-        { libelle: "Épargne conseillée", accessor: (m) => m.epargneFCFA },
+        { libelle: "Revenus (FCFA)", accessor: (m) => m.revenusFCFA },
+        { libelle: "Apports (FCFA)", accessor: (m) => m.apportsFCFA },
+        { libelle: "Coût aliments (FCFA)", accessor: (m) => m.coutAlimentsFCFA },
+        { libelle: "Coût alevins (FCFA)", accessor: (m) => m.coutAlevinsFCFA },
+        { libelle: "Charges réparties (FCFA)", accessor: (m) => m.baseRepartitionFCFA },
+        { libelle: "Investissements (FCFA)", accessor: (m) => m.investissementsFCFA },
+        { libelle: "Épargne conseillée (FCFA)", accessor: (m) => m.epargneFCFA },
       ],
     },
   ];
@@ -450,7 +474,7 @@ export function PrevisionPDF({ data }: { data: CreatePrevisionExportDTO }) {
             </View>
             {data.aliments.map((a, i) => (
               <View key={i} style={styles.tableRow} wrap={false}>
-                <Text style={[styles.colLabel, { flex: 2 }]}>{a.libelle}</Text>
+                <Text style={[styles.colLabel, { flex: 2, paddingLeft: 0 }]}>{a.libelle}</Text>
                 <Text style={[styles.colValue, { flex: 1, textAlign: "left" }]}>
                   {a.tailleGranule}
                 </Text>
@@ -502,19 +526,18 @@ export function PrevisionPDF({ data }: { data: CreatePrevisionExportDTO }) {
       </Page>
 
       {/* ===================== PAGES DE DONNÉES ===================== */}
-      {sections.flatMap((section) =>
-        tranches.map((tranche, i) => (
-          <TableauMensuelPage
-            key={`${section.titre}-${i}`}
-            titreSection={section.titre}
-            data={data}
-            dateDebutPlan={dateDebutPlan}
-            tranche={tranche}
-            estDerniereTranche={i === tranches.length - 1}
-            lignes={section.lignes}
-          />
-        ))
-      )}
+      {/* Chaque page = TOUS les indicateurs pour une tranche de ≤7 mois */}
+      {tranches.map((tranche, i) => (
+        <TableauCompletPage
+          key={i}
+          data={data}
+          dateDebutPlan={dateDebutPlan}
+          tranche={tranche}
+          trancheIndex={i}
+          totalTranches={tranches.length}
+          sections={sections}
+        />
+      ))}
     </Document>
   );
 }
