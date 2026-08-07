@@ -17,6 +17,12 @@
     "open": "Open",
     "activate": "Activate",
     "archive": "Archive",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete scenario",
+    "deleteConfirmDescription": "The scenario \"{nom}\" and all its data (feed grades, parameters, planned batches, expenses, journal) will be permanently deleted. This action cannot be undone.",
+    "deleteCancel": "Cancel",
+    "deleteConfirm": "Delete permanently",
+    "deleteDeleting": "Deleting...",
     "statuts": {
       "BROUILLON": "Draft",
       "ACTIF": "Active",

@@ -11,12 +11,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { FileText, Archive, PlayCircle } from "lucide-react";
+import { FileText, Archive, PlayCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Permission, StatutScenarioPrevision } from "@/types";
 import { usePrevisionsApi } from "@/hooks/use-previsions-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ScenarioFormDialog } from "@/components/previsions/scenario-form-dialog";
 import { formatEntierPrevision } from "@/lib/previsions/format-previsions";
 import type { ScenarioPrevisionSummaryDTO } from "@/components/previsions/api-types";
@@ -34,11 +42,13 @@ interface ScenariosListClientProps {
 
 export function ScenariosListClient({ initialScenarios, permissions }: ScenariosListClientProps) {
   const t = useTranslations("previsions");
-  const { post } = usePrevisionsApi();
+  const { post, del } = usePrevisionsApi();
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deletingScenario, setDeletingScenario] = useState<ScenarioPrevisionSummaryDTO | null>(null);
 
   const peutGerer = permissions.includes(Permission.PREVISIONS_GERER);
+  const peutSupprimer = permissions.includes(Permission.PREVISIONS_SUPPRIMER);
 
   async function handleTransition(id: string, action: "activer" | "archiver") {
     setBusyId(id);
@@ -49,6 +59,20 @@ export function ScenariosListClient({ initialScenarios, permissions }: Scenarios
       );
       if (result.ok && result.data) {
         setScenarios((prev) => prev.map((s) => (s.id === id ? result.data! : s)));
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingScenario) return;
+    setBusyId(deletingScenario.id);
+    try {
+      const result = await del(`/api/previsions/scenarios/${deletingScenario.id}`);
+      if (result.ok) {
+        setScenarios((prev) => prev.filter((s) => s.id !== deletingScenario.id));
+        setDeletingScenario(null);
       }
     } finally {
       setBusyId(null);
@@ -122,11 +146,45 @@ export function ScenariosListClient({ initialScenarios, permissions }: Scenarios
                       {t("list.archive")}
                     </Button>
                   )}
+                  {peutSupprimer && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger"
+                      disabled={busyId === s.id}
+                      onClick={() => setDeletingScenario(s)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {t("list.delete")}
+                    </Button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+      {deletingScenario && (
+        <Dialog open={!!deletingScenario} onOpenChange={(next) => { if (!next) setDeletingScenario(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-destructive">
+                {t("list.deleteConfirmTitle")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("list.deleteConfirmDescription", { nom: deletingScenario.nom })}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeletingScenario(null)} disabled={busyId === deletingScenario.id}>
+                {t("list.deleteCancel")}
+              </Button>
+              <Button variant="danger" onClick={handleDelete} disabled={busyId === deletingScenario.id}>
+                {busyId === deletingScenario.id ? t("list.deleteDeleting") : t("list.deleteConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

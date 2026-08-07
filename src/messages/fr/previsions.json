@@ -17,6 +17,12 @@
     "open": "Ouvrir",
     "activate": "Activer",
     "archive": "Archiver",
+    "delete": "Supprimer",
+    "deleteConfirmTitle": "Supprimer le scénario",
+    "deleteConfirmDescription": "Le scénario « {nom} » et toutes ses données (granulométries, paramètres, vagues prévues, dépenses, journal) seront définitivement supprimés. Cette action est irréversible.",
+    "deleteCancel": "Annuler",
+    "deleteConfirm": "Supprimer définitivement",
+    "deleteDeleting": "Suppression...",
     "statuts": {
       "BROUILLON": "Brouillon",
       "ACTIF": "Actif",
