@@ -38,6 +38,8 @@ export default async function PrevisionsScenariosPage() {
     siteId: s.siteId,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
+    scenarioParentId: s.scenarioParentId ?? null,
+    scenarioParent: null,
   }));
 
   return (

@@ -20,7 +20,7 @@ export function ChainerScenarioButton({ scenarioId }: ChainerScenarioButtonProps
   async function handleChainer() {
     setLoading(true);
     try {
-      const result = await post(
+      const result = await post<{ id: string }>(
         `/api/previsions/scenarios/${scenarioId}/chainer`,
         {}
       );

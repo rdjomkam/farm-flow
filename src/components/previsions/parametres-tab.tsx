@@ -527,7 +527,7 @@ function ImportTresorerieSelector({ scenarioId, onImport }: ImportTresorerieProp
     if (scenarios) return;
     setLoading(true);
     try {
-      const result = await get("/api/previsions/scenarios");
+      const result = await get<{ data: { id: string; nom: string; code: string }[] }>("/api/previsions/scenarios");
       if (result.ok && result.data?.data) {
         setScenarios(
           result.data.data
@@ -547,7 +547,7 @@ function ImportTresorerieSelector({ scenarioId, onImport }: ImportTresorerieProp
   async function handleImport(fromId: string) {
     setImportLoading(fromId);
     try {
-      const result = await get(`/api/previsions/scenarios/${fromId}/solde-final`);
+      const result = await get<{ soldeFinalFCFA: number }>(`/api/previsions/scenarios/${fromId}/solde-final`);
       if (result.ok && result.data) {
         onImport(result.data.soldeFinalFCFA);
       }
